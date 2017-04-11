@@ -18,11 +18,17 @@
  */
 package io.druid.server.coordinator;
 
-import org.joda.time.DateTime;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.util.concurrent.ListeningExecutorService;
 
-import java.io.Closeable;
-
-public interface BalancerStrategyFactory extends Closeable
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
+@JsonSubTypes(value = {
+        @JsonSubTypes.Type(name = "diskNormalized", value = DiskNormalizedCostBalancerStrategyFactory.class),
+        @JsonSubTypes.Type(name = "cost", value = CostBalancerStrategyFactory.class),
+        @JsonSubTypes.Type(name = "random", value = RandomBalancerStrategyFactory.class),
+})
+public interface BalancerStrategyFactory
 {
-  public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp);
+  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec);
 }

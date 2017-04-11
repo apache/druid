@@ -24,11 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.common.ISE;
+import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -53,7 +54,7 @@ public class EventReceiverFirehoseTestClient
       String host,
       String chatID,
       ObjectMapper jsonMapper,
-      HttpClient httpClient,
+      @TestClient HttpClient httpClient,
       ObjectMapper smileMapper
   )
   {

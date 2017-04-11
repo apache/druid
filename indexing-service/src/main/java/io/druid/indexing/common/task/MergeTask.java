@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.timeline.DataSegment;
@@ -42,9 +43,12 @@ import java.util.Map;
  */
 public class MergeTask extends MergeTaskBase
 {
+  private static final Boolean defaultBuildV9Directly = Boolean.TRUE;
   @JsonIgnore
   private final List<AggregatorFactory> aggregators;
+  private final Boolean rollup;
   private final IndexSpec indexSpec;
+  private final Boolean buildV9Directly;
 
   @JsonCreator
   public MergeTask(
@@ -52,20 +56,25 @@ public class MergeTask extends MergeTaskBase
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
+      @JsonProperty("rollup") Boolean rollup,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     super(id, dataSource, segments, context);
     this.aggregators = Preconditions.checkNotNull(aggregators, "null aggregations");
+    this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
+    this.buildV9Directly = buildV9Directly == null ? defaultBuildV9Directly : buildV9Directly;
   }
 
   @Override
   public File merge(final TaskToolbox toolbox, final Map<DataSegment, File> segments, final File outDir)
       throws Exception
   {
-    return toolbox.getIndexMerger().mergeQueryableIndex(
+    IndexMerger indexMerger = buildV9Directly ? toolbox.getIndexMergerV9() : toolbox.getIndexMerger();
+    return indexMerger.mergeQueryableIndex(
         Lists.transform(
             ImmutableList.copyOf(segments.values()),
             new Function<File, QueryableIndex>()
@@ -82,6 +91,7 @@ public class MergeTask extends MergeTaskBase
               }
             }
         ),
+        rollup,
         aggregators.toArray(new AggregatorFactory[aggregators.size()]),
         outDir,
         indexSpec
@@ -92,6 +102,18 @@ public class MergeTask extends MergeTaskBase
   public String getType()
   {
     return "merge";
+  }
+
+  @JsonProperty
+  public Boolean getRollup()
+  {
+    return rollup;
+  }
+
+  @JsonProperty
+  public IndexSpec getIndexSpec()
+  {
+    return indexSpec;
   }
 
   @JsonProperty("aggregations")

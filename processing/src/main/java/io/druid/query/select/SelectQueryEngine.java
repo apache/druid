@@ -21,29 +21,42 @@ package io.druid.query.select;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
+import com.google.inject.Inject;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ColumnSelectorStrategy;
+import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.query.filter.Filter;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
-import io.druid.timeline.DataSegmentUtils;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
+import io.druid.timeline.DataSegmentUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +64,112 @@ import java.util.Map;
  */
 public class SelectQueryEngine
 {
+  private static final SelectStrategyFactory STRATEGY_FACTORY = new SelectStrategyFactory();
+
+  public static class SelectStrategyFactory implements ColumnSelectorStrategyFactory<SelectColumnSelectorStrategy>
+  {
+    @Override
+    public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
+        ColumnCapabilities capabilities, ColumnValueSelector selector
+    )
+    {
+      ValueType type = capabilities.getType();
+      switch(type) {
+        case STRING:
+          return new StringSelectColumnSelectorStrategy();
+        case LONG:
+          return new LongSelectColumnSelectorStrategy();
+        case FLOAT:
+          return new FloatSelectColumnSelectorStrategy();
+        default:
+          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+      }
+    }
+  }
+
+  public interface SelectColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends ColumnSelectorStrategy
+  {
+    /**
+     * Read the current row from dimSelector and add the row values for a dimension to the result map.
+     *
+     * Multi-valued rows should be added to the result as a List, single value rows should be added as a single object.
+     *
+     * @param outputName Output name for this dimension in the select query being served
+     * @param dimSelector Dimension value selector
+     * @param resultMap Row value map for the current row being retrieved by the select query
+     */
+    void addRowValuesToSelectResult(
+        String outputName,
+        ValueSelectorType dimSelector,
+        Map<String, Object> resultMap
+    );
+  }
+
+  public static class StringSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<DimensionSelector>
+  {
+    @Override
+    public void addRowValuesToSelectResult(String outputName, DimensionSelector selector, Map<String, Object> resultMap)
+    {
+      if (selector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        final IndexedInts vals = selector.getRow();
+
+        if (vals.size() == 1) {
+          final String dimVal = selector.lookupName(vals.get(0));
+          resultMap.put(outputName, dimVal);
+        } else {
+          List<String> dimVals = new ArrayList<>(vals.size());
+          for (int i = 0; i < vals.size(); ++i) {
+            dimVals.add(selector.lookupName(vals.get(i)));
+          }
+          resultMap.put(outputName, dimVals);
+        }
+      }
+    }
+  }
+
+  public static class LongSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<LongColumnSelector>
+  {
+
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName, LongColumnSelector dimSelector, Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.get());
+      }
+    }
+  }
+
+  public static class FloatSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<FloatColumnSelector>
+  {
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName, FloatColumnSelector dimSelector, Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.get());
+      }
+    }
+  }
+
+  private final Supplier<SelectQueryConfig> configSupplier;
+
+  @Inject
+  public SelectQueryEngine(
+      Supplier<SelectQueryConfig> configSupplier
+  )
+  {
+    this.configSupplier = configSupplier;
+  }
+
   public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final Segment segment)
   {
     final StorageAdapter adapter = segment.asStorageAdapter();
@@ -89,6 +208,7 @@ public class SelectQueryEngine
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
         filter,
+        query.getVirtualColumns(),
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<SelectResultValue>>()
@@ -104,16 +224,23 @@ public class SelectQueryEngine
 
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
-            final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-            for (DimensionSpec dim : dims) {
-              final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
-              dimSelectors.put(dim.getOutputName(), dimSelector);
+            final List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
+                DimensionHandlerUtils.createColumnSelectorPluses(
+                    STRATEGY_FACTORY,
+                    Lists.newArrayList(dims),
+                    cursor
+                )
+            );
+
+            for (DimensionSpec dimSpec : dims) {
+              builder.addDimension(dimSpec.getOutputName());
             }
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
             for (String metric : metrics) {
               final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
               metSelectors.put(metric, metricSelector);
+              builder.addMetric(metric);
             }
 
             final PagingOffset offset = query.getPagingOffset(segmentId);
@@ -122,41 +249,12 @@ public class SelectQueryEngine
 
             int lastOffset = offset.startOffset();
             for (; !cursor.isDone() && offset.hasNext(); cursor.advance(), offset.next()) {
-              final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-              theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
-
-              for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
-                final String dim = dimSelector.getKey();
-                final DimensionSelector selector = dimSelector.getValue();
-
-                if (selector == null) {
-                  theEvent.put(dim, null);
-                } else {
-                  final IndexedInts vals = selector.getRow();
-
-                  if (vals.size() == 1) {
-                    final String dimVal = selector.lookupName(vals.get(0));
-                    theEvent.put(dim, dimVal);
-                  } else {
-                    List<String> dimVals = Lists.newArrayList();
-                    for (int i = 0; i < vals.size(); ++i) {
-                      dimVals.add(selector.lookupName(vals.get(i)));
-                    }
-                    theEvent.put(dim, dimVals);
-                  }
-                }
-              }
-
-              for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
-                final String metric = metSelector.getKey();
-                final ObjectColumnSelector selector = metSelector.getValue();
-
-                if (selector == null) {
-                  theEvent.put(metric, null);
-                } else {
-                  theEvent.put(metric, selector.get());
-                }
-              }
+              final Map<String, Object> theEvent = singleEvent(
+                  EventHolder.timestampKey,
+                  timestampColumnSelector,
+                  selectorPlusList,
+                  metSelectors
+              );
 
               builder.addEntry(
                   new EventHolder(
@@ -173,5 +271,32 @@ public class SelectQueryEngine
           }
         }
     );
+  }
+
+  public static Map<String, Object> singleEvent(
+      String timestampKey,
+      LongColumnSelector timestampColumnSelector,
+      List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList,
+      Map<String, ObjectColumnSelector> metSelectors
+  )
+  {
+    final Map<String, Object> theEvent = Maps.newLinkedHashMap();
+    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.get()));
+
+    for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+      selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);
+    }
+
+    for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
+      final String metric = metSelector.getKey();
+      final ObjectColumnSelector selector = metSelector.getValue();
+
+      if (selector == null) {
+        theEvent.put(metric, null);
+      } else {
+        theEvent.put(metric, selector.get());
+      }
+    }
+    return theEvent;
   }
 }

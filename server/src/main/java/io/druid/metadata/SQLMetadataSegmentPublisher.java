@@ -1,5 +1,3 @@
-
-
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
  * or more contributor license agreements. See the NOTICE file
@@ -24,7 +22,8 @@ package io.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -56,9 +55,9 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     this.config = config;
     this.connector = connector;
     this.statement = String.format(
-        "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
         + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-        config.getSegmentsTable()
+        config.getSegmentsTable(), connector.getQuoteString()
     );
   }
 

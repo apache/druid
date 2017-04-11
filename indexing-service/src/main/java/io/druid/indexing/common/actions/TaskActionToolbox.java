@@ -19,16 +19,16 @@
 
 package io.druid.indexing.common.actions;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.java.util.common.ISE;
 import io.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -39,17 +39,20 @@ public class TaskActionToolbox
   private final TaskLockbox taskLockbox;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
+  private final SupervisorManager supervisorManager;
 
   @Inject
   public TaskActionToolbox(
       TaskLockbox taskLockbox,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      SupervisorManager supervisorManager
   )
   {
     this.taskLockbox = taskLockbox;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
+    this.supervisorManager = supervisorManager;
   }
 
   public TaskLockbox getTaskLockbox()
@@ -65,6 +68,11 @@ public class TaskActionToolbox
   public ServiceEmitter getEmitter()
   {
     return emitter;
+  }
+
+  public SupervisorManager getSupervisorManager()
+  {
+    return supervisorManager;
   }
 
   public void verifyTaskLocks(

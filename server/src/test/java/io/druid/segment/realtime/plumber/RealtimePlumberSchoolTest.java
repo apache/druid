@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.Committer;
@@ -36,8 +35,8 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
@@ -96,6 +95,7 @@ public class RealtimePlumberSchoolTest
   private DataSchema schema;
   private DataSchema schema2;
   private FireDepartmentMetrics metrics;
+  private File tmpDir;
 
   public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, boolean buildV9Directly)
   {
@@ -124,8 +124,7 @@ public class RealtimePlumberSchoolTest
   @Before
   public void setUp() throws Exception
   {
-    final File tmpDir = Files.createTempDir();
-    tmpDir.deleteOnExit();
+    tmpDir = Files.createTempDir();
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
 
@@ -135,13 +134,16 @@ public class RealtimePlumberSchoolTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
-                    new DimensionsSpec(null, null, null)
-                )
+                    new DimensionsSpec(null, null, null),
+                    null,
+                    null
+                ),
+                null
             ),
             Map.class
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
         jsonMapper
     );
 
@@ -151,13 +153,16 @@ public class RealtimePlumberSchoolTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
-                    new DimensionsSpec(null, null, null)
-                )
+                    new DimensionsSpec(null, null, null),
+                    null,
+                    null
+                ),
+                null
             ),
             Map.class
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.YEAR, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.YEAR, Granularities.NONE, null),
         jsonMapper
     );
 
@@ -198,6 +203,7 @@ public class RealtimePlumberSchoolTest
         0,
         0,
         false,
+        null,
         null
     );
 
@@ -231,6 +237,7 @@ public class RealtimePlumberSchoolTest
             schema.getDataSource()
         )
     );
+    FileUtils.deleteDirectory(tmpDir);
   }
 
   @Test(timeout = 60000)

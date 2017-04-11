@@ -22,23 +22,21 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.Pair;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -76,10 +74,11 @@ public class RegexFilterTest extends BaseFilterTest
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -141,7 +140,7 @@ public class RegexFilterTest extends BaseFilterTest
   public void testRegexWithExtractionFn()
   {
     String nullJsFn = "function(str) { if (str === null) { return 'NOT_NULL_ANYMORE'; } else { return str;} }";
-    ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     assertFilterMatches(new RegexDimFilter("dim1", ".*ANYMORE", changeNullFn), ImmutableList.of("0"));
     assertFilterMatches(new RegexDimFilter("dim1", "ab.*", changeNullFn), ImmutableList.<String>of("4", "5"));
@@ -154,14 +153,5 @@ public class RegexFilterTest extends BaseFilterTest
 
     assertFilterMatches(new RegexDimFilter("dim4", ".*ANYMORE", changeNullFn),  ImmutableList.of("0", "1", "2", "3", "4", "5"));
     assertFilterMatches(new RegexDimFilter("dim4", "a.*", changeNullFn),  ImmutableList.<String>of());
-  }
-
-  private void assertFilterMatches(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
   }
 }

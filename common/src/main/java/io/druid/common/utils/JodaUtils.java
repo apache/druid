@@ -23,7 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.common.guava.Comparators;
+import io.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -38,6 +38,7 @@ public class JodaUtils
   // limit intervals such that duration millis fits in a long
   public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
   public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
+  public static final Interval ETERNITY = new Interval(MIN_INSTANT, MAX_INSTANT);
 
   public static ArrayList<Interval> condenseIntervals(Iterable<Interval> intervals)
   {
@@ -57,8 +58,15 @@ public class JodaUtils
     while (intervalsIter.hasNext()) {
       Interval next = intervalsIter.next();
 
-      if (currInterval.overlaps(next) || currInterval.abuts(next)) {
+      if (currInterval.abuts(next)) {
         currInterval = new Interval(currInterval.getStart(), next.getEnd());
+      } else if(currInterval.overlaps(next)) {
+        DateTime nextEnd = next.getEnd();
+        DateTime currEnd = currInterval.getEnd();
+        currInterval = new Interval(
+            currInterval.getStart(),
+            nextEnd.isAfter(currEnd) ? nextEnd : currEnd
+        );
       } else {
         retVal.add(currInterval);
         currInterval = next;

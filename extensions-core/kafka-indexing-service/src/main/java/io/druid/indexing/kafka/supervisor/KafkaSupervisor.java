@@ -23,18 +23,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.TaskInfoProvider;
@@ -48,6 +52,7 @@ import io.druid.indexing.kafka.KafkaIndexTask;
 import io.druid.indexing.kafka.KafkaIndexTaskClient;
 import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.kafka.KafkaPartitions;
+import io.druid.indexing.kafka.KafkaTuningConfig;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskMaster;
@@ -58,6 +63,9 @@ import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.metadata.EntryExistsException;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -66,17 +74,24 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Supervisor responsible for managing the KafkaIndexTasks for a single dataSource. At a high level, the class accepts a
@@ -91,7 +106,8 @@ public class KafkaSupervisor implements Supervisor
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
   private static final Random RANDOM = new Random();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000; // prevent us from running too often in response to events
-  private static final int SHUTDOWN_TIMEOUT_MILLIS = 30000;
+  private static final long NOT_SET = -1;
+  private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
 
   // Internal data structures
   // --------------------------------------------------------
@@ -111,16 +127,21 @@ public class KafkaSupervisor implements Supervisor
     // this task group has completed successfully, at which point this will be destroyed and a new task group will be
     // created with new starting offsets. This allows us to create replacement tasks for failed tasks that process the
     // same offsets, even if the values in [partitionGroups] has been changed.
-    final Map<Integer, Long> partitionOffsets;
+    final ImmutableMap<Integer, Long> partitionOffsets;
 
-    final Map<String, TaskData> tasks = new HashMap<>();
+    final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
     final Optional<DateTime> minimumMessageTime;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
-    public TaskGroup(Map<Integer, Long> partitionOffsets, Optional<DateTime> minimumMessageTime)
+    public TaskGroup(ImmutableMap<Integer, Long> partitionOffsets, Optional<DateTime> minimumMessageTime)
     {
       this.partitionOffsets = partitionOffsets;
       this.minimumMessageTime = minimumMessageTime;
+    }
+
+    Set<String> taskIds()
+    {
+      return JavaCompatUtils.keySet(tasks);
     }
   }
 
@@ -131,25 +152,25 @@ public class KafkaSupervisor implements Supervisor
   }
 
   // Map<{group ID}, {actively reading task group}>; see documentation for TaskGroup class
-  private final HashMap<Integer, TaskGroup> taskGroups = new HashMap<>();
+  private final ConcurrentHashMap<Integer, TaskGroup> taskGroups = new ConcurrentHashMap<>();
 
   // After telling a taskGroup to stop reading and begin publishing a segment, it is moved from [taskGroups] to here so
   // we can monitor its status while we queue new tasks to read the next range of offsets. This is a list since we could
   // have multiple sets of tasks publishing at once if time-to-publish > taskDuration.
   // Map<{group ID}, List<{pending completion task groups}>>
-  private final HashMap<Integer, List<TaskGroup>> pendingCompletionTaskGroups = new HashMap<>();
+  private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
 
-  // The starting offset for a new partition in [partitionGroups] is initially set to null. When a new task group
-  // is created and is assigned partitions, if the offset in [partitionGroups] is null it will take the starting
+  // The starting offset for a new partition in [partitionGroups] is initially set to NOT_SET. When a new task group
+  // is created and is assigned partitions, if the offset in [partitionGroups] is NOT_SET it will take the starting
   // offset value from the metadata store, and if it can't find it there, from Kafka. Once a task begins
   // publishing, the offset in partitionGroups will be updated to the ending offset of the publishing-but-not-yet-
   // completed task, which will cause the next set of tasks to begin reading from where the previous task left
-  // off. If that previous task now fails, we will set the offset in [partitionGroups] back to null which will
+  // off. If that previous task now fails, we will set the offset in [partitionGroups] back to NOT_SET which will
   // cause successive tasks to again grab their starting offset from metadata store. This mechanism allows us to
   // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
   // failures during publishing.
   // Map<{group ID}, Map<{partition ID}, {startingOffset}>>
-  private Map<Integer, Map<Integer, Long>> partitionGroups = new HashMap<>();
+  private final ConcurrentHashMap<Integer, ConcurrentHashMap<Integer, Long>> partitionGroups = new ConcurrentHashMap<>();
   // --------------------------------------------------------
 
   private final TaskStorage taskStorage;
@@ -160,11 +181,15 @@ public class KafkaSupervisor implements Supervisor
   private final KafkaSupervisorSpec spec;
   private final String dataSource;
   private final KafkaSupervisorIOConfig ioConfig;
+  private final KafkaSupervisorTuningConfig tuningConfig;
+  private final KafkaTuningConfig taskTuningConfig;
   private final String supervisorId;
   private final TaskInfoProvider taskInfoProvider;
+  private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
 
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
+  private final ListeningExecutorService workerExec;
   private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
@@ -194,9 +219,17 @@ public class KafkaSupervisor implements Supervisor
 
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
+    this.tuningConfig = spec.getTuningConfig();
+    this.taskTuningConfig = KafkaTuningConfig.copyOf(this.tuningConfig);
     this.supervisorId = String.format("KafkaSupervisor-%s", dataSource);
-    this.exec = Execs.singleThreaded(supervisorId + "-%d");
+    this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
+
+    int workerThreads = (this.tuningConfig.getWorkerThreads() != null
+                         ? this.tuningConfig.getWorkerThreads()
+                         : Math.min(10, this.ioConfig.getTaskCount()));
+    this.workerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(workerThreads, supervisorId + "-Worker-%d"));
+    log.info("Created worker pool with [%d] threads for dataSource [%s]", workerThreads, this.dataSource);
 
     this.taskInfoProvider = new TaskInfoProvider()
     {
@@ -234,7 +267,29 @@ public class KafkaSupervisor implements Supervisor
       }
     };
 
-    this.taskClient = taskClientFactory.build(taskInfoProvider);
+    this.futureTimeoutInSeconds = Math.max(
+        MINIMUM_FUTURE_TIMEOUT_IN_SECONDS,
+        tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
+                                         + KafkaIndexTaskClient.MAX_RETRY_WAIT_SECONDS)
+    );
+
+    int chatThreads = (this.tuningConfig.getChatThreads() != null
+                       ? this.tuningConfig.getChatThreads()
+                       : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
+    this.taskClient = taskClientFactory.build(
+        taskInfoProvider,
+        dataSource,
+        chatThreads,
+        this.tuningConfig.getHttpTimeout(),
+        this.tuningConfig.getChatRetries()
+    );
+    log.info(
+        "Created taskClient with dataSource[%s] chatThreads[%d] httpTimeout[%s] chatRetries[%d]",
+        dataSource,
+        chatThreads,
+        this.tuningConfig.getHttpTimeout(),
+        this.tuningConfig.getChatRetries()
+    );
   }
 
   @Override
@@ -260,7 +315,7 @@ public class KafkaSupervisor implements Supervisor
                     try {
                       notice.handle();
                     }
-                    catch (Exception e) {
+                    catch (Throwable e) {
                       log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
                          .addData("noticeClass", notice.getClass().getSimpleName())
                          .emit();
@@ -273,23 +328,30 @@ public class KafkaSupervisor implements Supervisor
               }
             }
         );
+        firstRunTime = DateTime.now().plus(ioConfig.getStartDelay());
+        scheduledExec.scheduleAtFixedRate(
+            buildRunTask(),
+            ioConfig.getStartDelay().getMillis(),
+            Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
+            TimeUnit.MILLISECONDS
+        );
+
+        started = true;
+        log.info(
+            "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
+            dataSource,
+            ioConfig.getStartDelay(),
+            spec.toString()
+        );
       }
       catch (Exception e) {
+        if (consumer != null) {
+          consumer.close();
+        }
         log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
            .emit();
         throw Throwables.propagate(e);
       }
-
-      firstRunTime = DateTime.now().plus(ioConfig.getStartDelay());
-      scheduledExec.scheduleAtFixedRate(
-          buildRunTask(),
-          ioConfig.getStartDelay().getMillis(),
-          Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
-          TimeUnit.MILLISECONDS
-      );
-
-      started = true;
-      log.info("Started KafkaSupervisor[%s], first run in [%s]", dataSource, ioConfig.getStartDelay());
     }
   }
 
@@ -322,11 +384,12 @@ public class KafkaSupervisor implements Supervisor
             notices.add(new ShutdownNotice());
           }
 
-          long endTime = System.currentTimeMillis() + SHUTDOWN_TIMEOUT_MILLIS;
+          long shutdownTimeoutMillis = tuningConfig.getShutdownTimeout().getMillis();
+          long endTime = System.currentTimeMillis() + shutdownTimeoutMillis;
           while (!stopped) {
             long sleepTime = endTime - System.currentTimeMillis();
             if (sleepTime <= 0) {
-              log.info("Timed out while waiting for shutdown");
+              log.info("Timed out while waiting for shutdown (timeout [%,dms])", shutdownTimeoutMillis);
               stopped = true;
               break;
             }
@@ -335,6 +398,8 @@ public class KafkaSupervisor implements Supervisor
         }
         log.info("Shutdown notice handled");
 
+        taskClient.close();
+        workerExec.shutdownNow();
         exec.shutdownNow();
         started = false;
 
@@ -351,6 +416,13 @@ public class KafkaSupervisor implements Supervisor
   public SupervisorReport getStatus()
   {
     return generateReport(true);
+  }
+
+  @Override
+  public void reset(DataSourceMetadata dataSourceMetadata)
+  {
+    log.info("Posting ResetNotice");
+    notices.add(new ResetNotice(dataSourceMetadata));
   }
 
   public void possiblyRegisterListener()
@@ -392,13 +464,13 @@ public class KafkaSupervisor implements Supervisor
 
   private interface Notice
   {
-    void handle();
+    void handle() throws ExecutionException, InterruptedException, TimeoutException;
   }
 
   private class RunNotice implements Notice
   {
     @Override
-    public void handle()
+    public void handle() throws ExecutionException, InterruptedException, TimeoutException
     {
       long nowTime = System.currentTimeMillis();
       if (nowTime - lastRunTime < MAX_RUN_FREQUENCY_MILLIS) {
@@ -413,23 +485,9 @@ public class KafkaSupervisor implements Supervisor
   private class GracefulShutdownNotice extends ShutdownNotice
   {
     @Override
-    public void handle()
+    public void handle() throws InterruptedException, ExecutionException, TimeoutException
     {
-      // Prepare for shutdown by 1) killing all tasks that haven't been assigned to a worker yet, and 2) causing all
-      // running tasks to begin publishing by setting their startTime to a very long time ago so that the logic in
-      // checkTaskDuration() will be triggered. This is better than just telling these tasks to publish whatever they
-      // have, as replicas that are supposed to publish the same segment may not have read the same set of offsets.
-      for (TaskGroup taskGroup : taskGroups.values()) {
-        for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
-          if (taskInfoProvider.getTaskLocation(entry.getKey()).equals(TaskLocation.unknown())) {
-            killTask(entry.getKey());
-          } else {
-            entry.getValue().startTime = new DateTime(0);
-          }
-        }
-      }
-
-      checkTaskDuration();
+      gracefulShutdownInternal();
       super.handle();
     }
   }
@@ -437,7 +495,7 @@ public class KafkaSupervisor implements Supervisor
   private class ShutdownNotice implements Notice
   {
     @Override
-    public void handle()
+    public void handle() throws InterruptedException, ExecutionException, TimeoutException
     {
       consumer.close();
 
@@ -448,8 +506,139 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
+  private class ResetNotice implements Notice
+  {
+    final DataSourceMetadata dataSourceMetadata;
+
+    ResetNotice(DataSourceMetadata dataSourceMetadata)
+    {
+      this.dataSourceMetadata = dataSourceMetadata;
+    }
+
+    @Override
+    public void handle()
+    {
+      log.makeAlert("Resetting dataSource [%s]", dataSource).emit();
+      resetInternal(dataSourceMetadata);
+    }
+  }
+
   @VisibleForTesting
-  void runInternal()
+  void resetInternal(DataSourceMetadata dataSourceMetadata)
+  {
+    if (dataSourceMetadata == null) {
+      // Reset everything
+      boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
+      log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
+      killTaskGroupForPartitions(JavaCompatUtils.keySet(taskGroups));
+    } else if (!(dataSourceMetadata instanceof KafkaDataSourceMetadata)) {
+      throw new IAE("Expected KafkaDataSourceMetadata but found instance of [%s]", dataSourceMetadata.getClass());
+    } else {
+      // Reset only the partitions in dataSourceMetadata if it has not been reset yet
+      final KafkaDataSourceMetadata resetKafkaMetadata = (KafkaDataSourceMetadata) dataSourceMetadata;
+
+      if (resetKafkaMetadata.getKafkaPartitions().getTopic().equals(ioConfig.getTopic())) {
+        // metadata can be null
+        final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+        if (metadata != null && !(metadata instanceof KafkaDataSourceMetadata)) {
+          throw new IAE(
+              "Expected KafkaDataSourceMetadata from metadata store but found instance of [%s]",
+              metadata.getClass()
+          );
+        }
+        final KafkaDataSourceMetadata currentMetadata = (KafkaDataSourceMetadata) metadata;
+
+        // defend against consecutive reset requests from replicas
+        // as well as the case where the metadata store do not have an entry for the reset partitions
+        boolean doReset = false;
+        for (Map.Entry<Integer, Long> resetPartitionOffset : resetKafkaMetadata.getKafkaPartitions()
+                                                                               .getPartitionOffsetMap()
+                                                                               .entrySet()) {
+          final Long partitionOffsetInMetadataStore = currentMetadata == null
+                                                      ? null
+                                                      : currentMetadata.getKafkaPartitions()
+                                                                       .getPartitionOffsetMap()
+                                                                       .get(resetPartitionOffset.getKey());
+          final TaskGroup partitionTaskGroup = taskGroups.get(getTaskGroupIdForPartition(resetPartitionOffset.getKey()));
+          if (partitionOffsetInMetadataStore != null ||
+              (partitionTaskGroup != null && partitionTaskGroup.partitionOffsets.get(resetPartitionOffset.getKey())
+                                                                                .equals(resetPartitionOffset.getValue()))) {
+            doReset = true;
+            break;
+          }
+        }
+
+        if (!doReset) {
+          return;
+        }
+
+        boolean metadataUpdateSuccess = false;
+        if (currentMetadata == null) {
+          metadataUpdateSuccess = true;
+        } else {
+          final DataSourceMetadata newMetadata = currentMetadata.minus(resetKafkaMetadata);
+          try {
+            metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, newMetadata);
+          }
+          catch (IOException e) {
+            log.error("Resetting DataSourceMetadata failed [%s]", e.getMessage());
+            Throwables.propagate(e);
+          }
+        }
+        if (metadataUpdateSuccess) {
+          killTaskGroupForPartitions(JavaCompatUtils.keySet(resetKafkaMetadata.getKafkaPartitions()
+                                                                              .getPartitionOffsetMap()));
+        } else {
+          throw new ISE("Unable to reset metadata");
+        }
+      } else {
+        log.warn(
+            "Reset metadata topic [%s] and supervisor's topic [%s] do not match",
+            resetKafkaMetadata.getKafkaPartitions().getTopic(),
+            ioConfig.getTopic()
+        );
+      }
+    }
+  }
+
+  private void killTaskGroupForPartitions(Set<Integer> partitions)
+  {
+    for (Integer partition : partitions) {
+      TaskGroup taskGroup = taskGroups.get(getTaskGroupIdForPartition(partition));
+      if (taskGroup != null) {
+        // kill all tasks in this task group
+        for (String taskId : JavaCompatUtils.keySet(taskGroup.tasks)) {
+          log.info("Reset dataSource[%s] - killing task [%s]", dataSource, taskId);
+          killTask(taskId);
+        }
+      }
+      partitionGroups.remove(getTaskGroupIdForPartition(partition));
+      taskGroups.remove(getTaskGroupIdForPartition(partition));
+    }
+  }
+
+  @VisibleForTesting
+  void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
+  {
+    // Prepare for shutdown by 1) killing all tasks that haven't been assigned to a worker yet, and 2) causing all
+    // running tasks to begin publishing by setting their startTime to a very long time ago so that the logic in
+    // checkTaskDuration() will be triggered. This is better than just telling these tasks to publish whatever they
+    // have, as replicas that are supposed to publish the same segment may not have read the same set of offsets.
+    for (TaskGroup taskGroup : taskGroups.values()) {
+      for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
+        if (taskInfoProvider.getTaskLocation(entry.getKey()).equals(TaskLocation.unknown())) {
+          killTask(entry.getKey());
+        } else {
+          entry.getValue().startTime = new DateTime(0);
+        }
+      }
+    }
+
+    checkTaskDuration();
+  }
+
+  @VisibleForTesting
+  void runInternal() throws ExecutionException, InterruptedException, TimeoutException
   {
     possiblyRegisterListener();
     updatePartitionDataFromKafka();
@@ -484,7 +673,7 @@ public class KafkaSupervisor implements Supervisor
     String dataSchema, tuningConfig;
     try {
       dataSchema = sortingMapper.writeValueAsString(spec.getDataSchema());
-      tuningConfig = sortingMapper.writeValueAsString(spec.getTuningConfig());
+      tuningConfig = sortingMapper.writeValueAsString(taskTuningConfig);
     }
     catch (JsonProcessingException e) {
       throw Throwables.propagate(e);
@@ -508,11 +697,13 @@ public class KafkaSupervisor implements Supervisor
   private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
   {
     final Properties props = new Properties();
+
+    props.setProperty("metadata.max.age.ms", "10000");
+    props.setProperty("group.id", String.format("kafka-supervisor-%s", getRandomId()));
+
     props.putAll(ioConfig.getConsumerProperties());
 
     props.setProperty("enable.auto.commit", "false");
-    props.setProperty("metadata.max.age.ms", "10000");
-    props.setProperty("group.id", String.format("kafka-supervisor-%s", getRandomId()));
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
@@ -547,118 +738,166 @@ public class KafkaSupervisor implements Supervisor
     for (int partition = 0; partition < numPartitions; partition++) {
       int taskGroupId = getTaskGroupIdForPartition(partition);
 
-      if (partitionGroups.get(taskGroupId) == null) {
-        partitionGroups.put(taskGroupId, new HashMap<Integer, Long>());
-      }
+      partitionGroups.putIfAbsent(taskGroupId, new ConcurrentHashMap<Integer, Long>());
 
-      Map<Integer, Long> partitionMap = partitionGroups.get(taskGroupId);
-      if (!partitionMap.containsKey(partition)) {
+      ConcurrentHashMap<Integer, Long> partitionMap = partitionGroups.get(taskGroupId);
+
+      // The starting offset for a new partition in [partitionGroups] is initially set to NOT_SET; when a new task group
+      // is created and is assigned partitions, if the offset in [partitionGroups] is NOT_SET it will take the starting
+      // offset value from the metadata store, and if it can't find it there, from Kafka. Once a task begins
+      // publishing, the offset in partitionGroups will be updated to the ending offset of the publishing-but-not-yet-
+      // completed task, which will cause the next set of tasks to begin reading from where the previous task left
+      // off. If that previous task now fails, we will set the offset in [partitionGroups] back to NOT_SET which will
+      // cause successive tasks to again grab their starting offset from metadata store. This mechanism allows us to
+      // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
+      // failures during publishing.
+      if (partitionMap.putIfAbsent(partition, NOT_SET) == null) {
         log.info(
-            "New partition [%d] discovered for topic [%s], adding to task group [%d]",
+            "New partition [%d] discovered for topic [%s], added to task group [%d]",
             partition,
             ioConfig.getTopic(),
             taskGroupId
         );
-
-        // The starting offset for a new partition in [partitionGroups] is initially set to null; when a new task group
-        // is created and is assigned partitions, if the offset in [partitionGroups] is null it will take the starting
-        // offset value from the metadata store, and if it can't find it there, from Kafka. Once a task begins
-        // publishing, the offset in partitionGroups will be updated to the ending offset of the publishing-but-not-yet-
-        // completed task, which will cause the next set of tasks to begin reading from where the previous task left
-        // off. If that previous task now fails, we will set the offset in [partitionGroups] back to null which will
-        // cause successive tasks to again grab their starting offset from metadata store. This mechanism allows us to
-        // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
-        // failures during publishing.
-        partitionMap.put(partition, null);
       }
     }
   }
 
-  private void discoverTasks()
+  private void discoverTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
     int taskCount = 0;
+    List<String> futureTaskIds = Lists.newArrayList();
+    List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
     List<Task> tasks = taskStorage.getActiveTasks();
 
     for (Task task : tasks) {
-      if (task instanceof KafkaIndexTask && dataSource.equals(task.getDataSource())) {
-        taskCount++;
-        KafkaIndexTask kafkaTask = (KafkaIndexTask) task;
-        String taskId = task.getId();
+      if (!(task instanceof KafkaIndexTask) || !dataSource.equals(task.getDataSource())) {
+        continue;
+      }
 
-        // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
-        // later determine that this task is actively reading, we will make sure that it matches our current partition
-        // allocation (getTaskGroupIdForPartition(partition) should return the same value for every partition being read
-        // by this task) and kill it if it is not compatible. If the task is instead found to be in the publishing
-        // state, we will permit it to complete even if it doesn't match our current partition allocation to support
-        // seamless schema migration.
+      taskCount++;
+      final KafkaIndexTask kafkaTask = (KafkaIndexTask) task;
+      final String taskId = task.getId();
 
-        Iterator<Integer> it = kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap().keySet().iterator();
-        Integer taskGroupId = (it.hasNext() ? getTaskGroupIdForPartition(it.next()) : null);
+      // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
+      // later determine that this task is actively reading, we will make sure that it matches our current partition
+      // allocation (getTaskGroupIdForPartition(partition) should return the same value for every partition being read
+      // by this task) and kill it if it is not compatible. If the task is instead found to be in the publishing
+      // state, we will permit it to complete even if it doesn't match our current partition allocation to support
+      // seamless schema migration.
 
-        if (taskGroupId != null) {
-          // check to see if we already know about this task, either in [taskGroups] or in [pendingCompletionTaskGroups]
-          // and if not add it to taskGroups or pendingCompletionTaskGroups (if status = PUBLISHING)
-          TaskGroup taskGroup = taskGroups.get(taskGroupId);
-          if (!isTaskInPendingCompletionGroups(taskId) && (taskGroup == null || !taskGroup.tasks.containsKey(taskId))) {
-            Optional<KafkaIndexTask.Status> status = getTaskStatus(taskId);
-            if (status.isPresent() && status.get() == KafkaIndexTask.Status.PUBLISHING) {
-              addDiscoveredTaskToPendingCompletionTaskGroups(
-                  taskGroupId,
-                  taskId,
-                  kafkaTask.getIOConfig()
-                           .getStartPartitions()
-                           .getPartitionOffsetMap()
-              );
+      Iterator<Integer> it = kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap().keySet().iterator();
+      final Integer taskGroupId = (it.hasNext() ? getTaskGroupIdForPartition(it.next()) : null);
 
-              // update partitionGroups with the publishing task's offsets (if they are greater than what is existing)
-              // so that the next tasks will start reading from where this task left off
-              Map<Integer, Long> publishingTaskCurrentOffsets = getCurrentOffsets(taskId, true);
-              for (Map.Entry<Integer, Long> entry : publishingTaskCurrentOffsets.entrySet()) {
-                Integer partition = entry.getKey();
-                Long offset = entry.getValue();
-                Map<Integer, Long> partitionOffsets = partitionGroups.get(getTaskGroupIdForPartition(partition));
-                if (partitionOffsets.get(partition) == null || partitionOffsets.get(partition) < offset) {
-                  partitionOffsets.put(partition, offset);
-                }
-              }
+      if (taskGroupId != null) {
+        // check to see if we already know about this task, either in [taskGroups] or in [pendingCompletionTaskGroups]
+        // and if not add it to taskGroups or pendingCompletionTaskGroups (if status = PUBLISHING)
+        TaskGroup taskGroup = taskGroups.get(taskGroupId);
+        if (!isTaskInPendingCompletionGroups(taskId) && (taskGroup == null || !taskGroup.tasks.containsKey(taskId))) {
 
-            } else {
-              for (Integer partition : kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap().keySet()) {
-                if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
-                  log.warn("Stopping task [%s] which does not match the expected partition allocation", taskId);
-                  stopTask(taskId, false);
-                  taskGroupId = null;
-                  break;
-                }
-              }
+          futureTaskIds.add(taskId);
+          futures.add(
+              Futures.transform(
+                  taskClient.getStatusAsync(taskId), new Function<KafkaIndexTask.Status, Boolean>()
+                  {
+                    @Override
+                    public Boolean apply(KafkaIndexTask.Status status)
+                    {
+                      if (status == KafkaIndexTask.Status.PUBLISHING) {
+                        addDiscoveredTaskToPendingCompletionTaskGroups(
+                            taskGroupId,
+                            taskId,
+                            kafkaTask.getIOConfig()
+                                     .getStartPartitions()
+                                     .getPartitionOffsetMap()
+                        );
 
-              if (taskGroupId == null) {
-                continue;
-              }
+                        // update partitionGroups with the publishing task's offsets (if they are greater than what is
+                        // existing) so that the next tasks will start reading from where this task left off
+                        Map<Integer, Long> publishingTaskCurrentOffsets = taskClient.getCurrentOffsets(taskId, true);
 
-              if (!taskGroups.containsKey(taskGroupId)) {
-                log.debug("Creating new task group [%d]", taskGroupId);
-                taskGroups.put(
-                    taskGroupId,
-                    new TaskGroup(
-                        kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap(),
-                        kafkaTask.getIOConfig().getMinimumMessageTime()
-                    )
-                );
-              }
+                        for (Map.Entry<Integer, Long> entry : publishingTaskCurrentOffsets.entrySet()) {
+                          Integer partition = entry.getKey();
+                          Long offset = entry.getValue();
+                          ConcurrentHashMap<Integer, Long> partitionOffsets = partitionGroups.get(
+                              getTaskGroupIdForPartition(partition)
+                          );
 
-              if (!isTaskCurrent(taskGroupId, taskId)) {
-                log.info("Stopping task [%s] which does not match the expected parameters and ingestion spec", taskId);
-                stopTask(taskId, false);
-              } else {
-                taskGroups.get(taskGroupId).tasks.put(taskId, new TaskData());
-              }
-            }
-          }
+                          boolean succeeded;
+                          do {
+                            succeeded = true;
+                            Long previousOffset = partitionOffsets.putIfAbsent(partition, offset);
+                            if (previousOffset != null && previousOffset < offset) {
+                              succeeded = partitionOffsets.replace(partition, previousOffset, offset);
+                            }
+                          } while (!succeeded);
+                        }
+
+                      } else {
+                        for (Integer partition : kafkaTask.getIOConfig()
+                                                          .getStartPartitions()
+                                                          .getPartitionOffsetMap()
+                                                          .keySet()) {
+                          if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
+                            log.warn(
+                                "Stopping task [%s] which does not match the expected partition allocation",
+                                taskId
+                            );
+                            try {
+                              stopTask(taskId, false).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+                            }
+                            catch (InterruptedException | ExecutionException | TimeoutException e) {
+                              log.warn(e, "Exception while stopping task");
+                            }
+                            return false;
+                          }
+                        }
+
+                        if (taskGroups.putIfAbsent(
+                            taskGroupId,
+                            new TaskGroup(
+                                ImmutableMap.copyOf(
+                                    kafkaTask.getIOConfig()
+                                             .getStartPartitions()
+                                             .getPartitionOffsetMap()
+                                ), kafkaTask.getIOConfig().getMinimumMessageTime()
+                            )
+                        ) == null) {
+                          log.debug("Created new task group [%d]", taskGroupId);
+                        }
+
+                        if (!isTaskCurrent(taskGroupId, taskId)) {
+                          log.info(
+                              "Stopping task [%s] which does not match the expected parameters and ingestion spec",
+                              taskId
+                          );
+                          try {
+                            stopTask(taskId, false).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+                          }
+                          catch (InterruptedException | ExecutionException | TimeoutException e) {
+                            log.warn(e, "Exception while stopping task");
+                          }
+                          return false;
+                        } else {
+                          taskGroups.get(taskGroupId).tasks.putIfAbsent(taskId, new TaskData());
+                        }
+                      }
+                      return true;
+                    }
+                  }, workerExec
+              )
+          );
         }
       }
     }
 
+    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      if (results.get(i) == null) {
+        String taskId = futureTaskIds.get(i);
+        log.warn("Task [%s] failed to return status, killing task", taskId);
+        killTask(taskId);
+      }
+    }
     log.debug("Found [%d] Kafka indexing tasks for dataSource [%s]", taskCount, dataSource);
   }
 
@@ -668,16 +907,13 @@ public class KafkaSupervisor implements Supervisor
       Map<Integer, Long> startingPartitions
   )
   {
-    if (!pendingCompletionTaskGroups.containsKey(groupId)) {
-      pendingCompletionTaskGroups.put(groupId, Lists.<TaskGroup>newArrayList());
-    }
+    pendingCompletionTaskGroups.putIfAbsent(groupId, Lists.<TaskGroup>newCopyOnWriteArrayList());
 
-    List<TaskGroup> taskGroupList = pendingCompletionTaskGroups.get(groupId);
+    CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingCompletionTaskGroups.get(groupId);
     for (TaskGroup taskGroup : taskGroupList) {
       if (taskGroup.partitionOffsets.equals(startingPartitions)) {
-        if (!taskGroup.tasks.containsKey(taskId)) {
-          log.info("Adding discovered task [%s] to existing pending task group", taskId);
-          taskGroup.tasks.put(taskId, new TaskData());
+        if (taskGroup.tasks.putIfAbsent(taskId, new TaskData()) == null) {
+          log.info("Added discovered task [%s] to existing pending task group", taskId);
         }
         return;
       }
@@ -687,7 +923,7 @@ public class KafkaSupervisor implements Supervisor
 
     // reading the minimumMessageTime from the publishing task and setting it here is not necessary as this task cannot
     // change to a state where it will read any more events
-    TaskGroup newTaskGroup = new TaskGroup(startingPartitions, Optional.<DateTime>absent());
+    TaskGroup newTaskGroup = new TaskGroup(ImmutableMap.copyOf(startingPartitions), Optional.<DateTime>absent());
 
     newTaskGroup.tasks.put(taskId, new TaskData());
     newTaskGroup.completionTimeout = DateTime.now().plus(ioConfig.getCompletionTimeout());
@@ -695,33 +931,47 @@ public class KafkaSupervisor implements Supervisor
     taskGroupList.add(newTaskGroup);
   }
 
-  private void updateTaskStatus()
+  private void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException
   {
+    final List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    final List<String> futureTaskIds = Lists.newArrayList();
+
     // update status (and startTime if unknown) of current tasks in taskGroups
     for (TaskGroup group : taskGroups.values()) {
       for (Map.Entry<String, TaskData> entry : group.tasks.entrySet()) {
-        String taskId = entry.getKey();
-        TaskData taskData = entry.getValue();
+        final String taskId = entry.getKey();
+        final TaskData taskData = entry.getValue();
 
         if (taskData.startTime == null) {
-          try {
-            taskData.startTime = getTaskStartTime(taskId);
-            if (taskData.startTime != null) {
-              long millisRemaining = ioConfig.getTaskDuration().getMillis() - (System.currentTimeMillis()
-                                                                               - taskData.startTime.getMillis());
-              if (millisRemaining > 0) {
-                scheduledExec.schedule(
-                    buildRunTask(),
-                    millisRemaining + MAX_RUN_FREQUENCY_MILLIS,
-                    TimeUnit.MILLISECONDS
-                );
-              }
-            }
-          }
-          catch (Exception e) {
-            log.warn(e, "Task [%s] failed to return start time, killing task", taskId);
-            killTask(taskId);
-          }
+          futureTaskIds.add(taskId);
+          futures.add(
+              Futures.transform(
+                  taskClient.getStartTimeAsync(taskId), new Function<DateTime, Boolean>()
+                  {
+                    @Nullable
+                    @Override
+                    public Boolean apply(@Nullable DateTime startTime)
+                    {
+                      if (startTime == null) {
+                        return false;
+                      }
+
+                      taskData.startTime = startTime;
+                      long millisRemaining = ioConfig.getTaskDuration().getMillis() - (System.currentTimeMillis()
+                                                                                       - taskData.startTime.getMillis());
+                      if (millisRemaining > 0) {
+                        scheduledExec.schedule(
+                            buildRunTask(),
+                            millisRemaining + MAX_RUN_FREQUENCY_MILLIS,
+                            TimeUnit.MILLISECONDS
+                        );
+                      }
+
+                      return true;
+                    }
+                  }, workerExec
+              )
+          );
         }
 
         taskData.status = taskStorage.getStatus(taskId).get();
@@ -736,15 +986,27 @@ public class KafkaSupervisor implements Supervisor
         }
       }
     }
+
+    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      // false means the task hasn't started running yet and that's okay; null means it should be running but the HTTP
+      // request threw an exception so kill the task
+      if (results.get(i) == null) {
+        String taskId = futureTaskIds.get(i);
+        log.warn("Task [%s] failed to return start time, killing task", taskId);
+        killTask(taskId);
+      }
+    }
   }
 
-  private void checkTaskDuration()
+  private void checkTaskDuration() throws InterruptedException, ExecutionException, TimeoutException
   {
-    Iterator<Map.Entry<Integer, TaskGroup>> i = taskGroups.entrySet().iterator();
-    while (i.hasNext()) {
-      Map.Entry<Integer, TaskGroup> groupEntry = i.next();
-      Integer groupId = groupEntry.getKey();
-      TaskGroup group = groupEntry.getValue();
+    final List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
+    final List<Integer> futureGroupIds = Lists.newArrayList();
+
+    for (Map.Entry<Integer, TaskGroup> entry : taskGroups.entrySet()) {
+      Integer groupId = entry.getKey();
+      TaskGroup group = entry.getValue();
 
       // find the longest running task from this group
       DateTime earliestTaskStart = DateTime.now();
@@ -757,34 +1019,48 @@ public class KafkaSupervisor implements Supervisor
       // if this task has run longer than the configured duration, signal all tasks in the group to persist
       if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
         log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
-        Map<Integer, Long> endOffsets = signalTasksToFinish(groupId);
+        futureGroupIds.add(groupId);
+        futures.add(signalTasksToFinish(groupId));
+      }
+    }
 
+    List<Map<Integer, Long>> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int j = 0; j < results.size(); j++) {
+      Integer groupId = futureGroupIds.get(j);
+      TaskGroup group = taskGroups.get(groupId);
+      Map<Integer, Long> endOffsets = results.get(j);
+
+      if (endOffsets != null) {
         // set a timeout and put this group in pendingCompletionTaskGroups so that it can be monitored for completion
         group.completionTimeout = DateTime.now().plus(ioConfig.getCompletionTimeout());
-        if (!pendingCompletionTaskGroups.containsKey(groupId)) {
-          pendingCompletionTaskGroups.put(groupId, Lists.<TaskGroup>newArrayList());
-        }
+        pendingCompletionTaskGroups.putIfAbsent(groupId, Lists.<TaskGroup>newCopyOnWriteArrayList());
         pendingCompletionTaskGroups.get(groupId).add(group);
 
-        // if we know what the endOffsets are going to be from talking to the tasks, set them as the next startOffsets
-        if (endOffsets != null) {
-          for (Map.Entry<Integer, Long> entry : endOffsets.entrySet()) {
-            partitionGroups.get(groupId).put(entry.getKey(), entry.getValue());
-          }
+        // set endOffsets as the next startOffsets
+        for (Map.Entry<Integer, Long> entry : endOffsets.entrySet()) {
+          partitionGroups.get(groupId).put(entry.getKey(), entry.getValue());
         }
-
-        // remove this task group from the list of current task groups now that it has been handled
-        i.remove();
+      } else {
+        log.warn(
+            "All tasks in group [%s] failed to transition to publishing state, killing tasks [%s]",
+            groupId,
+            group.taskIds()
+        );
+        for (String id : group.taskIds()) {
+          killTask(id);
+        }
       }
+
+      // remove this task group from the list of current task groups now that it has been handled
+      taskGroups.remove(groupId);
     }
   }
 
-  private Map<Integer, Long> signalTasksToFinish(int groupId)
+  private ListenableFuture<Map<Integer, Long>> signalTasksToFinish(final int groupId)
   {
-    TaskGroup taskGroup = taskGroups.get(groupId);
+    final TaskGroup taskGroup = taskGroups.get(groupId);
 
-    // 1) Pause running tasks and build a map of the highest offset read by any task in the group for each partition
-    Map<Integer, Long> endOffsets = new HashMap<>();
+    // 1) Check if any task completed (in which case we're done) and kill unassigned tasks
     Iterator<Map.Entry<String, TaskData>> i = taskGroup.tasks.entrySet().iterator();
     while (i.hasNext()) {
       Map.Entry<String, TaskData> taskEntry = i.next();
@@ -796,8 +1072,17 @@ public class KafkaSupervisor implements Supervisor
         // This will cause us to create a new set of tasks next cycle that will start from the offsets in
         // metadata store (which will have advanced if we succeeded in publishing and will remain the same if publishing
         // failed and we need to re-ingest)
-        stopTasksInGroup(taskGroup);
-        return null;
+        return Futures.transform(
+            stopTasksInGroup(taskGroup), new Function<Object, Map<Integer, Long>>()
+            {
+              @Nullable
+              @Override
+              public Map<Integer, Long> apply(@Nullable Object input)
+              {
+                return null;
+              }
+            }
+        );
       }
 
       if (task.status.isRunnable()) {
@@ -805,52 +1090,85 @@ public class KafkaSupervisor implements Supervisor
           log.info("Killing task [%s] which hasn't been assigned to a worker", taskId);
           killTask(taskId);
           i.remove();
-        } else {
-          Map<Integer, Long> currentOffsets;
-          try {
-            currentOffsets = taskClient.pause(taskId); // pause task and get offsets
-          }
-          catch (Exception e) {
-            log.warn(e, "Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
-            killTask(taskId);
-            i.remove();
-            continue;
-          }
+        }
+      }
+    }
 
-          for (Map.Entry<Integer, Long> offset : currentOffsets.entrySet()) {
-            if (!endOffsets.containsKey(offset.getKey())
-                || endOffsets.get(offset.getKey()).compareTo(offset.getValue()) < 0) {
-              endOffsets.put(offset.getKey(), offset.getValue());
+    // 2) Pause running tasks
+    final List<ListenableFuture<Map<Integer, Long>>> pauseFutures = Lists.newArrayList();
+    final List<String> pauseTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
+    for (final String taskId : pauseTaskIds) {
+      pauseFutures.add(taskClient.pauseAsync(taskId));
+    }
+
+    return Futures.transform(
+        Futures.successfulAsList(pauseFutures), new Function<List<Map<Integer, Long>>, Map<Integer, Long>>()
+        {
+          @Nullable
+          @Override
+          public Map<Integer, Long> apply(List<Map<Integer, Long>> input)
+          {
+            // 3) Build a map of the highest offset read by any task in the group for each partition
+            final Map<Integer, Long> endOffsets = new HashMap<>();
+            for (int i = 0; i < input.size(); i++) {
+              Map<Integer, Long> result = input.get(i);
+
+              if (result == null || result.isEmpty()) { // kill tasks that didn't return a value
+                String taskId = pauseTaskIds.get(i);
+                log.warn("Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
+                killTask(taskId);
+                taskGroup.tasks.remove(taskId);
+
+              } else { // otherwise build a map of the highest offsets seen
+                for (Map.Entry<Integer, Long> offset : result.entrySet()) {
+                  if (!endOffsets.containsKey(offset.getKey())
+                      || endOffsets.get(offset.getKey()).compareTo(offset.getValue()) < 0) {
+                    endOffsets.put(offset.getKey(), offset.getValue());
+                  }
+                }
+              }
             }
+
+            // 4) Set the end offsets for each task to the values from step 3 and resume the tasks. All the tasks should
+            //    finish reading and start publishing within a short period, depending on how in sync the tasks were.
+            final List<ListenableFuture<Boolean>> setEndOffsetFutures = Lists.newArrayList();
+            final List<String> setEndOffsetTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
+
+            if (setEndOffsetTaskIds.isEmpty()) {
+              log.info("All tasks in taskGroup [%d] have failed, tasks will be re-created", groupId);
+              return null;
+            }
+
+            log.info("Setting endOffsets for tasks in taskGroup [%d] to %s and resuming", groupId, endOffsets);
+            for (final String taskId : setEndOffsetTaskIds) {
+              setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, true));
+            }
+
+            try {
+              List<Boolean> results = Futures.successfulAsList(setEndOffsetFutures)
+                                             .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+              for (int i = 0; i < results.size(); i++) {
+                if (results.get(i) == null || !results.get(i)) {
+                  String taskId = setEndOffsetTaskIds.get(i);
+                  log.warn("Task [%s] failed to respond to [set end offsets] in a timely manner, killing task", taskId);
+                  killTask(taskId);
+                  taskGroup.tasks.remove(taskId);
+                }
+              }
+            }
+            catch (Exception e) {
+              Throwables.propagate(e);
+            }
+
+            if (taskGroup.tasks.isEmpty()) {
+              log.info("All tasks in taskGroup [%d] have failed, tasks will be re-created", groupId);
+              return null;
+            }
+
+            return endOffsets;
           }
-        }
-      }
-    }
-
-    // 2) Set the end offsets for each task to the values from step 1 and resume the tasks. All the tasks should
-    //    finish reading and start publishing within a short period of time, depending on how in sync the tasks were.
-    log.info("Setting endOffsets for tasks in taskGroup [%d] to %s and resuming", groupId, endOffsets);
-    i = taskGroup.tasks.entrySet().iterator();
-    while (i.hasNext()) {
-      Map.Entry<String, TaskData> taskEntry = i.next();
-      String taskId = taskEntry.getKey();
-      TaskData task = taskEntry.getValue();
-
-      if (task.status.isRunnable()) {
-        try {
-          taskClient.setEndOffsets(taskId, endOffsets, true);
-        }
-        catch (Exception e) {
-          log.warn(e, "Task [%s] failed to respond to [set end offsets] in a timely manner, killing task", taskId);
-          killTask(taskId);
-          i.remove();
-        }
-      }
-    }
-
-    // 3) Return the ending offsets so we can start the next set of tasks from where these tasks ended while the current
-    //    set of tasks are publishing.
-    return endOffsets;
+        }, workerExec
+    );
   }
 
   /**
@@ -861,22 +1179,25 @@ public class KafkaSupervisor implements Supervisor
    * starting offset for subsequent task groups is no longer valid, and subsequent tasks would fail as soon as they
    * attempted to publish because of the contiguous range consistency check.
    */
-  private void checkPendingCompletionTasks()
+  private void checkPendingCompletionTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
-    for (Map.Entry<Integer, List<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
+    List<ListenableFuture<?>> futures = Lists.newArrayList();
+
+    for (Map.Entry<Integer, CopyOnWriteArrayList<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
 
       boolean stopTasksInTaskGroup = false;
       Integer groupId = pendingGroupList.getKey();
-      Iterator<TaskGroup> iTaskGroup = pendingGroupList.getValue().iterator();
-      while (iTaskGroup.hasNext()) {
+      CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingGroupList.getValue();
+      List<TaskGroup> toRemove = Lists.newArrayList();
+
+      for (TaskGroup group : taskGroupList) {
         boolean foundSuccess = false, entireTaskGroupFailed = false;
-        TaskGroup group = iTaskGroup.next();
 
         if (stopTasksInTaskGroup) {
           // One of the earlier groups that was handling the same partition set timed out before the segments were
           // published so stop any additional groups handling the same partition set that are pending completion.
-          stopTasksInGroup(group);
-          iTaskGroup.remove();
+          futures.add(stopTasksInGroup(group));
+          toRemove.add(group);
           continue;
         }
 
@@ -896,10 +1217,10 @@ public class KafkaSupervisor implements Supervisor
           if (task.getValue().status.isSuccess()) {
             // If one of the pending completion tasks was successful, stop the rest of the tasks in the group as
             // we no longer need them to publish their segment.
-            log.info("Task [%s] completed successfully, stopping tasks %s", task.getKey(), group.tasks.keySet());
-            stopTasksInGroup(group);
+            log.info("Task [%s] completed successfully, stopping tasks %s", task.getKey(), group.taskIds());
+            futures.add(stopTasksInGroup(group));
             foundSuccess = true;
-            iTaskGroup.remove(); // remove the TaskGroup from the list of pending completion task groups
+            toRemove.add(group); // remove the TaskGroup from the list of pending completion task groups
             break; // skip iterating the rest of the tasks in this group as they've all been stopped now
           }
         }
@@ -910,7 +1231,7 @@ public class KafkaSupervisor implements Supervisor
           } else {
             log.makeAlert(
                 "No task in [%s] succeeded before the completion timeout elapsed [%s]!",
-                group.tasks.keySet(),
+                group.taskIds(),
                 ioConfig.getCompletionTimeout()
             ).emit();
           }
@@ -919,22 +1240,28 @@ public class KafkaSupervisor implements Supervisor
           partitionGroups.remove(groupId);
 
           // stop all the tasks in this pending completion group
-          stopTasksInGroup(group);
+          futures.add(stopTasksInGroup(group));
 
           // set a flag so the other pending completion groups for this set of partitions will also stop
           stopTasksInTaskGroup = true;
 
           // stop all the tasks in the currently reading task group and remove the bad task group
-          stopTasksInGroup(taskGroups.remove(groupId));
+          futures.add(stopTasksInGroup(taskGroups.remove(groupId)));
 
-          iTaskGroup.remove();
+          toRemove.add(group);
         }
       }
+
+      taskGroupList.removeAll(toRemove);
     }
+
+    // wait for all task shutdowns to complete before returning
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
-  private void checkCurrentTaskState()
+  private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
+    List<ListenableFuture<?>> futures = Lists.newArrayList();
     Iterator<Map.Entry<Integer, TaskGroup>> iTaskGroups = taskGroups.entrySet().iterator();
     while (iTaskGroups.hasNext()) {
       Map.Entry<Integer, TaskGroup> taskGroupEntry = iTaskGroups.next();
@@ -947,7 +1274,7 @@ public class KafkaSupervisor implements Supervisor
       //   2) Remove any tasks that have failed from the list
       //   3) If any task completed successfully, stop all the tasks in this group and move to the next group
 
-      log.debug("Task group [%d] pre-pruning: %s", groupId, taskGroup.tasks.keySet());
+      log.debug("Task group [%d] pre-pruning: %s", groupId, taskGroup.taskIds());
 
       Iterator<Map.Entry<String, TaskData>> iTasks = taskGroup.tasks.entrySet().iterator();
       while (iTasks.hasNext()) {
@@ -958,7 +1285,7 @@ public class KafkaSupervisor implements Supervisor
         // stop and remove bad tasks from the task group
         if (!isTaskCurrent(groupId, taskId)) {
           log.info("Stopping task [%s] which does not match the expected offset range and ingestion spec", taskId);
-          stopTask(taskId, false);
+          futures.add(stopTask(taskId, false));
           iTasks.remove();
           continue;
         }
@@ -972,21 +1299,28 @@ public class KafkaSupervisor implements Supervisor
         // check for successful tasks, and if we find one, stop all tasks in the group and remove the group so it can
         // be recreated with the next set of offsets
         if (taskData.status.isSuccess()) {
-          stopTasksInGroup(taskGroup);
+          futures.add(stopTasksInGroup(taskGroup));
           iTaskGroups.remove();
           break;
         }
       }
-      log.debug("Task group [%d] post-pruning: %s", groupId, taskGroup.tasks.keySet());
+      log.debug("Task group [%d] post-pruning: %s", groupId, taskGroup.taskIds());
     }
+
+    // wait for all task shutdowns to complete before returning
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
   void createNewTasks()
   {
     // check that there is a current task group for each group of partitions in [partitionGroups]
-    for (Integer groupId : partitionGroups.keySet()) {
+    for (Integer groupId : JavaCompatUtils.keySet(partitionGroups)) {
       if (!taskGroups.containsKey(groupId)) {
-        log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
+        log.info(
+            "Creating new task group [%d] for partitions %s",
+            groupId,
+            JavaCompatUtils.keySet(partitionGroups.get(groupId))
+        );
 
         Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
             DateTime.now().minus(ioConfig.getLateMessageRejectionPeriod().get())
@@ -1048,9 +1382,9 @@ public class KafkaSupervisor implements Supervisor
           taskId,
           new TaskResource(sequenceName, 1),
           spec.getDataSchema(),
-          spec.getTuningConfig(),
+          taskTuningConfig,
           kafkaIOConfig,
-          ImmutableMap.<String, Object>of(),
+          spec.getContext(),
           null
       );
 
@@ -1068,23 +1402,23 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private Map<Integer, Long> generateStartingOffsetsForPartitionGroup(int groupId)
+  private ImmutableMap<Integer, Long> generateStartingOffsetsForPartitionGroup(int groupId)
   {
-    Map<Integer, Long> startingOffsets = new HashMap<>();
+    ImmutableMap.Builder<Integer, Long> builder = ImmutableMap.builder();
     for (Map.Entry<Integer, Long> entry : partitionGroups.get(groupId).entrySet()) {
       Integer partition = entry.getKey();
       Long offset = entry.getValue();
 
-      if (offset != null) {
+      if (offset != null && offset != NOT_SET) {
         // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
-        startingOffsets.put(partition, offset);
+        builder.put(partition, offset);
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the offsets) then
         // get the offset from metadata storage (if available) or Kafka (otherwise)
-        startingOffsets.put(partition, getOffsetFromStorageForPartition(partition));
+        builder.put(partition, getOffsetFromStorageForPartition(partition));
       }
     }
-    return startingOffsets;
+    return builder.build();
   }
 
   /**
@@ -1102,8 +1436,9 @@ public class KafkaSupervisor implements Supervisor
       long latestKafkaOffset = getOffsetFromKafkaForPartition(partition, false);
       if (offset > latestKafkaOffset) {
         throw new ISE(
-            "Offset in metadata storage [%,d] > latest Kafka offset [%,d] for partition [%d]. If your Kafka offsets have"
-            + " been reset, you will need to remove the entry for [%s] from the dataSource table.",
+            "Offset in metadata storage [%,d] > latest Kafka offset [%,d] for partition[%d] dataSource[%s]. If these "
+            + "messages are no longer available (perhaps you deleted and re-created your Kafka topic) you can use the "
+            + "supervisor reset API to restart ingestion.",
             offset,
             latestKafkaOffset,
             partition,
@@ -1174,32 +1509,39 @@ public class KafkaSupervisor implements Supervisor
     return generateSequenceName(taskGroupId).equals(taskSequenceName);
   }
 
-  private void stopTasksInGroup(TaskGroup taskGroup)
+  private ListenableFuture<?> stopTasksInGroup(TaskGroup taskGroup)
   {
     if (taskGroup == null) {
-      return;
+      return Futures.immediateFuture(null);
     }
 
+    final List<ListenableFuture<Void>> futures = Lists.newArrayList();
     for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
       if (!entry.getValue().status.isComplete()) {
-        stopTask(entry.getKey(), false);
+        futures.add(stopTask(entry.getKey(), false));
       }
     }
+
+    return Futures.successfulAsList(futures);
   }
 
-  private void stopTask(final String id, final boolean publish)
+  private ListenableFuture<Void> stopTask(final String id, final boolean publish)
   {
-    if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
-      try {
-        taskClient.stop(id, publish);
-      }
-      catch (Exception e) {
-        log.warn(e, "Task [%s] failed to stop in a timely manner, killing task", id);
-        killTask(id);
-      }
-    } else {
-      killTask(id);
-    }
+    return Futures.transform(
+        taskClient.stopAsync(id, publish), new Function<Boolean, Void>()
+        {
+          @Nullable
+          @Override
+          public Void apply(@Nullable Boolean result)
+          {
+            if (result == null || !result) {
+              log.info("Task [%s] failed to stop in a timely manner, killing task", id);
+              killTask(id);
+            }
+            return null;
+          }
+        }
+    );
   }
 
   private void killTask(final String id)
@@ -1210,47 +1552,6 @@ public class KafkaSupervisor implements Supervisor
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
     }
-  }
-
-  private DateTime getTaskStartTime(final String id)
-  {
-    if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
-      DateTime startTime = taskClient.getStartTime(id, false);
-      log.debug("Received start time of [%s] from task [%s]", startTime, id);
-      return startTime;
-    }
-
-    return null;
-  }
-
-  private Optional<KafkaIndexTask.Status> getTaskStatus(final String id)
-  {
-    if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
-      try {
-        return Optional.of(taskClient.getStatus(id));
-      }
-      catch (Exception e) {
-        log.warn(e, "Failed to get status for task [%s]", id);
-      }
-    }
-
-    return Optional.absent();
-  }
-
-  private Map<Integer, Long> getCurrentOffsets(final String id, final boolean retry)
-  {
-    if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
-      try {
-        return taskClient.getCurrentOffsets(id, retry);
-      }
-      catch (Exception e) {
-        // this happens regularly if generateReport() is frequently hit and a task is in transition and isn't fatal so
-        // downgrade to info without stack trace
-        log.info("Failed to get current offsets for task [%s]", id);
-      }
-    }
-
-    return ImmutableMap.of();
   }
 
   private int getTaskGroupIdForPartition(int partition)
@@ -1286,6 +1587,9 @@ public class KafkaSupervisor implements Supervisor
         ioConfig.getTaskDuration().getMillis() / 1000
     );
 
+    List<TaskReportData> taskReports = Lists.newArrayList();
+    List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
+
     try {
       for (TaskGroup taskGroup : taskGroups.values()) {
         for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
@@ -1294,19 +1598,24 @@ public class KafkaSupervisor implements Supervisor
           Long remainingSeconds = null;
           if (startTime != null) {
             remainingSeconds = Math.max(
-                0,
-                ioConfig.getTaskDuration().getMillis() - (DateTime.now().getMillis() - startTime
-                    .getMillis())
+                0, ioConfig.getTaskDuration().getMillis() - (DateTime.now().getMillis() - startTime.getMillis())
             ) / 1000;
           }
 
-          report.addActiveTask(
-              taskId,
-              (includeOffsets ? taskGroup.partitionOffsets : null),
-              (includeOffsets ? getCurrentOffsets(taskId, false) : null),
-              startTime,
-              remainingSeconds
+          taskReports.add(
+              new TaskReportData(
+                  taskId,
+                  (includeOffsets ? taskGroup.partitionOffsets : null),
+                  null,
+                  startTime,
+                  remainingSeconds,
+                  TaskReportData.TaskType.ACTIVE
+              )
           );
+
+          if (includeOffsets) {
+            futures.add(taskClient.getCurrentOffsetsAsync(taskId, false));
+          }
         }
       }
 
@@ -1321,15 +1630,32 @@ public class KafkaSupervisor implements Supervisor
                                  / 1000;
             }
 
-            report.addPublishingTask(
-                taskId,
-                (includeOffsets ? taskGroup.partitionOffsets : null),
-                (includeOffsets ? getCurrentOffsets(taskId, false) : null),
-                startTime,
-                remainingSeconds
+            taskReports.add(
+                new TaskReportData(
+                    taskId,
+                    (includeOffsets ? taskGroup.partitionOffsets : null),
+                    null,
+                    startTime,
+                    remainingSeconds,
+                    TaskReportData.TaskType.PUBLISHING
+                )
             );
+
+            if (includeOffsets) {
+              futures.add(taskClient.getCurrentOffsetsAsync(taskId, false));
+            }
           }
         }
+      }
+
+      List<Map<Integer, Long>> results = Futures.successfulAsList(futures)
+                                                .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      for (int i = 0; i < taskReports.size(); i++) {
+        TaskReportData reportData = taskReports.get(i);
+        if (includeOffsets) {
+          reportData.setCurrentOffsets(results.get(i));
+        }
+        report.addTask(reportData);
       }
     }
     catch (Exception e) {

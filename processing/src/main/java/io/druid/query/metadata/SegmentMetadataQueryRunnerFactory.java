@@ -26,10 +26,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
-import io.druid.granularity.QueryGranularity;
+import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
 import io.druid.query.ConcatQueryRunner;
@@ -127,7 +128,17 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           aggregators = null;
         }
 
-        final QueryGranularity queryGranularity;
+        final TimestampSpec timestampSpec;
+        if (query.hasTimestampSpec()) {
+          if (metadata == null) {
+            metadata = segment.asStorageAdapter().getMetadata();
+          }
+          timestampSpec = metadata != null ? metadata.getTimestampSpec() : null;
+        } else {
+          timestampSpec = null;
+        }
+
+        final Granularity queryGranularity;
         if (query.hasQueryGranularity()) {
           if (metadata == null) {
             metadata = segment.asStorageAdapter().getMetadata();
@@ -135,6 +146,19 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           queryGranularity = metadata != null ? metadata.getQueryGranularity() : null;
         } else {
           queryGranularity = null;
+        }
+
+        Boolean rollup = null;
+        if (query.hasRollup()) {
+          if (metadata == null) {
+            metadata = segment.asStorageAdapter().getMetadata();
+          }
+          rollup = metadata != null ? metadata.isRollup() : null;
+          if (rollup == null) {
+            // in this case, this segment is built before no-rollup function is coded,
+            // thus it is built with rollup
+            rollup = Boolean.TRUE;
+          }
         }
 
         return Sequences.simple(
@@ -146,7 +170,9 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     totalSize,
                     numRows,
                     aggregators,
-                    queryGranularity
+                    timestampSpec,
+                    queryGranularity,
+                    rollup
                 )
             )
         );

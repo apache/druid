@@ -31,8 +31,7 @@ import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
@@ -66,6 +65,8 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.lookup.LookupModule;
@@ -83,6 +84,7 @@ import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.QueryResource;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -200,6 +202,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
+            binder.bind(QueryCountStatsProvider.class).to(QueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
             LifecycleModule.register(binder, QueryResource.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));

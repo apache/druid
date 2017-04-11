@@ -50,7 +50,7 @@ public class VSizeIndexedIntsWriterTest
   @After
   public void tearDown() throws Exception
   {
-    ioPeon.cleanup();
+    ioPeon.close();
   }
 
   private void generateVals(final int totalSize, final int maxValue) throws IOException
@@ -78,7 +78,7 @@ public class VSizeIndexedIntsWriterTest
     writer.close();
     long writtenLength = writer.getSerializedSize();
     final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
-    writer.writeToChannel(outputChannel);
+    writer.writeToChannel(outputChannel, null);
     outputChannel.close();
 
     assertEquals(writtenLength, intsFromList.getSerializedSize());

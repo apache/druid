@@ -20,7 +20,7 @@
 package io.druid.query;
 
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.config.Config;
+import io.druid.java.util.common.config.Config;
 import org.junit.Assert;
 import org.junit.Test;
 import org.skife.config.ConfigurationObjectFactory;
@@ -42,25 +42,34 @@ public class DruidProcessingConfigTest
 
     Assert.assertEquals(1024 * 1024 * 1024, config.intermediateComputeSizeBytes());
     Assert.assertEquals(Integer.MAX_VALUE, config.poolCacheMaxCount());
-    Assert.assertTrue(config.getNumThreads() < Runtime.getRuntime().availableProcessors());
+    if (Runtime.getRuntime().availableProcessors() == 1) {
+      Assert.assertTrue(config.getNumThreads() == 1);
+    } else {
+      Assert.assertTrue(config.getNumThreads() < Runtime.getRuntime().availableProcessors());
+    }
+    Assert.assertEquals(Math.max(2, config.getNumThreads() / 4), config.getNumMergeBuffers());
     Assert.assertEquals(0, config.columnCacheSizeBytes());
     Assert.assertFalse(config.isFifo());
+    Assert.assertEquals(System.getProperty("java.io.tmpdir"), config.getTmpDir());
 
     //with non-defaults
     Properties props = new Properties();
     props.setProperty("druid.processing.buffer.sizeBytes", "1");
     props.setProperty("druid.processing.buffer.poolCacheMaxCount", "1");
-    props.setProperty("druid.processing.numThreads", "5");
+    props.setProperty("druid.processing.numThreads", "256");
     props.setProperty("druid.processing.columnCache.sizeBytes", "1");
     props.setProperty("druid.processing.fifo", "true");
+    props.setProperty("druid.processing.tmpDir", "/test/path");
 
     factory = Config.createFactory(props);
     config = factory.buildWithReplacements(DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
 
     Assert.assertEquals(1, config.intermediateComputeSizeBytes());
     Assert.assertEquals(1, config.poolCacheMaxCount());
-    Assert.assertEquals(5, config.getNumThreads());
+    Assert.assertEquals(256, config.getNumThreads());
+    Assert.assertEquals(64, config.getNumMergeBuffers());
     Assert.assertEquals(1, config.columnCacheSizeBytes());
     Assert.assertTrue(config.isFifo());
+    Assert.assertEquals("/test/path", config.getTmpDir());
   }
 }

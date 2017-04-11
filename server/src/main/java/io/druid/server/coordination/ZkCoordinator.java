@@ -21,16 +21,17 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -492,6 +493,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     finally {
       callback.execute();
     }
+  }
+
+  public Collection<DataSegment> getPendingDeleteSnapshot()
+  {
+    return ImmutableList.copyOf(segmentsToDelete);
   }
 
   private static class BackgroundSegmentAnnouncer implements AutoCloseable

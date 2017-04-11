@@ -28,6 +28,11 @@ import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
+import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.StringCardinalityAggregatorColumnSelectorStrategy;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -39,6 +44,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
   CardinalityBufferAggregator agg;
   List<DimensionSelector> selectorList;
+  ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] dimInfos;
   ByteBuffer buf;
   int pos;
 
@@ -73,22 +79,27 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
         .cycle()
         .limit(MAX);
 
-
+    final DimensionSpec dimSpec1 = new DefaultDimensionSpec("dim1", "dim1");
     final CardinalityAggregatorTest.TestDimensionSelector dim1 =
-        new CardinalityAggregatorTest.TestDimensionSelector(values);
+        new CardinalityAggregatorTest.TestDimensionSelector(values, null);
+    final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> dimInfo1 = new ColumnSelectorPlus(
+        dimSpec1.getDimension(),
+        dimSpec1.getOutputName(),
+        new StringCardinalityAggregatorColumnSelectorStrategy(),
+        dim1
+    );
 
     selectorList = Lists.newArrayList(
         (DimensionSelector) dim1
     );
 
-    agg = new CardinalityBufferAggregator(
-        selectorList,
-        byRow
-    );
+    dimInfos = new ColumnSelectorPlus[] {dimInfo1};
+
+    agg = new CardinalityBufferAggregator(dimInfos, byRow);
 
     CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.newArrayList("dim1"),
+        Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("dim1", "dim1")),
         byRow
     );
 

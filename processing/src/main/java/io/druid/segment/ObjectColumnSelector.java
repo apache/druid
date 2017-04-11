@@ -19,8 +19,12 @@
 
 package io.druid.segment;
 
-public interface ObjectColumnSelector<T>
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+
+public interface ObjectColumnSelector<T> extends ColumnValueSelector
 {
   public Class<T> classOfObject();
+
+  @CalledFromHotLoop
   public T get();
 }

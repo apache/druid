@@ -32,10 +32,7 @@ import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Module;
-import com.metamx.common.logger.Logger;
-import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -44,7 +41,6 @@ import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.GuiceInjectors;
@@ -57,6 +53,9 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -80,6 +79,7 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -132,7 +132,7 @@ public class IngestSegmentFirehoseFactoryTest
         }
     );
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withQueryGranularity(QueryGranularities.NONE)
+        .withQueryGranularity(Granularities.NONE)
         .withMinTimestamp(JodaUtils.MIN_INSTANT)
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(
@@ -202,7 +202,7 @@ public class IngestSegmentFirehoseFactoryTest
     };
     final LocalTaskActionClientFactory tac = new LocalTaskActionClientFactory(
         ts,
-        new TaskActionToolbox(tl, mdc, newMockEmitter())
+        new TaskActionToolbox(tl, mdc, newMockEmitter(), EasyMock.createMock(SupervisorManager.class))
     );
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);
@@ -238,6 +238,12 @@ public class IngestSegmentFirehoseFactoryTest
           public void kill(DataSegment segments) throws SegmentLoadingException
           {
 
+          }
+
+          @Override
+          public void killAll() throws IOException
+          {
+            throw new UnsupportedOperationException("not implemented");
           }
         },
         new DataSegmentMover()
@@ -298,7 +304,9 @@ public class IngestSegmentFirehoseFactoryTest
                     DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of()),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
                     ImmutableList.<SpatialDimensionSchema>of()
-                )
+                ),
+                null,
+                null
             )
         )
     )) {
@@ -416,7 +424,9 @@ public class IngestSegmentFirehoseFactoryTest
               DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
               ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
               ImmutableList.<SpatialDimensionSchema>of()
-          )
+          ),
+          null,
+          null
       )
   );
 
@@ -523,21 +533,6 @@ public class IngestSegmentFirehoseFactoryTest
 
   private static ServiceEmitter newMockEmitter()
   {
-    return new ServiceEmitter(null, null, null)
-    {
-      @Override
-      public void emit(Event event)
-      {
-
-      }
-
-      @Override
-      public void emit(ServiceEventBuilder builder)
-      {
-
-      }
-    };
-
-
+    return new NoopServiceEmitter();
   }
 }

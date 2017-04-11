@@ -45,9 +45,11 @@ public class DefaultObjectMapper extends ObjectMapper
     super(factory);
     registerModule(new DruidDefaultSerializersModule());
     registerModule(new GuavaModule());
-    registerModule(new QueryGranularityModule());
+    registerModule(new GranularityModule());
     registerModule(new AggregatorsModule());
     registerModule(new SegmentsModule());
+    registerModule(new StringComparatorModule());
+    registerModule(new SegmentizerModule());
 
     configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     configure(MapperFeature.AUTO_DETECT_GETTERS, false);
@@ -57,6 +59,7 @@ public class DefaultObjectMapper extends ObjectMapper
     configure(MapperFeature.AUTO_DETECT_SETTERS, false);
     configure(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS, false);
     configure(SerializationFeature.INDENT_OUTPUT, false);
+    configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, false);
   }
 
   @Override

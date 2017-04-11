@@ -1,21 +1,21 @@
 /*
-* Licensed to Metamarkets Group Inc. (Metamarkets) under one
-* or more contributor license agreements. See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership. Metamarkets licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License. You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package io.druid.data.input.impl;
 
@@ -27,8 +27,8 @@ import com.google.common.collect.Lists;
 import io.druid.TestObjectMapper;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
-import junit.framework.Assert;
 import org.joda.time.DateTime;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -49,7 +49,8 @@ public class InputRowParserSerdeTest
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "bar")), null, null),
             null,
             null
-        )
+        ),
+        null
     );
     final ByteBufferInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
@@ -142,11 +143,11 @@ public class InputRowParserSerdeTest
         ImmutableList.of("1412705931123", "123.456", "1.23E47", "hello"),
         parsed.getDimension("values")
     );
-    Assert.assertEquals(Float.POSITIVE_INFINITY, parsed.getFloatMetric("toobig"));
+    Assert.assertEquals(Float.POSITIVE_INFINITY, parsed.getFloatMetric("toobig"), 0.0);
     Assert.assertEquals(123E64, parsed.getRaw("toobig"));
-    Assert.assertEquals(123.456f, parsed.getFloatMetric("value"));
+    Assert.assertEquals(123.456f, parsed.getFloatMetric("value"), 0.0f);
     Assert.assertEquals(123456789000L, parsed.getRaw("long"));
-    Assert.assertEquals(1.23456791E11f, parsed.getFloatMetric("long"));
+    Assert.assertEquals(1.23456791E11f, parsed.getFloatMetric("long"), 0.0f);
     Assert.assertEquals(1412705931123L, parsed.getTimestampFromEpoch());
   }
 
@@ -197,7 +198,8 @@ public class InputRowParserSerdeTest
             new DimensionsSpec(null, null, null),
             flattenSpec,
             null
-        )
+        ),
+        null
     );
 
     final StringInputRowParser parser2 = jsonMapper.readValue(
@@ -225,7 +227,7 @@ public class InputRowParserSerdeTest
     List<JSONPathFieldSpec> fieldSpecs = parsedSpec.getFields();
     Assert.assertEquals(JSONPathFieldType.ROOT, fieldSpecs.get(0).getType());
     Assert.assertEquals("parseThisRootField", fieldSpecs.get(0).getName());
-    Assert.assertEquals("parseThisRootField", fieldSpecs.get(0).getExpr());
+    Assert.assertEquals(null, fieldSpecs.get(0).getExpr());
   }
 
 }

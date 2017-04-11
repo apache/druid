@@ -22,12 +22,14 @@ package io.druid.cli;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.ExtensionsConfig;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -45,7 +47,7 @@ import java.util.List;
 public class CliHadoopIndexer implements Runnable
 {
 
-  private static final String DEFAULT_HADOOP_COORDINATES = "org.apache.hadoop:hadoop-client:2.3.0";
+  private static final List<String> DEFAULT_HADOOP_COORDINATES = TaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES;
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
@@ -57,7 +59,7 @@ public class CliHadoopIndexer implements Runnable
   private List<String> coordinates;
 
   @Option(name = "--no-default-hadoop",
-          description = "don't pull down the default hadoop version (currently " + DEFAULT_HADOOP_COORDINATES + ")",
+          description = "don't pull down the default hadoop version",
           required = false)
   public boolean noDefaultHadoop;
 
@@ -74,7 +76,7 @@ public class CliHadoopIndexer implements Runnable
         allCoordinates.addAll(coordinates);
       }
       if (!noDefaultHadoop) {
-        allCoordinates.add(DEFAULT_HADOOP_COORDINATES);
+        allCoordinates.addAll(DEFAULT_HADOOP_COORDINATES);
       }
 
       final List<URL> extensionURLs = Lists.newArrayList();

@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -37,14 +37,17 @@ import java.util.List;
 public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord>
 {
   private final ParseSpec parseSpec;
+  private final boolean binaryAsString;
   private final List<String> dimensions;
 
   @JsonCreator
   public ParquetHadoopInputRowParser(
-      @JsonProperty("parseSpec") ParseSpec parseSpec
+      @JsonProperty("parseSpec") ParseSpec parseSpec,
+      @JsonProperty("binaryAsString") Boolean binaryAsString
   )
   {
     this.parseSpec = parseSpec;
+    this.binaryAsString = binaryAsString == null ? false : binaryAsString;
 
     List<DimensionSchema> dimensionSchema = parseSpec.getDimensionsSpec().getDimensions();
     this.dimensions = Lists.newArrayList();
@@ -54,12 +57,12 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   }
 
   /**
-   * imitate avro extension {@link AvroStreamInputRowParser#parseGenericRecord(GenericRecord, ParseSpec, List, boolean)}
+   * imitate avro extension {@link AvroStreamInputRowParser#parseGenericRecord(GenericRecord, ParseSpec, List, boolean, boolean)}
    */
   @Override
   public InputRow parse(GenericRecord record)
   {
-    GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, false);
+    GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, false, binaryAsString);
     TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
     DateTime dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);
     return new MapBasedInputRow(dateTime, dimensions, genericRecordAsMap);
@@ -75,6 +78,6 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new ParquetHadoopInputRowParser(parseSpec);
+    return new ParquetHadoopInputRowParser(parseSpec, binaryAsString);
   }
 }

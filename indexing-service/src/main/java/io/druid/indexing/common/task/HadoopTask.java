@@ -25,11 +25,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
-import com.metamx.common.logger.Logger;
+
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -127,9 +128,15 @@ public abstract class HadoopTask extends AbstractTask
    */
   protected ClassLoader buildClassLoader(final TaskToolbox toolbox) throws MalformedURLException
   {
+    return buildClassLoader(hadoopDependencyCoordinates, toolbox.getConfig().getDefaultHadoopCoordinates());
+  }
+
+  public static ClassLoader buildClassLoader(final List<String> hadoopDependencyCoordinates,
+                                             final List<String> defaultHadoopCoordinates) throws MalformedURLException
+  {
     final List<String> finalHadoopDependencyCoordinates = hadoopDependencyCoordinates != null
                                                           ? hadoopDependencyCoordinates
-                                                          : toolbox.getConfig().getDefaultHadoopCoordinates();
+                                                          : defaultHadoopCoordinates;
 
     final List<URL> jobURLs = Lists.newArrayList(
         Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs())

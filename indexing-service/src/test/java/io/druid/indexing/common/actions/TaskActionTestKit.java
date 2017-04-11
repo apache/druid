@@ -26,11 +26,13 @@ import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskStorage;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.server.metrics.NoopServiceEmitter;
+import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.rules.ExternalResource;
 
@@ -91,7 +93,8 @@ public class TaskActionTestKit extends ExternalResource
     taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         metadataStorageCoordinator,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        EasyMock.createMock(SupervisorManager.class)
     );
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();

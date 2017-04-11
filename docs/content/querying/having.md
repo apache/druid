@@ -8,6 +8,36 @@ It is essentially the equivalent of the HAVING clause in SQL.
 
 Druid supports the following types of having clauses.
 
+### Query filters
+
+Query filter HavingSpecs allow all [Druid query filters](filters.html) to be used in the Having part of the query.
+
+The grammar for a query filter HavingSpec is:
+
+```json
+{
+    "type" : "filter",
+    "filter" : <any Druid query filter>
+}
+```
+
+For example, to use a selector filter:
+
+
+```json
+{
+    "type" : "filter",
+    "filter" : {
+      "type": "selector",
+      "dimension" : "<dimension>",
+      "value" : "<dimension_value>"
+    }
+}
+```
+
+You can use "filter" HavingSpecs to filter on the timestamp of result rows by applying a filter to the "\_\_time"
+column.
+
 ### Numeric filters
 
 The simplest having clause is a numeric filter.

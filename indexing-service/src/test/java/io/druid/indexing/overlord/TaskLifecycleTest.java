@@ -34,10 +34,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.metamx.common.Granularity;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Comparators;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
@@ -48,7 +45,6 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -69,8 +65,13 @@ import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -90,6 +91,7 @@ import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentKiller;
+import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -505,7 +507,8 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(emitter);
 
     taskLockbox = new TaskLockbox(taskStorage);
-    tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter));
+    tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
+        SupervisorManager.class)));
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
 
@@ -514,7 +517,7 @@ public class TaskLifecycleTest
         tac,
         emitter,
         dataSegmentPusher,
-        new LocalDataSegmentKiller(),
+        new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig()),
         new DataSegmentMover()
         {
           @Override
@@ -572,7 +575,7 @@ public class TaskLifecycleTest
         }, // segment announcer
         handoffNotifierFactory,
         queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
-        null, // query executor service
+        MoreExecutors.sameThreadExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
             new SegmentLoaderLocalCacheManager(
@@ -643,17 +646,17 @@ public class TaskLifecycleTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false, null),
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
         ),
-        mapper,
-        null
+        null,
+        MAPPER
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -701,17 +704,17 @@ public class TaskLifecycleTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P1D"))
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory()),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false, null),
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
         ),
-        mapper,
-        null
+        null,
+        MAPPER
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -1060,17 +1063,17 @@ public class TaskLifecycleTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false, null),
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null)
         ),
-        mapper,
-        null
+        null,
+        MAPPER
     );
 
     final long startTime = System.currentTimeMillis();
@@ -1165,7 +1168,7 @@ public class TaskLifecycleTest
         "test_ds",
         null,
         new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
         mapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
@@ -1187,6 +1190,7 @@ public class TaskLifecycleTest
         null,
         0,
         0,
+        null,
         null,
         null
     );

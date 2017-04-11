@@ -51,17 +51,43 @@ public class ApproximateHistogramGroupByQueryTest
 {
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
+  private String testName;
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig();
-    final GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
+    final GroupByQueryConfig v1Config = new GroupByQueryConfig()
+    {
+      @Override
+      public String getDefaultStrategy()
+      {
+        return GroupByStrategySelector.STRATEGY_V1;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v1";
+      }
+    };
+    final GroupByQueryConfig v1SingleThreadedConfig = new GroupByQueryConfig()
     {
       @Override
       public boolean isSingleThreaded()
       {
         return true;
+      }
+
+      @Override
+      public String getDefaultStrategy()
+      {
+        return GroupByStrategySelector.STRATEGY_V1;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v1SingleThreaded";
       }
     };
     final GroupByQueryConfig v2Config = new GroupByQueryConfig()
@@ -71,32 +97,47 @@ public class ApproximateHistogramGroupByQueryTest
       {
         return GroupByStrategySelector.STRATEGY_V2;
       }
+
+      @Override
+      public String toString()
+      {
+        return "v2";
+      }
     };
 
-    defaultConfig.setMaxIntermediateRows(10000);
-    singleThreadedConfig.setMaxIntermediateRows(10000);
+    v1Config.setMaxIntermediateRows(10000);
+    v1SingleThreadedConfig.setMaxIntermediateRows(10000);
 
     final List<Object[]> constructors = Lists.newArrayList();
     final List<GroupByQueryConfig> configs = ImmutableList.of(
-        defaultConfig,
-        singleThreadedConfig,
+        v1Config,
+        v1SingleThreadedConfig,
         v2Config
     );
 
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        constructors.add(new Object[]{factory, runner});
+        final String testName = String.format(
+            "config=%s, runner=%s",
+            config.toString(),
+            runner.toString()
+        );
+        constructors.add(new Object[]{testName, factory, runner});
       }
     }
 
     return constructors;
   }
 
-  public ApproximateHistogramGroupByQueryTest(GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public ApproximateHistogramGroupByQueryTest(String testName, GroupByQueryRunnerFactory factory, QueryRunner runner)
   {
+    this.testName = testName;
     this.factory = factory;
     this.runner = runner;
+
+    //Note: this is needed in order to properly register the serde for Histogram.
+    new ApproximateHistogramDruidModule().configure(null);
   }
 
   @Test

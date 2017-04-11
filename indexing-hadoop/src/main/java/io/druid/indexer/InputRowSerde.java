@@ -26,16 +26,17 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
-import com.metamx.common.IAE;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.VirtualColumns;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -87,6 +88,7 @@ public class InputRowSerde
 
         Aggregator agg = aggFactory.factorize(
             IncrementalIndex.makeColumnSelectorFactory(
+                VirtualColumns.EMPTY,
                 aggFactory,
                 supplier,
                 true
@@ -98,9 +100,9 @@ public class InputRowSerde
         catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
           if (reportParseExceptions) {
-            throw new ParseException(e, "Encountered parse error for aggregator[%s]", agg.getName());
+            throw new ParseException(e, "Encountered parse error for aggregator[%s]", k);
           }
-          log.debug(e, "Encountered parse error, skipping aggregator[%s].", agg.getName());
+          log.debug(e, "Encountered parse error, skipping aggregator[%s].", k);
         }
 
         String t = aggFactory.getTypeName();

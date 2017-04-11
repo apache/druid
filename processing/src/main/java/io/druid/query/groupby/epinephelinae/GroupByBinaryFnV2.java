@@ -20,10 +20,10 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.Maps;
-import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.AllGranularity;
+import io.druid.java.util.common.granularity.AllGranularity;
+import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
@@ -78,7 +78,7 @@ public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
     if (query.getGranularity() instanceof AllGranularity) {
       return row.getTimestamp();
     } else {
-      return query.getGranularity().toDateTime(query.getGranularity().truncate(row.getTimestamp().getMillis()));
+      return query.getGranularity().bucketStart(row.getTimestamp());
     }
   }
 }

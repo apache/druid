@@ -33,8 +33,6 @@ import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
@@ -51,6 +49,8 @@ import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.ServerConfig;
@@ -59,6 +59,7 @@ import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -95,8 +96,9 @@ public class JettyServerModule extends JerseyServletModule
     Jerseys.addResource(binder, StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
 
-    //Adding empty binding for ServletFilterHolders so that injector returns
-    //an empty set when no external modules provide ServletFilterHolder impls
+    // Adding empty binding for ServletFilterHolders and Handlers so that injector returns an empty set if none
+    // are provided by extensions.
+    Multibinder.newSetBinder(binder, Handler.class);
     Multibinder.newSetBinder(binder, ServletFilterHolder.class);
 
     MetricsModule.register(binder, JettyMonitor.class);

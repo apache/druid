@@ -23,17 +23,14 @@ import io.druid.query.filter.ValueMatcher;
 
 /**
 */
-public class BooleanValueMatcher implements ValueMatcher
+public final class BooleanValueMatcher
 {
-  private final boolean matches;
-
-  public BooleanValueMatcher(final boolean matches) {
-    this.matches = matches;
+  public static ValueMatcher of(boolean matches)
+  {
+    return matches ? TrueValueMatcher.instance() : FalseValueMatcher.instance();
   }
 
-  @Override
-  public boolean matches()
+  private BooleanValueMatcher()
   {
-    return matches;
   }
 }

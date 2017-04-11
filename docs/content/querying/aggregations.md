@@ -76,14 +76,64 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 { "type" : "longMax", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
+### First / Last aggregator
+
+First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
+
+Note that queries with first/last aggregators on a segment created with rollup enabled will return the rolled up value, and not the last value within the raw ingested data.
+
+#### `doubleFirst` aggregator
+
+`doubleFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "doubleFirst",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `doubleLast` aggregator
+
+`doubleLast` computes the metric value with the maximum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "doubleLast",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `longFirst` aggregator
+
+`longFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "longFirst",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `longLast` aggregator
+
+`longLast` computes the metric value with the maximum timestamp or 0 if no row exist
+
+```json
+{ 
+  "type" : "longLast",
+  "name" : <output_name>, 
+  "fieldName" : <metric_name>,
+}
+```
+
 ### JavaScript aggregator
 
-Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions).
-
-All JavaScript functions must return numerical values.
-
-JavaScript aggregators are much slower than the native aggregators and if performance is critical, you should implement 
-your functionality as a native aggregator.
+Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions are allowed). Your
+JavaScript functions are expected to return floating-point values.
 
 ```json
 { "type": "javascript",
@@ -111,8 +161,9 @@ your functionality as a native aggregator.
 }
 ```
 
-The JavaScript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
-use than a native aggregator.
+<div class="note info">
+JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+</div>
 
 ## Approximate Aggregations
 
@@ -127,10 +178,12 @@ instead of the cardinality aggregator if you do not care about the individual va
 {
   "type": "cardinality",
   "name": "<output_name>",
-  "fieldNames": [ <dimension1>, <dimension2>, ... ],
+  "fields": [ <dimension1>, <dimension2>, ... ],
   "byRow": <false | true> # (optional, defaults to false)
 }
 ```
+
+Each individual element of the "fields" list can be a String or [DimensionSpec](../querying/dimensionspecs.html). A String dimension in the fields list is equivalent to a DefaultDimensionSpec (no transformations).
 
 #### Cardinality by value
 
@@ -171,7 +224,7 @@ Determine the number of distinct countries people are living in or have come fro
 {
   "type": "cardinality",
   "name": "distinct_countries",
-  "fieldNames": [ "coutry_of_origin", "country_of_residence" ]
+  "fields": [ "country_of_origin", "country_of_residence" ]
 }
 ```
 
@@ -181,18 +234,45 @@ Determine the number of distinct people (i.e. combinations of first and last nam
 {
   "type": "cardinality",
   "name": "distinct_people",
-  "fieldNames": [ "first_name", "last_name" ],
+  "fields": [ "first_name", "last_name" ],
   "byRow" : true
 }
 ```
+
+Determine the number of distinct starting characters of last names
+
+```json
+{
+  "type": "cardinality",
+  "name": "distinct_last_name_first_char",
+  "fields": [
+    {
+     "type" : "extraction",
+     "dimension" : "last_name",
+     "outputName" :  "last_name_first_char",
+     "extractionFn" : { "type" : "substring", "index" : 0, "length" : 1 }
+    }
+  ],
+  "byRow" : true
+}
+```
+
 
 ### HyperUnique aggregator
 
 Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension that has been aggregated as a "hyperUnique" metric at indexing time.
 
 ```json
-{ "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
+{ 
+  "type" : "hyperUnique",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "isInputHyperUnique" : false
+}
 ```
+
+isInputHyperUnique can be set to true to index pre-computed HLL (Base64 encoded output from druid-hll is expected).
+The isInputHyperUnique field only affects ingestion-time behavior, and is ignored at query time.
 
 For more approximate aggregators, please see [theta sketches](../development/extensions-core/datasketches-aggregators.html).
 

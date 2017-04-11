@@ -20,19 +20,21 @@
 package io.druid.query.timeboundary;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import com.google.inject.Inject;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentSkippingQueryRunner;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DataSourceUtil;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -58,10 +60,24 @@ public class TimeBoundaryQueryQueryToolChest
   {
   };
 
+  private final GenericQueryMetricsFactory queryMetricsFactory;
+
+  @VisibleForTesting
+  public TimeBoundaryQueryQueryToolChest()
+  {
+    this(DefaultGenericQueryMetricsFactory.instance());
+  }
+
+  @Inject
+  public TimeBoundaryQueryQueryToolChest(GenericQueryMetricsFactory queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
+
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> segments)
   {
-    if (segments.size() <= 1) {
+    if (segments.size() <= 1 || query.hasFilters()) {
       return segments;
     }
 
@@ -107,11 +123,9 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(TimeBoundaryQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(TimeBoundaryQuery query)
   {
-    return new ServiceMetricEvent.Builder()
-            .setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()))
-            .setDimension(DruidMetrics.TYPE, query.getType());
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override
@@ -129,10 +143,16 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery> getCacheStrategy(TimeBoundaryQuery query)
+  public CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery> getCacheStrategy(final TimeBoundaryQuery query)
   {
     return new CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery>()
     {
+      @Override
+      public boolean isCacheable(TimeBoundaryQuery query, boolean willMergeRunners)
+      {
+        return true;
+      }
+
       @Override
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {

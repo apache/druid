@@ -22,14 +22,14 @@ package io.druid.tests.indexer;
 import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.guice.annotations.Global;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
 import io.druid.testing.guice.DruidTestModuleFactory;
+import io.druid.testing.guice.TestClient;
 import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.ServerDiscoveryUtil;
 import org.joda.time.DateTime;
@@ -54,7 +54,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   ServerDiscoveryFactory factory;
 
   @Inject
-  @Global
+  @TestClient
   HttpClient httpClient;
 
   @Inject

@@ -134,8 +134,8 @@ public class ListFilteredDimensionSpecTest
     Assert.assertEquals("c", selector.lookupName(0));
     Assert.assertEquals("g", selector.lookupName(1));
 
-    Assert.assertEquals(0, selector.lookupId("c"));
-    Assert.assertEquals(1, selector.lookupId("g"));
+    Assert.assertEquals(0, selector.idLookup().lookupId("c"));
+    Assert.assertEquals(1, selector.idLookup().lookupId("g"));
   }
 
   @Test
@@ -158,7 +158,35 @@ public class ListFilteredDimensionSpecTest
     Assert.assertEquals("a", selector.lookupName(0));
     Assert.assertEquals("z", selector.lookupName(23));
 
-    Assert.assertEquals(0, selector.lookupId("a"));
-    Assert.assertEquals(23, selector.lookupId("z"));
+    Assert.assertEquals(0, selector.idLookup().lookupId("a"));
+    Assert.assertEquals(23, selector.idLookup().lookupId("z"));
+  }
+
+  @Test
+  public void testDecoratorWithBlacklistUsingNonPresentValues()
+  {
+    ListFilteredDimensionSpec spec = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("foo", "bar"),
+        ImmutableSet.of("c", "gx"),
+        false
+    );
+
+    DimensionSelector selector = spec.decorate(TestDimensionSelector.instance);
+
+    Assert.assertEquals(25, selector.getValueCardinality());
+
+    IndexedInts row = selector.getRow();
+    Assert.assertEquals(2, row.size());
+    Assert.assertEquals(3, row.get(0));
+    Assert.assertEquals(5, row.get(1));
+
+    Assert.assertEquals("e", selector.lookupName(row.get(0)));
+    Assert.assertEquals("g", selector.lookupName(row.get(1)));
+
+    Assert.assertEquals("a", selector.lookupName(0));
+    Assert.assertEquals("z", selector.lookupName(24));
+
+    Assert.assertEquals(0, selector.idLookup().lookupId("a"));
+    Assert.assertEquals(24, selector.idLookup().lookupId("z"));
   }
 }

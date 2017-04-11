@@ -19,25 +19,15 @@
 
 package io.druid.query.metadata;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import io.druid.collections.StupidPool;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.Result;
-import io.druid.query.TestQueryRunners;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
-import io.druid.query.aggregation.DoubleMinAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.ListColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
@@ -47,18 +37,13 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
 import io.druid.segment.column.ValueType;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class SegmentMetadataUnionQueryTest
@@ -89,8 +74,9 @@ public class SegmentMetadataUnionQueryTest
                 new QueryableIndexSegment(
                     QueryRunnerTestHelper.segmentId,
                     TestIndex.getMMappedTestIndex()
-                )
-            ), true
+                ),
+                null
+            ), true,
         },
         new Object[]{
             QueryRunnerTestHelper.makeUnionQueryRunner(
@@ -98,7 +84,8 @@ public class SegmentMetadataUnionQueryTest
                 new IncrementalIndexSegment(
                     TestIndex.getIncrementalTestIndex(),
                     QueryRunnerTestHelper.segmentId
-                )
+                ),
+                null
             ), false
         }
     );
@@ -123,8 +110,10 @@ public class SegmentMetadataUnionQueryTest
                 null
             )
         ),
-        mmap ? 287928 : 291020,
+        mmap ? 495876 : 498656,
         4836,
+        null,
+        null,
         null,
         null
     );
@@ -132,6 +121,12 @@ public class SegmentMetadataUnionQueryTest
         .dataSource(QueryRunnerTestHelper.unionDataSource)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
         .toInclude(new ListColumnIncluderator(Lists.newArrayList("placement")))
+        .analysisTypes(
+            SegmentMetadataQuery.AnalysisType.CARDINALITY,
+            SegmentMetadataQuery.AnalysisType.SIZE,
+            SegmentMetadataQuery.AnalysisType.INTERVAL,
+            SegmentMetadataQuery.AnalysisType.MINMAX
+        )
         .build();
     List result = Sequences.toList(runner.run(query, Maps.newHashMap()), Lists.<SegmentAnalysis>newArrayList());
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");

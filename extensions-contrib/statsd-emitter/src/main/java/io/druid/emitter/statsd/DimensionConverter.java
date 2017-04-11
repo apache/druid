@@ -1,20 +1,20 @@
 /*
- *  Licensed to Metamarkets Group Inc. (Metamarkets) under one
- *  or more contributor license agreements. See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership. Metamarkets licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.emitter.statsd;
@@ -23,8 +23,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,7 +46,12 @@ public class DimensionConverter
     metricMap = readMap(mapper, dimensionMapPath);
   }
 
-  public StatsDMetric.Type addFilteredUserDims(String service, String metric, Map<String, Object> userDims, ImmutableList.Builder<String> builder)
+  public StatsDMetric addFilteredUserDims(
+      String service,
+      String metric,
+      Map<String, Object> userDims,
+      ImmutableList.Builder<String> builder
+  )
   {
      /*
         Find the metric in the map. If we cant find it try to look it up prefixed by the service name.
@@ -63,7 +69,7 @@ public class DimensionConverter
           builder.add(userDims.get(dim).toString());
         }
       }
-      return statsDMetric.type;
+      return statsDMetric;
     } else {
       return null;
     }

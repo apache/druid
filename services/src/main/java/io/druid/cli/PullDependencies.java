@@ -24,13 +24,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.internal.DefaultTeslaAether;
@@ -218,19 +219,18 @@ public class PullDependencies implements Runnable
     final File extensionsDir = new File(extensionsConfig.getDirectory());
     final File hadoopDependenciesDir = new File(extensionsConfig.getHadoopDependenciesDir());
 
-    if (clean) {
-      try {
+    try {
+      if (clean) {
         FileUtils.deleteDirectory(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
       }
-      catch (IOException e) {
-        log.error("Unable to clear extension directory at [%s]", extensionsConfig.getDirectory());
-        throw Throwables.propagate(e);
-      }
+      FileUtils.forceMkdir(extensionsDir);
+      FileUtils.forceMkdir(hadoopDependenciesDir);
     }
-
-    createRootExtensionsDirectory(extensionsDir);
-    createRootExtensionsDirectory(hadoopDependenciesDir);
+    catch (IOException e) {
+      log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);
+      throw Throwables.propagate(e);
+    }
 
     log.info(
         "Start pull-deps with local repository [%s] and remote repositories [%s]",
@@ -240,7 +240,8 @@ public class PullDependencies implements Runnable
 
     try {
       log.info("Start downloading dependencies for extension coordinates: [%s]", coordinates);
-      for (final String coordinate : coordinates) {
+      for (String coordinate : coordinates) {
+        coordinate = coordinate.trim();
         final Artifact versionedArtifact = getArtifact(coordinate);
 
         File currExtensionDir = new File(extensionsDir, versionedArtifact.getArtifactId());
@@ -456,22 +457,6 @@ public class PullDependencies implements Runnable
     }
     finally {
       System.setOut(oldOut);
-    }
-  }
-
-  private void createRootExtensionsDirectory(File atLocation)
-  {
-    if (atLocation.isDirectory()) {
-      log.info("Root extension directory [%s] already exists, skip creating");
-      return;
-    }
-    if (!atLocation.mkdirs()) {
-      throw new ISE(
-          String.format(
-              "Unable to create extensions directory at [%s]",
-              atLocation.getAbsolutePath()
-          )
-      );
     }
   }
 

@@ -22,7 +22,7 @@ package io.druid.query.spec;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 import org.joda.time.Interval;
 
 import java.util.Arrays;

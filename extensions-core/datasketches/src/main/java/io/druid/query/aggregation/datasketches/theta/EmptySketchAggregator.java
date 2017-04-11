@@ -23,11 +23,8 @@ import io.druid.query.aggregation.Aggregator;
 
 public class EmptySketchAggregator implements Aggregator
 {
-  private final String name;
-
-  public EmptySketchAggregator(String name)
+  public EmptySketchAggregator()
   {
-    this.name = name;
   }
 
   @Override
@@ -43,7 +40,7 @@ public class EmptySketchAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return SketchOperations.EMPTY_SKETCH;
+    return SketchHolder.EMPTY;
   }
 
   @Override
@@ -56,12 +53,6 @@ public class EmptySketchAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public String getName()
-  {
-    return name;
   }
 
   @Override

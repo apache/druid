@@ -27,7 +27,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
-import com.metamx.common.guava.CloseQuietly;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
@@ -38,6 +37,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.DruidMetrics;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -70,6 +70,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
@@ -189,6 +191,8 @@ public class RealtimeIndexTask extends AbstractTask
       throw new IllegalStateException("WTF?!? run with non-null plumber??!");
     }
 
+    setupTimeoutAlert();
+
     boolean normalExit = true;
 
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
@@ -297,9 +301,10 @@ public class RealtimeIndexTask extends AbstractTask
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
-    // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
-    // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
-    // NOTE: "same" segment.
+    // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip
+    // NOTE: (partitionNum_index.zip for HDFS data storage) and descriptor.json (partitionNum_descriptor.json for
+    // NOTE: HDFS data storage) to mismatch, or it can cause historical nodes to load different instances of
+    // NOTE: the "same" segment.
     final PlumberSchool plumberSchool = new RealtimePlumberSchool(
         toolbox.getEmitter(),
         toolbox.getQueryRunnerFactoryConglomerate(),
@@ -515,6 +520,28 @@ public class RealtimeIndexTask extends AbstractTask
     public void publishSegment(DataSegment segment) throws IOException
     {
       taskToolbox.publishSegments(ImmutableList.of(segment));
+    }
+  }
+
+  private void setupTimeoutAlert()
+  {
+    if (spec.getTuningConfig().getAlertTimeout() > 0) {
+      Timer timer = new Timer("RealtimeIndexTask-Timer", true);
+      timer.schedule(
+          new TimerTask()
+          {
+            @Override
+            public void run()
+            {
+              log.makeAlert(
+                  "RealtimeIndexTask for dataSource [%s] hasn't finished in configured time [%d] ms.",
+                  spec.getDataSchema().getDataSource(),
+                  spec.getTuningConfig().getAlertTimeout()
+              ).emit();
+            }
+          },
+          spec.getTuningConfig().getAlertTimeout()
+      );
     }
   }
 }

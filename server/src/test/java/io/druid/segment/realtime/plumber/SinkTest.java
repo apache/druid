@@ -21,11 +21,10 @@ package io.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.metamx.common.Granularity;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -51,7 +50,7 @@ public class SinkTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.MINUTE, null),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
         new DefaultObjectMapper()
     );
 
@@ -70,6 +69,7 @@ public class SinkTest
         null,
         0,
         0,
+        null,
         null,
         null
     );

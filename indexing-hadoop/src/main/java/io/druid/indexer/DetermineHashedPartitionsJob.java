@@ -28,12 +28,12 @@ import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
-import io.druid.granularity.QueryGranularity;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -142,12 +142,13 @@ public class DetermineHashedPartitionsJob implements Jobby
             new UniformGranularitySpec(
                 config.getGranularitySpec().getSegmentGranularity(),
                 config.getGranularitySpec().getQueryGranularity(),
+                config.getGranularitySpec().isRollup(),
                 intervals
             )
         );
-        log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());
+        log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
-      Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+      Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
@@ -189,7 +190,7 @@ public class DetermineHashedPartitionsJob implements Jobby
             }
           }
 
-          shardSpecs.put(bucket, actualSpecs);
+          shardSpecs.put(bucket.getMillis(), actualSpecs);
 
         } else {
           log.info("Path[%s] didn't exist!?", partitionInfoPath);
@@ -211,7 +212,7 @@ public class DetermineHashedPartitionsJob implements Jobby
   public static class DetermineCardinalityMapper extends HadoopDruidIndexerMapper<LongWritable, BytesWritable>
   {
     private static HashFunction hashFunction = Hashing.murmur3_128();
-    private QueryGranularity rollupGranularity = null;
+    private Granularity rollupGranularity = null;
     private Map<Interval, HyperLogLogCollector> hyperLogLogs;
     private HadoopDruidIndexerConfig config;
     private boolean determineIntervals;
@@ -247,7 +248,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
 
       final List<Object> groupKey = Rows.toGroupKey(
-          rollupGranularity.truncate(inputRow.getTimestampFromEpoch()),
+          rollupGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
           inputRow
       );
       Interval interval;
@@ -317,9 +318,16 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
       HyperLogLogCollector aggregate = HyperLogLogCollector.makeLatestCollector();
       for (BytesWritable value : values) {
-        aggregate.fold(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()));
+        aggregate.fold(
+            HyperLogLogCollector.makeCollector(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()))
+        );
       }
-      Interval interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
+      Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(new DateTime(key.get()));
+
+      if (!intervalOptional.isPresent()) {
+        throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+      }
+      Interval interval = intervalOptional.get();
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(
@@ -413,6 +421,3 @@ public class DetermineHashedPartitionsJob implements Jobby
   }
 
 }
-
-
-

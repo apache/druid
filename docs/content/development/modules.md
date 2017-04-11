@@ -8,7 +8,7 @@ Druid uses a module system that allows for the addition of extensions at runtime
 
 ## Writing your own extensions
 
-Druid's extensions leverage Guice in order to add things at runtime.  Basically, Guice is a framework for Dependency Injection, but we use it to hold the expected object graph of the Druid process.  Extensions can make any changes they want/need to the object graph via adding Guice bindings.  While the extensions actually give you the capability to change almost anything however you want, in general, we expect people to want to extend one of a few things.
+Druid's extensions leverage Guice in order to add things at runtime.  Basically, Guice is a framework for Dependency Injection, but we use it to hold the expected object graph of the Druid process.  Extensions can make any changes they want/need to the object graph via adding Guice bindings.  While the extensions actually give you the capability to change almost anything however you want, in general, we expect people to want to extend one of the things listed below.  This means that we honor our [versioning strategy](./versioning.html) for changes that affect the interfaces called out on this page, but other interfaces are deemed "internal" and can be changed in an incompatible manner even between patch releases.
 
 1. Add a new deep storage implementation
 1. Add a new Firehose
@@ -49,7 +49,7 @@ If your jar has this file, then when it is added to the classpath or as an exten
 
 ### Adding a new deep storage implementation
 
-Check the `azure-storage`, `cassandra-storage`, `hdfs-storage` and `s3-extensions` modules for examples of how to do this.
+Check the `azure-storage`, `google-storage`, `cassandra-storage`, `hdfs-storage` and `s3-extensions` modules for examples of how to do this.
 
 The basic idea behind the extension is that you need to add bindings for your DataSegmentPusher and DataSegmentPuller objects.  The way to add them is something like (taken from HdfsStorageDruidModule)
 
@@ -85,7 +85,7 @@ In this way, you can validate both push (at realtime node) and pull (at historic
 
 * DataSegmentPusher
 
-Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see two new files: `descriptor.json` and `index.zip` after your ingestion task ends.
+Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see two new files: `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage) and `index.zip` (`partitionNum_index.zip` for HDFS data storage) after your ingestion task ends.
 
 * DataSegmentPuller
 
@@ -118,7 +118,7 @@ To mark a segment as not used, you need to connect to your metadata storage and 
 
 To start a segment killing task, you need to access the old Coordinator console `http://<COODRINATOR_IP>:<COORDINATOR_PORT/old-console/kill.html` then select the appropriate datasource and then input a time range (e.g. `2000/3000`).
 
-After the killing task ends, both `descriptor.json` and `index.zip` files should be deleted from the data storage.
+After the killing task ends, both `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage)  and `index.zip` (`partitionNum_index.zip` for HDFS data storage) files should be deleted from the data storage.
 
 ### Adding a new Firehose
 

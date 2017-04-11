@@ -22,7 +22,8 @@ package io.druid.data.input;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteSource;
 import com.google.common.io.LineProcessor;
-import com.metamx.common.parsers.Parser;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.parsers.Parser;
 
 import java.io.IOException;
 import java.util.Map;
@@ -44,35 +45,63 @@ public class MapPopulator<K, V>
     this.parser = parser;
   }
 
+  public static class PopulateResult
+  {
+    private final int lines;
+    private final int entries;
+
+    public PopulateResult(int lines, int entries)
+    {
+      this.lines = lines;
+      this.entries = entries;
+    }
+
+    public int getLines()
+    {
+      return lines;
+    }
+
+    public int getEntries()
+    {
+      return entries;
+    }
+  }
+
   /**
    * Read through the `source` line by line and populate `map` with the data returned from the `parser`
    *
    * @param source The ByteSource to read lines from
    * @param map    The map to populate
    *
-   * @return The number of entries parsed
+   * @return number of lines read and entries parsed
    *
    * @throws IOException
    */
-  public long populate(final ByteSource source, final Map<K, V> map) throws IOException
+  public PopulateResult populate(final ByteSource source, final Map<K, V> map) throws IOException
   {
     return source.asCharSource(Charsets.UTF_8).readLines(
-        new LineProcessor<Long>()
+        new LineProcessor<PopulateResult>()
         {
-          private long count = 0L;
+          private int lines = 0;
+          private int entries = 0;
 
           @Override
           public boolean processLine(String line) throws IOException
           {
-            map.putAll(parser.parse(line));
-            ++count;
+            if (lines == Integer.MAX_VALUE) {
+              throw new ISE("Cannot read more than %,d lines", Integer.MAX_VALUE);
+            }
+            final Map<K, V> kvMap = parser.parse(line);
+            map.putAll(kvMap);
+            lines++;
+            entries += kvMap.size();
             return true;
           }
 
           @Override
-          public Long getResult()
+          public PopulateResult getResult()
           {
-            return count;
+            return new PopulateResult(lines, entries);
           }
         }
     );

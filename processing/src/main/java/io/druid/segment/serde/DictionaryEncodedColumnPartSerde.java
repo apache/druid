@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.spatial.ImmutableRTree;
-import com.metamx.common.IAE;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.spatial.ImmutableRTree;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.column.ColumnBuilder;
@@ -225,23 +227,23 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             }
 
             @Override
-            public void write(WritableByteChannel channel) throws IOException
+            public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
             {
               channel.write(ByteBuffer.wrap(new byte[]{version.asByte()}));
               if (version.compareTo(VERSION.COMPRESSED) >= 0) {
                 channel.write(ByteBuffer.wrap(Ints.toByteArray(flags)));
               }
               if (dictionaryWriter != null) {
-                dictionaryWriter.writeToChannel(channel);
+                dictionaryWriter.writeToChannel(channel, smoosher);
               }
               if (valueWriter != null) {
-                valueWriter.writeToChannel(channel);
+                valueWriter.writeToChannel(channel, smoosher);
               }
               if (bitmapIndexWriter != null) {
-                bitmapIndexWriter.writeToChannel(channel);
+                bitmapIndexWriter.writeToChannel(channel, smoosher);
               }
               if (spatialIndexWriter != null) {
-                spatialIndexWriter.writeToChannel(channel);
+                spatialIndexWriter.writeToChannel(channel, smoosher);
               }
             }
           }
@@ -369,7 +371,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             }
 
             @Override
-            public void write(WritableByteChannel channel) throws IOException
+            public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
             {
               channel.write(ByteBuffer.wrap(new byte[]{version.asByte()}));
               if (version.compareTo(VERSION.COMPRESSED) >= 0) {
@@ -434,17 +436,21 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags) || Feature.MULTI_VALUE_V3.isSet(rFlags);
 
-        final GenericIndexed<String> rDictionary = GenericIndexed.read(buffer, GenericIndexed.STRING_STRATEGY);
+        final GenericIndexed<String> rDictionary = GenericIndexed.read(
+            buffer,
+            GenericIndexed.STRING_STRATEGY,
+            builder.getFileMapper()
+        );
         builder.setType(ValueType.STRING);
 
         final WritableSupplier<IndexedInts> rSingleValuedColumn;
         final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
 
         if (hasMultipleValues) {
-          rMultiValuedColumn = readMultiValuedColum(rVersion, buffer, rFlags);
+          rMultiValuedColumn = readMultiValuedColum(rVersion, buffer, rFlags, builder.getFileMapper());
           rSingleValuedColumn = null;
         } else {
-          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
+          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer, builder.getFileMapper());
           rMultiValuedColumn = null;
         }
 
@@ -459,7 +465,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
                );
 
         GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
-            buffer, bitmapSerdeFactory.getObjectStrategy()
+            buffer, bitmapSerdeFactory.getObjectStrategy(), builder.getFileMapper()
         );
         builder.setBitmapIndex(
             new BitmapIndexColumnPartSupplier(
@@ -479,19 +485,23 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       }
 
 
-      private WritableSupplier<IndexedInts> readSingleValuedColumn(VERSION version, ByteBuffer buffer)
+      private WritableSupplier<IndexedInts> readSingleValuedColumn(
+          VERSION version,
+          ByteBuffer buffer,
+          SmooshedFileMapper fileMapper
+      )
       {
         switch (version) {
           case UNCOMPRESSED_SINGLE_VALUE:
             return VSizeIndexedInts.readFromByteBuffer(buffer).asWritableSupplier();
           case COMPRESSED:
-            return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
+          return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
         }
         throw new IAE("Unsupported single-value version[%s]", version);
       }
 
       private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColum(
-          VERSION version, ByteBuffer buffer, int flags
+          VERSION version, ByteBuffer buffer, int flags, SmooshedFileMapper fileMapper
       )
       {
         switch (version) {
@@ -499,9 +509,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             return VSizeIndexed.readFromByteBuffer(buffer).asWritableSupplier();
           case COMPRESSED:
             if (Feature.MULTI_VALUE.isSet(flags)) {
-              return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder);
+              return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
             } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
-              return CompressedVSizeIndexedV3Supplier.fromByteBuffer(buffer, byteOrder);
+              return CompressedVSizeIndexedV3Supplier.fromByteBuffer(buffer, byteOrder, fileMapper);
             } else {
               throw new IAE("Unrecognized multi-value flag[%d]", flags);
             }

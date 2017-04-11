@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -33,9 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.RE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.curator.announcement.Announcer;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -45,6 +43,9 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.initialization.jetty.JettyBindings;
@@ -54,11 +55,12 @@ import io.druid.server.listener.resource.AbstractListenerHandler;
 import io.druid.server.listener.resource.ListenerResource;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.curator.utils.ZKPaths;
+
+import javax.ws.rs.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.ws.rs.Path;
-import org.apache.curator.utils.ZKPaths;
 
 public class LookupModule implements DruidModule
 {
@@ -116,10 +118,8 @@ class LookupListeningResource extends ListenerResource
         {
         })
         {
-          private final Object deleteLock = new Object();
-
           @Override
-          public synchronized Object post(final Map<String, LookupExtractorFactory> lookups)
+          public Object post(final Map<String, LookupExtractorFactory> lookups)
               throws Exception
           {
             final Map<String, LookupExtractorFactory> failedUpdates = new HashMap<>();
@@ -154,17 +154,17 @@ class LookupListeningResource extends ListenerResource
           @Override
           public Object delete(String id)
           {
-            // Prevent races to 404 vs 500 between concurrent delete requests
-            synchronized (deleteLock) {
+            if (manager.get(id) == null) {
+              return null;
+            }
+            if (!manager.remove(id)) {
               if (manager.get(id) == null) {
                 return null;
               }
-              if (!manager.remove(id)) {
-                // We don't have more information at this point.
-                throw new RE("Could not remove lookup [%s]", id);
-              }
-              return id;
+              // We don't have more information at this point.
+              throw new RE("Could not remove lookup [%s]", id);
             }
+            return id;
           }
         }
     );

@@ -23,6 +23,7 @@ import io.druid.math.expr.antlr.ExprBaseListener;
 import io.druid.math.expr.antlr.ExprParser;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.apache.commons.lang.StringEscapeUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -146,6 +147,15 @@ public class ExprListenerImpl extends ExprBaseListener
   public void exitNestedExpr(ExprParser.NestedExprContext ctx)
   {
     nodes.put(ctx, nodes.get(ctx.getChild(1)));
+  }
+
+  @Override
+  public void exitString(ExprParser.StringContext ctx)
+  {
+    String text = ctx.getText();
+    String unquoted = text.substring(1, text.length() - 1);
+    String unescaped = unquoted.indexOf('\\') >= 0 ? StringEscapeUtils.unescapeJava(unquoted) : unquoted;
+    nodes.put(ctx, new StringExpr(unescaped));
   }
 
   @Override
@@ -275,7 +285,7 @@ public class ExprListenerImpl extends ExprBaseListener
   public void exitFunctionExpr(ExprParser.FunctionExprContext ctx)
   {
     String fnName = ctx.getChild(0).getText();
-    if (!Parser.func.containsKey(fnName)) {
+    if (!Parser.hasFunction(fnName)) {
       throw new RuntimeException("function " + fnName + " is not defined.");
     }
 
@@ -289,9 +299,13 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitIdentifierExpr(ExprParser.IdentifierExprContext ctx)
   {
+    String text = ctx.getText();
+    if (text.charAt(0) == '"' && text.charAt(text.length() - 1) == '"') {
+      text = StringEscapeUtils.unescapeJava(text.substring(1, text.length() - 1));
+    }
     nodes.put(
         ctx,
-        new IdentifierExpr(ctx.getText())
+        new IdentifierExpr(text)
     );
   }
 

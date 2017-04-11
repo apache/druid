@@ -23,12 +23,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.metamx.common.StringUtils;
+import com.google.common.primitives.Floats;
+import io.druid.common.guava.GuavaUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
@@ -43,6 +46,11 @@ public class SelectorDimFilter implements DimFilter
   private final String dimension;
   private final String value;
   private final ExtractionFn extractionFn;
+
+  private final Object initLock = new Object();
+
+  private DruidLongPredicate longPredicate;
+  private DruidFloatPredicate floatPredicate;
 
   @JsonCreator
   public SelectorDimFilter(
@@ -88,21 +96,30 @@ public class SelectorDimFilter implements DimFilter
       return new SelectorFilter(dimension, value);
     } else {
       final String valueOrNull = Strings.emptyToNull(value);
-      final Predicate<String> predicate = new Predicate<String>()
+
+      final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
       {
         @Override
-        public boolean apply(String input)
+        public Predicate<String> makeStringPredicate()
         {
-          return Objects.equals(valueOrNull, input);
+          return Predicates.equalTo(valueOrNull);
         }
 
         @Override
-        public String toString()
+        public DruidLongPredicate makeLongPredicate()
         {
-          return value;
+          initLongPredicate();
+          return longPredicate;
+        }
+
+        @Override
+        public DruidFloatPredicate makeFloatPredicate()
+        {
+          initFloatPredicate();
+          return floatPredicate;
         }
       };
-      return new DimensionPredicateFilter(dimension, predicate, extractionFn);
+      return new DimensionPredicateFilter(dimension, predicateFactory, extractionFn);
     }
   }
 
@@ -173,5 +190,60 @@ public class SelectorDimFilter implements DimFilter
     result = 31 * result + (value != null ? value.hashCode() : 0);
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
+  }
+
+
+  private void initLongPredicate()
+  {
+    if (longPredicate != null) {
+      return;
+    }
+    synchronized (initLock) {
+      if (longPredicate != null) {
+        return;
+      }
+      final Long valueAsLong = GuavaUtils.tryParseLong(value);
+      if (valueAsLong == null) {
+        longPredicate = DruidLongPredicate.ALWAYS_FALSE;
+      } else {
+        // store the primitive, so we don't unbox for every comparison
+        final long unboxedLong = valueAsLong.longValue();
+        longPredicate =  new DruidLongPredicate()
+        {
+          @Override
+          public boolean applyLong(long input)
+          {
+            return input == unboxedLong;
+          }
+        };
+      }
+    }
+  }
+
+  private void initFloatPredicate()
+  {
+    if (floatPredicate != null) {
+      return;
+    }
+    synchronized (initLock) {
+      if (floatPredicate != null) {
+        return;
+      }
+      final Float valueAsFloat = Floats.tryParse(value);
+
+      if (valueAsFloat == null) {
+        floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
+      } else {
+        final int floatBits = Float.floatToIntBits(valueAsFloat);
+        floatPredicate = new DruidFloatPredicate()
+        {
+          @Override
+          public boolean applyFloat(float input)
+          {
+            return Float.floatToIntBits(input) == floatBits;
+          }
+        };
+      }
+    }
   }
 }

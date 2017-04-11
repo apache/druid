@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
@@ -80,10 +80,10 @@ public class JavaScriptExtractionFn implements ExtractionFn
     this.function = function;
     this.injective = injective;
 
-    if (config.isDisabled()) {
-      this.fn = null;
-    } else {
+    if (config.isEnabled()) {
       this.fn = compile(function);
+    } else {
+      this.fn = null;
     }
   }
 

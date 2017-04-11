@@ -37,18 +37,17 @@ public class LongSumAggregator implements Aggregator
     }
   };
 
-  static long combineValues(Object lhs, Object rhs) {
+  static long combineValues(Object lhs, Object rhs)
+  {
     return ((Number) lhs).longValue() + ((Number) rhs).longValue();
   }
 
   private final LongColumnSelector selector;
-  private final String name;
 
   private long sum;
 
-  public LongSumAggregator(String name, LongColumnSelector selector)
+  public LongSumAggregator(LongColumnSelector selector)
   {
-    this.name = name;
     this.selector = selector;
 
     this.sum = 0;
@@ -85,15 +84,9 @@ public class LongSumAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
   public Aggregator clone()
   {
-    return new LongSumAggregator(name, selector);
+    return new LongSumAggregator(selector);
   }
 
   @Override

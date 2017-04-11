@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.FloatColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -60,8 +61,12 @@ public class HistogramBufferAggregator implements BufferAggregator
     final int minPos = position + minOffset;
     final int maxPos = position + maxOffset;
 
-    if(value < buf.getFloat(minPos)) buf.putFloat(minPos, value);
-    if(value > buf.getFloat(maxPos)) buf.putFloat(maxPos, value);
+    if(value < buf.getFloat(minPos)) {
+      buf.putFloat(minPos, value);
+    }
+    if(value > buf.getFloat(maxPos)) {
+      buf.putFloat(maxPos, value);
+    }
 
     int index = Arrays.binarySearch(breaks, value);
     index = (index >= 0) ? index : -(index + 1);
@@ -100,5 +105,11 @@ public class HistogramBufferAggregator implements BufferAggregator
   public void close()
   {
     // no resources to cleanup
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
   }
 }

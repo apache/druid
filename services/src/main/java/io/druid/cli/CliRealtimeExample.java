@@ -24,13 +24,14 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.RealtimeModule;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.coordination.DataSegmentAnnouncer;

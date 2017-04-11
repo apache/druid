@@ -23,16 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.Granularity;
-import com.metamx.common.ISE;
-import com.metamx.common.parsers.ParseException;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -41,8 +36,10 @@ import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.BaseQuery;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -50,7 +47,6 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -58,8 +54,6 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
-import io.druid.query.groupby.GroupByQueryEngine;
-import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
@@ -88,7 +82,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -136,14 +129,14 @@ public class RealtimeManagerTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
         jsonMapper
     );
     schema2 = new DataSchema(
         "testV2",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
         jsonMapper
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
@@ -202,6 +195,7 @@ public class RealtimeManagerTest
         0,
         0,
         null,
+        null,
         null
     );
     plumber = new TestPlumber(new Sink(
@@ -257,6 +251,7 @@ public class RealtimeManagerTest
         0,
         0,
         null,
+        null,
         null
     );
 
@@ -274,6 +269,7 @@ public class RealtimeManagerTest
         0,
         0,
         null,
+        null,
         null
     );
 
@@ -281,7 +277,7 @@ public class RealtimeManagerTest
         "testing",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("ignore")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
         jsonMapper
     );
 
@@ -606,13 +602,15 @@ public class RealtimeManagerTest
         interval_26_28,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            "druid.sample.tsv.top"
+            "druid.sample.numeric.tsv.top",
+            null
         )
         ,
         interval_28_29,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            "druid.sample.tsv.bottom"
+            "druid.sample.numeric.tsv.bottom",
+            null
         )
     );
     plumber.setRunners(runnerMap);

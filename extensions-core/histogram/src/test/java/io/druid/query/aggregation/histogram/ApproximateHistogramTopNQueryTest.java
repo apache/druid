@@ -54,7 +54,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class ApproximateHistogramTopNQueryTest
 {
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
@@ -69,6 +69,7 @@ public class ApproximateHistogramTopNQueryTest
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
                     new StupidPool<ByteBuffer>(
+                        "TopNQueryRunnerFactory-bufferPool",
                         new Supplier<ByteBuffer>()
                         {
                           @Override

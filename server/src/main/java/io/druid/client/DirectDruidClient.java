@@ -29,34 +29,32 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.IAE;
-import com.metamx.common.Pair;
-import com.metamx.common.RE;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
-import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -84,6 +82,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -162,16 +161,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     try {
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
 
-      final long requestStartTime = System.currentTimeMillis();
+      final long requestStartTimeNs = System.nanoTime();
 
-      final ServiceMetricEvent.Builder builder = toolChest.makeMetricBuilder(query);
-      builder.setDimension("server", host);
-      builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
-
+      final QueryMetrics<? super Query<T>> queryMetrics = toolChest.makeMetrics(query);
+      queryMetrics.server(host);
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
       {
-        private long responseStartTime;
+        private long responseStartTimeNs;
         private final AtomicLong byteCount = new AtomicLong(0);
         private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
@@ -180,8 +177,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         public ClientResponse<InputStream> handleResponse(HttpResponse response)
         {
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
-          responseStartTime = System.currentTimeMillis();
-          emitter.emit(builder.build("query/node/ttfb", responseStartTime - requestStartTime));
+          responseStartTimeNs = System.nanoTime();
+          queryMetrics.reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
 
           try {
             final String responseContext = response.headers().get("X-Druid-Response-Context");
@@ -270,17 +267,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public ClientResponse<InputStream> done(ClientResponse<InputStream> clientResponse)
         {
-          long stopTime = System.currentTimeMillis();
+          long stopTimeNs = System.nanoTime();
+          long nodeTimeNs = stopTimeNs - responseStartTimeNs;
           log.debug(
               "Completed queryId[%s] request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
               query.getId(),
               url,
               byteCount.get(),
-              stopTime - responseStartTime,
-              byteCount.get() / (0.0001 * (stopTime - responseStartTime))
+              TimeUnit.NANOSECONDS.toMillis(nodeTimeNs),
+              byteCount.get() / TimeUnit.NANOSECONDS.toSeconds(nodeTimeNs)
           );
-          emitter.emit(builder.build("query/node/time", stopTime - requestStartTime));
-          emitter.emit(builder.build("query/node/bytes", byteCount.get()));
+          queryMetrics.reportNodeTime(nodeTimeNs);
+          queryMetrics.reportNodeBytes(byteCount.get());
+          queryMetrics.emit(emitter);
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
@@ -480,13 +479,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final JsonToken nextToken = jp.nextToken();
           if (nextToken == JsonToken.START_OBJECT) {
             QueryInterruptedException cause = jp.getCodec().readValue(jp, QueryInterruptedException.class);
-            //case we get an exception with an unknown message.
-            if (cause.isNotKnown()) {
-              throw new QueryInterruptedException(QueryInterruptedException.UNKNOWN_EXCEPTION, cause.getMessage(), host);
-            } else {
-              throw  new QueryInterruptedException(cause, host);
-            }
-
+            throw new QueryInterruptedException(cause, host);
           } else if (nextToken != JsonToken.START_ARRAY) {
             throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
           } else {

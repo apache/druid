@@ -19,11 +19,11 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
@@ -56,23 +56,27 @@ import java.util.List;
  * of pointers) it still helps significantly on initialization times. Otherwise, we'd need to clear the used bits of
  * each bucket in the entire buffer, which is a lot of writes if the buckets are small.
  */
-public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Grouper<KeyType>
+public class BufferGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger log = new Logger(BufferGrouper.class);
 
+  private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
-  private static final float MAX_LOAD_FACTOR = 0.75f;
+  private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
   private static final int HASH_SIZE = Ints.BYTES;
 
-  private final ByteBuffer buffer;
+  private final Supplier<ByteBuffer> bufferSupplier;
   private final KeySerde<KeyType> keySerde;
   private final int keySize;
   private final BufferAggregator[] aggregators;
   private final int[] aggregatorOffsets;
   private final int initialBuckets;
   private final int bucketSize;
-  private final int tableArenaSize;
   private final int bufferGrouperMaxSize; // Integer.MAX_VALUE in production, only used for unit tests
+  private final float maxLoadFactor;
+
+  private ByteBuffer buffer;
+  private int tableArenaSize = -1;
 
   // Buffer pointing to the current table (it moves around as the table grows)
   private ByteBuffer tableBuffer;
@@ -89,22 +93,30 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
   // Maximum number of elements in the table before it must be resized
   private int maxSize;
 
+  private boolean initialized = false;
+
   public BufferGrouper(
-      final ByteBuffer buffer,
+      final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
       final int bufferGrouperMaxSize,
+      final float maxLoadFactor,
       final int initialBuckets
   )
   {
-    this.buffer = buffer;
+    this.bufferSupplier = bufferSupplier;
     this.keySerde = keySerde;
     this.keySize = keySerde.keySize();
     this.aggregators = new BufferAggregator[aggregatorFactories.length];
     this.aggregatorOffsets = new int[aggregatorFactories.length];
     this.bufferGrouperMaxSize = bufferGrouperMaxSize;
-    this.initialBuckets = initialBuckets > 0 ? initialBuckets : DEFAULT_INITIAL_BUCKETS;
+    this.maxLoadFactor = maxLoadFactor > 0 ? maxLoadFactor : DEFAULT_MAX_LOAD_FACTOR;
+    this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
+
+    if (this.maxLoadFactor >= 1.0f) {
+      throw new IAE("Invalid maxLoadFactor[%f], must be < 1.0", maxLoadFactor);
+    }
 
     int offset = HASH_SIZE + keySize;
     for (int i = 0; i < aggregatorFactories.length; i++) {
@@ -114,9 +126,23 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
     }
 
     this.bucketSize = offset;
-    this.tableArenaSize = (buffer.capacity() / (bucketSize + Ints.BYTES)) * bucketSize;
+  }
 
-    reset();
+  @Override
+  public void init()
+  {
+    if (!initialized) {
+      this.buffer = bufferSupplier.get();
+      this.tableArenaSize = (buffer.capacity() / (bucketSize + Ints.BYTES)) * bucketSize;
+      reset();
+      initialized = true;
+    }
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return initialized;
   }
 
   @Override
@@ -127,12 +153,13 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
       return false;
     }
 
-    Preconditions.checkArgument(
-        keyBuffer.remaining() == keySize,
-        "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
-        keyBuffer.remaining(),
-        keySize
-    );
+    if (keyBuffer.remaining() != keySize) {
+      throw new IAE(
+          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
+          keyBuffer.remaining(),
+          keySize
+      );
+    }
 
     int bucket = findBucket(
         tableBuffer,
@@ -257,7 +284,7 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
         }
       };
 
-      final KeyComparator comparator = keySerde.comparator();
+      final KeyComparator comparator = keySerde.bufferComparator();
 
       // Sort offsets in-place.
       Collections.sort(
@@ -403,8 +430,9 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
 
     for (int oldBucket = 0; oldBucket < buckets; oldBucket++) {
       if (isUsed(oldBucket)) {
+        int oldPosition = oldBucket * bucketSize;
         entryBuffer.limit((oldBucket + 1) * bucketSize);
-        entryBuffer.position(oldBucket * bucketSize);
+        entryBuffer.position(oldPosition);
         keyBuffer.limit(entryBuffer.position() + HASH_SIZE + keySize);
         keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
@@ -415,8 +443,18 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
           throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
         }
 
-        newTableBuffer.position(newBucket * bucketSize);
+        int newPosition = newBucket * bucketSize;
+        newTableBuffer.position(newPosition);
         newTableBuffer.put(entryBuffer);
+
+        for (int i = 0; i < aggregators.length; i++) {
+          aggregators[i].relocate(
+              oldPosition + aggregatorOffsets[i],
+              newPosition + aggregatorOffsets[i],
+              tableBuffer,
+              newTableBuffer
+          );
+        }
 
         buffer.putInt(tableArenaSize + newSize * Ints.BYTES, newBucket * bucketSize);
         newSize++;
@@ -433,9 +471,9 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
     }
   }
 
-  private static int maxSizeForBuckets(int buckets)
+  private int maxSizeForBuckets(int buckets)
   {
-    return Math.max(1, (int) (buckets * MAX_LOAD_FACTOR));
+    return Math.max(1, (int) (buckets * maxLoadFactor));
   }
 
   /**

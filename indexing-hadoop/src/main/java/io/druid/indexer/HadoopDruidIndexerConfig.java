@@ -37,18 +37,18 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
@@ -91,6 +91,7 @@ public class HadoopDruidIndexerConfig
   public static final IndexIO INDEX_IO;
   public static final IndexMerger INDEX_MERGER;
   public static final IndexMergerV9 INDEX_MERGER_V9;
+  public static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
 
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
 
@@ -106,6 +107,7 @@ public class HadoopDruidIndexerConfig
                 JsonConfigProvider.bindInstance(
                     binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null)
                 );
+                JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
               }
             },
             new IndexingHadoopModule()
@@ -115,6 +117,7 @@ public class HadoopDruidIndexerConfig
     INDEX_IO = injector.getInstance(IndexIO.class);
     INDEX_MERGER = injector.getInstance(IndexMerger.class);
     INDEX_MERGER_V9 = injector.getInstance(IndexMergerV9.class);
+    HADOOP_KERBEROS_CONFIG = injector.getInstance(HadoopKerberosConfig.class);
   }
 
   public static enum IndexJobCounters
@@ -210,11 +213,11 @@ public class HadoopDruidIndexerConfig
     return retVal;
   }
 
-  private volatile HadoopIngestionSpec schema;
-  private volatile PathSpec pathSpec;
-  private final Map<DateTime, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
-  private final Map<DateTime, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
-  private final QueryGranularity rollupGran;
+  private HadoopIngestionSpec schema;
+  private PathSpec pathSpec;
+  private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
+  private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
+  private final Granularity rollupGran;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
@@ -223,7 +226,7 @@ public class HadoopDruidIndexerConfig
   {
     this.schema = spec;
     this.pathSpec = JSON_MAPPER.convertValue(spec.getIOConfig().getPathSpec(), PathSpec.class);
-    for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : spec.getTuningConfig().getShardSpecs().entrySet()) {
+    for (Map.Entry<Long, List<HadoopyShardSpec>> entry : spec.getTuningConfig().getShardSpecs().entrySet()) {
       if (entry.getValue() == null || entry.getValue().isEmpty()) {
         continue;
       }
@@ -307,7 +310,7 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
-  public void setShardSpecs(Map<DateTime, List<HadoopyShardSpec>> shardSpecs)
+  public void setShardSpecs(Map<Long, List<HadoopyShardSpec>> shardSpecs)
   {
     this.schema = schema.withTuningConfig(schema.getTuningConfig().withShardSpecs(shardSpecs));
     this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
@@ -333,6 +336,11 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getPartitionsSpec().getTargetPartitionSize();
   }
 
+  public boolean isForceExtendableShardSpecs()
+  {
+    return schema.getTuningConfig().isForceExtendableShardSpecs();
+  }
+
   public long getMaxPartitionSize()
   {
     return schema.getTuningConfig().getPartitionsSpec().getMaxPartitionSize();
@@ -355,7 +363,12 @@ public class HadoopDruidIndexerConfig
 
   public HadoopyShardSpec getShardSpec(Bucket bucket)
   {
-    return schema.getTuningConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
+    return schema.getTuningConfig().getShardSpecs().get(bucket.time.getMillis()).get(bucket.partitionNum);
+  }
+
+  public int getShardSpecCount(Bucket bucket)
+  {
+    return schema.getTuningConfig().getShardSpecs().get(bucket.time.getMillis()).size();
   }
 
   public boolean isBuildV9Directly()
@@ -398,12 +411,12 @@ public class HadoopDruidIndexerConfig
       return Optional.absent();
     }
     final DateTime bucketStart = timeBucket.get().getStart();
-    final ShardSpec actualSpec = shardSpecLookups.get(bucketStart)
+    final ShardSpec actualSpec = shardSpecLookups.get(bucketStart.getMillis())
                                                  .getShardSpec(
-                                                     rollupGran.truncate(inputRow.getTimestampFromEpoch()),
+                                                     rollupGran.bucketStart(inputRow.getTimestamp()).getMillis(),
                                                      inputRow
                                                  );
-    final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(bucketStart).get(actualSpec);
+    final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(bucketStart.getMillis()).get(actualSpec);
 
     return Optional.of(
         new Bucket(
@@ -425,6 +438,13 @@ public class HadoopDruidIndexerConfig
     );
   }
 
+  public List<Interval> getInputIntervals()
+  {
+    return schema.getDataSchema()
+                 .getGranularitySpec()
+                 .inputIntervals();
+  }
+
   public Optional<Iterable<Bucket>> getAllBuckets()
   {
     Optional<Set<Interval>> intervals = getSegmentGranularIntervals();
@@ -439,7 +459,7 @@ public class HadoopDruidIndexerConfig
                     public Iterable<Bucket> apply(Interval input)
                     {
                       final DateTime bucketTime = input.getStart();
-                      final List<HadoopyShardSpec> specs = schema.getTuningConfig().getShardSpecs().get(bucketTime);
+                      final List<HadoopyShardSpec> specs = schema.getTuningConfig().getShardSpecs().get(bucketTime.getMillis());
                       if (specs == null) {
                         return ImmutableList.of();
                       }
@@ -487,7 +507,7 @@ public class HadoopDruidIndexerConfig
   {
     return new Path(
         String.format(
-            "%s/%s/%s/%s",
+            "%s/%s/%s_%s",
             getWorkingPath(),
             schema.getDataSchema().getDataSource(),
             schema.getTuningConfig().getVersion().replace(":", ""),

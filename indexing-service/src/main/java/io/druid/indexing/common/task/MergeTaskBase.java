@@ -34,7 +34,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
-import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -43,6 +42,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.ISE;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -99,6 +99,12 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
             )
         ) == 0, "segments in the wrong datasource"
     );
+    verifyInputSegments(segments);
+
+    this.segments = segments;
+  }
+
+  protected void verifyInputSegments(List<DataSegment> segments) {
     // Verify segments are all unsharded
     Preconditions.checkArgument(
         Iterables.size(
@@ -115,8 +121,6 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
             )
         ) == 0, "segments without NoneShardSpec"
     );
-
-    this.segments = segments;
   }
 
   @Override

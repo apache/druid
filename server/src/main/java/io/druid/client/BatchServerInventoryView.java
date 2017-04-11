@@ -25,18 +25,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
@@ -52,7 +48,6 @@ import java.util.concurrent.Executor;
 public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegment>>
     implements FilteredServerInventoryView
 {
-  private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final EmittingLogger log = new EmittingLogger(BatchServerInventoryView.class);
 
   final private ConcurrentMap<String, Set<DataSegment>> zNodes = new MapMaker().makeMap();
@@ -192,18 +187,5 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   protected void segmentCallbackRemoved(SegmentCallback callback)
   {
     segmentPredicates.remove(callback);
-  }
-
-  @Override
-  protected Set<DataSegment> internInventory(Set<DataSegment> sample)
-  {
-    return ImmutableSet.copyOf(FluentIterable.from(sample).transform(new Function<DataSegment, DataSegment>()
-    {
-      @Override
-      public DataSegment apply(DataSegment input)
-      {
-        return DATA_SEGMENT_INTERNER.intern(input);
-      }
-    }));
   }
 }

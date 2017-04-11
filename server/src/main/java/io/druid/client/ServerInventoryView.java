@@ -25,14 +25,14 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.MapMaker;
-import com.metamx.common.StringUtils;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.curator.inventory.CuratorInventoryManager;
 import io.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import io.druid.curator.inventory.InventoryManagerConfig;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -100,7 +100,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           public InventoryType deserializeInventory(byte[] bytes)
           {
             try {
-              return internInventory(jsonMapper.<InventoryType>readValue(bytes, typeReference));
+              return jsonMapper.readValue(bytes, typeReference);
             }
             catch (IOException e) {
               CharBuffer.wrap(StringUtils.fromUtf8(bytes).toCharArray());
@@ -191,15 +191,6 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
         inventoryManager.stop();
       }
     }
-  }
-
-  /**
-   * Optionally override to allow interning the inventory
-   * @param sample The inventory to intern
-   * @return An interned instance equal to sample
-   */
-  protected InventoryType internInventory(InventoryType sample) {
-    return sample;
   }
 
   public boolean isStarted()

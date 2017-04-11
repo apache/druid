@@ -21,6 +21,7 @@ layout: toc
     * [Stream Push](/docs/VERSION/ingestion/stream-push.html)
     * [Stream Pull](/docs/VERSION/ingestion/stream-pull.html)
   * [Updating Existing Data](/docs/VERSION/ingestion/update-existing-data.html)
+  * [Ingestion Tasks](/docs/VERSION/ingestion/tasks.html)
   * [FAQ](/docs/VERSION/ingestion/faq.html)
 
 ## Querying
@@ -47,6 +48,7 @@ layout: toc
   * [Joins](/docs/VERSION/querying/joins.html)
   * [Multitenancy](/docs/VERSION/querying/multitenancy.html)
   * [Caching](/docs/VERSION/querying/caching.html)
+  * [Sorting Orders](/docs/VERSION/querying/sorting-orders.html)
 
 ## Design
   * [Overview](/docs/VERSION/design/design.html)
@@ -72,6 +74,10 @@ layout: toc
   * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
   * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
+  * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
+  * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
+  * [Pull Dependencies Tool](/docs/VERSION/operations/pull-deps.html)
+  * [Recommendations](/docs/VERSION/operations/recommendations.html)
 
 ## Configuration
   * [Common Configuration](/docs/VERSION/configuration/index.html)
@@ -86,6 +92,7 @@ layout: toc
   * [Overview](/docs/VERSION/development/overview.html)
   * [Libraries](/docs/VERSION/development/libraries.html)
   * [Extensions](/docs/VERSION/development/extensions.html)
+  * [JavaScript](/docs/VERSION/development/javascript.html)
   * [Build From Source](/docs/VERSION/development/build.html)
   * [Versioning](/docs/VERSION/development/versioning.html)
   * [Integration](/docs/VERSION/development/integrating-druid-with-other-technologies.html)

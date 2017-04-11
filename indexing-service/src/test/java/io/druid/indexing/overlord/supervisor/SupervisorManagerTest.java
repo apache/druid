@@ -21,6 +21,7 @@ package io.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.metadata.MetadataSupervisorManager;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -249,6 +250,25 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void testResetSupervisor() throws Exception
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
+        "id1", new TestSupervisorSpec("id1", supervisor1)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    supervisor1.reset(EasyMock.anyObject(DataSourceMetadata.class));
+    replayAll();
+
+    manager.start();
+    Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", null));
+    Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", null));
+
+    verifyAll();
+  }
+
   private class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;
@@ -271,5 +291,12 @@ public class SupervisorManagerTest extends EasyMockSupport
     {
       return supervisor;
     }
+
+    @Override
+    public List<String> getDataSources()
+    {
+      return null;
+    }
+
   }
 }

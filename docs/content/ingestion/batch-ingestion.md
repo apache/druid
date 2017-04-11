@@ -152,7 +152,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |workingPath|String|The working path to use for intermediate results (results between Hadoop jobs).|no (default == '/tmp/druid-indexing')|
-|version|String|The version of created segments.|no (default == datetime that indexing starts at)|
+|version|String|The version of created segments. Ignored for HadoopIndexTask unless useExplicitVersion is set to true|no (default == datetime that indexing starts at)|
 |partitionsSpec|Object|A specification of how to partition each time bucket into segments. Absence of this property means no partitioning will occur. See 'Partitioning specification' below.|no (default == 'hashed')|
 |maxRowsInMemory|Integer|The number of rows to aggregate before persisting. Note that this is the number of post-aggregation rows which may not be equal to the number of input events due to roll-up. This is used to manage the required JVM heap size.|no (default == 75000)|
 |leaveIntermediate|Boolean|Leave behind intermediate files (for debugging) in the workingPath when a job completes, whether it passes or fails.|no (default == false)|
@@ -163,8 +163,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |useCombiner|Boolean|Use Hadoop combiner to merge rows at mapper if possible.|no (default == false)|
 |jobProperties|Object|A map of properties to add to the Hadoop job configuration, see below for details.|no (default == null)|
 |indexSpec|Object|Tune how data is indexed. See below for more information.|no|
-|buildV9Directly|Boolean|Build v9 index directly instead of building v8 index and converting it to v9 format.|no (default = false)|
+|buildV9Directly|Boolean|Whether to build a v9 index directly instead of first building a v8 index and then converting it to v9 format.|no (default == true)|
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
+|forceExtendableShardSpecs|Boolean|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|no (default = false)|
+|useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|
 
 #### jobProperties field of TuningConfig
 
@@ -178,14 +180,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
    }
 ```
 
-The following properties can be used to tune how the MapReduce job is configured by overriding default Hadoop/YARN/Mapreduce configurations:
+Hadoop's [MapReduce documentation](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) lists the possible configuration parameters.
 
-|Property name|Type|Description|
-|-------------|----|-----------|
-|mapreduce.job.user.classpath.first|String|Use Druid classpath instead of Hadoop classpath for common libraries like [Jackson](https://github.com/FasterXML/jackson) (required with [Cloudera Hadoop distribution](../operations/other-hadoop.html)) when set to `"true"`.|
-|...|String|See [Mapred configuration](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) for more configuration parameters.|
-
-**Please note that using `mapreduce.job.user.classpath.first` is an expert feature and should not be used without a deep understanding of Hadoop and Java class loading mechanism.**
+With some Hadoop distributions, it may be necessary to set `mapreduce.job.classpath` or `mapreduce.job.user.classpath.first`
+to avoid class loading issues. See the [working with different Hadoop versions documentation](../operations/other-hadoop.html)
+for more details.
 
 #### IndexSpec
 
@@ -193,7 +192,8 @@ The following properties can be used to tune how the MapReduce job is configured
 |-----|----|-----------|--------|
 |bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
 |dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
-|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
+|longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
 
 ##### Bitmap types
 
@@ -288,6 +288,19 @@ classification=yarn-site,properties=[mapreduce.reduce.memory.mb=6144,mapreduce.r
 - Follow the instructions under "[Configure Hadoop for data
 loads](../tutorials/cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML files from
 `/etc/hadoop/conf` on your EMR master.
+
+### Secured Hadoop Cluster
+
+By default druid can use the exisiting TGT kerberos ticket available in local kerberos key cache.
+Although TGT ticket has a limited life cycle, 
+therefore you need to call `kinit` command periodically to ensure validity of TGT ticket.
+To avoid this extra external cron job script calling `kinit` periodically,
+ you can provide the principal name and keytab location and druid will do the authentication transparently at startup and job launching time.   
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.hadoop.security.kerberos.principal`|`druid@EXAMPLE.COM`| Principal user name |empty|
+|`druid.hadoop.security.kerberos.keytab`|`/etc/security/keytabs/druid.headlessUser.keytab`|Path to keytab file|empty|
 
 #### Loading from S3 with EMR
 

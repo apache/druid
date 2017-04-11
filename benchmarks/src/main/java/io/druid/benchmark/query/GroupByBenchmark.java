@@ -23,13 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -39,8 +37,13 @@ import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -70,13 +73,16 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -84,6 +90,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -100,14 +107,14 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(jvmArgsPrepend = "-server", value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 15)
+@Measurement(iterations = 30)
 public class GroupByBenchmark
 {
   @Param({"4"})
   private int numSegments;
 
-  @Param({"4"})
+  @Param({"2", "4"})
   private int numProcessingThreads;
 
   @Param({"-1"})
@@ -116,11 +123,14 @@ public class GroupByBenchmark
   @Param({"100000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.nested"})
   private String schemaAndQuery;
 
   @Param({"v1", "v2"})
   private String defaultStrategy;
+
+  @Param({"all", "day"})
+  private String queryGranularity;
 
   private static final Logger log = new Logger(GroupByBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -128,10 +138,11 @@ public class GroupByBenchmark
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
 
-  private List<IncrementalIndex> incIndexes;
-  private List<QueryableIndex> qIndexes;
+  private File tmpDir;
+  private IncrementalIndex anIncrementalIndex;
+  private List<QueryableIndex> queryableIndexes;
 
-  private QueryRunnerFactory factory;
+  private QueryRunnerFactory<Row, GroupByQuery> factory;
 
   private BenchmarkSchemaInfo schemaInfo;
   private GroupByQuery query;
@@ -184,23 +195,142 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(QueryGranularities.DAY)
+          .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
       basicQueries.put("A", queryA);
     }
 
+    { // basic.nested
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory(
+          "sumLongSequential",
+          "sumLongSequential"
+      ));
+
+      GroupByQuery subqueryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", null),
+              new DefaultDimensionSpec("dimZipf", null)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularities.DAY)
+          .build();
+
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource(subqueryA)
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", null)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularities.WEEK)
+          .build();
+
+      basicQueries.put("nested", queryA);
+    }
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
+
+    // simple one column schema, for testing performance difference between querying on numeric values as Strings and
+    // directly as longs
+    Map<String, GroupByQuery> simpleQueries = new LinkedHashMap<>();
+    BenchmarkSchemaInfo simpleSchema = BenchmarkSchemas.SCHEMA_MAP.get("simple");
+
+    { // simple.A
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(simpleSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory(
+          "rows",
+          "rows"
+      ));
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.STRING)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .build();
+
+      simpleQueries.put("A", queryA);
+    }
+    SCHEMA_QUERY_MAP.put("simple", simpleQueries);
+
+
+    Map<String, GroupByQuery> simpleLongQueries = new LinkedHashMap<>();
+    BenchmarkSchemaInfo simpleLongSchema = BenchmarkSchemas.SCHEMA_MAP.get("simpleLong");
+    { // simpleLong.A
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(simpleLongSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory(
+          "rows",
+          "rows"
+      ));
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.LONG)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .build();
+
+      simpleLongQueries.put("A", queryA);
+    }
+    SCHEMA_QUERY_MAP.put("simpleLong", simpleLongQueries);
+
+
+    Map<String, GroupByQuery> simpleFloatQueries = new LinkedHashMap<>();
+    BenchmarkSchemaInfo simpleFloatSchema = BenchmarkSchemas.SCHEMA_MAP.get("simpleFloat");
+    { // simpleFloat.A
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(simpleFloatSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory(
+          "rows",
+          "rows"
+      ));
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.FLOAT)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .build();
+
+      simpleFloatQueries.put("A", queryA);
+    }
+    SCHEMA_QUERY_MAP.put("simpleFloat", simpleFloatQueries);
   }
 
-
-  @Setup
+  @Setup(Level.Trial)
   public void setup() throws IOException
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
     executorService = Execs.multiThreaded(numProcessingThreads, "GroupByThreadPool[%d]");
 
@@ -213,53 +343,68 @@ public class GroupByBenchmark
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schemaName);
     query = SCHEMA_QUERY_MAP.get(schemaName).get(queryName);
 
-    incIndexes = new ArrayList<>();
+    final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
+        schemaInfo.getColumnSchemas(),
+        RNG_SEED + 1,
+        schemaInfo.getDataInterval(),
+        rowsPerSegment
+    );
+
+    tmpDir = Files.createTempDir();
+    log.info("Using temp dir: %s", tmpDir.getAbsolutePath());
+
+    // queryableIndexes   -> numSegments worth of on-disk segments
+    // anIncrementalIndex -> the last incremental index
+    anIncrementalIndex = null;
+    queryableIndexes = new ArrayList<>(numSegments);
+
     for (int i = 0; i < numSegments; i++) {
-      log.info("Generating rows for segment " + i);
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
-          schemaInfo.getColumnSchemas(),
-          RNG_SEED + 1,
-          schemaInfo.getDataInterval(),
-          rowsPerSegment
+      log.info("Generating rows for segment %d/%d", i + 1, numSegments);
+
+      final IncrementalIndex index = makeIncIndex(schemaInfo.isWithRollup());
+
+      for (int j = 0; j < rowsPerSegment; j++) {
+        final InputRow row = dataGenerator.nextRow();
+        if (j % 20000 == 0) {
+          log.info("%,d/%,d rows generated.", i * rowsPerSegment + j, rowsPerSegment * numSegments);
+        }
+        index.add(row);
+      }
+
+      log.info(
+          "%,d/%,d rows generated, persisting segment %d/%d.",
+          (i + 1) * rowsPerSegment,
+          rowsPerSegment * numSegments,
+          i + 1,
+          numSegments
       );
 
-      IncrementalIndex incIndex = makeIncIndex();
-      incIndexes.add(incIndex);
-      for (int j = 0; j < rowsPerSegment; j++) {
-        InputRow row = gen.nextRow();
-        if (j % 10000 == 0) {
-          log.info(j + " rows generated.");
-        }
-        incIndex.add(row);
-      }
-      log.info(rowsPerSegment + " rows generated");
-
-    }
-
-    IncrementalIndex incIndex = incIndexes.get(0);
-
-    File tmpFile = Files.createTempDir();
-    log.info("Using temp dir: " + tmpFile.getAbsolutePath());
-    tmpFile.deleteOnExit();
-
-    qIndexes = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
-      File indexFile = INDEX_MERGER_V9.persist(
-          incIndex,
-          tmpFile,
+      final File file = INDEX_MERGER_V9.persist(
+          index,
+          new File(tmpDir, String.valueOf(i)),
           new IndexSpec()
       );
-      QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
-      qIndexes.add(qIndex);
+
+      queryableIndexes.add(INDEX_IO.loadIndex(file));
+
+      if (i == numSegments - 1) {
+        anIncrementalIndex = index;
+      } else {
+        index.close();
+      }
     }
 
     StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
-        new OffheapBufferGenerator("compute", 250000000),
+        "GroupByBenchmark-computeBufferPool",
+        new OffheapBufferGenerator("compute", 250_000_000),
+        0,
         Integer.MAX_VALUE
     );
+
+    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
     BlockingPool<ByteBuffer> mergePool = new BlockingPool<>(
-        new OffheapBufferGenerator("merge", 250000000),
-        1
+        new OffheapBufferGenerator("merge", 250_000_000),
+        2
     );
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
@@ -273,6 +418,12 @@ public class GroupByBenchmark
       public int getBufferGrouperInitialBuckets()
       {
         return initialBuckets;
+      }
+
+      @Override
+      public long getMaxOnDiskStorage()
+      {
+        return 1_000_000_000L;
       }
     };
     config.setSingleThreaded(false);
@@ -317,27 +468,50 @@ public class GroupByBenchmark
     factory = new GroupByQueryRunnerFactory(
         strategySelector,
         new GroupByQueryQueryToolChest(
-            configSupplier,
             strategySelector,
-            bufferPool,
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
         )
     );
   }
 
-  private IncrementalIndex makeIncIndex()
+  private IncrementalIndex makeIncIndex(boolean withRollup)
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(withRollup)
             .build(),
         true,
         false,
         true,
         rowsPerSegment
     );
+  }
+
+  @TearDown(Level.Trial)
+  public void tearDown()
+  {
+    try {
+      if (anIncrementalIndex != null) {
+        anIncrementalIndex.close();
+      }
+
+      if (queryableIndexes != null) {
+        for (QueryableIndex index : queryableIndexes) {
+          index.close();
+        }
+      }
+
+      if (tmpDir != null) {
+        FileUtils.deleteDirectory(tmpDir);
+      }
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to tear down, temp dir was: %s", tmpDir);
+      throw Throwables.propagate(e);
+    }
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)
@@ -352,7 +526,6 @@ public class GroupByBenchmark
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 
-
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -361,7 +534,7 @@ public class GroupByBenchmark
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         "incIndex",
-        new IncrementalIndexSegment(incIndexes.get(0), "incIndex")
+        new IncrementalIndexSegment(anIncrementalIndex, "incIndex")
     );
 
     List<Row> results = GroupByBenchmark.runQuery(factory, runner, query);
@@ -379,7 +552,7 @@ public class GroupByBenchmark
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         "qIndex",
-        new QueryableIndexSegment("qIndex", qIndexes.get(0))
+        new QueryableIndexSegment("qIndex", queryableIndexes.get(0))
     );
 
     List<Row> results = GroupByBenchmark.runQuery(factory, runner, query);
@@ -389,29 +562,17 @@ public class GroupByBenchmark
     }
   }
 
-
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndex(Blackhole blackhole) throws Exception
   {
-    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
-    QueryToolChest toolChest = factory.getToolchest();
-    for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
-      QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
-          factory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
-      );
-      singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
-    }
-
-    QueryRunner theRunner = toolChest.postMergeQueryDecoration(
-        new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(executorService, singleSegmentRunners)),
-            toolChest
-        )
+    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(executorService, makeMultiRunners())
+        ),
+        (QueryToolChest) toolChest
     );
 
     Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
@@ -420,5 +581,71 @@ public class GroupByBenchmark
     for (Row result : results) {
       blackhole.consume(result);
     }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndexWithSpilling(Blackhole blackhole) throws Exception
+  {
+    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(executorService, makeMultiRunners())
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    final GroupByQuery spillingQuery = query.withOverriddenContext(
+        ImmutableMap.<String, Object>of("bufferGrouperMaxSize", 4000)
+    );
+    Sequence<Row> queryResult = theRunner.run(spillingQuery, Maps.<String, Object>newHashMap());
+    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+
+    for (Row result : results) {
+      blackhole.consume(result);
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndexWithSerde(Blackhole blackhole) throws Exception
+  {
+    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            new SerializingQueryRunner<>(
+                new DefaultObjectMapper(new SmileFactory()),
+                Row.class,
+                toolChest.mergeResults(
+                    factory.mergeRunners(executorService, makeMultiRunners())
+                )
+            )
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+
+    for (Row result : results) {
+      blackhole.consume(result);
+    }
+  }
+
+  private List<QueryRunner<Row>> makeMultiRunners()
+  {
+    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    for (int i = 0; i < numSegments; i++) {
+      String segmentName = "qIndex" + i;
+      QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+          factory,
+          segmentName,
+          new QueryableIndexSegment(segmentName, queryableIndexes.get(i))
+      );
+      runners.add(factory.getToolchest().preMergeQueryDecoration(runner));
+    }
+    return runners;
   }
 }

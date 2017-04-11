@@ -23,7 +23,8 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.StorageService;
@@ -136,5 +137,17 @@ public class S3TaskLogs implements TaskLogs
   private String getTaskLogKey(String taskid)
   {
     return String.format("%s/%s/log", config.getS3Prefix(), taskid);
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public void killOlderThan(long timestamp) throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
   }
 }

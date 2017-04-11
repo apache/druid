@@ -22,17 +22,17 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUnusedAction;
 import io.druid.indexing.common.actions.SegmentMetadataUpdateAction;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -62,52 +62,61 @@ public class RestoreTask extends AbstractFixedIntervalTask
   }
 
   @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
-    {
-      // Confirm we have a lock (will throw if there isn't exactly one element)
-      final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  {
+    // Confirm we have a lock (will throw if there isn't exactly one element)
+    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
 
-      if (!myLock.getDataSource().equals(getDataSource())) {
-        throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
+    if (!myLock.getDataSource().equals(getDataSource())) {
+      throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
+    }
+
+    if (!myLock.getInterval().equals(getInterval())) {
+      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
+    }
+
+    // List unused segments
+    final List<DataSegment> unusedSegments = toolbox
+        .getTaskActionClient()
+        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+
+    // Verify none of these segments have versions > lock version
+    for (final DataSegment unusedSegment : unusedSegments) {
+      if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
+        throw new ISE(
+            "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
+            unusedSegment.getIdentifier(),
+            unusedSegment.getVersion(),
+            myLock.getVersion()
+        );
       }
 
-      if (!myLock.getInterval().equals(getInterval())) {
-        throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
+      log.info("OK to restore segment: %s", unusedSegment.getIdentifier());
+    }
+
+    final List<DataSegment> restoredSegments = new ArrayList<>();
+
+    // Move segments
+    for (DataSegment segment : unusedSegments) {
+      final DataSegment restored = toolbox.getDataSegmentArchiver().restore(segment);
+      if (restored != null) {
+        restoredSegments.add(restored);
+      } else {
+        log.info("Segment [%s] did not move, not updating metadata", segment);
       }
+    }
 
-      // List unused segments
-      final List<DataSegment> unusedSegments = toolbox
-          .getTaskActionClient()
-          .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
-
-      // Verify none of these segments have versions > lock version
-      for (final DataSegment unusedSegment : unusedSegments) {
-        if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
-          throw new ISE(
-              "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
-              unusedSegment.getIdentifier(),
-              unusedSegment.getVersion(),
-              myLock.getVersion()
-          );
-        }
-
-        log.info("OK to restore segment: %s", unusedSegment.getIdentifier());
-      }
-
-      List<DataSegment> restoredSegments = Lists.newLinkedList();
-
-      // Move segments
-      for (DataSegment segment : unusedSegments) {
-        restoredSegments.add(toolbox.getDataSegmentArchiver().restore(segment));
-      }
-
+    if (restoredSegments.isEmpty()) {
+      log.info("No segments restored");
+    } else {
       // Update metadata for moved segments
       toolbox.getTaskActionClient().submit(
           new SegmentMetadataUpdateAction(
               ImmutableSet.copyOf(restoredSegments)
           )
       );
-
-      return TaskStatus.success(getId());
     }
+
+    return TaskStatus.success(getId());
+  }
 }

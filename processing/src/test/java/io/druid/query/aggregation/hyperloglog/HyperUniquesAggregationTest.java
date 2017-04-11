@@ -20,29 +20,55 @@
 package io.druid.query.aggregation.hyperloglog;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.AggregatorsModule;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 
+@RunWith(Parameterized.class)
 public class HyperUniquesAggregationTest
 {
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
+
+  private final GroupByQueryConfig config;
+
+  public HyperUniquesAggregationTest(GroupByQueryConfig config)
+  {
+    this.config = config;
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+    return constructors;
+  }
 
   @Test
   public void testIngestAndQuery() throws Exception
   {
     AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Lists.newArrayList(new AggregatorsModule()),
+        config,
         tempFolder
     );
 
@@ -88,7 +114,7 @@ public class HyperUniquesAggregationTest
         parseSpec,
         metricSpec,
         0,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         50000,
         query
     );
@@ -96,5 +122,67 @@ public class HyperUniquesAggregationTest
     MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
     Assert.assertEquals(3.0, row.getFloatMetric("index_hll"), 0.1);
     Assert.assertEquals(3.0, row.getFloatMetric("index_unique_count"), 0.1);
+  }
+
+  @Test
+  public void testIngestAndQueryPrecomputedHll() throws Exception
+  {
+    AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+            Lists.newArrayList(new AggregatorsModule()),
+            config,
+            tempFolder
+    );
+
+    String metricSpec = "[{"
+            + "\"type\": \"hyperUnique\","
+            + "\"name\": \"index_hll\","
+            + "\"fieldName\": \"preComputedHll\","
+            + "\"isInputHyperUnique\": true"
+            + "}]";
+
+    String parseSpec = "{"
+            + "\"type\" : \"string\","
+            + "\"parseSpec\" : {"
+            + "    \"format\" : \"tsv\","
+            + "    \"timestampSpec\" : {"
+            + "        \"column\" : \"timestamp\","
+            + "        \"format\" : \"auto\""
+            + "},"
+            + "    \"dimensionsSpec\" : {"
+            + "        \"dimensions\": [],"
+            + "        \"dimensionExclusions\" : [],"
+            + "        \"spatialDimensions\" : []"
+            + "    },"
+            + "    \"columns\": [\"timestamp\", \"market\", \"preComputedHll\"]"
+            + "  }"
+            + "}";
+
+    String query = "{"
+            + "\"queryType\": \"groupBy\","
+            + "\"dataSource\": \"test_datasource\","
+            + "\"granularity\": \"ALL\","
+            + "\"dimensions\": [],"
+            + "\"aggregations\": ["
+            + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
+            + "],"
+            + "\"postAggregations\": ["
+            + "  { \"type\": \"hyperUniqueCardinality\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
+            + "],"
+            + "\"intervals\": [ \"1970/2050\" ]"
+            + "}";
+
+    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+            new File(this.getClass().getClassLoader().getResource("druid.hll.sample.tsv").getFile()),
+            parseSpec,
+            metricSpec,
+            0,
+            Granularities.DAY,
+            50000,
+            query
+    );
+
+    MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
+    Assert.assertEquals(4.0, row.getFloatMetric("index_hll"), 0.1);
+    Assert.assertEquals(4.0, row.getFloatMetric("index_unique_count"), 0.1);
   }
 }

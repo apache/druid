@@ -28,16 +28,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
-import com.metamx.common.Pair;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidDataSource;
@@ -53,6 +46,15 @@ import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import io.druid.guice.annotations.Self;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.DruidNode;
@@ -84,6 +86,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -129,7 +132,7 @@ public class DruidCoordinator
   private volatile int leaderCounter = 0;
   private volatile boolean leader = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
-
+  private final BalancerStrategyFactory factory;
 
   @Inject
   public DruidCoordinator(
@@ -146,7 +149,8 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
-      @CoordinatorIndexingServiceHelper Set<DruidCoordinatorHelper> indexingServiceHelpers
+      @CoordinatorIndexingServiceHelper Set<DruidCoordinatorHelper> indexingServiceHelpers,
+      BalancerStrategyFactory factory
   )
   {
     this(
@@ -164,7 +168,8 @@ public class DruidCoordinator
         serviceAnnouncer,
         self,
         Maps.<String, LoadQueuePeon>newConcurrentMap(),
-        indexingServiceHelpers
+        indexingServiceHelpers,
+        factory
     );
   }
 
@@ -183,7 +188,8 @@ public class DruidCoordinator
       ServiceAnnouncer serviceAnnouncer,
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
-      Set<DruidCoordinatorHelper> indexingServiceHelpers
+      Set<DruidCoordinatorHelper> indexingServiceHelpers,
+      BalancerStrategyFactory factory
   )
   {
     this.config = config;
@@ -205,6 +211,7 @@ public class DruidCoordinator
 
     this.leaderLatch = new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
+    this.factory = factory;
   }
 
   public boolean isLeader()
@@ -546,7 +553,6 @@ public class DruidCoordinator
         leader = true;
         metadataSegmentManager.start();
         metadataRuleManager.start();
-        serverInventoryView.start();
         serviceAnnouncer.announce(self);
         final int startingLeaderCounter = leaderCounter;
 
@@ -628,7 +634,6 @@ public class DruidCoordinator
         loadManagementPeons.clear();
 
         serviceAnnouncer.unannounce(self);
-        serverInventoryView.stop();
         metadataRuleManager.stop();
         metadataSegmentManager.stop();
         leader = false;
@@ -664,6 +669,7 @@ public class DruidCoordinator
     @Override
     public void run()
     {
+      ListeningExecutorService balancerExec = null;
       try {
         synchronized (lock) {
           final LeaderLatch latch = leaderLatch.get();
@@ -686,27 +692,32 @@ public class DruidCoordinator
           }
         }
 
-        try (BalancerStrategyFactory factory =
-                 new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads())) {
-          // Do coordinator stuff.
-          DruidCoordinatorRuntimeParams params =
-              DruidCoordinatorRuntimeParams.newBuilder()
-                                           .withStartTime(startTime)
-                                           .withDatasources(metadataSegmentManager.getInventory())
-                                           .withDynamicConfigs(getDynamicConfigs())
-                                           .withEmitter(emitter)
-                                           .withBalancerStrategyFactory(factory)
-                                           .build();
-          for (DruidCoordinatorHelper helper : helpers) {
-            // Don't read state and run state in the same helper otherwise racy conditions may exist
-            if (leader && startingLeaderCounter == leaderCounter) {
-              params = helper.run(params);
-            }
+        balancerExec = MoreExecutors.listeningDecorator(
+                Executors.newFixedThreadPool(getDynamicConfigs().getBalancerComputeThreads()));
+        BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
+
+        // Do coordinator stuff.
+        DruidCoordinatorRuntimeParams params =
+                DruidCoordinatorRuntimeParams.newBuilder()
+                        .withStartTime(startTime)
+                        .withDatasources(metadataSegmentManager.getInventory())
+                        .withDynamicConfigs(getDynamicConfigs())
+                        .withEmitter(emitter)
+                        .withBalancerStrategy(balancerStrategy)
+                        .build();
+        for (DruidCoordinatorHelper helper : helpers) {
+          // Don't read state and run state in the same helper otherwise racy conditions may exist
+          if (leader && startingLeaderCounter == leaderCounter) {
+            params = helper.run(params);
           }
         }
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
+      } finally {
+        if(balancerExec != null){
+          balancerExec.shutdownNow();
+        }
       }
     }
   }
@@ -765,6 +776,7 @@ public class DruidCoordinator
                     if (!loadManagementPeons.containsKey(server.getName())) {
                       String basePath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName());
                       LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
+                      loadQueuePeon.start();
                       log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
 
                       loadManagementPeons.put(server.getName(), loadQueuePeon);

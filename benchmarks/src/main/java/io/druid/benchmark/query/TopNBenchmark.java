@@ -22,11 +22,7 @@ package io.druid.benchmark.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -34,8 +30,12 @@ import io.druid.collections.StupidPool;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -50,8 +50,10 @@ import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.query.topn.DimensionTopNMetricSpec;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNQueryConfig;
@@ -69,6 +71,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -79,6 +82,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -104,7 +108,7 @@ public class TopNBenchmark
   @Param({"750000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.numericSort", "basic.alphanumericSort"})
   private String schemaAndQuery;
 
   @Param({"10"})
@@ -123,6 +127,7 @@ public class TopNBenchmark
   private BenchmarkSchemaInfo schemaInfo;
   private TopNQueryBuilder queryBuilder;
   private TopNQuery query;
+  private File tmpDir;
 
   private ExecutorService executorService;
 
@@ -162,13 +167,45 @@ public class TopNBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(QueryGranularities.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimSequential")
           .metric("sumFloatNormal")
           .intervals(intervalSpec)
           .aggregators(queryAggs);
 
       basicQueries.put("A", queryBuilderA);
+    }
+    { // basic.numericSort
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
+
+      TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
+          .dataSource("blah")
+          .granularity(Granularities.ALL)
+          .dimension("dimUniform")
+          .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+          .intervals(intervalSpec)
+          .aggregators(queryAggs);
+
+      basicQueries.put("numericSort", queryBuilderA);
+    }
+    { // basic.alphanumericSort
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
+
+      TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
+          .dataSource("blah")
+          .granularity(Granularities.ALL)
+          .dimension("dimUniform")
+          .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
+          .intervals(intervalSpec)
+          .aggregators(queryAggs);
+
+      basicQueries.put("alphanumericSort", queryBuilderA);
     }
 
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
@@ -181,7 +218,7 @@ public class TopNBenchmark
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
 
     executorService = Execs.multiThreaded(numSegments, "TopNThreadPool");
@@ -220,15 +257,14 @@ public class TopNBenchmark
       incIndexes.add(incIndex);
     }
 
-    File tmpFile = Files.createTempDir();
-    log.info("Using temp dir: " + tmpFile.getAbsolutePath());
-    tmpFile.deleteOnExit();
+    tmpDir = Files.createTempDir();
+    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
     qIndexes = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       File indexFile = INDEX_MERGER_V9.persist(
           incIndexes.get(i),
-          tmpFile,
+          tmpDir,
           new IndexSpec()
       );
 
@@ -237,17 +273,28 @@ public class TopNBenchmark
     }
 
     factory = new TopNQueryRunnerFactory(
-        new StupidPool<>(new OffheapBufferGenerator("compute", 250000000), Integer.MAX_VALUE),
+        new StupidPool<>(
+            "TopNBenchmark-compute-bufferPool",
+            new OffheapBufferGenerator("compute", 250000000),
+            0,
+            Integer.MAX_VALUE
+        ),
         new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
+  }
+
+  @TearDown
+  public void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(tmpDir);
   }
 
   private IncrementalIndex makeIncIndex()
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

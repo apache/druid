@@ -21,13 +21,14 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelector;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +68,7 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
 
@@ -80,7 +81,7 @@ public class OrFilter implements BooleanFilter
   @Override
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
-      ValueMatcherFactory valueMatcherFactory,
+      ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   )
   {
@@ -91,7 +92,7 @@ public class OrFilter implements BooleanFilter
       if (filter.supportsBitmapIndex(selector)) {
         bitmaps.add(filter.getBitmapIndex(selector));
       } else {
-        ValueMatcher matcher = filter.makeMatcher(valueMatcherFactory);
+        ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
         matchers.add(matcher);
       }
     }
@@ -153,6 +154,30 @@ public class OrFilter implements BooleanFilter
       }
     }
     return true;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    for (Filter filter : filters) {
+      if(!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  {
+    // Estimate selectivity with attribute value independence assumption
+    double selectivity = 0;
+    for (final Filter filter : filters) {
+      selectivity += filter.estimateSelectivity(indexSelector);
+    }
+    return Math.min(selectivity, 1.);
   }
 
   public String toString()

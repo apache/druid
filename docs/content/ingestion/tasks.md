@@ -76,9 +76,8 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : -1,
-      "rowFlushBoundary" : 0,
-      "numShards": 1
+      "targetPartitionSize" : 5000000,
+      "maxRowsInMemory" : 75000
     }
   }
 }
@@ -100,7 +99,12 @@ See [Ingestion](../ingestion/index.html)
 
 #### IOConfig
 
-This field is required. You can specify a type of [Firehose](../ingestion/firehose.html) here.
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|The task type, this should always be "index".|none|yes|
+|firehose|Specify a [Firehose](../ingestion/firehose.html) here.|none|yes|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs (which can be forced by setting 'forceExtendableShardSpecs' in the tuning config).|false|no|
+|skipFirehoseCaching|By default the IndexTask will fully read the supplied firehose to disk before processing the data. This prevents the task from doing multiple remote fetches and enforces determinism if more than one pass through the data is required. It also allows the task to retry fetching the data if the firehose throws an exception during reading. This requires sufficient disk space for the temporary cache.|false|no|
 
 #### TuningConfig
 
@@ -108,11 +112,15 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|The task type, this should always be "index".|None.|yes|
-|targetPartitionSize|Used in sharding. Determines how many rows are in each segment. Set this to -1 to use numShards instead for sharding.|5000000|no|
-|rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|75000|no|
-|numShards|Directly specify the number of shards to create. You can skip the intermediate persist step if you specify the number of shards you want and set targetPartitionSize=-1.|null|no|
+|type|The task type, this should always be "index".|none|yes|
+|targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|5000000|no|
+|maxRowsInMemory|Used in determining when intermediate persists to disk should occur.|75000|no|
+|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if targetPartitionSize is set.|null|no|
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
+|maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
+|buildV9Directly|Whether to build a v9 index directly instead of first building a v8 index and then converting it to v9 format.|true|no|
+|forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
+|reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 
 #### IndexSpec
 
@@ -123,7 +131,8 @@ compression formats. The indexSpec is optional and default parameters will be us
 |-----|----|-----------|--------|
 |bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
 |dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
-|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
+|longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
 
 ##### Bitmap types
 
@@ -153,13 +162,17 @@ Append tasks append a list of segments together into a single segment (one after
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>,
+    "buildV9Directly": <true or false, default true>,
     "aggregations": <optional list of aggregators>
 }
 ```
 
 ### Merge Task
 
-Merge tasks merge a list of segments together. Any common timestamps are merged. The grammar is:
+Merge tasks merge a list of segments together. Any common timestamps are merged.
+If rollup is disabled as part of ingestion, common timestamps are not merged and rows are reordered by their timestamp.
+
+The grammar is:
 
 ```json
 {
@@ -167,7 +180,27 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
+    "rollup": <whether or not to rollup data during a merge>,
+    "buildV9Directly": <true or false, default true>,
     "segments": <JSON list of DataSegment objects to merge>
+}
+```
+
+### Same Interval Merge Task
+
+Same Interval Merge task is a shortcut of merge task, all segments in the interval are going to be merged.
+
+The grammar is:
+
+```json
+{
+    "type": "same_interval_merge",
+    "id": <task_id>,
+    "dataSource": <task_datasource>,
+    "aggregations": <list of aggregators>,
+    "rollup": <whether or not to rollup data during a merge>,
+    "buildV9Directly": <true or false, default true>,
+    "interval": <DataSegment objects in this interval are going to be merged>
 }
 ```
 

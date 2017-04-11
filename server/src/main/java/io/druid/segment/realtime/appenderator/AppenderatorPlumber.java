@@ -30,16 +30,16 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import com.metamx.common.Granularity;
-import com.metamx.common.ISE;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.guava.Sequence;
 import com.metamx.emitter.EmittingLogger;
 
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -242,7 +242,7 @@ public class AppenderatorPlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
-    final long truncatedTime = segmentGranularity.truncate(new DateTime(timestamp)).getMillis();
+    final long truncatedTime = segmentGranularity.bucketStart(new DateTime(timestamp)).getMillis();
 
     SegmentIdentifier retVal = segments.get(truncatedTime);
 
@@ -334,7 +334,7 @@ public class AppenderatorPlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
-    final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
+    final DateTime truncatedNow = segmentGranularity.bucketStart(new DateTime());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
     log.info(
@@ -391,7 +391,7 @@ public class AppenderatorPlumber implements Plumber
 
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
-    DateTime minTimestampAsDate = segmentGranularity.truncate(
+    DateTime minTimestampAsDate = segmentGranularity.bucketStart(
         new DateTime(
             Math.max(
                 windowMillis,

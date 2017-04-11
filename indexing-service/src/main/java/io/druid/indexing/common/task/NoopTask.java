@@ -22,12 +22,15 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
+import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
+
 import org.joda.time.DateTime;
 
 import java.util.Map;
@@ -135,14 +138,15 @@ public class NoopTask extends AbstractTask
   {
     if (firehoseFactory != null) {
       log.info("Connecting firehose");
-      firehoseFactory.connect(null);
     }
+    try (Firehose firehose = firehoseFactory != null ? firehoseFactory.connect(null) : null) {
 
-    log.info("Running noop task[%s]", getId());
-    log.info("Sleeping for %,d millis.", runTime);
-    Thread.sleep(runTime);
-    log.info("Woke up!");
-    return TaskStatus.success(getId());
+      log.info("Running noop task[%s]", getId());
+      log.info("Sleeping for %,d millis.", runTime);
+      Thread.sleep(runTime);
+      log.info("Woke up!");
+      return TaskStatus.success(getId());
+    }
   }
 
   public static NoopTask create()

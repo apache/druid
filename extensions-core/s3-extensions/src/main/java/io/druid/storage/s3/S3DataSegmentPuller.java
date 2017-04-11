@@ -25,18 +25,23 @@ import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.FileUtils;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.MapUtils;
-import com.metamx.common.StringUtils;
-import com.metamx.common.UOE;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.model.StorageObject;
+
+import javax.tools.FileObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,11 +51,6 @@ import java.io.Writer;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import javax.tools.FileObject;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.StorageObject;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
@@ -175,15 +175,9 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       throw new SegmentLoadingException("IndexFile[%s] does not exist.", s3Coords);
     }
 
-    if (!outDir.exists()) {
-      outDir.mkdirs();
-    }
-
-    if (!outDir.isDirectory()) {
-      throw new ISE("outDir[%s] must be a directory.", outDir);
-    }
-
     try {
+      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+
       final URI uri = URI.create(String.format("s3://%s/%s", s3Coords.bucket, s3Coords.path));
       final ByteSource byteSource = new ByteSource()
       {
@@ -311,13 +305,6 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
         throw Throwables.propagate(e);
       }
     }
-  }
-
-  private String toFilename(String key, final String suffix)
-  {
-    String filename = key.substring(key.lastIndexOf("/") + 1); // characters after last '/'
-    filename = filename.substring(0, filename.length() - suffix.length()); // remove the suffix from the end
-    return filename;
   }
 
   private boolean isObjectInBucket(final S3Coords coords) throws SegmentLoadingException

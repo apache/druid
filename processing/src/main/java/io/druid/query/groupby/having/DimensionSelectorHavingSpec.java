@@ -23,15 +23,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.metamx.common.StringUtils;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class DimensionSelectorHavingSpec implements HavingSpec
+public class DimensionSelectorHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = (byte) 0x8;
   private static final byte STRING_SEPARATOR = (byte) 0xFF;

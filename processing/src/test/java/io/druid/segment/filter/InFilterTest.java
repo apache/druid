@@ -23,13 +23,13 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
@@ -42,15 +42,11 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
-import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -79,10 +75,11 @@ public class InFilterTest extends BaseFilterTest
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -213,10 +210,10 @@ public class InFilterTest extends BaseFilterTest
   public void testMatchWithExtractionFn()
   {
     String extractionJsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn superFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn superFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     String nullJsFn = "function(str) { if (str === null) { return 'YES'; } else { return 'NO';} }";
-    ExtractionFn yesNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn yesNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     assertFilterMatches(
         toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
@@ -299,14 +296,5 @@ public class InFilterTest extends BaseFilterTest
   private DimFilter toInFilterWithFn(String dim, ExtractionFn fn, String value, String... values)
   {
     return new InDimFilter(dim, Lists.asList(value, values), fn);
-  }
-
-  private void assertFilterMatches(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
   }
 }

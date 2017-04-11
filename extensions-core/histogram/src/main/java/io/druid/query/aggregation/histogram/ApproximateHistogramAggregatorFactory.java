@@ -26,7 +26,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-import com.metamx.common.StringUtils;
+
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -80,7 +81,6 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramAggregator(
-        name,
         metricFactory.makeFloatColumnSelector(fieldName),
         resolution,
         lowerLimit,
@@ -251,12 +251,6 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return new ApproximateHistogram(resolution).getMaxStorageSize();
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return new ApproximateHistogram(resolution);
   }
 
   @Override

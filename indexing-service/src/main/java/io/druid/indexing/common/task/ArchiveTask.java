@@ -22,13 +22,14 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUnusedAction;
 import io.druid.indexing.common.actions.SegmentMetadataUpdateAction;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -96,7 +97,11 @@ public class ArchiveTask extends AbstractFixedIntervalTask
     // Move segments
     for (DataSegment segment : unusedSegments) {
       final DataSegment archivedSegment = toolbox.getDataSegmentArchiver().archive(segment);
-      toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(ImmutableSet.of(archivedSegment)));
+      if (archivedSegment != null) {
+        toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(ImmutableSet.of(archivedSegment)));
+      } else {
+        log.info("No action was taken for [%s]", segment);
+      }
     }
 
     return TaskStatus.success(getId());

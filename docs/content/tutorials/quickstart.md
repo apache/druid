@@ -10,7 +10,7 @@ In this quickstart, we will download Druid, set up it up on a single machine, lo
 
 You will need:
 
-  * Java 7 or higher
+  * Java 8 or higher
   * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
   * 8G of RAM
   * 2 vCPUs
@@ -226,7 +226,7 @@ curl -L -H'Content-Type: application/json' -XPOST --data-binary @quickstart/wiki
 
 Druid is ideal for power user-facing analytic applications. There are a number of different open source applications to
 visualize and explore data in Druid. We recommend trying [Pivot](https://github.com/implydata/pivot),
-[Caravel](https://github.com/airbnb/caravel), or [Metabase](https://github.com/metabase/metabase) to start
+[Superset](https://github.com/airbnb/superset), or [Metabase](https://github.com/metabase/metabase) to start
 visualizing the data you just ingested.
 
 If you installed Pivot for example, you should be able to view your data in your browser at [localhost:9090](http://localhost:9090/).

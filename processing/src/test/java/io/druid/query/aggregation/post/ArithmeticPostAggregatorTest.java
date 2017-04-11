@@ -39,49 +39,64 @@ public class ArithmeticPostAggregatorTest
   @Test
   public void testCompute()
   {
+    final String aggName = "rows";
     ArithmeticPostAggregator arithmeticPostAggregator;
-    CountAggregator agg = new CountAggregator("rows");
+    ExpressionPostAggregator expressionPostAggregator;
+    CountAggregator agg = new CountAggregator();
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
     Map<String, Object> metricValues = new HashMap<String, Object>();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6
+                "roku", 6D
             ),
             new FieldAccessPostAggregator(
                 "rows", "rows"
             )
         );
 
+    for (PostAggregator postAggregator : postAggregatorList) {
+      metricValues.put(postAggregator.getName(), postAggregator.compute(metricValues));
+    }
+
     arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggregatorList);
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku + rows");
     Assert.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(9.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("subtract", "-", postAggregatorList);
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku - rows");
     Assert.assertEquals(3.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(3.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("multiply", "*", postAggregatorList);
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku * rows");
     Assert.assertEquals(18.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(18.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("divide", "/", postAggregatorList);
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku / rows");
     Assert.assertEquals(2.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(2.0, expressionPostAggregator.compute(metricValues));
   }
 
   @Test
   public void testComparator()
   {
+    final String aggName = "rows";
     ArithmeticPostAggregator arithmeticPostAggregator;
-    CountAggregator agg = new CountAggregator("rows");
+    CountAggregator agg = new CountAggregator();
     Map<String, Object> metricValues = new HashMap<String, Object>();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6
+                "roku", 6D
             ),
             new FieldAccessPostAggregator(
                 "rows", "rows"
@@ -94,7 +109,7 @@ public class ArithmeticPostAggregatorTest
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
     Object after = arithmeticPostAggregator.compute(metricValues);
 
     Assert.assertEquals(-1, comp.compare(before, after));

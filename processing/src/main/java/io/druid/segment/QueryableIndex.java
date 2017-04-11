@@ -19,12 +19,13 @@
 
 package io.druid.segment;
 
-import com.metamx.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  */
@@ -32,10 +33,10 @@ public interface QueryableIndex extends ColumnSelector, Closeable
 {
   public Interval getDataInterval();
   public int getNumRows();
-  public Indexed<String> getColumnNames();
   public Indexed<String> getAvailableDimensions();
   public BitmapFactory getBitmapFactoryForDimensions();
   public Metadata getMetadata();
+  public Map<String, DimensionHandler> getDimensionHandlers();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.

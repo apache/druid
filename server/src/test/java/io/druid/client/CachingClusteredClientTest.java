@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
@@ -33,6 +34,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ForwardingListeningExecutorService;
@@ -42,13 +44,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.guava.MergeIterable;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.guava.nary.TrinaryFn;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
@@ -56,14 +51,20 @@ import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularity;
-import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.BaseQuery;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.guava.MergeIterable;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.guava.nary.TrinaryFn;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
@@ -76,12 +77,10 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
@@ -94,9 +93,9 @@ import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
-import io.druid.query.groupby.GroupByQueryEngine;
-import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.SearchHit;
@@ -105,6 +104,7 @@ import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -124,7 +124,6 @@ import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
-import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
@@ -144,7 +143,6 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -153,6 +151,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -163,7 +162,12 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of("finalize", false);
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of(
+      "finalize", false,
+
+      // GroupBy v2 won't cache on the broker, so test with v1.
+      "groupByStrategy", GroupByStrategySelector.STRATEGY_V1
+  );
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
   static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
@@ -210,16 +214,45 @@ public class CachingClusteredClientTest
       )
   );
   private static final List<AggregatorFactory> RENAMED_AGGS = Arrays.asList(
-      new CountAggregatorFactory("rows2"),
+      new CountAggregatorFactory("rows"),
       new LongSumAggregatorFactory("imps", "imps"),
       new LongSumAggregatorFactory("impers2", "imps")
   );
+  private static final List<PostAggregator> DIFF_ORDER_POST_AGGS = Arrays.<PostAggregator>asList(
+      new ArithmeticPostAggregator(
+          "avg_imps_per_row",
+          "/",
+          Arrays.<PostAggregator>asList(
+              new FieldAccessPostAggregator("imps", "imps"),
+              new FieldAccessPostAggregator("rows", "rows")
+          )
+      ),
+      new ArithmeticPostAggregator(
+          "avg_imps_per_row_half",
+          "/",
+          Arrays.<PostAggregator>asList(
+              new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
+              new ConstantPostAggregator("constant", 2)
+          )
+      ),
+      new ArithmeticPostAggregator(
+          "avg_imps_per_row_double",
+          "*",
+          Arrays.<PostAggregator>asList(
+              new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
+              new ConstantPostAggregator("constant", 2)
+          )
+      )
+  );
   private static final DimFilter DIM_FILTER = null;
   private static final List<PostAggregator> RENAMED_POST_AGGS = ImmutableList.of();
-  private static final QueryGranularity GRANULARITY = QueryGranularities.DAY;
+  private static final Granularity GRANULARITY = Granularities.DAY;
   private static final DateTimeZone TIMEZONE = DateTimeZone.forID("America/Los_Angeles");
-  private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
+  private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
+
+  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+
   static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
       ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                   .put(
@@ -244,7 +277,8 @@ public class CachingClusteredClientTest
                       SelectQuery.class,
                       new SelectQueryQueryToolChest(
                           jsonMapper,
-                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+                          selectConfigSupplier
                       )
                   )
                   .put(
@@ -276,7 +310,7 @@ public class CachingClusteredClientTest
         new Function<Integer, Object[]>()
         {
           @Override
-          public Object[] apply(@Nullable Integer input)
+          public Object[] apply(Integer input)
           {
             return new Object[]{input};
           }
@@ -361,7 +395,7 @@ public class CachingClusteredClientTest
         }
         return task instanceof Callable ?
                delegate.submit((Callable) task) :
-               delegate.submit((Runnable) task);
+               (ListenableFuture<T>) delegate.submit((Runnable) task);
       }
 
       @Override
@@ -770,23 +804,24 @@ public class CachingClusteredClientTest
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        client, new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-    )
+        client,
+        new TopNQueryQueryToolChest(
+            new TopNQueryConfig(),
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        )
     );
 
     testQueryCaching(
         runner,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeTopNResults(new DateTime("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998),
+        makeTopNResultsWithoutRename(new DateTime("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeTopNResults(new DateTime("2011-01-02"), "a", 50, 4997, "b", 50, 4996, "c", 50, 4995),
+        makeTopNResultsWithoutRename(new DateTime("2011-01-02"), "a", 50, 4997, "b", 50, 4996, "c", 50, 4995),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -795,7 +830,7 @@ public class CachingClusteredClientTest
         ),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -823,7 +858,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-01/2011-01-10")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
-                   .postAggregators(RENAMED_POST_AGGS)
+                   .postAggregators(DIFF_ORDER_POST_AGGS)
                    .build(),
             context
         )
@@ -857,7 +892,7 @@ public class CachingClusteredClientTest
         runner,
         builder.build(),
         new Interval("2011-11-04/2011-11-08"),
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-11-04", TIMEZONE), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-11-05", TIMEZONE), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-11-06", TIMEZONE), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -877,7 +912,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-11-04/2011-11-08")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
-                   .postAggregators(RENAMED_POST_AGGS)
+                   .postAggregators(DIFF_ORDER_POST_AGGS)
                    .build(),
             context
         )
@@ -890,14 +925,14 @@ public class CachingClusteredClientTest
     List<Sequence<Result<TopNResultValue>>> sequences =
         ImmutableList.of(
             Sequences.simple(
-                makeTopNResults(
+                makeTopNResultsWithoutRename(
                     new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
                     new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
                     new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
                 )
             ),
             Sequences.simple(
-                makeTopNResults(
+                makeTopNResultsWithoutRename(
                     new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
                     new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
                     new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
@@ -907,7 +942,7 @@ public class CachingClusteredClientTest
         );
 
     TestHelper.assertExpectedResults(
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -957,13 +992,13 @@ public class CachingClusteredClientTest
         runner,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeTopNResults(),
+        makeTopNResultsWithoutRename(),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeTopNResults(),
+        makeTopNResultsWithoutRename(),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -972,7 +1007,7 @@ public class CachingClusteredClientTest
         ),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -999,7 +1034,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-01/2011-01-10")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
-                   .postAggregators(RENAMED_POST_AGGS)
+                   .postAggregators(DIFF_ORDER_POST_AGGS)
                    .build(),
             context
         )
@@ -1031,13 +1066,13 @@ public class CachingClusteredClientTest
         runner,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeTopNResults(),
+        makeTopNResultsWithoutRename(),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeTopNResults(),
+        makeTopNResultsWithoutRename(),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -1046,7 +1081,7 @@ public class CachingClusteredClientTest
         ),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -1057,7 +1092,7 @@ public class CachingClusteredClientTest
 
     HashMap<String, List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
-        makeTopNResults(
+        makeTopNResultsWithoutRename(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -1073,7 +1108,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-01/2011-01-10")
                    .metric("avg_imps_per_row_double")
                    .aggregators(AGGS)
-                   .postAggregators(POST_AGGS)
+                   .postAggregators(DIFF_ORDER_POST_AGGS)
                    .build(),
             context
         )
@@ -1089,7 +1124,7 @@ public class CachingClusteredClientTest
                                                     .granularity(GRANULARITY)
                                                     .limit(1000)
                                                     .intervals(SEG_SPEC)
-                                                    .dimensions(Arrays.asList("a_dim"))
+                                                    .dimensions(Arrays.asList(TOP_DIM))
                                                     .query("how")
                                                     .context(CONTEXT);
 
@@ -1097,13 +1132,14 @@ public class CachingClusteredClientTest
         client,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeSearchResults(new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
+        makeSearchResults(TOP_DIM, new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeSearchResults(new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
+        makeSearchResults(TOP_DIM, new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
 
         new Interval("2011-01-05/2011-01-10"),
         makeSearchResults(
+            TOP_DIM,
             new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
             new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
             new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
@@ -1113,6 +1149,7 @@ public class CachingClusteredClientTest
 
         new Interval("2011-01-05/2011-01-10"),
         makeSearchResults(
+            TOP_DIM,
             new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
             new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
             new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
@@ -1130,6 +1167,7 @@ public class CachingClusteredClientTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         makeSearchResults(
+            TOP_DIM,
             new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
             new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
             new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
@@ -1152,8 +1190,111 @@ public class CachingClusteredClientTest
   }
 
   @Test
+  public void testSearchCachingRenamedOutput() throws Exception
+  {
+    final Druids.SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .filters(DIM_FILTER)
+        .granularity(GRANULARITY)
+        .limit(1000)
+        .intervals(SEG_SPEC)
+        .dimensions(Arrays.asList(TOP_DIM))
+        .query("how")
+        .context(CONTEXT);
+
+    testQueryCaching(
+        client,
+        builder.build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeSearchResults(TOP_DIM, new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
+
+        new Interval("2011-01-02/2011-01-03"),
+        makeSearchResults(TOP_DIM, new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSearchResults(
+            TOP_DIM,
+            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+        ),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSearchResults(
+            TOP_DIM,
+            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+        )
+    );
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(
+        client, new SearchQueryQueryToolChest(
+        new SearchQueryConfig(),
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    )
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(
+        makeSearchResults(
+            TOP_DIM,
+            new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
+            new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
+            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
+            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                .build(),
+            context
+        )
+    );
+    TestHelper.assertExpectedResults(
+        makeSearchResults(
+            "new_dim",
+            new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
+            new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
+            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
+            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                .dimensions(new DefaultDimensionSpec(
+                    TOP_DIM,
+                    "new_dim"
+                ))
+                .build(),
+            context
+        )
+    );
+  }
+
+  @Test
   public void testSelectCaching() throws Exception
   {
+    final Set<String> dimensions = Sets.<String>newHashSet("a");
+    final Set<String> metrics = Sets.<String>newHashSet("rows");
+
     Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
                                               .dataSource(DATA_SOURCE)
                                               .intervals(SEG_SPEC)
@@ -1168,14 +1309,13 @@ public class CachingClusteredClientTest
         client,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeSelectResults(new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeSelectResults(new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeSelectResults(
-            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
             new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
             new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
             new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
@@ -1183,8 +1323,7 @@ public class CachingClusteredClientTest
         ),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeSelectResults(
-            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
             new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
             new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
             new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
@@ -1196,13 +1335,13 @@ public class CachingClusteredClientTest
         client,
         new SelectQueryQueryToolChest(
             jsonMapper,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            selectConfigSupplier
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
-        makeSelectResults(
-            new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
             new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
             new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
             new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
@@ -1218,6 +1357,109 @@ public class CachingClusteredClientTest
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
                    .build(),
+            context
+        )
+    );
+  }
+
+  @Test
+  public void testSelectCachingRenamedOutputName() throws Exception
+  {
+    final Set<String> dimensions = Sets.<String>newHashSet("a");
+    final Set<String> metrics = Sets.<String>newHashSet("rows");
+
+    Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .intervals(SEG_SPEC)
+        .filters(DIM_FILTER)
+        .granularity(GRANULARITY)
+        .dimensions(Arrays.asList("a"))
+        .metrics(Arrays.asList("rows"))
+        .pagingSpec(new PagingSpec(null, 3))
+        .context(CONTEXT);
+
+    testQueryCaching(
+        client,
+        builder.build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
+
+        new Interval("2011-01-02/2011-01-03"),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSelectResults(
+            dimensions, metrics,
+            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9)
+        ),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSelectResults(
+            dimensions, metrics,
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+        )
+    );
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(
+        client,
+        new SelectQueryQueryToolChest(
+            jsonMapper,
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            selectConfigSupplier
+        )
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(
+        makeSelectResults(
+            dimensions, metrics,
+            new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
+            new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
+            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                .build(),
+            context
+        )
+    );
+
+    TestHelper.assertExpectedResults(
+        makeSelectResults(
+            dimensions, metrics,
+            new DateTime("2011-01-01"), ImmutableMap.of("a2", "b", "rows", 1),
+            new DateTime("2011-01-02"), ImmutableMap.of("a2", "c", "rows", 5),
+            new DateTime("2011-01-05"), ImmutableMap.of("a2", "d", "rows", 5),
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a2", "d", "rows", 5),
+            new DateTime("2011-01-06"), ImmutableMap.of("a2", "e", "rows", 6),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a2", "e", "rows", 6),
+            new DateTime("2011-01-07"), ImmutableMap.of("a2", "f", "rows", 7),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a2", "f", "rows", 7),
+            new DateTime("2011-01-08"), ImmutableMap.of("a2", "g", "rows", 8),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a2", "g", "rows", 8),
+            new DateTime("2011-01-09"), ImmutableMap.of("a2", "h", "rows", 9),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a2", "h", "rows", 9)
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                .dimensionSpecs(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("a", "a2")))
+                .build(),
             context
         )
     );
@@ -1403,14 +1645,20 @@ public class CachingClusteredClientTest
                                      Druids.newOrDimFilterBuilder().fields(
                                          Arrays.asList(
                                              new SelectorDimFilter("dim0", "1", null),
-                                             new BoundDimFilter("dim0", "222", "333", false, false, false, null)
+                                             new BoundDimFilter("dim0", "222", "333", false, false, false, null,
+                                                                StringComparators.LEXICOGRAPHIC
+                                             )
                                          )
                                      ).build(),
                                      Druids.newAndDimFilterBuilder().fields(
                                          Arrays.asList(
                                              new InDimFilter("dim1", Arrays.asList("0", "1", "2", "3", "4"), null),
-                                             new BoundDimFilter("dim1", "0", "3", false, true, false, null),
-                                             new BoundDimFilter("dim1", "1", "9999", true, false, false, null)
+                                             new BoundDimFilter("dim1", "0", "3", false, true, false, null,
+                                                                StringComparators.LEXICOGRAPHIC
+                                             ),
+                                             new BoundDimFilter("dim1", "1", "9999", true, false, false, null,
+                                                                StringComparators.LEXICOGRAPHIC
+                                             )
                                          )
                                      ).build()
                                  )
@@ -1475,14 +1723,20 @@ public class CachingClusteredClientTest
                                      Druids.newOrDimFilterBuilder().fields(
                                          Arrays.asList(
                                              new SelectorDimFilter("dim1", "a", null),
-                                             new BoundDimFilter("dim1", "from", "to", false, false, false, null)
+                                             new BoundDimFilter("dim1", "from", "to", false, false, false, null,
+                                                                StringComparators.LEXICOGRAPHIC
+                                             )
                                          )
                                      ).build(),
                                      Druids.newAndDimFilterBuilder().fields(
                                          Arrays.asList(
                                              new InDimFilter("dim2", Arrays.asList("a", "c", "e", "g"), null),
-                                             new BoundDimFilter("dim2", "aaa", "hi", false, false, false, null),
-                                             new BoundDimFilter("dim2", "e", "zzz", true, true, false, null)
+                                             new BoundDimFilter("dim2", "aaa", "hi", false, false, false, null,
+                                                                StringComparators.LEXICOGRAPHIC
+                                             ),
+                                             new BoundDimFilter("dim2", "e", "zzz", true, true, false, null,
+                                                                StringComparators.LEXICOGRAPHIC
+                                             )
                                          )
                                      ).build()
                                  )
@@ -2315,7 +2569,7 @@ public class CachingClusteredClientTest
               (DateTime) objects[i],
               new TimeseriesResultValue(
                   ImmutableMap.of(
-                      "rows2", objects[i + 1],
+                      "rows", objects[i + 1],
                       "imps", objects[i + 2],
                       "impers2", objects[i + 2]
                   )
@@ -2326,9 +2580,27 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<Result<TopNResultValue>> makeTopNResults
+  private Iterable<Result<TopNResultValue>> makeTopNResultsWithoutRename
       (Object... objects)
   {
+    return makeTopNResults(
+        Lists.newArrayList(
+            TOP_DIM,
+            "rows",
+            "imps",
+            "impers",
+            "avg_imps_per_row",
+            "avg_imps_per_row_double",
+            "avg_imps_per_row_half"
+        ),
+        objects
+    );
+  }
+
+  private Iterable<Result<TopNResultValue>> makeTopNResults
+      (List<String> names, Object... objects)
+  {
+    Preconditions.checkArgument(names.size() == 7);
     List<Result<TopNResultValue>> retVal = Lists.newArrayList();
     int index = 0;
     while (index < objects.length) {
@@ -2345,14 +2617,14 @@ public class CachingClusteredClientTest
         final double rows = ((Number) objects[index + 1]).doubleValue();
         values.add(
             ImmutableMap.<String, Object>builder()
-                        .put(TOP_DIM, objects[index])
-                        .put("rows", rows)
-                        .put("imps", imps)
-                        .put("impers", imps)
-                        .put("avg_imps_per_row", imps / rows)
-                        .put("avg_imps_per_row_double", ((imps * 2) / rows))
-                        .put("avg_imps_per_row_half", (imps / (rows * 2)))
-                        .build()
+                .put(names.get(0), objects[index])
+                .put(names.get(1), rows)
+                .put(names.get(2), imps)
+                .put(names.get(3), imps)
+                .put(names.get(4), imps / rows)
+                .put(names.get(5), ((imps * 2) / rows))
+                .put(names.get(6), (imps / (rows * 2)))
+                .build()
         );
         index += 3;
       }
@@ -2365,38 +2637,22 @@ public class CachingClusteredClientTest
   private Iterable<Result<TopNResultValue>> makeRenamedTopNResults
       (Object... objects)
   {
-    List<Result<TopNResultValue>> retVal = Lists.newArrayList();
-    int index = 0;
-    while (index < objects.length) {
-      DateTime timestamp = (DateTime) objects[index++];
-
-      List<Map<String, Object>> values = Lists.newArrayList();
-      while (index < objects.length && !(objects[index] instanceof DateTime)) {
-        if (objects.length - index < 3) {
-          throw new ISE(
-              "expect 3 values for each entry in the top list, had %d values left.", objects.length - index
-          );
-        }
-        final double imps = ((Number) objects[index + 2]).doubleValue();
-        final double rows = ((Number) objects[index + 1]).doubleValue();
-        values.add(
-            ImmutableMap.of(
-                TOP_DIM, objects[index],
-                "rows2", rows,
-                "imps", imps,
-                "impers2", imps
-            )
-        );
-        index += 3;
-      }
-
-      retVal.add(new Result<>(timestamp, new TopNResultValue(values)));
-    }
-    return retVal;
+    return makeTopNResults(
+        Lists.newArrayList(
+            TOP_DIM,
+            "rows",
+            "imps",
+            "impers2",
+            "avg_imps_per_row",
+            "avg_imps_per_row_double",
+            "avg_imps_per_row_half"
+        ),
+        objects
+    );
   }
 
   private Iterable<Result<SearchResultValue>> makeSearchResults
-      (Object... objects)
+      (String dim, Object... objects)
   {
     List<Result<SearchResultValue>> retVal = Lists.newArrayList();
     int index = 0;
@@ -2405,7 +2661,7 @@ public class CachingClusteredClientTest
 
       List<SearchHit> values = Lists.newArrayList();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
-        values.add(new SearchHit(TOP_DIM, objects[index++].toString(), (Integer) objects[index++]));
+        values.add(new SearchHit(dim, objects[index++].toString(), (Integer) objects[index++]));
       }
 
       retVal.add(new Result<>(timestamp, new SearchResultValue(values)));
@@ -2413,7 +2669,7 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<Result<SelectResultValue>> makeSelectResults(Object... objects)
+  private Iterable<Result<SelectResultValue>> makeSelectResults(Set<String> dimensions, Set<String> metrics, Object... objects)
   {
     List<Result<SelectResultValue>> retVal = Lists.newArrayList();
     int index = 0;
@@ -2421,11 +2677,15 @@ public class CachingClusteredClientTest
       DateTime timestamp = (DateTime) objects[index++];
 
       List<EventHolder> values = Lists.newArrayList();
+
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
         values.add(new EventHolder(null, 0, (Map) objects[index++]));
       }
 
-      retVal.add(new Result<>(timestamp, new SelectResultValue(null, values)));
+      retVal.add(new Result<>(
+          timestamp,
+          new SelectResultValue(null, dimensions, metrics, values)
+      ));
     }
     return retVal;
   }
@@ -2871,16 +3131,16 @@ public class CachingClusteredClientTest
 
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
-            new DateTime("2011-01-05T"), ImmutableMap.of("output2", "c", "rows2", 3, "imps", 3, "impers2", 3),
-            new DateTime("2011-01-05T01"), ImmutableMap.of("output2", "c", "rows2", 3, "imps", 3, "impers2", 3),
-            new DateTime("2011-01-06T"), ImmutableMap.of("output2", "d", "rows2", 4, "imps", 4, "impers2", 4),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("output2", "d", "rows2", 4, "imps", 4, "impers2", 4),
-            new DateTime("2011-01-07T"), ImmutableMap.of("output2", "e", "rows2", 5, "imps", 5, "impers2", 5),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("output2", "e", "rows2", 5, "imps", 5, "impers2", 5),
-            new DateTime("2011-01-08T"), ImmutableMap.of("output2", "f", "rows2", 6, "imps", 6, "impers2", 6),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("output2", "f", "rows2", 6, "imps", 6, "impers2", 6),
-            new DateTime("2011-01-09T"), ImmutableMap.of("output2", "g", "rows2", 7, "imps", 7, "impers2", 7),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("output2", "g", "rows2", 7, "imps", 7, "impers2", 7)
+            new DateTime("2011-01-05T"), ImmutableMap.of("output2", "c", "rows", 3, "imps", 3, "impers2", 3),
+            new DateTime("2011-01-05T01"), ImmutableMap.of("output2", "c", "rows", 3, "imps", 3, "impers2", 3),
+            new DateTime("2011-01-06T"), ImmutableMap.of("output2", "d", "rows", 4, "imps", 4, "impers2", 4),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("output2", "d", "rows", 4, "imps", 4, "impers2", 4),
+            new DateTime("2011-01-07T"), ImmutableMap.of("output2", "e", "rows", 5, "imps", 5, "impers2", 5),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("output2", "e", "rows", 5, "imps", 5, "impers2", 5),
+            new DateTime("2011-01-08T"), ImmutableMap.of("output2", "f", "rows", 6, "imps", 6, "impers2", 6),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("output2", "f", "rows", 6, "imps", 6, "impers2", 6),
+            new DateTime("2011-01-09T"), ImmutableMap.of("output2", "g", "rows", 7, "imps", 7, "impers2", 7),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("output2", "g", "rows", 7, "imps", 7, "impers2", 7)
         ),
         runner.run(
             builder.setInterval("2011-01-05/2011-01-10")
@@ -2891,6 +3151,44 @@ public class CachingClusteredClientTest
         ),
         "renamed aggregators test"
     );
+  }
+
+  @Test
+  public void testIfNoneMatch() throws Exception
+  {
+    Interval interval = new Interval("2016/2017");
+    final DataSegment dataSegment = new DataSegment(
+        "dataSource",
+        interval,
+        "ver",
+        ImmutableMap.<String, Object>of(
+            "type", "hdfs",
+            "path", "/tmp"
+        ),
+        ImmutableList.of("product"),
+        ImmutableList.of("visited_sum"),
+        NoneShardSpec.instance(),
+        9,
+        12334
+    );
+    final ServerSelector selector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
+
+    TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+                                    .dataSource(DATA_SOURCE)
+                                    .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(interval)))
+                                    .context(ImmutableMap.<String, Object>of("If-None-Match", "aVJV29CJY93rszVW/QBy0arWZo0="))
+                                    .build();
+
+
+    Map<String, String> responseContext = new HashMap<>();
+
+    client.run(query, responseContext);
+    Assert.assertEquals("Z/eS4rQz5v477iq7Aashr6JPZa0=", responseContext.get("ETag"));
   }
 
 }

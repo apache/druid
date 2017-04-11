@@ -25,11 +25,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
+
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthorizationInfo;

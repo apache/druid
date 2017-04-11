@@ -21,13 +21,18 @@ package io.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.Pair;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.indexing.overlord.DataSourceMetadata;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.collect.JavaCompatUtils;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.metadata.MetadataSupervisorManager;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,7 +59,7 @@ public class SupervisorManager
 
   public Set<String> getSupervisorIds()
   {
-    return supervisors.keySet();
+    return JavaCompatUtils.keySet(supervisors);
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
@@ -112,7 +117,7 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
 
     synchronized (lock) {
-      for (String id : supervisors.keySet()) {
+      for (String id : JavaCompatUtils.keySet(supervisors)) {
         try {
           supervisors.get(id).lhs.stop(false);
         }
@@ -138,9 +143,24 @@ public class SupervisorManager
     return supervisor == null ? Optional.<SupervisorReport>absent() : Optional.fromNullable(supervisor.lhs.getStatus());
   }
 
+  public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(id, "id");
+
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+
+    if (supervisor == null) {
+      return false;
+    }
+
+    supervisor.lhs.reset(dataSourceMetadata);
+    return true;
+  }
+
   /**
    * Stops a supervisor with a given id and then removes it from the list.
-   * <p>
+   * <p/>
    * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
    * starting and stopping supervisors.
    *
@@ -164,7 +184,7 @@ public class SupervisorManager
 
   /**
    * Creates a supervisor from the provided spec and starts it if there is not already a supervisor with that id.
-   * <p>
+   * <p/>
    * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
    * starting and stopping supervisors.
    *
@@ -177,11 +197,21 @@ public class SupervisorManager
       return false;
     }
 
-    Supervisor supervisor = spec.createSupervisor();
-    supervisor.start(); // try starting the supervisor first so we don't persist a bad spec
-
     if (persistSpec) {
       metadataSupervisorManager.insert(id, spec);
+    }
+
+    Supervisor supervisor = null;
+    try {
+      supervisor = spec.createSupervisor();
+      supervisor.start();
+    }
+    catch (Exception e) {
+      // Supervisor creation or start failed write tombstone only when trying to start a new supervisor
+      if (persistSpec) {
+        metadataSupervisorManager.insert(id, new NoopSupervisorSpec());
+      }
+      Throwables.propagate(e);
     }
 
     supervisors.put(id, Pair.of(supervisor, spec));

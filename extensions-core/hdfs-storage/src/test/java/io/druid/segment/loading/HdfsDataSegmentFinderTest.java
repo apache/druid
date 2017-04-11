@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -27,6 +27,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.storage.hdfs.HdfsDataSegmentFinder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -44,7 +45,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -110,6 +110,26 @@ public class HdfsDataSegmentFinderTest
                                                             .shardSpec(new NumberedShardSpec(1, 2))
                                                             .build();
 
+  private static final DataSegment SEGMENT_5 = DataSegment.builder()
+                                                          .dataSource("wikipedia")
+                                                          .interval(
+                                                              new Interval(
+                                                                  "2013-09-03T00:00:00.000Z/2013-09-04T00:00:00.000Z"
+                                                              )
+                                                          )
+                                                          .version("2015-10-21T22:07:57.074Z")
+                                                          .loadSpec(
+                                                              ImmutableMap.<String, Object>of(
+                                                                  "type",
+                                                                  "hdfs",
+                                                                  "path",
+                                                                  "hdfs://abc.com:1234/somewhere/1_index.zip"
+                                                              )
+                                                          )
+                                                          .dimensions(ImmutableList.of("language", "page"))
+                                                          .metrics(ImmutableList.of("count"))
+                                                          .build();
+
   private static MiniDFSCluster miniCluster;
   private static File hdfsTmpDir;
   private static URI uriBase;
@@ -122,11 +142,13 @@ public class HdfsDataSegmentFinderTest
   private Path descriptor3;
   private Path descriptor4_0;
   private Path descriptor4_1;
+  private Path descriptor5;
   private Path indexZip1;
   private Path indexZip2;
   private Path indexZip3;
   private Path indexZip4_0;
   private Path indexZip4_1;
+  private Path indexZip5;
 
   @BeforeClass
   public static void setupStatic() throws IOException
@@ -134,7 +156,6 @@ public class HdfsDataSegmentFinderTest
     mapper.registerSubtypes(new NamedType(NumberedShardSpec.class, "numbered"));
 
     hdfsTmpDir = File.createTempFile("hdfsDataSource", "dir");
-    hdfsTmpDir.deleteOnExit();
     if (!hdfsTmpDir.delete()) {
       throw new IOException(String.format("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath()));
     }
@@ -146,11 +167,12 @@ public class HdfsDataSegmentFinderTest
   }
 
   @AfterClass
-  public static void tearDownStatic()
+  public static void tearDownStatic() throws IOException
   {
     if (miniCluster != null) {
       miniCluster.shutdown(true);
     }
+    FileUtils.deleteDirectory(hdfsTmpDir);
   }
 
   @Before
@@ -162,23 +184,29 @@ public class HdfsDataSegmentFinderTest
     descriptor3 = new Path(dataSourceDir, "interval3/v2/0/" + DESCRIPTOR_JSON);
     descriptor4_0 = new Path(dataSourceDir, "interval4/v1/0/" + DESCRIPTOR_JSON);
     descriptor4_1 = new Path(dataSourceDir, "interval4/v1/1/" + DESCRIPTOR_JSON);
+    descriptor5 = new Path(dataSourceDir, "interval5/v1/1/" + "1_" +DESCRIPTOR_JSON);
     indexZip1 = new Path(descriptor1.getParent(), INDEX_ZIP);
     indexZip2 = new Path(descriptor2.getParent(), INDEX_ZIP);
     indexZip3 = new Path(descriptor3.getParent(), INDEX_ZIP);
     indexZip4_0 = new Path(descriptor4_0.getParent(), INDEX_ZIP);
     indexZip4_1 = new Path(descriptor4_1.getParent(), INDEX_ZIP);
+    indexZip5 = new Path(descriptor5.getParent(), "1_" + INDEX_ZIP);
+
 
     mapper.writeValue(fs.create(descriptor1), SEGMENT_1);
     mapper.writeValue(fs.create(descriptor2), SEGMENT_2);
     mapper.writeValue(fs.create(descriptor3), SEGMENT_3);
     mapper.writeValue(fs.create(descriptor4_0), SEGMENT_4_0);
     mapper.writeValue(fs.create(descriptor4_1), SEGMENT_4_1);
+    mapper.writeValue(fs.create(descriptor5), SEGMENT_5);
 
     create(indexZip1);
     create(indexZip2);
     create(indexZip3);
     create(indexZip4_0);
     create(indexZip4_1);
+    create(indexZip5);
+
   }
 
   private void create(Path indexZip1) throws IOException
@@ -194,13 +222,15 @@ public class HdfsDataSegmentFinderTest
 
     final Set<DataSegment> segments = hdfsDataSegmentFinder.findSegments(dataSourceDir.toString(), false);
 
-    Assert.assertEquals(5, segments.size());
+    Assert.assertEquals(6, segments.size());
 
     DataSegment updatedSegment1 = null;
     DataSegment updatedSegment2 = null;
     DataSegment updatedSegment3 = null;
     DataSegment updatedSegment4_0 = null;
     DataSegment updatedSegment4_1 = null;
+    DataSegment updatedSegment5 = null;
+
     for (DataSegment dataSegment : segments) {
       if (dataSegment.getIdentifier().equals(SEGMENT_1.getIdentifier())) {
         updatedSegment1 = dataSegment;
@@ -212,7 +242,10 @@ public class HdfsDataSegmentFinderTest
         updatedSegment4_0 = dataSegment;
       } else if (dataSegment.getIdentifier().equals(SEGMENT_4_1.getIdentifier())) {
         updatedSegment4_1 = dataSegment;
-      } else {
+      } else if (dataSegment.getIdentifier().equals(SEGMENT_5.getIdentifier())) {
+        updatedSegment5 = dataSegment;
+      }
+      else {
         Assert.fail("Unexpected segment");
       }
     }
@@ -222,12 +255,16 @@ public class HdfsDataSegmentFinderTest
     Assert.assertEquals(descriptor3.toUri().getPath(), getDescriptorPath(updatedSegment3));
     Assert.assertEquals(descriptor4_0.toUri().getPath(), getDescriptorPath(updatedSegment4_0));
     Assert.assertEquals(descriptor4_1.toUri().getPath(), getDescriptorPath(updatedSegment4_1));
+    Assert.assertEquals(descriptor5.toUri().getPath(), getDescriptorPathWithPartitionNum(updatedSegment5, 1));
+
 
     final String serializedSegment1 = mapper.writeValueAsString(updatedSegment1);
     final String serializedSegment2 = mapper.writeValueAsString(updatedSegment2);
     final String serializedSegment3 = mapper.writeValueAsString(updatedSegment3);
     final String serializedSegment4_0 = mapper.writeValueAsString(updatedSegment4_0);
     final String serializedSegment4_1 = mapper.writeValueAsString(updatedSegment4_1);
+    final String serializedSegment5 = mapper.writeValueAsString(updatedSegment5);
+
 
     // since updateDescriptor was not enabled, descriptor.json still has stale information
     Assert.assertNotEquals(serializedSegment1, readContent(descriptor1));
@@ -235,6 +272,7 @@ public class HdfsDataSegmentFinderTest
     Assert.assertNotEquals(serializedSegment3, readContent(descriptor3));
     Assert.assertNotEquals(serializedSegment4_0, readContent(descriptor4_0));
     Assert.assertNotEquals(serializedSegment4_1, readContent(descriptor4_1));
+    Assert.assertNotEquals(serializedSegment5, readContent(descriptor5));
 
     // enable updateDescriptor so that descriptors.json will be updated to relfect the new loadSpec
     final Set<DataSegment> segments2 = hdfsDataSegmentFinder.findSegments(dataSourceDir.toString(), true);
@@ -245,6 +283,7 @@ public class HdfsDataSegmentFinderTest
     Assert.assertEquals(serializedSegment3, readContent(descriptor3));
     Assert.assertEquals(serializedSegment4_0, readContent(descriptor4_0));
     Assert.assertEquals(serializedSegment4_1, readContent(descriptor4_1));
+    Assert.assertEquals(serializedSegment5, readContent(descriptor5));
   }
 
   @Test(expected = SegmentLoadingException.class)
@@ -275,6 +314,12 @@ public class HdfsDataSegmentFinderTest
   {
     final Path indexzip = new Path(String.valueOf(segment.getLoadSpec().get("path")));
     return indexzip.getParent().toString() + "/" + DESCRIPTOR_JSON;
+  }
+
+  private String getDescriptorPathWithPartitionNum(DataSegment segment, int partitionNum)
+  {
+    final Path indexzip = new Path(String.valueOf(segment.getLoadSpec().get("path")));
+    return indexzip.getParent().toString() + "/" + partitionNum + "_" + DESCRIPTOR_JSON;
   }
 
   private String readContent(Path descriptor) throws IOException

@@ -27,14 +27,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
-import com.metamx.common.FileUtils;
-import com.metamx.common.Granularity;
 import io.druid.client.DruidDataSource;
 import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
@@ -44,6 +41,8 @@ import io.druid.indexer.HadoopTuningConfig;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
+import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.metadata.MetadataSegmentManagerConfig;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
@@ -56,6 +55,8 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.TestIndex;
+import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -164,7 +165,8 @@ public class HadoopConverterJobTest
                             "\t",
                             "\u0001",
                             Arrays.asList(TestIndex.COLUMNS)
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -173,8 +175,8 @@ public class HadoopConverterJobTest
                     new HyperUniquesAggregatorFactory("quality_uniques", "quality")
                 },
                 new UniformGranularitySpec(
-                    Granularity.MONTH,
-                    QueryGranularities.DAY,
+                    Granularities.MONTH,
+                    Granularities.DAY,
                     ImmutableList.<Interval>of(interval)
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
@@ -203,7 +205,9 @@ public class HadoopConverterJobTest
                 false,
                 null,
                 null,
-                null
+                null,
+                false,
+                false
             )
         )
     );
@@ -283,7 +287,10 @@ public class HadoopConverterJobTest
         new HadoopDruidConverterConfig(
             DATASOURCE,
             interval,
-            new IndexSpec(new RoaringBitmapSerdeFactory(null), "uncompressed", "uncompressed"),
+            new IndexSpec(new RoaringBitmapSerdeFactory(null),
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,
             tmpDir.toURI(),
@@ -386,7 +393,10 @@ public class HadoopConverterJobTest
         new HadoopDruidConverterConfig(
             DATASOURCE,
             interval,
-            new IndexSpec(new RoaringBitmapSerdeFactory(null), "uncompressed", "uncompressed"),
+            new IndexSpec(new RoaringBitmapSerdeFactory(null),
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,
             tmpDir.toURI(),

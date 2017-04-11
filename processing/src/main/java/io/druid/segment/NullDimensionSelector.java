@@ -19,49 +19,46 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterators;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.ZeroIndexedInts;
+import io.druid.segment.filter.BooleanValueMatcher;
 
-import java.io.IOException;
-import java.util.Iterator;
+import javax.annotation.Nullable;
 
-public class NullDimensionSelector implements DimensionSelector
+public class NullDimensionSelector implements DimensionSelector, IdLookup
 {
+  private static final NullDimensionSelector INSTANCE = new NullDimensionSelector();
 
-  private static final IndexedInts SINGLETON = new IndexedInts() {
-    @Override
-    public int size() {
-      return 1;
-    }
+  private NullDimensionSelector()
+  {
+    // Singleton.
+  }
 
-    @Override
-    public int get(int index) {
-      return 0;
-    }
-
-    @Override
-    public Iterator<Integer> iterator() {
-      return Iterators.singletonIterator(0);
-    }
-
-    @Override
-    public void fill(int index, int[] toFill)
-    {
-      throw new UnsupportedOperationException("NullDimensionSelector does not support fill");
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-
-    }
-  };
+  public static NullDimensionSelector instance()
+  {
+    return INSTANCE;
+  }
 
   @Override
   public IndexedInts getRow()
   {
-    return SINGLETON;
+    return ZeroIndexedInts.instance();
+  }
+
+  @Override
+  public ValueMatcher makeValueMatcher(String value)
+  {
+    return BooleanValueMatcher.of(value == null);
+  }
+
+  @Override
+  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+  {
+    return BooleanValueMatcher.of(predicate.apply(null));
   }
 
   @Override
@@ -73,12 +70,31 @@ public class NullDimensionSelector implements DimensionSelector
   @Override
   public String lookupName(int id)
   {
+    assert id == 0 : "id = " + id;
     return null;
+  }
+
+  @Override
+  public boolean nameLookupPossibleInAdvance()
+  {
+    return true;
+  }
+
+  @Nullable
+  @Override
+  public IdLookup idLookup()
+  {
+    return this;
   }
 
   @Override
   public int lookupId(String name)
   {
     return Strings.isNullOrEmpty(name) ? 0 : -1;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
   }
 }

@@ -32,6 +32,7 @@ import java.io.File;
 public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
+  private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
 
   private final int maxRowsInMemory;
   private final int maxRowsPerSegment;
@@ -42,6 +43,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean buildV9Directly;
   private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
+  private final boolean resetOffsetAutomatically;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -53,7 +55,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
-      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout
+      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
+      @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -74,6 +77,25 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     this.handoffConditionTimeout = handoffConditionTimeout == null
                                    ? defaults.getHandoffConditionTimeout()
                                    : handoffConditionTimeout;
+    this.resetOffsetAutomatically = resetOffsetAutomatically == null
+                                    ? DEFAULT_RESET_OFFSET_AUTOMATICALLY
+                                    : resetOffsetAutomatically;
+  }
+
+  public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
+  {
+    return new KafkaTuningConfig(
+        config.maxRowsInMemory,
+        config.maxRowsPerSegment,
+        config.intermediatePersistPeriod,
+        config.basePersistDirectory,
+        config.maxPendingPersists,
+        config.indexSpec,
+        config.buildV9Directly,
+        config.reportParseExceptions,
+        config.handoffConditionTimeout,
+        config.resetOffsetAutomatically
+    );
   }
 
   @JsonProperty
@@ -130,6 +152,12 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return handoffConditionTimeout;
   }
 
+  @JsonProperty
+  public boolean isResetOffsetAutomatically()
+  {
+    return resetOffsetAutomatically;
+  }
+
   public KafkaTuningConfig withBasePersistDirectory(File dir)
   {
     return new KafkaTuningConfig(
@@ -141,7 +169,104 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         indexSpec,
         buildV9Directly,
         reportParseExceptions,
-        handoffConditionTimeout
+        handoffConditionTimeout,
+        resetOffsetAutomatically
     );
+  }
+
+  public KafkaTuningConfig withMaxRowsInMemory(int rows)
+  {
+    return new KafkaTuningConfig(
+        rows,
+        maxRowsPerSegment,
+        intermediatePersistPeriod,
+        basePersistDirectory,
+        maxPendingPersists,
+        indexSpec,
+        buildV9Directly,
+        reportParseExceptions,
+        handoffConditionTimeout,
+        resetOffsetAutomatically
+    );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    KafkaTuningConfig that = (KafkaTuningConfig) o;
+
+    if (maxRowsInMemory != that.maxRowsInMemory) {
+      return false;
+    }
+    if (maxRowsPerSegment != that.maxRowsPerSegment) {
+      return false;
+    }
+    if (maxPendingPersists != that.maxPendingPersists) {
+      return false;
+    }
+    if (buildV9Directly != that.buildV9Directly) {
+      return false;
+    }
+    if (reportParseExceptions != that.reportParseExceptions) {
+      return false;
+    }
+    if (handoffConditionTimeout != that.handoffConditionTimeout) {
+      return false;
+    }
+    if (resetOffsetAutomatically != that.resetOffsetAutomatically) {
+      return false;
+    }
+    if (intermediatePersistPeriod != null
+        ? !intermediatePersistPeriod.equals(that.intermediatePersistPeriod)
+        : that.intermediatePersistPeriod != null) {
+      return false;
+    }
+    if (basePersistDirectory != null
+        ? !basePersistDirectory.equals(that.basePersistDirectory)
+        : that.basePersistDirectory != null) {
+      return false;
+    }
+    return indexSpec != null ? indexSpec.equals(that.indexSpec) : that.indexSpec == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = maxRowsInMemory;
+    result = 31 * result + maxRowsPerSegment;
+    result = 31 * result + (intermediatePersistPeriod != null ? intermediatePersistPeriod.hashCode() : 0);
+    result = 31 * result + (basePersistDirectory != null ? basePersistDirectory.hashCode() : 0);
+    result = 31 * result + maxPendingPersists;
+    result = 31 * result + (indexSpec != null ? indexSpec.hashCode() : 0);
+    result = 31 * result + (buildV9Directly ? 1 : 0);
+    result = 31 * result + (reportParseExceptions ? 1 : 0);
+    result = 31 * result + (int) (handoffConditionTimeout ^ (handoffConditionTimeout >>> 32));
+    result = 31 * result + (resetOffsetAutomatically ? 1 : 0);
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "KafkaTuningConfig{" +
+           "maxRowsInMemory=" + maxRowsInMemory +
+           ", maxRowsPerSegment=" + maxRowsPerSegment +
+           ", intermediatePersistPeriod=" + intermediatePersistPeriod +
+           ", basePersistDirectory=" + basePersistDirectory +
+           ", maxPendingPersists=" + maxPendingPersists +
+           ", indexSpec=" + indexSpec +
+           ", buildV9Directly=" + buildV9Directly +
+           ", reportParseExceptions=" + reportParseExceptions +
+           ", handoffConditionTimeout=" + handoffConditionTimeout +
+           ", resetOffsetAutomatically=" + resetOffsetAutomatically +
+           '}';
   }
 }

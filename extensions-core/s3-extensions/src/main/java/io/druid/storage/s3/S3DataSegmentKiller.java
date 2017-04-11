@@ -20,14 +20,15 @@
 package io.druid.storage.s3;
 
 import com.google.inject.Inject;
-import com.metamx.common.MapUtils;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -67,5 +68,11 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     catch (ServiceException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getIdentifier(), e);
     }
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
   }
 }

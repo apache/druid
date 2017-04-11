@@ -21,36 +21,46 @@ package io.druid.query.aggregation.datasketches.theta;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+import com.yahoo.sketches.Family;
+import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
+import com.yahoo.sketches.theta.Union;
+import com.yahoo.sketches.theta.UpdateSketch;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
-import io.druid.query.Result;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
-import io.druid.query.select.SelectResultValue;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.groupby.epinephelinae.GrouperTestUtil;
+import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class SketchAggregationTest
 {
   private final AggregationTestHelper helper;
@@ -58,124 +68,25 @@ public class SketchAggregationTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  public SketchAggregationTest()
+  public SketchAggregationTest(final GroupByQueryConfig config)
   {
     SketchModule sm = new SketchModule();
     sm.configure(null);
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(sm.getJacksonModules(), tempFolder);
-  }
-
-  @Test
-  public void testSimpleDataIngestAndGpByQuery() throws Exception
-  {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
-        new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("simple_test_data_record_parser.json"),
-        readFileFromClasspathAsString("simple_test_data_aggregators.json"),
-        0,
-        QueryGranularities.NONE,
-        5,
-        readFileFromClasspathAsString("simple_test_data_group_by_query.json")
-    );
-
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
-    Assert.assertEquals(5, results.size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_3")
-                    .put("sketch_count", 38.0)
-                    .put("sketchEstimatePostAgg", 38.0)
-                    .put("sketchUnionPostAggEstimate", 38.0)
-                    .put("sketchIntersectionPostAggEstimate", 38.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            ),
-            new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_1")
-                    .put("sketch_count", 42.0)
-                    .put("sketchEstimatePostAgg", 42.0)
-                    .put("sketchUnionPostAggEstimate", 42.0)
-                    .put("sketchIntersectionPostAggEstimate", 42.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            ),
-            new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_2")
-                    .put("sketch_count", 42.0)
-                    .put("sketchEstimatePostAgg", 42.0)
-                    .put("sketchUnionPostAggEstimate", 42.0)
-                    .put("sketchIntersectionPostAggEstimate", 42.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            ),
-            new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_4")
-                    .put("sketch_count", 42.0)
-                    .put("sketchEstimatePostAgg", 42.0)
-                    .put("sketchUnionPostAggEstimate", 42.0)
-                    .put("sketchIntersectionPostAggEstimate", 42.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            ),
-            new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_5")
-                    .put("sketch_count", 42.0)
-                    .put("sketchEstimatePostAgg", 42.0)
-                    .put("sketchUnionPostAggEstimate", 42.0)
-                    .put("sketchIntersectionPostAggEstimate", 42.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            )
-        ),
-        results
-    );
-  }
-
-  @Test
-  public void testSimpleDataIngestAndSelectQuery() throws Exception
-  {
-    SketchModule sm = new SketchModule();
-    sm.configure(null);
-    AggregationTestHelper selectQueryAggregationTestHelper = AggregationTestHelper.createSelectQueryAggregationTestHelper(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         sm.getJacksonModules(),
+        config,
         tempFolder
     );
+  }
 
-    Sequence seq = selectQueryAggregationTestHelper.createIndexAndRunQueryOnSegment(
-        new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("simple_test_data_record_parser.json"),
-        readFileFromClasspathAsString("simple_test_data_aggregators.json"),
-        0,
-        QueryGranularities.NONE,
-        5000,
-        readFileFromClasspathAsString("select_query.json")
-    );
-
-    Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(Sequences.toList(seq, Lists.newArrayList()));
-    Assert.assertEquals(new DateTime("2014-10-20T00:00:00.000Z"), result.getTimestamp());
-    Assert.assertEquals(100, result.getValue().getEvents().size());
-    Assert.assertEquals("AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=", result.getValue().getEvents().get(0).getEvent().get("pty_country"));
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+    return constructors;
   }
 
   @Test
@@ -186,7 +97,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
         readFileFromClasspathAsString("sketch_test_data_aggregators.json"),
         0,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         5,
         readFileFromClasspathAsString("sketch_test_data_group_by_query.json")
     );
@@ -199,10 +110,10 @@ public class SketchAggregationTest
             ImmutableMap
                 .<String, Object>builder()
                 .put("sids_sketch_count", 50.0)
-                .put("sids_sketch_count_with_err", 
+                .put("sids_sketch_count_with_err",
                     new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2))
                 .put("sketchEstimatePostAgg", 50.0)
-                .put("sketchEstimatePostAggWithErrorBounds", 
+                .put("sketchEstimatePostAggWithErrorBounds",
                     new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2))
                 .put("sketchUnionPostAggEstimate", 50.0)
                 .put("sketchIntersectionPostAggEstimate", 50.0)
@@ -227,7 +138,7 @@ public class SketchAggregationTest
         + "  }"
         + "]",
         0,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         5,
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
@@ -318,7 +229,7 @@ public class SketchAggregationTest
   @Test
   public void testSketchMergeFinalization() throws Exception
   {
-    Sketch sketch = Sketches.updateSketchBuilder().build(128);
+    SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().build(128));
 
     SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
@@ -328,7 +239,7 @@ public class SketchAggregationTest
 
     agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false, null, null);
     Assert.assertEquals(sketch, agg.finalizeComputation(sketch));
-    
+
     agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, 2);
     SketchEstimateWithErrorBounds est = (SketchEstimateWithErrorBounds) agg.finalizeComputation(sketch);
     Assert.assertEquals(0.0, est.getEstimate(), 0.0001);
@@ -359,7 +270,7 @@ public class SketchAggregationTest
             null
         )
     );
-    
+
     assertPostAggregatorSerde(
         new SketchEstimatePostAggregator(
             "name",
@@ -415,6 +326,87 @@ public class SketchAggregationTest
 
     Assert.assertTrue(Arrays.equals(factory1.getCacheKey(), factory2.getCacheKey()));
     Assert.assertFalse(Arrays.equals(factory1.getCacheKey(), factory3.getCacheKey()));
+  }
+
+  @Test
+  public void testRetentionDataIngestAndGpByQuery() throws Exception
+  {
+    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("retention_test_data.tsv").getFile()),
+        readFileFromClasspathAsString("simple_test_data_record_parser.json"),
+        readFileFromClasspathAsString("simple_test_data_aggregators.json"),
+        0,
+        Granularities.NONE,
+        5,
+        readFileFromClasspathAsString("retention_test_data_group_by_query.json")
+    );
+
+    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            new MapBasedRow(
+                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                ImmutableMap
+                    .<String, Object>builder()
+                    .put("product", "product_1")
+                    .put("p1_unique_country_day_1", 20.0)
+                    .put("p1_unique_country_day_2", 20.0)
+                    .put("p1_unique_country_day_3", 10.0)
+                    .put("sketchEstimatePostAgg", 20.0)
+                    .put("sketchIntersectionPostAggEstimate1", 10.0)
+                    .put("sketchIntersectionPostAggEstimate2", 5.0)
+                    .put("non_existing_col_validation", 0.0)
+                    .build()
+            )
+        ),
+        results
+    );
+  }
+
+  @Test
+  public void testSketchAggregatorFactoryComparator()
+  {
+    Comparator<Object> comparator = SketchHolder.COMPARATOR;
+    Assert.assertEquals(0, comparator.compare(null, null));
+
+    Union union1 = (Union) SetOperation.builder().build(1<<4, Family.UNION);
+    union1.update("a");
+    union1.update("b");
+    Sketch sketch1 = union1.getResult();
+
+    Assert.assertEquals(-1, comparator.compare(null, SketchHolder.of(sketch1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch1), null));
+
+    Union union2 = (Union) SetOperation.builder().build(1<<4, Family.UNION);
+    union2.update("a");
+    union2.update("b");
+    union2.update("c");
+    Sketch sketch2 = union2.getResult();
+
+    Assert.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(sketch2)));
+    Assert.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(union2)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(sketch1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(union1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(union1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(sketch1)));
+  }
+
+  @Test
+  public void testRelocation()
+  {
+    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
+    UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
+    updateSketch.update(1);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
+    SketchHolder[] holders = helper.runRelocateVerificationTest(
+        new SketchMergeAggregatorFactory("sketch", "sketch", 16, false, true, 2),
+        columnSelectorFactory,
+        SketchHolder.class
+    );
+    Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

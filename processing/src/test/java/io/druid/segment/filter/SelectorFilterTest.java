@@ -22,15 +22,14 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.Pair;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Pair;
 import io.druid.query.extraction.MapLookupExtractor;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -79,10 +78,11 @@ public class SelectorFilterTest extends BaseFilterTest
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -142,6 +142,13 @@ public class SelectorFilterTest extends BaseFilterTest
     assertFilterMatches(new SelectorDimFilter("dim4", "a", null), ImmutableList.<String>of());
     assertFilterMatches(new SelectorDimFilter("dim4", "b", null), ImmutableList.<String>of());
     assertFilterMatches(new SelectorDimFilter("dim4", "c", null), ImmutableList.<String>of());
+  }
+
+  @Test
+  public void testExpressionVirtualColumn()
+  {
+    assertFilterMatches(new SelectorDimFilter("expr", "1.1", null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(new SelectorDimFilter("expr", "1.2", null), ImmutableList.<String>of());
   }
 
   @Test
@@ -234,14 +241,5 @@ public class SelectorFilterTest extends BaseFilterTest
     assertFilterMatches(new ExtractionDimFilter("dim1", "UNKNOWN", lookupFn, null), ImmutableList.of("0", "1", "2", "5"));
     assertFilterMatches(new ExtractionDimFilter("dim0", "5", lookupFn2, null), ImmutableList.of("2", "5"));
     assertFilterMatches(new ExtractionDimFilter("dim0", null, lookupFn3, null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
-  }
-
-  private void assertFilterMatches(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
   }
 }

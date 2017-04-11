@@ -21,7 +21,7 @@ package io.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.guava.Comparators;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -164,5 +164,13 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
   public int hashCode()
   {
     return delegate != null ? delegate.hashCode() : 0;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "InvertedTopNMetricSpec{" +
+           "delegate=" + delegate +
+           '}';
   }
 }

@@ -37,10 +37,6 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.Granularity;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
@@ -55,7 +51,6 @@ import io.druid.data.input.impl.JSONPathFieldSpec;
 import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -73,9 +68,14 @@ import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskStorage;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
@@ -173,6 +173,7 @@ public class KafkaIndexTaskTest
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2011", "d", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2011", "e", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, "unparseable".getBytes()),
+      new ProducerRecord<byte[], byte[]>("topic0", 0, null, null),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2013", "f", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 1, null, JB("2012", "g", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 1, null, JB("2011", "h", "y", 1.0f))
@@ -198,7 +199,7 @@ public class KafkaIndexTaskTest
             Map.class
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
         objectMapper
     );
   }
@@ -305,6 +306,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -346,6 +348,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -399,6 +402,7 @@ public class KafkaIndexTaskTest
             false,
             new DateTime("2010")
         ),
+        null,
         null
     );
 
@@ -459,6 +463,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -499,6 +504,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -550,6 +556,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -600,6 +607,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -632,6 +640,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
     final KafkaIndexTask task2 = createTask(
@@ -645,6 +654,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -698,6 +708,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
     final KafkaIndexTask task2 = createTask(
@@ -705,12 +716,13 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             "sequence1",
             new KafkaPartitions("topic0", ImmutableMap.of(0, 3L)),
-            new KafkaPartitions("topic0", ImmutableMap.of(0, 7L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 8L)),
             kafkaServer.consumerProperties(),
             true,
             false,
             null
         ),
+        null,
         null
     );
 
@@ -734,7 +746,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().thrownAway());
     Assert.assertEquals(3, task2.getFireDepartmentMetrics().processed());
-    Assert.assertEquals(1, task2.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(2, task2.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task2.getFireDepartmentMetrics().thrownAway());
 
     // Check published segments & metadata, should all be from the first task
@@ -765,6 +777,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
     final KafkaIndexTask task2 = createTask(
@@ -772,12 +785,13 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             "sequence1",
             new KafkaPartitions("topic0", ImmutableMap.of(0, 3L)),
-            new KafkaPartitions("topic0", ImmutableMap.of(0, 7L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 8L)),
             kafkaServer.consumerProperties(),
             false,
             false,
             null
         ),
+        null,
         null
     );
 
@@ -807,7 +821,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().thrownAway());
     Assert.assertEquals(3, task2.getFireDepartmentMetrics().processed());
-    Assert.assertEquals(1, task2.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(2, task2.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task2.getFireDepartmentMetrics().thrownAway());
 
     // Check published segments & metadata
@@ -837,6 +851,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -893,6 +908,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
     final KafkaIndexTask task2 = createTask(
@@ -906,6 +922,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -961,6 +978,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -995,6 +1013,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -1046,6 +1065,7 @@ public class KafkaIndexTaskTest
             false,
             null
         ),
+        null,
         null
     );
 
@@ -1128,6 +1148,7 @@ public class KafkaIndexTaskTest
             true,
             null
         ),
+        null,
         null
     );
 
@@ -1200,6 +1221,77 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc3));
   }
 
+  @Test(timeout = 30_000L)
+  public void testRunWithOffsetOutOfRangeExceptionAndPause() throws Exception
+  {
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 2L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            null
+        ),
+        null,
+        null
+    );
+
+    runTask(task);
+
+    while (!task.getStatus().equals(KafkaIndexTask.Status.READING)) {
+      Thread.sleep(2000);
+    }
+
+    task.pause(0);
+
+    while (!task.getStatus().equals(KafkaIndexTask.Status.PAUSED)) {
+      Thread.sleep(25);
+    }
+  }
+
+  @Test(timeout = 30_000L)
+  public void testRunWithOffsetOutOfRangeExceptionAndNextOffsetGreaterThanLeastAvailable() throws Exception
+  {
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : RECORDS) {
+        kafkaProducer.send(record).get();
+      }
+    }
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 200L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 500L)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            null
+        ),
+        null,
+        true
+    );
+
+    runTask(task);
+
+    while (!task.getStatus().equals(KafkaIndexTask.Status.READING)) {
+      Thread.sleep(2000);
+    }
+
+    int i = 0;
+    while(i++ < 5) {
+      Assert.assertEquals(task.getStatus(), KafkaIndexTask.Status.READING);
+      // Offset should not be reset
+      Assert.assertTrue(task.getCurrentOffsets().get(0) == 200L);
+      Thread.sleep(2000);
+    }
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
     try {
@@ -1253,7 +1345,8 @@ public class KafkaIndexTaskTest
   private KafkaIndexTask createTask(
       final String taskId,
       final KafkaIOConfig ioConfig,
-      final Integer maxRowsPerSegment
+      final Integer maxRowsPerSegment,
+      final Boolean resetOffsetAutomatically
   )
   {
     final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
@@ -1265,7 +1358,8 @@ public class KafkaIndexTaskTest
         null,
         buildV9Directly,
         reportParseExceptions,
-        handoffConditionTimeout
+        handoffConditionTimeout,
+        resetOffsetAutomatically
     );
     return new KafkaIndexTask(
         taskId,
@@ -1354,7 +1448,8 @@ public class KafkaIndexTaskTest
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         metadataStorageCoordinator,
-        emitter
+        emitter,
+        new SupervisorManager(null)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
@@ -1495,7 +1590,7 @@ public class KafkaIndexTaskTest
     );
     IndexIO indexIO = new TestUtils().getTestIndexIO();
     QueryableIndex index = indexIO.loadIndex(outputLocation);
-    DictionaryEncodedColumn dim1 = index.getColumn("dim1").getDictionaryEncoding();
+    DictionaryEncodedColumn<String> dim1 = index.getColumn("dim1").getDictionaryEncoding();
     List<String> values = Lists.newArrayList();
     for (int i = 0; i < dim1.length(); i++) {
       int id = dim1.getSingleValueRow(i);
@@ -1514,7 +1609,7 @@ public class KafkaIndexTaskTest
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory("rows", "rows")
                                       )
-                                  ).granularity(QueryGranularities.ALL)
+                                  ).granularity(Granularities.ALL)
                                   .intervals("0000/3000")
                                   .build();
 

@@ -20,70 +20,161 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.common.ISE;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Grouper based around a set of underlying {@link SpillingGrouper} instances. Thread-safe.
- *
- * The passed-in buffer is cut up into "concurrencyHint" slices, and each slice is passed to a different underlying
- * grouper. Access to each slice is separately synchronized.
+ * <p>
+ * The passed-in buffer is cut up into concurrencyHint slices, and each slice is passed to a different underlying
+ * grouper. Access to each slice is separately synchronized. As long as the result set fits in memory, keys are
+ * partitioned between buffers based on their hash, and multiple threads can write into the same buffer. When
+ * it becomes clear that the result set does not fit in memory, the table switches to a mode where each thread
+ * gets its own buffer and its own spill files on disk.
  */
-public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements Grouper<KeyType>
+public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 {
-  private final List<Grouper<KeyType>> groupers;
+  private final List<SpillingGrouper<KeyType>> groupers;
+  private final ThreadLocal<SpillingGrouper<KeyType>> threadLocalGrouper;
+  private final AtomicInteger threadNumber = new AtomicInteger();
+  private volatile boolean spilling = false;
   private volatile boolean closed = false;
+  private final Comparator<KeyType> keyObjComparator;
+
+  private final Supplier<ByteBuffer> bufferSupplier;
+  private final ColumnSelectorFactory columnSelectorFactory;
+  private final AggregatorFactory[] aggregatorFactories;
+  private final int bufferGrouperMaxSize;
+  private final float bufferGrouperMaxLoadFactor;
+  private final int bufferGrouperInitialBuckets;
+  private final LimitedTemporaryStorage temporaryStorage;
+  private final ObjectMapper spillMapper;
+  private final int concurrencyHint;
+  private final KeySerdeFactory<KeyType> keySerdeFactory;
+
+  private volatile boolean initialized = false;
 
   public ConcurrentGrouper(
-      final ByteBuffer buffer,
-      final int concurrencyHint,
-      final LimitedTemporaryStorage temporaryStorage,
-      final ObjectMapper spillMapper,
-      final int bufferGrouperMaxSize,
-      final int bufferGrouperInitialBuckets,
+      final Supplier<ByteBuffer> bufferSupplier,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
-      final AggregatorFactory[] aggregatorFactories
+      final AggregatorFactory[] aggregatorFactories,
+      final int bufferGrouperMaxSize,
+      final float bufferGrouperMaxLoadFactor,
+      final int bufferGrouperInitialBuckets,
+      final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper spillMapper,
+      final int concurrencyHint
   )
   {
-    this.groupers = new ArrayList<>(concurrencyHint);
+    Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
 
-    final int sliceSize = (buffer.capacity() / concurrencyHint);
-    for (int i = 0; i < concurrencyHint; i++) {
-      final ByteBuffer slice = buffer.duplicate();
-      slice.position(sliceSize * i);
-      slice.limit(slice.position() + sliceSize);
-      groupers.add(
-          new SpillingGrouper<>(
-              slice.slice(),
-              keySerdeFactory,
-              columnSelectorFactory,
-              aggregatorFactories,
-              temporaryStorage,
-              spillMapper,
-              bufferGrouperMaxSize,
-              bufferGrouperInitialBuckets
-          )
-      );
+    this.groupers = new ArrayList<>(concurrencyHint);
+    this.threadLocalGrouper = new ThreadLocal<SpillingGrouper<KeyType>>()
+    {
+      @Override
+      protected SpillingGrouper<KeyType> initialValue()
+      {
+        return groupers.get(threadNumber.getAndIncrement());
+      }
+    };
+
+    this.bufferSupplier = bufferSupplier;
+    this.columnSelectorFactory = columnSelectorFactory;
+    this.aggregatorFactories = aggregatorFactories;
+    this.bufferGrouperMaxSize = bufferGrouperMaxSize;
+    this.bufferGrouperMaxLoadFactor = bufferGrouperMaxLoadFactor;
+    this.bufferGrouperInitialBuckets = bufferGrouperInitialBuckets;
+    this.temporaryStorage = temporaryStorage;
+    this.spillMapper = spillMapper;
+    this.concurrencyHint = concurrencyHint;
+    this.keySerdeFactory = keySerdeFactory;
+    this.keyObjComparator = keySerdeFactory.objectComparator();
+  }
+
+  @Override
+  public void init()
+  {
+    if (!initialized) {
+      synchronized (bufferSupplier) {
+        if (!initialized) {
+          final ByteBuffer buffer = bufferSupplier.get();
+          final int sliceSize = (buffer.capacity() / concurrencyHint);
+
+          for (int i = 0; i < concurrencyHint; i++) {
+            final ByteBuffer slice = buffer.duplicate();
+            slice.position(sliceSize * i);
+            slice.limit(slice.position() + sliceSize);
+            final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
+                Suppliers.ofInstance(slice.slice()),
+                keySerdeFactory,
+                columnSelectorFactory,
+                aggregatorFactories,
+                bufferGrouperMaxSize,
+                bufferGrouperMaxLoadFactor,
+                bufferGrouperInitialBuckets,
+                temporaryStorage,
+                spillMapper,
+                false
+            );
+            grouper.init();
+            groupers.add(grouper);
+          }
+
+          initialized = true;
+        }
+      }
     }
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return initialized;
   }
 
   @Override
   public boolean aggregate(KeyType key, int keyHash)
   {
+    if (!initialized) {
+      throw new ISE("Grouper is not initialized");
+    }
+
     if (closed) {
       throw new ISE("Grouper is closed");
     }
 
-    final Grouper<KeyType> grouper = groupers.get(grouperNumberForKeyHash(keyHash));
-    synchronized (grouper) {
-      return grouper.aggregate(key, keyHash);
+    if (!spilling) {
+      final SpillingGrouper<KeyType> hashBasedGrouper = groupers.get(grouperNumberForKeyHash(keyHash));
+
+      synchronized (hashBasedGrouper) {
+        if (!spilling) {
+          if (hashBasedGrouper.aggregate(key, keyHash)) {
+            return true;
+          } else {
+            spilling = true;
+          }
+        }
+      }
+    }
+
+    // At this point we know spilling = true
+    final SpillingGrouper<KeyType> tlGrouper = threadLocalGrouper.get();
+
+    synchronized (tlGrouper) {
+      tlGrouper.setSpillingAllowed(true);
+      return tlGrouper.aggregate(key, keyHash);
     }
   }
 
@@ -96,6 +187,10 @@ public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements G
   @Override
   public void reset()
   {
+    if (!initialized) {
+      throw new ISE("Grouper is not initialized");
+    }
+
     if (closed) {
       throw new ISE("Grouper is closed");
     }
@@ -110,6 +205,10 @@ public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements G
   @Override
   public Iterator<Entry<KeyType>> iterator(final boolean sorted)
   {
+    if (!initialized) {
+      throw new ISE("Grouper is not initialized");
+    }
+
     if (closed) {
       throw new ISE("Grouper is closed");
     }
@@ -122,7 +221,7 @@ public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements G
       }
     }
 
-    return Groupers.mergeIterators(iterators, sorted);
+    return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
   }
 
   @Override

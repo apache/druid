@@ -24,11 +24,8 @@ import io.druid.query.aggregation.Aggregator;
 public class EmptyDistinctCountAggregator implements Aggregator
 {
 
-  private final String name;
-
-  public EmptyDistinctCountAggregator(String name)
+  public EmptyDistinctCountAggregator()
   {
-    this.name = name;
   }
 
   @Override
@@ -51,12 +48,6 @@ public class EmptyDistinctCountAggregator implements Aggregator
   public float getFloat()
   {
     return (float) 0;
-  }
-
-  @Override
-  public String getName()
-  {
-    return name;
   }
 
   @Override

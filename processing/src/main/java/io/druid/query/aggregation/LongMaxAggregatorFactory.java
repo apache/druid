@@ -23,13 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
-import com.metamx.common.StringUtils;
+import io.druid.common.utils.StringUtils;
+import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -37,32 +40,48 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0xA;
 
-  private final String fieldName;
   private final String name;
+  private final String fieldName;
+  private final String expression;
 
   @JsonCreator
   public LongMaxAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("expression") String expression
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+    Preconditions.checkArgument(
+        fieldName == null ^ expression == null,
+        "Must have a valid, non-null fieldName or expression"
+    );
 
     this.name = name;
     this.fieldName = fieldName;
+    this.expression = expression;
+  }
+
+  public LongMaxAggregatorFactory(String name, String fieldName)
+  {
+    this(name, fieldName, null);
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongMaxAggregator(name, metricFactory.makeLongColumnSelector(fieldName));
+    return new LongMaxAggregator(getLongColumnSelector(metricFactory));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongMaxBufferAggregator(metricFactory.makeLongColumnSelector(fieldName));
+    return new LongMaxBufferAggregator(getLongColumnSelector(metricFactory));
+  }
+
+  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
+  {
+    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression, Long.MIN_VALUE);
   }
 
   @Override
@@ -80,7 +99,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongMaxAggregatorFactory(name, name);
+    return new LongMaxAggregatorFactory(name, name, null);
   }
 
   @Override
@@ -96,7 +115,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongMaxAggregatorFactory(fieldName, fieldName));
+    return Arrays.<AggregatorFactory>asList(new LongMaxAggregatorFactory(fieldName, fieldName, expression));
   }
 
   @Override
@@ -117,6 +136,12 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
+  @JsonProperty
+  public String getExpression()
+  {
+    return expression;
+  }
+
   @Override
   @JsonProperty
   public String getName()
@@ -127,15 +152,21 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(fieldName);
+    return fieldName != null ? Arrays.asList(fieldName) : Parser.findRequiredBindings(expression);
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
+    byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
+    byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+    return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
+                     .put(CACHE_TYPE_ID)
+                     .put(fieldNameBytes)
+                     .put(AggregatorUtil.STRING_SEPARATOR)
+                     .put(expressionBytes)
+                     .array();
   }
 
   @Override
@@ -151,16 +182,11 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object getAggregatorStartValue()
-  {
-    return Long.MIN_VALUE;
-  }
-
-  @Override
   public String toString()
   {
     return "LongMaxAggregatorFactory{" +
            "fieldName='" + fieldName + '\'' +
+           ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
            '}';
   }
@@ -168,13 +194,24 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     LongMaxAggregatorFactory that = (LongMaxAggregatorFactory) o;
 
-    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) return false;
-    if (name != null ? !name.equals(that.name) : that.name != null) return false;
+    if (!Objects.equals(fieldName, that.fieldName)) {
+      return false;
+    }
+    if (!Objects.equals(expression, that.expression)) {
+      return false;
+    }
+    if (!Objects.equals(name, that.name)) {
+      return false;
+    }
 
     return true;
   }
@@ -183,6 +220,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   public int hashCode()
   {
     int result = fieldName != null ? fieldName.hashCode() : 0;
+    result = 31 * result + (expression != null ? expression.hashCode() : 0);
     result = 31 * result + (name != null ? name.hashCode() : 0);
     return result;
   }

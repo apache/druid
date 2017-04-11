@@ -22,13 +22,15 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -64,8 +66,9 @@ public class HdfsTaskLogs implements TaskLogs
         final OutputStream out = fs.create(path, true)
     ) {
       ByteStreams.copy(in, out);
-      log.info("Wrote task log to: %s", path);
     }
+
+    log.info("Wrote task log to: %s", path);
   }
 
   @Override
@@ -113,6 +116,44 @@ public class HdfsTaskLogs implements TaskLogs
   private static String mergePaths(String path1, String path2)
   {
     return path1 + (path1.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR) + path2;
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    log.info("Deleting all task logs from hdfs dir [%s].", config.getDirectory());
+    Path taskLogDir = new Path(config.getDirectory());
+    FileSystem fs = taskLogDir.getFileSystem(hadoopConfig);
+    fs.delete(taskLogDir, true);
+  }
+
+  @Override
+  public void killOlderThan(long timestamp) throws IOException
+  {
+    Path taskLogDir = new Path(config.getDirectory());
+    FileSystem fs = taskLogDir.getFileSystem(hadoopConfig);
+    if (fs.exists(taskLogDir)) {
+
+      if (!fs.isDirectory(taskLogDir)) {
+        throw new IOException(String.format("taskLogDir [%s] must be a directory.", taskLogDir));
+      }
+
+      RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(taskLogDir);
+      while (iter.hasNext()) {
+        LocatedFileStatus file = iter.next();
+        if (file.getModificationTime() < timestamp) {
+          Path p = file.getPath();
+          log.info("Deleting hdfs task log [%s].", p.toUri().toString());
+          fs.delete(p, true);
+        }
+
+        if (Thread.currentThread().isInterrupted()) {
+          throw new IOException(
+              new InterruptedException("Thread interrupted. Couldn't delete all tasklogs.")
+          );
+        }
+      }
+    }
   }
 }
 

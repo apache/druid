@@ -22,29 +22,27 @@ package io.druid.query.groupby.orderby;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.ordering.StringComparators.StringComparator;
+import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -90,12 +88,12 @@ public class DefaultLimitSpec implements LimitSpec
       List<PostAggregator> postAggs
   )
   {
-    // Can avoid materialization if the natural ordering is good enough.
+    // Can avoid re-sorting if the natural ordering is good enough.
 
-    boolean materializationNeeded = false;
+    boolean sortingNeeded = false;
 
     if (dimensions.size() < columns.size()) {
-      materializationNeeded = true;
+      sortingNeeded = true;
     }
 
     final Set<String> aggAndPostAggNames = Sets.newHashSet();
@@ -106,22 +104,37 @@ public class DefaultLimitSpec implements LimitSpec
       aggAndPostAggNames.add(postAgg.getName());
     }
 
-    if (!materializationNeeded) {
+    if (!sortingNeeded) {
       for (int i = 0; i < columns.size(); i++) {
         final OrderByColumnSpec columnSpec = columns.get(i);
 
+        if (aggAndPostAggNames.contains(columnSpec.getDimension())) {
+          sortingNeeded = true;
+          break;
+        }
+
+        final ValueType columnType = getOrderByType(columnSpec, dimensions);
+        final StringComparator naturalComparator;
+        if (columnType == ValueType.STRING) {
+          naturalComparator = StringComparators.LEXICOGRAPHIC;
+        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
+          naturalComparator = StringComparators.NUMERIC;
+        } else {
+          sortingNeeded = true;
+          break;
+        }
+
         if (columnSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING
-            || !columnSpec.getDimensionComparator().equals(StringComparators.LEXICOGRAPHIC)
-            || !columnSpec.getDimension().equals(dimensions.get(i).getOutputName())
-            || aggAndPostAggNames.contains(columnSpec.getDimension())) {
-          materializationNeeded = true;
+            || !columnSpec.getDimensionComparator().equals(naturalComparator)
+            || !columnSpec.getDimension().equals(dimensions.get(i).getOutputName())) {
+          sortingNeeded = true;
           break;
         }
       }
     }
 
-    if (!materializationNeeded) {
-      return new LimitingFn(limit);
+    if (!sortingNeeded) {
+      return limit == Integer.MAX_VALUE ? Functions.<Sequence<Row>>identity() : new LimitingFn(limit);
     }
 
     // Materialize the Comparator first for fast-fail error checking.
@@ -138,6 +151,17 @@ public class DefaultLimitSpec implements LimitSpec
   public LimitSpec merge(LimitSpec other)
   {
     return this;
+  }
+
+  private ValueType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
+  {
+    for (DimensionSpec dimSpec : dimensions) {
+      if (columnSpec.getDimension().equals(dimSpec.getOutputName())) {
+        return dimSpec.getOutputType();
+      }
+    }
+
+    throw new ISE("Unknown column in order clause[%s]", columnSpec);
   }
 
   private Ordering<Row> makeComparator(
@@ -251,120 +275,39 @@ public class DefaultLimitSpec implements LimitSpec
     {
       return Sequences.limit(input, limit);
     }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      LimitingFn that = (LimitingFn) o;
-
-      if (limit != that.limit) {
-        return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return limit;
-    }
   }
 
   private static class SortingFn implements Function<Sequence<Row>, Sequence<Row>>
   {
     private final Ordering<Row> ordering;
 
-    public SortingFn(Ordering<Row> ordering) {this.ordering = ordering;}
+    public SortingFn(Ordering<Row> ordering)
+    {
+      this.ordering = ordering;
+    }
 
     @Override
     public Sequence<Row> apply(@Nullable Sequence<Row> input)
     {
       return Sequences.sort(input, ordering);
     }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      SortingFn sortingFn = (SortingFn) o;
-
-      if (ordering != null ? !ordering.equals(sortingFn.ordering) : sortingFn.ordering != null) {
-        return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return ordering != null ? ordering.hashCode() : 0;
-    }
   }
 
   private static class TopNFunction implements Function<Sequence<Row>, Sequence<Row>>
   {
-    private final TopNSorter<Row> sorter;
+    private final Ordering<Row> ordering;
     private final int limit;
 
     public TopNFunction(Ordering<Row> ordering, int limit)
     {
+      this.ordering = ordering;
       this.limit = limit;
-
-      this.sorter = new TopNSorter<>(ordering);
     }
 
     @Override
-    public Sequence<Row> apply(
-        Sequence<Row> input
-    )
+    public Sequence<Row> apply(final Sequence<Row> input)
     {
-      final ArrayList<Row> materializedList = Sequences.toList(input, Lists.<Row>newArrayList());
-      return Sequences.simple(sorter.toTopN(materializedList, limit));
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      TopNFunction that = (TopNFunction) o;
-
-      if (limit != that.limit) {
-        return false;
-      }
-      if (sorter != null ? !sorter.equals(that.sorter) : that.sorter != null) {
-        return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      int result = sorter != null ? sorter.hashCode() : 0;
-      result = 31 * result + limit;
-      return result;
+      return new TopNSequence<>(input, ordering, limit);
     }
   }
 

@@ -46,7 +46,7 @@ Very large clusters should consider selecting larger servers.
 
 We recommend running your favorite Linux distribution. You will also need:
 
-  * Java 7 or better
+  * Java 8 or better
 
 Your OS package manager should be able to help for both Java. If your Ubuntu-based OS
 does not have a recent enough version of Java, WebUpd8 offers [packages for those
@@ -121,7 +121,7 @@ druid.indexer.logs.s3Prefix=druid/indexing-logs
 
 In `conf/druid/_common/common.runtime.properties`,
 
-- Set `druid.extensions.loadList=["io.druid.extensions:druid-hdfs-storage"]`.
+- Set `druid.extensions.loadList=["druid-hdfs-storage"]`.
 
 - Comment out the configurations for local storage under "Deep Storage" and "Indexing service logs".
 
@@ -189,12 +189,12 @@ In this simple cluster, you will deploy a single Druid Coordinator, a
 single Druid Overlord, a single ZooKeeper instance, and an embedded Derby metadata store on the same server.
 
 In `conf/druid/_common/common.runtime.properties`, replace
-"zk.host.ip" with the IP address of the machine that runs your ZK instance:
+"zk.service.host" with the address of the machine that runs your ZK instance:
 
 - `druid.zk.service.host`
 
-In `conf/_common/common.runtime.properties`, replace
-"metadata.store.ip" with the IP address of the machine that you will use as your metadata store:
+In `conf/druid/_common/common.runtime.properties`, replace
+"metadata.storage.*" with the address of the machine that you will use as your metadata store:
 
 - `druid.metadata.storage.connector.connectURI`
 - `druid.metadata.storage.connector.host`
@@ -292,9 +292,9 @@ rsync -az druid-#{DRUIDVERSION}/ COORDINATION_SERVER:druid-#{DRUIDVERSION}/
 Log on to your coordination server and install Zookeeper:
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz -o zookeeper-3.4.6.tar.gz
-tar -xzf zookeeper-3.4.6.tar.gz
-cd zookeeper-3.4.6
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz -o zookeeper-3.4.9.tar.gz
+tar -xzf zookeeper-3.4.9.tar.gz
+cd zookeeper-3.4.9
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 ```

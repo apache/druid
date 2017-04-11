@@ -22,7 +22,8 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.SQLMetadataConnector;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -37,11 +38,13 @@ import java.util.List;
 public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdaterJobHandler
 {
   private static final Logger log = new Logger(SQLMetadataStorageUpdaterJobHandler.class);
+  private final SQLMetadataConnector connector;
   private final IDBI dbi;
 
   @Inject
   public SQLMetadataStorageUpdaterJobHandler(SQLMetadataConnector connector)
   {
+    this.connector = connector;
     this.dbi = connector.getDBI();
   }
 
@@ -55,9 +58,9 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
           {
             final PreparedBatch batch = handle.prepareBatch(
                 String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    tableName
+                    tableName, connector.getQuoteString()
                 )
             );
             for (final DataSegment segment : segments) {

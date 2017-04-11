@@ -23,7 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import com.metamx.common.guava.FunctionalIterator;
+
+import io.druid.java.util.common.guava.FunctionalIterator;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -45,7 +46,7 @@ import java.util.PriorityQueue;
  */
 public class OrderedMergeIterator<T> implements Iterator<T>
 {
-  private final PriorityQueue<PeekingIterator<T>> pQueue;
+  private final PriorityQueue<PeekingIterator<T>> firstElementComparedPQueue;
 
   private PeekingIterator<PeekingIterator<T>> iterOfIterators;
   private final Comparator<T> comparator;
@@ -56,7 +57,7 @@ public class OrderedMergeIterator<T> implements Iterator<T>
   )
   {
     this.comparator = comparator;
-    pQueue = new PriorityQueue<PeekingIterator<T>>(
+    firstElementComparedPQueue = new PriorityQueue<PeekingIterator<T>>(
         16,
         new Comparator<PeekingIterator<T>>()
         {
@@ -96,7 +97,7 @@ public class OrderedMergeIterator<T> implements Iterator<T>
   @Override
   public boolean hasNext()
   {
-    return !pQueue.isEmpty() || iterOfIterators.hasNext();
+    return !firstElementComparedPQueue.isEmpty() || iterOfIterators.hasNext();
   }
 
   @Override
@@ -106,26 +107,26 @@ public class OrderedMergeIterator<T> implements Iterator<T>
       throw new NoSuchElementException();
     }
 
-    final PeekingIterator<T> it;
+    final PeekingIterator<T> littleIt;
     if (!iterOfIterators.hasNext()) {
-      it = pQueue.remove();
-    } else if (pQueue.isEmpty()) {
-      it = iterOfIterators.next();
+      littleIt = firstElementComparedPQueue.remove();
+    } else if (firstElementComparedPQueue.isEmpty()) {
+      littleIt = iterOfIterators.next();
     } else {
-      T pQueueValue = pQueue.peek().peek();
+      T pQueueValue = firstElementComparedPQueue.peek().peek();
       T iterItersValue = iterOfIterators.peek().peek();
 
       if (comparator.compare(pQueueValue, iterItersValue) <= 0) {
-        it = pQueue.remove();
+        littleIt = firstElementComparedPQueue.remove();
       } else {
-        it = iterOfIterators.next();
+        littleIt = iterOfIterators.next();
       }
     }
 
-    T retVal = it.next();
+    T retVal = littleIt.next();
 
-    if (it.hasNext()) {
-      pQueue.add(it);
+    if (littleIt.hasNext()) {
+      firstElementComparedPQueue.add(littleIt);
     }
 
     return retVal;

@@ -21,15 +21,14 @@ package io.druid.segment.realtime;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.common.Granularity;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.TestHelper;
@@ -86,15 +85,18 @@ public class FireDepartmentTest
                             DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "dim2")),
                             null,
                             null
-                        )
-                    )
+                        ),
+                        null,
+                        null
+                    ),
+                    null
                 ),
                 Map.class
             ),
             new AggregatorFactory[]{
                 new CountAggregatorFactory("count")
             },
-            new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.MINUTE, null),
+            new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
             jsonMapper
         ),
         new RealtimeIOConfig(

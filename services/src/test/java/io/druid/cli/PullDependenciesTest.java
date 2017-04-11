@@ -22,7 +22,6 @@ package io.druid.cli;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.metamx.common.ISE;
 import io.druid.guice.ExtensionsConfig;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.eclipse.aether.artifact.Artifact;
@@ -167,9 +166,9 @@ public class PullDependenciesTest
   }
 
   /**
-   * A file exists on the root extension directory path, but it's not a directory, throw ISE.
+   * A file exists on the root extension directory path, but it's not a directory, throw exception.
    */
-  @Test(expected = ISE.class)
+  @Test(expected = RuntimeException.class)
   public void testPullDependencies_root_extension_dir_bad_state() throws IOException
   {
     Assert.assertTrue(rootExtensionsDir.createNewFile());
@@ -187,9 +186,9 @@ public class PullDependenciesTest
   }
 
   /**
-   * A file exists on the root hadoop dependencies directory path, but it's not a directory, throw ISE.
+   * A file exists on the root hadoop dependencies directory path, but it's not a directory, throw exception.
    */
-  @Test(expected = ISE.class)
+  @Test(expected = RuntimeException.class)
   public void testPullDependencies_root_hadoop_dependencies_dir_bad_state() throws IOException
   {
     Assert.assertTrue(rootHadoopDependenciesDir.createNewFile());

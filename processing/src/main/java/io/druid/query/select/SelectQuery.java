@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
@@ -31,9 +31,11 @@ import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -41,9 +43,10 @@ import java.util.Map;
 public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
 {
   private final DimFilter dimFilter;
-  private final QueryGranularity granularity;
+  private final Granularity granularity;
   private final List<DimensionSpec> dimensions;
   private final List<String> metrics;
+  private final VirtualColumns virtualColumns;
   private final PagingSpec pagingSpec;
 
   @JsonCreator
@@ -52,9 +55,10 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("descending") boolean descending,
       @JsonProperty("filter") DimFilter dimFilter,
-      @JsonProperty("granularity") QueryGranularity granularity,
+      @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("metrics") List<String> metrics,
+      @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("pagingSpec") PagingSpec pagingSpec,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -63,6 +67,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions;
+    this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.metrics = metrics;
     this.pagingSpec = pagingSpec;
 
@@ -105,7 +110,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   }
 
   @JsonProperty
-  public QueryGranularity getGranularity()
+  public Granularity getGranularity()
   {
     return granularity;
   }
@@ -128,6 +133,12 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return metrics;
   }
 
+  @JsonProperty
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
+  }
+
   public PagingOffset getPagingOffset(String identifier)
   {
     return pagingSpec.getOffset(identifier, isDescending());
@@ -143,6 +154,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         granularity,
         dimensions,
         metrics,
+        virtualColumns,
         pagingSpec,
         getContext()
     );
@@ -159,6 +171,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         granularity,
         dimensions,
         metrics,
+        virtualColumns,
         pagingSpec,
         getContext()
     );
@@ -174,6 +187,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         granularity,
         dimensions,
         metrics,
+        virtualColumns,
         pagingSpec,
         computeOverridenContext(contextOverrides)
     );
@@ -189,6 +203,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         granularity,
         dimensions,
         metrics,
+        virtualColumns,
         pagingSpec,
         getContext()
     );
@@ -204,6 +219,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         granularity,
         dimensions,
         metrics,
+        virtualColumns,
         pagingSpec,
         getContext()
     );
@@ -220,6 +236,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
            ", granularity=" + granularity +
            ", dimensions=" + dimensions +
            ", metrics=" + metrics +
+           ", virtualColumns=" + virtualColumns +
            ", pagingSpec=" + pagingSpec +
            '}';
   }
@@ -227,17 +244,36 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     SelectQuery that = (SelectQuery) o;
 
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
-    if (metrics != null ? !metrics.equals(that.metrics) : that.metrics != null) return false;
-    if (pagingSpec != null ? !pagingSpec.equals(that.pagingSpec) : that.pagingSpec != null) return false;
+    if (!Objects.equals(dimFilter, that.dimFilter)) {
+      return false;
+    }
+    if (!Objects.equals(granularity, that.granularity)) {
+      return false;
+    }
+    if (!Objects.equals(dimensions, that.dimensions)) {
+      return false;
+    }
+    if (!Objects.equals(metrics, that.metrics)) {
+      return false;
+    }
+    if (!Objects.equals(virtualColumns, that.virtualColumns)) {
+      return false;
+    }
+    if (!Objects.equals(pagingSpec, that.pagingSpec)) {
+      return false;
+    }
 
     return true;
   }
@@ -250,6 +286,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (metrics != null ? metrics.hashCode() : 0);
+    result = 31 * result + (virtualColumns != null ? virtualColumns.hashCode() : 0);
     result = 31 * result + (pagingSpec != null ? pagingSpec.hashCode() : 0);
     return result;
   }

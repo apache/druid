@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.metamx.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
 import org.junit.After;
 import org.junit.Assert;
@@ -103,7 +103,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(theSupplier.getSerializedSize(), bytes.length);
 
-    supplier = CompressedIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), ByteOrder.nativeOrder());
+    supplier = CompressedIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), ByteOrder.nativeOrder(), null);
     indexed = supplier.get();
   }
 
@@ -111,7 +111,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
   {
     vals = new int[totalSize];
     Random rand = new Random(0);
-    for(int i = 0; i < vals.length; ++i) {
+    for (int i = 0; i < vals.length; ++i) {
       vals[i] = rand.nextInt();
     }
 

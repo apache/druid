@@ -25,7 +25,6 @@ import io.druid.segment.ObjectColumnSelector;
 
 public class ApproximateHistogramFoldingAggregator implements Aggregator
 {
-  private final String name;
   private final ObjectColumnSelector<ApproximateHistogram> selector;
   private final int resolution;
   private final float lowerLimit;
@@ -36,14 +35,12 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   private long[] tmpBufferB;
 
   public ApproximateHistogramFoldingAggregator(
-      String name,
       ObjectColumnSelector<ApproximateHistogram> selector,
       int resolution,
       float lowerLimit,
       float upperLimit
   )
   {
-    this.name = name;
     this.selector = selector;
     this.resolution = resolution;
     this.lowerLimit = lowerLimit;
@@ -91,12 +88,6 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("ApproximateHistogramFoldingAggregator does not support getLong()");
-  }
-
-  @Override
-  public String getName()
-  {
-    return name;
   }
 
   @Override

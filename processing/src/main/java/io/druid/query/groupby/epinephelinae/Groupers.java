@@ -26,36 +26,52 @@ import java.util.Iterator;
 
 public class Groupers
 {
-  private static final Comparator<Grouper.Entry<? extends Comparable>> ENTRY_COMPARATOR = new Comparator<Grouper.Entry<? extends Comparable>>()
-  {
-    @Override
-    public int compare(
-        final Grouper.Entry<? extends Comparable> lhs,
-        final Grouper.Entry<? extends Comparable> rhs
-    )
-    {
-      return lhs.getKey().compareTo(rhs.getKey());
-    }
-  };
-
   private Groupers()
   {
     // No instantiation
   }
 
+  private static final int C1 = 0xcc9e2d51;
+  private static final int C2 = 0x1b873593;
+
+  /*
+   * This method was rewritten in Java from an intermediate step of the Murmur hash function in
+   * https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp, which contained the
+   * following header:
+   *
+   * MurmurHash3 was written by Austin Appleby, and is placed in the public domain. The author
+   * hereby disclaims copyright to this source code.
+   */
+  static int smear(int hashCode) {
+    return C2 * Integer.rotateLeft(hashCode * C1, 15);
+  }
+
   public static int hash(final Object obj)
   {
     // Mask off the high bit so we can use that to determine if a bucket is used or not.
-    return obj.hashCode() & 0x7fffffff;
+    // Also apply the smear function, to improve distribution.
+    final int code = obj.hashCode();
+    return smear(code) & 0x7fffffff;
+
   }
 
-  public static <KeyType extends Comparable<KeyType>> Iterator<Grouper.Entry<KeyType>> mergeIterators(
+  public static <KeyType> Iterator<Grouper.Entry<KeyType>> mergeIterators(
       final Iterable<Iterator<Grouper.Entry<KeyType>>> iterators,
-      final boolean sorted
+      final Comparator<KeyType> keyTypeComparator
   )
   {
-    if (sorted) {
-      return Iterators.mergeSorted(iterators, ENTRY_COMPARATOR);
+    if (keyTypeComparator != null) {
+      return Iterators.mergeSorted(
+          iterators,
+          new Comparator<Grouper.Entry<KeyType>>()
+          {
+            @Override
+            public int compare(Grouper.Entry<KeyType> lhs, Grouper.Entry<KeyType> rhs)
+            {
+              return keyTypeComparator.compare(lhs.getKey(), rhs.getKey());
+            }
+          }
+      );
     } else {
       return Iterators.concat(iterators.iterator());
     }

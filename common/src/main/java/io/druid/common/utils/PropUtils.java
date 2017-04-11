@@ -19,9 +19,9 @@
 
 package io.druid.common.utils;
 
-import com.metamx.common.ISE;
-
 import java.util.Properties;
+
+import io.druid.java.util.common.ISE;
 
 /**
  */

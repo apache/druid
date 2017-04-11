@@ -24,13 +24,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.guice.annotations.Global;
+import io.druid.java.util.common.ISE;
 import io.druid.testing.IntegrationTestingConfig;
+import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
@@ -48,20 +48,20 @@ public class CoordinatorResourceTestClient
 
   @Inject
   CoordinatorResourceTestClient(
-      ObjectMapper jsonMapper,
-      @Global HttpClient httpClient, IntegrationTestingConfig config
+    ObjectMapper jsonMapper,
+    @TestClient HttpClient httpClient, IntegrationTestingConfig config
   )
   {
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.coordinator = config.getCoordinatorHost();
+    this.coordinator = config.getCoordinatorUrl();
     this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
   }
 
   private String getCoordinatorURL()
   {
     return String.format(
-        "http://%s/druid/coordinator/v1/",
+        "%s/druid/coordinator/v1/",
         coordinator
     );
   }

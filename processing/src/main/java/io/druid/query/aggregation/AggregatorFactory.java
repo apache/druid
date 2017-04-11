@@ -19,7 +19,8 @@
 
 package io.druid.query.aggregation;
 
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.Cacheable;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Comparator;
@@ -29,15 +30,15 @@ import java.util.Map;
 
 /**
  * Processing related interface
- * 
+ *
  * An AggregatorFactory is an object that knows how to generate an Aggregator using a ColumnSelectorFactory.
- * 
+ *
  * This is useful as an abstraction to allow Aggregator classes to be written in terms of MetricSelector objects
  * without making any assumptions about how they are pulling values out of the base data.  That is, the data is
  * provided to the Aggregator through the MetricSelector object, so whatever creates that object gets to choose how
  * the data is actually stored and accessed.
  */
-public abstract class AggregatorFactory
+public abstract class AggregatorFactory implements Cacheable
 {
   private static final Logger log = new Logger(AggregatorFactory.class);
 
@@ -78,7 +79,10 @@ public abstract class AggregatorFactory
    */
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    throw new UnsupportedOperationException(String.format("[%s] does not implement getMergingFactory(..)", this.getClass().getName()));
+    throw new UnsupportedOperationException(String.format(
+        "[%s] does not implement getMergingFactory(..)",
+        this.getClass().getName()
+    ));
   }
 
   /**
@@ -112,8 +116,6 @@ public abstract class AggregatorFactory
 
   public abstract List<String> requiredFields();
 
-  public abstract byte[] getCacheKey();
-
   public abstract String getTypeName();
 
   /**
@@ -122,13 +124,6 @@ public abstract class AggregatorFactory
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
    */
   public abstract int getMaxIntermediateSize();
-
-  /**
-   * Returns the starting value for a corresponding aggregator. For example, 0 for sums, - Infinity for max, an empty mogrifier
-   *
-   * @return the starting value for a corresponding aggregator.
-   */
-  public abstract Object getAggregatorStartValue();
 
   /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and

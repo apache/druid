@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import com.sun.jersey.spi.container.ResourceFilter;
+import io.druid.server.BrokerQueryResource;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.QueryResource;
 import io.druid.server.StatusResource;
@@ -67,7 +68,8 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
             getRequestPaths(ClientInfoResource.class),
             getRequestPaths(CoordinatorDynamicConfigsResource.class),
             getRequestPaths(QueryResource.class),
-            getRequestPaths(StatusResource.class)
+            getRequestPaths(StatusResource.class),
+            getRequestPaths(BrokerQueryResource.class)
         )
     );
   }
@@ -97,7 +99,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   }
 
   @Test
-  public void testDatasourcesResourcesFilteringAccess()
+  public void testResourcesFilteringAccess()
   {
     setUpMockExpectations(requestPath, true, requestMethod);
     EasyMock.replay(req, request, authorizationInfo);
@@ -107,11 +109,11 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   }
 
   @Test(expected = WebApplicationException.class)
-  public void testDatasourcesResourcesFilteringNoAccess()
+  public void testResourcesFilteringNoAccess()
   {
     setUpMockExpectations(requestPath, false, requestMethod);
     EasyMock.replay(req, request, authorizationInfo);
-    //Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
+    Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
       resourceFilter.getRequestFilter().filter(request);
     }
@@ -123,7 +125,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   }
 
   @Test
-  public void testDatasourcesResourcesFilteringBadPath()
+  public void testResourcesFilteringBadPath()
   {
     EasyMock.replay(req, request, authorizationInfo);
     final String badRequestPath = requestPath.replaceAll("\\w+", "droid");

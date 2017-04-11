@@ -19,8 +19,10 @@
 
 package io.druid.segment;
 
-import io.druid.segment.data.CompressedFloatsSupplierSerializer;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.FloatSupplierSerializer;
 import io.druid.segment.data.IOPeon;
 
 import java.io.IOException;
@@ -42,7 +44,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressedObjectStrategy.CompressionStrategy compression;
-  private CompressedFloatsSupplierSerializer writer;
+  private FloatSupplierSerializer writer;
 
   public FloatColumnSerializer(
       IOPeon ioPeon,
@@ -60,7 +62,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   @Override
   public void open() throws IOException
   {
-    writer = CompressedFloatsSupplierSerializer.create(
+    writer = CompressionFactory.getFloatSerializer(
         ioPeon,
         String.format("%s.float_column", filenameBase),
         byteOrder,
@@ -89,9 +91,9 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    writer.writeToChannel(channel);
+    writer.writeToChannel(channel, smoosher);
   }
 
 }

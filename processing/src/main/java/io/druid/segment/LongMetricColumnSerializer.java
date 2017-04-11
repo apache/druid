@@ -19,41 +19,49 @@
 
 package io.druid.segment;
 
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
-import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.LongSupplierSerializer;
 
 import java.io.File;
 import java.io.IOException;
 
 /**
+ * Unsafe for concurrent use from multiple threads.
  */
 public class LongMetricColumnSerializer implements MetricColumnSerializer
 {
   private final String metricName;
   private final IOPeon ioPeon;
   private final File outDir;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionFactory.LongEncodingStrategy encoding;
 
-  private CompressedLongsSupplierSerializer writer;
+  private LongSupplierSerializer writer;
 
   public LongMetricColumnSerializer(
       String metricName,
       File outDir,
-      IOPeon ioPeon
+      IOPeon ioPeon,
+      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionFactory.LongEncodingStrategy encoding
   )
   {
     this.metricName = metricName;
     this.ioPeon = ioPeon;
     this.outDir = outDir;
+    this.compression = compression;
+    this.encoding = encoding;
   }
 
   @Override
   public void open() throws IOException
   {
-    writer = CompressedLongsSupplierSerializer.create(
-        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER,
-        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+    writer = CompressionFactory.getLongSerializer(
+        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER, encoding, compression
     );
 
     writer.open();
@@ -70,9 +78,14 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   public void close() throws IOException
   {
     final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
+    closeFile(outFile);
+  }
+
+  public void closeFile(final File outFile) throws IOException
+  {
     outFile.delete();
     MetricHolder.writeLongMetric(
-        Files.newOutputStreamSupplier(outFile, true), metricName, writer
+        Files.asByteSink(outFile, FileWriteMode.APPEND), metricName, writer
     );
     IndexIO.checkFileSize(outFile);
 

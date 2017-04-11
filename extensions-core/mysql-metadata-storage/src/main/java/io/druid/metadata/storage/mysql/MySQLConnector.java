@@ -22,9 +22,10 @@ package io.druid.metadata.storage.mysql;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
@@ -41,6 +42,7 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final Logger log = new Logger(MySQLConnector.class);
   private static final String PAYLOAD_TYPE = "LONGBLOB";
   private static final String SERIAL_TYPE = "BIGINT(20) AUTO_INCREMENT";
+  private static final String QUOTE_STRING = "`";
 
   private final DBI dbi;
 
@@ -73,6 +75,11 @@ public class MySQLConnector extends SQLMetadataConnector
   protected String getSerialType()
   {
     return SERIAL_TYPE;
+  }
+
+  @Override
+  public String getQuoteString() {
+    return QUOTE_STRING;
   }
 
   @Override

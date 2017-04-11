@@ -1,4 +1,3 @@
-
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
  * or more contributor license agreements. See the NOTICE file
@@ -23,7 +22,7 @@ package io.druid.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -32,9 +31,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.common.Pair;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
@@ -43,6 +39,9 @@ import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
@@ -134,8 +133,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataRuleManager.class);
 
   private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataRuleManagerConfig> config;
-  private final Supplier<MetadataStorageTablesConfig> dbTables;
+  private final MetadataRuleManagerConfig config;
+  private final MetadataStorageTablesConfig dbTables;
   private final IDBI dbi;
   private final AtomicReference<ImmutableMap<String, List<Rule>>> rules;
   private final AuditManager auditManager;
@@ -152,8 +151,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   @Inject
   public SQLMetadataRuleManager(
       @Json ObjectMapper jsonMapper,
-      Supplier<MetadataRuleManagerConfig> config,
-      Supplier<MetadataStorageTablesConfig> dbTables,
+      MetadataRuleManagerConfig config,
+      MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
       AuditManager auditManager
   )
@@ -163,6 +162,10 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     this.dbTables = dbTables;
     this.dbi = connector.getDBI();
     this.auditManager = auditManager;
+
+    // Verify configured Periods can be treated as Durations (fail-fast before they're needed).
+    Preconditions.checkNotNull(config.getAlertThreshold().toStandardDuration());
+    Preconditions.checkNotNull(config.getPollDuration().toStandardDuration());
 
     this.rules = new AtomicReference<>(
         ImmutableMap.<String, List<Rule>>of()
@@ -179,7 +182,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
 
       exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d"));
 
-      createDefaultRule(dbi, getRulesTable(), config.get().getDefaultRule(), jsonMapper);
+      createDefaultRule(dbi, getRulesTable(), config.getDefaultRule(), jsonMapper);
       future = exec.scheduleWithFixedDelay(
           new Runnable()
           {
@@ -195,7 +198,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
             }
           },
           0,
-          config.get().getPollDuration().toStandardDuration().getMillis(),
+          config.getPollDuration().toStandardDuration().getMillis(),
           TimeUnit.MILLISECONDS
       );
 
@@ -301,7 +304,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         retryStartTime = System.currentTimeMillis();
       }
 
-      if (System.currentTimeMillis() - retryStartTime > config.get().getAlertThreshold().getMillis()) {
+      if (System.currentTimeMillis() - retryStartTime > config.getAlertThreshold().toStandardDuration().getMillis()) {
         log.makeAlert(e, "Exception while polling for rules")
            .emit();
         retryStartTime = 0;
@@ -329,8 +332,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));
     }
-    if (theRules.get(config.get().getDefaultRule()) != null) {
-      retVal.addAll(theRules.get(config.get().getDefaultRule()));
+    if (theRules.get(config.getDefaultRule()) != null) {
+      retVal.addAll(theRules.get(config.getDefaultRule()));
     }
     return retVal;
   }
@@ -399,6 +402,6 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
 
   private String getRulesTable()
   {
-    return dbTables.get().getRulesTable();
+    return dbTables.getRulesTable();
   }
 }

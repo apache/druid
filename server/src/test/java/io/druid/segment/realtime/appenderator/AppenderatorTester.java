@@ -21,7 +21,6 @@ package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.Granularity;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
@@ -33,8 +32,8 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
@@ -103,7 +102,9 @@ public class AppenderatorTester implements AutoCloseable
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("ts", "auto", null),
-                new DimensionsSpec(null, null, null)
+                new DimensionsSpec(null, null, null),
+                null,
+                null
             )
         ),
         Map.class
@@ -115,7 +116,7 @@ public class AppenderatorTester implements AutoCloseable
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("met", "met")
         },
-        new UniformGranularitySpec(Granularity.MINUTE, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
         objectMapper
     );
 
@@ -132,6 +133,7 @@ public class AppenderatorTester implements AutoCloseable
         null,
         0,
         0,
+        null,
         null,
         null
     );

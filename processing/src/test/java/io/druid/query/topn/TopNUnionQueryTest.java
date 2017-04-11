@@ -57,7 +57,7 @@ public class TopNUnionQueryTest
     this.runner = runner;
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(
@@ -76,6 +76,7 @@ public class TopNUnionQueryTest
             QueryRunnerTestHelper.makeUnionQueryRunners(
                 new TopNQueryRunnerFactory(
                     new StupidPool<ByteBuffer>(
+                        "TopNQueryRunnerFactory-bufferPool",
                         new Supplier<ByteBuffer>()
                         {
                           @Override

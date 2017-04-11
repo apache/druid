@@ -22,11 +22,12 @@ package io.druid.query.aggregation.datasketches.theta;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
-import com.metamx.common.IAE;
-import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Util;
-import com.yahoo.sketches.theta.Sketch;
+import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.List;
@@ -35,12 +36,9 @@ import java.util.Set;
 
 public class SketchSetPostAggregator implements PostAggregator
 {
-
-  private static final Logger LOG = new Logger(SketchSetPostAggregator.class);
-
   private final String name;
   private final List<PostAggregator> fields;
-  private final SketchOperations.Func func;
+  private final SketchHolder.Func func;
   private final int maxSketchSize;
 
   @JsonCreator
@@ -53,7 +51,7 @@ public class SketchSetPostAggregator implements PostAggregator
   {
     this.name = name;
     this.fields = fields;
-    this.func = SketchOperations.Func.valueOf(func);
+    this.func = SketchHolder.Func.valueOf(func);
     this.maxSketchSize = maxSize == null ? SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE : maxSize;
     Util.checkIfPowerOf2(this.maxSketchSize, "size");
 
@@ -73,20 +71,20 @@ public class SketchSetPostAggregator implements PostAggregator
   }
 
   @Override
-  public Comparator<Sketch> getComparator()
+  public Comparator<Object> getComparator()
   {
-    return SketchAggregatorFactory.COMPARATOR;
+    return SketchHolder.COMPARATOR;
   }
 
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
-    Sketch[] sketches = new Sketch[fields.size()];
+    Object[] sketches = new Object[fields.size()];
     for (int i = 0; i < sketches.length; i++) {
-      sketches[i] = (Sketch) fields.get(i).compute(combinedAggregators);
+      sketches[i] = fields.get(i).compute(combinedAggregators);
     }
 
-    return SketchOperations.sketchSetOperation(func, maxSketchSize, sketches);
+    return SketchHolder.sketchSetOperation(func, maxSketchSize, sketches);
   }
 
   @Override
@@ -94,6 +92,12 @@ public class SketchSetPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty
@@ -163,5 +167,34 @@ public class SketchSetPostAggregator implements PostAggregator
     result = 31 * result + func.hashCode();
     result = 31 * result + maxSketchSize;
     return result;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final CacheKeyBuilder builder = new CacheKeyBuilder(PostAggregatorIds.DATA_SKETCHES_SKETCH_SET)
+        .appendString(getFunc())
+        .appendInt(maxSketchSize);
+
+    if (preserveFieldOrderInCacheKey(func)) {
+      builder.appendCacheables(fields);
+    } else {
+      builder.appendCacheablesIgnoringOrder(fields);
+    }
+
+    return builder.build();
+  }
+
+  private static boolean preserveFieldOrderInCacheKey(SketchHolder.Func func)
+  {
+    switch (func) {
+      case NOT:
+        return true;
+      case UNION:
+      case INTERSECT:
+        return false;
+      default:
+        throw new IAE(func.name());
+    }
   }
 }

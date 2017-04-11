@@ -22,8 +22,9 @@ package io.druid.server.coordinator.rules;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.IAE;
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.java.util.common.IAE;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -32,7 +33,6 @@ import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.ReplicationThrottler;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -71,8 +71,7 @@ public abstract class LoadRule implements Rule
       }
 
       final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
-      final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-      final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
+      final BalancerStrategy strategy = params.getBalancerStrategy();
       if (availableSegments.contains(segment)) {
         CoordinatorStats assignStats = assign(
             params.getReplicationManager(),
@@ -204,33 +203,9 @@ public abstract class LoadRule implements Rule
         }
 
         if (holder.isServingSegment(segment)) {
-          if (expectedNumReplicantsForTier > 0) { // don't throttle unless we are removing extra replicants
-            if (!replicationManager.canDestroyReplicant(tier)) {
-              serverQueue.add(holder);
-              break;
-            }
-
-            replicationManager.registerReplicantTermination(
-                tier,
-                segment.getIdentifier(),
-                holder.getServer().getHost()
-            );
-          }
-
           holder.getPeon().dropSegment(
               segment,
-              new LoadPeonCallback()
-              {
-                @Override
-                public void execute()
-                {
-                  replicationManager.unregisterReplicantTermination(
-                      tier,
-                      segment.getIdentifier(),
-                      holder.getServer().getHost()
-                  );
-                }
-              }
+              null
           );
           --loadedNumReplicantsForTier;
           stats.addToTieredStat(droppedCount, tier, 1);
@@ -244,13 +219,16 @@ public abstract class LoadRule implements Rule
   }
 
   protected void validateTieredReplicants(Map<String, Integer> tieredReplicants){
-    if(tieredReplicants.size() == 0)
+    if(tieredReplicants.size() == 0) {
       throw new IAE("A rule with empty tiered replicants is invalid");
+    }
     for (Map.Entry<String, Integer> entry: tieredReplicants.entrySet()) {
-      if (entry.getValue() == null)
+      if (entry.getValue() == null) {
         throw new IAE("Replicant value cannot be empty");
-      if (entry.getValue() < 0)
+      }
+      if (entry.getValue() < 0) {
         throw new IAE("Replicant value [%d] is less than 0, which is not allowed", entry.getValue());
+      }
     }
   }
 

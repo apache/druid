@@ -25,17 +25,17 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.ResourceClosingSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CacheStats;
 import io.druid.client.cache.MapCache;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.SequenceWrapper;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -58,6 +58,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -66,10 +68,21 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@RunWith(Parameterized.class)
 public class CachingQueryRunnerTest
 {
+  @Parameterized.Parameters(name = "numBackgroundThreads={0}")
+  public static Iterable<Object[]> constructorFeeder() throws IOException
+  {
+    return QueryRunnerTestHelper.cartesian(Arrays.asList(5, 1, 0));
+  }
 
   private static final List<AggregatorFactory> AGGS = Arrays.asList(
       new CountAggregatorFactory("rows"),
@@ -85,6 +98,17 @@ public class CachingQueryRunnerTest
       new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
   };
 
+  private ExecutorService backgroundExecutorService;
+
+  public CachingQueryRunnerTest(int numBackgroundThreads)
+  {
+    if (numBackgroundThreads > 0) {
+      backgroundExecutorService = Executors.newFixedThreadPool(numBackgroundThreads);
+    } else {
+      backgroundExecutorService = MoreExecutors.sameThreadExecutor();
+    }
+  }
+
   @Test
   public void testCloseAndPopulate() throws Exception
   {
@@ -98,7 +122,7 @@ public class CachingQueryRunnerTest
         .threshold(3)
         .intervals("2011-01-05/2011-01-10")
         .aggregators(AGGS)
-        .granularity(QueryGranularities.ALL);
+        .granularity(Granularities.ALL);
 
     QueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
@@ -167,22 +191,70 @@ public class CachingQueryRunnerTest
       throws Exception
   {
     final AssertingClosable closable = new AssertingClosable();
-    final Sequence resultSeq = new ResourceClosingSequence(
-        Sequences.simple(expectedRes), closable
-    )
+    final Sequence resultSeq = Sequences.wrap(
+        Sequences.simple(expectedRes),
+        new SequenceWrapper()
+        {
+          @Override
+          public void before()
+          {
+            Assert.assertFalse(closable.isClosed());
+          }
+
+          @Override
+          public void after(boolean isDone, Throwable thrown) throws Exception
+          {
+            closable.close();
+          }
+        }
+    );
+
+    final CountDownLatch cacheMustBePutOnce = new CountDownLatch(1);
+    Cache cache = new Cache()
     {
+      private final Map<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
+
       @Override
-      public Yielder toYielder(Object initValue, YieldingAccumulator accumulator)
+      public byte[] get(NamedKey key)
       {
-        Assert.assertFalse(closable.isClosed());
-        return super.toYielder(
-            initValue,
-            accumulator
-        );
+        return baseMap.get(key);
+      }
+
+      @Override
+      public void put(NamedKey key, byte[] value)
+      {
+        baseMap.put(key, value);
+        cacheMustBePutOnce.countDown();
+      }
+
+      @Override
+      public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
+      {
+        return null;
+      }
+
+      @Override
+      public void close(String namespace)
+      {
+      }
+
+      @Override
+      public CacheStats getStats()
+      {
+        return null;
+      }
+
+      @Override
+      public boolean isLocal()
+      {
+        return true;
+      }
+
+      @Override
+      public void doMonitor(ServiceEmitter emitter)
+      {
       }
     };
-
-    Cache cache = MapCache.create(1024 * 1024);
 
     String segmentIdentifier = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
@@ -202,7 +274,7 @@ public class CachingQueryRunnerTest
             return resultSeq;
           }
         },
-        MoreExecutors.sameThreadExecutor(),
+        backgroundExecutorService,
         new CacheConfig()
         {
           @Override
@@ -236,6 +308,9 @@ public class CachingQueryRunnerTest
     Assert.assertTrue(closable.isClosed());
     Assert.assertEquals(expectedRes.toString(), results.toString());
 
+    // wait for background caching finish
+    // wait at most 10 seconds to fail the test to avoid block overall tests
+    Assert.assertTrue("cache must be populated", cacheMustBePutOnce.await(10, TimeUnit.SECONDS));
     byte[] cacheValue = cache.get(cacheKey);
     Assert.assertNotNull(cacheValue);
 
@@ -292,7 +367,7 @@ public class CachingQueryRunnerTest
             return Sequences.empty();
           }
         },
-        MoreExecutors.sameThreadExecutor(),
+        backgroundExecutorService,
         new CacheConfig()
         {
           @Override

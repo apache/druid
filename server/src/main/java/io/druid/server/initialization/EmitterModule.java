@@ -19,7 +19,9 @@
 
 package io.druid.server.initialization;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
@@ -31,14 +33,14 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
@@ -80,7 +82,17 @@ public class EmitterModule implements Module
   public ServiceEmitter getServiceEmitter(@Self Supplier<DruidNode> configSupplier, Emitter emitter)
   {
     final DruidNode config = configSupplier.get();
-    final ServiceEmitter retVal = new ServiceEmitter(config.getServiceName(), config.getHostAndPort(), emitter);
+    String version = getClass().getPackage().getImplementationVersion();
+    final ImmutableMap<String, String> otherServiceDimensions = ImmutableMap.of(
+        "version",
+        Strings.nullToEmpty(version) // Version is null during `mvn test`.
+    );
+    final ServiceEmitter retVal = new ServiceEmitter(
+        config.getServiceName(),
+        config.getHostAndPort(),
+        emitter,
+        otherServiceDimensions
+    );
     EmittingLogger.registerEmitter(retVal);
     return retVal;
   }

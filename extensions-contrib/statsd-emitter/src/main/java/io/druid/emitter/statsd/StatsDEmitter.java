@@ -1,20 +1,20 @@
 /*
- *  Licensed to Metamarkets Group Inc. (Metamarkets) under one
- *  or more contributor license agreements. See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership. Metamarkets licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.emitter.statsd;
@@ -22,13 +22,13 @@ package io.druid.emitter.statsd;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.util.Map;
@@ -46,28 +46,36 @@ public class StatsDEmitter implements Emitter
   private final StatsDEmitterConfig config;
   private final DimensionConverter converter;
 
-  public StatsDEmitter(StatsDEmitterConfig config, ObjectMapper mapper) {
-    this.config = config;
-    this.converter = new DimensionConverter(mapper, config.getDimensionMapPath());
-    statsd = new NonBlockingStatsDClient(
-        config.getPrefix(),
-        config.getHostname(),
-        config.getPort(),
-        new StatsDClientErrorHandler()
-        {
-          private int exceptionCount = 0;
-          @Override
-          public void handle(Exception exception)
-          {
-            if (exceptionCount % 1000 == 0) {
-              log.error(exception, "Error sending metric to StatsD.");
-            }
-            exceptionCount += 1;
-          }
-        }
+  public StatsDEmitter(StatsDEmitterConfig config, ObjectMapper mapper)
+  {
+    this(config, mapper,
+         new NonBlockingStatsDClient(
+             config.getPrefix(),
+             config.getHostname(),
+             config.getPort(),
+             new StatsDClientErrorHandler()
+             {
+               private int exceptionCount = 0;
+
+               @Override
+               public void handle(Exception exception)
+               {
+                 if (exceptionCount % 1000 == 0) {
+                   log.error(exception, "Error sending metric to StatsD.");
+                 }
+                 exceptionCount += 1;
+               }
+             }
+         )
     );
   }
 
+  public StatsDEmitter(StatsDEmitterConfig config, ObjectMapper mapper, StatsDClient client)
+  {
+    this.config = config;
+    this.converter = new DimensionConverter(mapper, config.getDimensionMapPath());
+    this.statsd = client;
+  }
 
   @Override
   public void start() {}
@@ -90,28 +98,29 @@ public class StatsDEmitter implements Emitter
       nameBuilder.add(service);
       nameBuilder.add(metric);
 
-      StatsDMetric.Type metricType = converter.addFilteredUserDims(service, metric, userDims, nameBuilder);
+      StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, nameBuilder);
 
-      if (metricType != null) {
+      if (statsDMetric != null) {
 
         String fullName = Joiner.on(config.getSeparator())
                                 .join(nameBuilder.build())
                                 .replaceAll(DRUID_METRIC_SEPARATOR, config.getSeparator())
                                 .replaceAll(STATSD_SEPARATOR, config.getSeparator());
 
-        switch (metricType) {
+        long val = statsDMetric.convertRange ? Math.round(value.doubleValue() * 100) : value.longValue();
+        switch (statsDMetric.type) {
           case count:
-            statsd.count(fullName, value.longValue());
+            statsd.count(fullName, val);
             break;
           case timer:
-            statsd.time(fullName, value.longValue());
+            statsd.time(fullName, val);
             break;
           case gauge:
-            statsd.gauge(fullName, value.longValue());
+            statsd.gauge(fullName, val);
             break;
         }
       } else {
-        log.error("Metric=[%s] has no StatsD type mapping", metric);
+        log.debug("Metric=[%s] has no StatsD type mapping", statsDMetric);
       }
     }
   }

@@ -143,8 +143,12 @@ columns names ("column_1", "column2", ... "column_n") will be assigned. Ensure t
   }
 ```
 
-Please note with the JavaScript parser that data must be fully parsed and returned as a `{key:value}` format in the JS logic. 
+Note with the JavaScript parser that data must be fully parsed and returned as a `{key:value}` format in the JS logic.
 This means any flattening or parsing multi-dimensional values must be done here.
+
+<div class="note info">
+JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+</div>
 
 ### Multi-value dimensions
 

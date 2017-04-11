@@ -22,19 +22,19 @@ package io.druid.benchmark.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -45,12 +45,15 @@ import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -64,11 +67,14 @@ import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import org.apache.commons.io.FileUtils;
+import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -79,6 +85,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -104,7 +111,7 @@ public class TimeseriesBenchmark
   @Param({"750000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.timeFilterNumeric", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
   private String schemaAndQuery;
 
   private static final Logger log = new Logger(TimeseriesBenchmark.class);
@@ -115,6 +122,7 @@ public class TimeseriesBenchmark
 
   private List<IncrementalIndex> incIndexes;
   private List<QueryableIndex> qIndexes;
+  private File tmpDir;
 
   private QueryRunnerFactory factory;
   private BenchmarkSchemaInfo schemaInfo;
@@ -159,7 +167,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery queryA =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(QueryGranularities.ALL)
+                .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(false)
@@ -167,6 +175,64 @@ public class TimeseriesBenchmark
 
       basicQueries.put("A", queryA);
     }
+    {
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
+      BoundDimFilter timeFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
+                                                     StringComparators.NUMERIC);
+      queryAggs.add(new FilteredAggregatorFactory(lsaf, timeFilter));
+
+      TimeseriesQuery timeFilterQuery =
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("blah")
+                .granularity(Granularities.ALL)
+                .intervals(intervalSpec)
+                .aggregators(queryAggs)
+                .descending(false)
+                .build();
+
+      basicQueries.put("timeFilterNumeric", timeFilterQuery);
+    }
+    {
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
+      BoundDimFilter timeFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
+                                                     StringComparators.ALPHANUMERIC);
+      queryAggs.add(new FilteredAggregatorFactory(lsaf, timeFilter));
+
+      TimeseriesQuery timeFilterQuery =
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("blah")
+                .granularity(Granularities.ALL)
+                .intervals(intervalSpec)
+                .aggregators(queryAggs)
+                .descending(false)
+                .build();
+
+      basicQueries.put("timeFilterAlphanumeric", timeFilterQuery);
+    }
+    {
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(new Interval(200000, 300000)));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
+      queryAggs.add(lsaf);
+
+      TimeseriesQuery timeFilterQuery =
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("blah")
+                .granularity(Granularities.ALL)
+                .intervals(intervalSpec)
+                .aggregators(queryAggs)
+                .descending(false)
+                .build();
+
+      basicQueries.put("timeFilterByInterval", timeFilterQuery);
+    }
+
 
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
   }
@@ -177,7 +243,7 @@ public class TimeseriesBenchmark
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
 
     executorService = Execs.multiThreaded(numSegments, "TimeseriesThreadPool");
@@ -214,15 +280,14 @@ public class TimeseriesBenchmark
       incIndexes.add(incIndex);
     }
 
-    File tmpFile = Files.createTempDir();
-    log.info("Using temp dir: " + tmpFile.getAbsolutePath());
-    tmpFile.deleteOnExit();
+    tmpDir = Files.createTempDir();
+    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
     qIndexes = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       File indexFile = INDEX_MERGER_V9.persist(
           incIndexes.get(i),
-          tmpFile,
+          tmpDir,
           new IndexSpec()
       );
 
@@ -239,11 +304,17 @@ public class TimeseriesBenchmark
     );
   }
 
+  @TearDown
+  public void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(tmpDir);
+  }
+
   private IncrementalIndex makeIncIndex()
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

@@ -19,13 +19,10 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Family;
-import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Union;
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.ObjectColumnSelector;
 
@@ -33,19 +30,13 @@ import java.util.List;
 
 public class SketchAggregator implements Aggregator
 {
-  private static final Logger logger = new Logger(SketchAggregator.class);
-
   private final ObjectColumnSelector selector;
-  private final String name;
-  private final int size;
 
   private Union union;
 
-  public SketchAggregator(String name, ObjectColumnSelector selector, int size)
+  public SketchAggregator(ObjectColumnSelector selector, int size)
   {
-    this.name = name;
     this.selector = selector;
-    this.size = size;
     union = new SynchronizedUnion((Union) SetOperation.builder().build(size, Family.UNION));
   }
 
@@ -74,7 +65,7 @@ public class SketchAggregator implements Aggregator
     //however, advantage of ordered sketch is that they are faster to "union" later
     //given that results from the aggregator will be combined further, it is better
     //to return the ordered sketch here
-    return union.getResult(true, null);
+    return SketchHolder.of(union.getResult(true, null));
   }
 
   @Override
@@ -90,12 +81,6 @@ public class SketchAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
   public void close()
   {
     union = null;
@@ -103,10 +88,8 @@ public class SketchAggregator implements Aggregator
 
   static void updateUnion(Union union, Object update)
   {
-    if (update instanceof Memory) {
-      union.update((Memory) update);
-    } else if (update instanceof Sketch) {
-      union.update((Sketch) update);
+    if (update instanceof SketchHolder) {
+      ((SketchHolder) update).updateUnion(union);
     } else if (update instanceof String) {
       union.update((String) update);
     } else if (update instanceof byte[]) {

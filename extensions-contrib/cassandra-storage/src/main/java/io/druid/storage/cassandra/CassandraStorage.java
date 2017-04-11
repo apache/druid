@@ -41,32 +41,32 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
  */
 public class CassandraStorage 
 {
-	private static final String CLUSTER_NAME = "druid_cassandra_cluster";
-	private static final String INDEX_TABLE_NAME = "index_storage";
-	private static final String DESCRIPTOR_TABLE_NAME = "descriptor_storage";
+  private static final String CLUSTER_NAME = "druid_cassandra_cluster";
+  private static final String INDEX_TABLE_NAME = "index_storage";
+  private static final String DESCRIPTOR_TABLE_NAME = "descriptor_storage";
 
-	private AstyanaxContext<Keyspace> astyanaxContext;
-	final Keyspace keyspace;
-	final ChunkedStorageProvider indexStorage;
-	final ColumnFamily<String, String> descriptorStorage;	
-	final CassandraDataSegmentConfig config;
+  private AstyanaxContext<Keyspace> astyanaxContext;
+  final Keyspace keyspace;
+  final ChunkedStorageProvider indexStorage;
+  final ColumnFamily<String, String> descriptorStorage;  
+  final CassandraDataSegmentConfig config;
 
-	public CassandraStorage(CassandraDataSegmentConfig config)
-	{
-		this.astyanaxContext = new AstyanaxContext.Builder()
-		    .forCluster(CLUSTER_NAME)
-		    .forKeyspace(config.getKeyspace())
-		    .withAstyanaxConfiguration(new AstyanaxConfigurationImpl().setDiscoveryType(NodeDiscoveryType.NONE))
-		    .withConnectionPoolConfiguration(
-		        new ConnectionPoolConfigurationImpl("MyConnectionPool").setMaxConnsPerHost(10)
-		            .setSeeds(config.getHost())).withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-		    .buildKeyspace(ThriftFamilyFactory.getInstance());
-		this.astyanaxContext.start();
-		this.keyspace = this.astyanaxContext.getEntity();
-		this.config = config;
-		indexStorage = new CassandraChunkedStorageProvider(keyspace, INDEX_TABLE_NAME);
+  public CassandraStorage(CassandraDataSegmentConfig config)
+  {
+    this.astyanaxContext = new AstyanaxContext.Builder()
+        .forCluster(CLUSTER_NAME)
+        .forKeyspace(config.getKeyspace())
+        .withAstyanaxConfiguration(new AstyanaxConfigurationImpl().setDiscoveryType(NodeDiscoveryType.NONE))
+        .withConnectionPoolConfiguration(
+            new ConnectionPoolConfigurationImpl("MyConnectionPool").setMaxConnsPerHost(10)
+                .setSeeds(config.getHost())).withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
+        .buildKeyspace(ThriftFamilyFactory.getInstance());
+    this.astyanaxContext.start();
+    this.keyspace = this.astyanaxContext.getEntity();
+    this.config = config;
+    indexStorage = new CassandraChunkedStorageProvider(keyspace, INDEX_TABLE_NAME);
 
-		descriptorStorage = new ColumnFamily<String, String>(DESCRIPTOR_TABLE_NAME,
-		    StringSerializer.get(), StringSerializer.get());
-	}
+    descriptorStorage = new ColumnFamily<String, String>(DESCRIPTOR_TABLE_NAME,
+        StringSerializer.get(), StringSerializer.get());
+  }
 }

@@ -19,22 +19,81 @@
 
 package io.druid.query.search.search;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.query.ordering.StringComparator;
+import io.druid.query.ordering.StringComparators;
 
 import java.util.Comparator;
 
-/**
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LexicographicSearchSortSpec.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "lexicographic", value = LexicographicSearchSortSpec.class),
-    @JsonSubTypes.Type(name = "alphanumeric", value = AlphanumericSearchSortSpec.class),
-    @JsonSubTypes.Type(name = "strlen", value = StrlenSearchSortSpec.class)
-})
-public interface SearchSortSpec
+public class SearchSortSpec
 {
-  Comparator<SearchHit> getComparator();
+  public static final StringComparator DEFAULT_ORDERING = StringComparators.LEXICOGRAPHIC;
 
-  byte[] getCacheKey();
+  private final StringComparator ordering;
+
+  @JsonCreator
+  public SearchSortSpec(
+      @JsonProperty("type") StringComparator ordering
+  )
+  {
+    this.ordering = ordering == null ? DEFAULT_ORDERING : ordering;
+  }
+
+  @JsonProperty("type")
+  public StringComparator getOrdering()
+  {
+    return ordering;
+  }
+
+  public Comparator<SearchHit> getComparator()
+  {
+    return new Comparator<SearchHit>()
+    {
+      @Override
+      public int compare(SearchHit searchHit, SearchHit searchHit1)
+      {
+        int retVal = ordering.compare(
+            searchHit.getValue(), searchHit1.getValue());
+
+        if (retVal == 0) {
+          retVal = StringComparators.LEXICOGRAPHIC.compare(
+              searchHit.getDimension(), searchHit1.getDimension());
+        }
+        return retVal;
+      }
+    };
+  }
+
+  public byte[] getCacheKey()
+  {
+    return ordering.getCacheKey();
+  }
+
+  public String toString()
+  {
+    return String.format("%sSort", ordering.toString());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SearchSortSpec that = (SearchSortSpec) o;
+
+    return ordering.equals(that.ordering);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return ordering.hashCode();
+  }
 }

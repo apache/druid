@@ -22,16 +22,17 @@ package io.druid.server.log;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.MutableDateTime;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -48,8 +49,8 @@ public class FileRequestLogger implements RequestLogger
 
   private final Object lock = new Object();
 
-  private volatile DateTime currentDay;
-  private volatile OutputStreamWriter fileWriter;
+  private DateTime currentDay;
+  private OutputStreamWriter fileWriter;
 
   public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
   {
@@ -66,12 +67,11 @@ public class FileRequestLogger implements RequestLogger
 
       MutableDateTime mutableDateTime = new DateTime().toMutableDateTime();
       mutableDateTime.setMillisOfDay(0);
-      currentDay = mutableDateTime.toDateTime();
+      synchronized (lock) {
+        currentDay = mutableDateTime.toDateTime();
 
-      fileWriter = new OutputStreamWriter(
-          new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
-          Charsets.UTF_8
-      );
+        fileWriter = getFileWriter();
+      }
       long nextDay = currentDay.plusDays(1).getMillis();
       Duration delay = new Duration(nextDay - new DateTime().getMillis());
 
@@ -84,15 +84,11 @@ public class FileRequestLogger implements RequestLogger
             @Override
             public ScheduledExecutors.Signal call()
             {
-              currentDay = currentDay.plusDays(1);
-
               try {
                 synchronized (lock) {
+                  currentDay = currentDay.plusDays(1);
                   CloseQuietly.close(fileWriter);
-                  fileWriter = new OutputStreamWriter(
-                      new FileOutputStream(new File(baseDir, currentDay.toString()), true),
-                      Charsets.UTF_8
-                  );
+                  fileWriter = getFileWriter();
                 }
               }
               catch (Exception e) {
@@ -107,6 +103,13 @@ public class FileRequestLogger implements RequestLogger
     catch (IOException e) {
       Throwables.propagate(e);
     }
+  }
+
+  private OutputStreamWriter getFileWriter() throws FileNotFoundException {
+    return new OutputStreamWriter(
+            new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
+            Charsets.UTF_8
+    );
   }
 
   @LifecycleStop

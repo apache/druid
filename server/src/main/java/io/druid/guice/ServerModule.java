@@ -23,11 +23,12 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.lifecycle.Lifecycle;
+
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.DruidModule;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;

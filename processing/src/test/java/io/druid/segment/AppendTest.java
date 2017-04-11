@@ -22,9 +22,9 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
-import io.druid.granularity.QueryGranularity;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
@@ -79,7 +79,7 @@ public class AppendTest
   };
 
   final String dataSource = "testing";
-  final QueryGranularity allGran = QueryGranularities.ALL;
+  final Granularity allGran = Granularities.ALL;
   final String dimensionValue = "dimension";
   final String valueValue = "value";
   final String marketDimension = "market";
@@ -113,7 +113,7 @@ public class AppendTest
     // (1, 2) cover overlapping segments of the form
     // |------|
     //     |--------|
-    QueryableIndex appendedIndex = SchemalessIndex.getAppendedIncrementalIndex(
+    QueryableIndex appendedIndex = SchemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.1", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("append.json.2", METRIC_AGGS)
@@ -128,7 +128,7 @@ public class AppendTest
     // (3, 4) cover overlapping segments of the form
     // |------------|
     //     |-----|
-    QueryableIndex append2 = SchemalessIndex.getAppendedIncrementalIndex(
+    QueryableIndex append2 = SchemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.3", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("append.json.4", METRIC_AGGS)
@@ -144,7 +144,7 @@ public class AppendTest
     // |-------------|
     //   |---|
     //          |---|
-    QueryableIndex append3 = SchemalessIndex.getAppendedIncrementalIndex(
+    QueryableIndex append3 = SchemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.5", METRIC_AGGS),
             new Pair<String, AggregatorFactory[]>("append.json.6", METRIC_AGGS),

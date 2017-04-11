@@ -22,8 +22,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
-import com.metamx.collections.spatial.search.Bound;
-import com.metamx.common.StringUtils;
+import io.druid.collections.spatial.search.Bound;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.filter.SpatialFilter;
 
 import java.nio.ByteBuffer;

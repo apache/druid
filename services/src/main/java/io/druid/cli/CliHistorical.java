@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheMonitor;
@@ -34,8 +34,10 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NodeTypeConfig;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.lookup.LookupModule;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
@@ -81,6 +83,7 @@ public class CliHistorical extends ServerRunnable
 
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("historical"));
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+            binder.bind(QueryCountStatsProvider.class).to(QueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, HistoricalResource.class);
             LifecycleModule.register(binder, QueryResource.class);

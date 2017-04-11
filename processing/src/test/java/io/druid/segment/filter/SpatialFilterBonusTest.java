@@ -23,12 +23,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.collections.spatial.search.RadiusBound;
-import com.metamx.collections.spatial.search.RectangularBound;
+import io.druid.collections.spatial.search.RadiusBound;
+import io.druid.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
@@ -118,7 +118,7 @@ public class SpatialFilterBonusTest
   {
     IncrementalIndex theIndex = new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                            .withQueryGranularity(QueryGranularities.DAY)
+                                            .withQueryGranularity(Granularities.DAY)
                                             .withMetrics(METRIC_AGGS)
                                             .withDimensionsSpec(
                                                 new DimensionsSpec(
@@ -257,7 +257,7 @@ public class SpatialFilterBonusTest
     try {
       IncrementalIndex first = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -277,7 +277,7 @@ public class SpatialFilterBonusTest
       );
       IncrementalIndex second = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -296,7 +296,7 @@ public class SpatialFilterBonusTest
       );
       IncrementalIndex third = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -439,6 +439,7 @@ public class SpatialFilterBonusTest
                   INDEX_IO.loadIndex(secondFile),
                   INDEX_IO.loadIndex(thirdFile)
               ),
+              true,
               METRIC_AGGS,
               mergedFile,
               indexSpec
@@ -457,7 +458,7 @@ public class SpatialFilterBonusTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularities.ALL)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
@@ -509,7 +510,7 @@ public class SpatialFilterBonusTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.DAY)
+                                  .granularity(Granularities.DAY)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
@@ -597,7 +598,7 @@ public class SpatialFilterBonusTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.DAY)
+                                  .granularity(Granularities.DAY)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .aggregators(
                                       Arrays.asList(

@@ -19,40 +19,33 @@
 
 package io.druid.query.ordering;
 
-import java.util.Comparator;
-
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedBytes;
-import com.metamx.common.IAE;
-import com.metamx.common.StringUtils;
+import io.druid.common.guava.GuavaUtils;
+import io.druid.java.util.common.StringUtils;
 
+import java.math.BigDecimal;
+import java.util.Comparator;
 
 public class StringComparators
 {
   public static final String LEXICOGRAPHIC_NAME = "lexicographic";
   public static final String ALPHANUMERIC_NAME = "alphanumeric";
+  public static final String NUMERIC_NAME = "numeric";
   public static final String STRLEN_NAME = "strlen";
 
-  public static final LexicographicComparator LEXICOGRAPHIC = new LexicographicComparator();
-  public static final AlphanumericComparator ALPHANUMERIC = new AlphanumericComparator();
-  public static final StrlenComparator STRLEN = new StrlenComparator();
+  public static final StringComparator LEXICOGRAPHIC = new LexicographicComparator();
+  public static final StringComparator ALPHANUMERIC = new AlphanumericComparator();
+  public static final StringComparator NUMERIC = new NumericComparator();
+  public static final StringComparator STRLEN = new StrlenComparator();
 
-  @JsonTypeInfo(use=Id.NAME, include=As.PROPERTY, property="type", defaultImpl = LexicographicComparator.class)
-  @JsonSubTypes(value = {
-      @JsonSubTypes.Type(name = StringComparators.LEXICOGRAPHIC_NAME, value = LexicographicComparator.class),
-      @JsonSubTypes.Type(name = StringComparators.ALPHANUMERIC_NAME, value = AlphanumericComparator.class),
-      @JsonSubTypes.Type(name = StringComparators.STRLEN_NAME, value = StrlenComparator.class)
-  })
-  public static interface StringComparator extends Comparator<String>
-  {
-  }
-  
-  public static class LexicographicComparator implements StringComparator
+  public static final int LEXICOGRAPHIC_CACHE_ID = 0x01;
+  public static final int ALPHANUMERIC_CACHE_ID = 0x02;
+  public static final int NUMERIC_CACHE_ID = 0x03;
+  public static final int STRLEN_CACHE_ID = 0x04;
+
+  public static class LexicographicComparator extends StringComparator
   {
     private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
     {
@@ -74,7 +67,7 @@ public class StringComparators
 
       return ORDERING.compare(s, s2);
     }
-    
+
     @Override
     public boolean equals(Object o)
     {
@@ -87,15 +80,21 @@ public class StringComparators
       
       return true;
     }
-    
+
     @Override
     public String toString()
     {
       return StringComparators.LEXICOGRAPHIC_NAME;
     }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) LEXICOGRAPHIC_CACHE_ID};
+    }
   }
   
-  public static class AlphanumericComparator implements StringComparator
+  public static class AlphanumericComparator extends StringComparator
   {
     // This code is based on https://github.com/amjjd/java-alphanum, see
     // NOTICE file for more information
@@ -299,9 +298,15 @@ public class StringComparators
     {
       return StringComparators.ALPHANUMERIC_NAME;
     }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) ALPHANUMERIC_CACHE_ID};
+    }
   }
 
-  public static class StrlenComparator implements StringComparator
+  public static class StrlenComparator extends StringComparator
   {
     private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
     {
@@ -340,18 +345,97 @@ public class StringComparators
     {
       return StringComparators.STRLEN_NAME;
     }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) STRLEN_CACHE_ID};
+    }
   }
 
-  public static StringComparator makeComparator(String type)
+  private static BigDecimal convertStringToBigDecimal(String input) {
+    if (input == null) {
+      return null;
+    }
+
+    // treat unparseable Strings as nulls
+    BigDecimal bd = null;
+    try {
+      bd = new BigDecimal(input);
+    } catch (NumberFormatException ex) {
+    }
+    return bd;
+  }
+
+  public static class NumericComparator extends StringComparator
   {
-    if (type.equals(StringComparators.LEXICOGRAPHIC_NAME)) {
-      return LEXICOGRAPHIC;
-    } else if (type.equals(StringComparators.ALPHANUMERIC_NAME)) {
-      return ALPHANUMERIC;
-    } else if (type.equals(StringComparators.STRLEN_NAME)) {
-      return STRLEN;
-    } else {
-      throw new IAE("Unknown string comparator[%s]", type);
+    @Override
+    public int compare(String o1, String o2)
+    {
+      // return if o1 and o2 are the same object
+      if (o1 == o2) {
+        return 0;
+      }
+      // we know o1 != o2
+      if (o1 == null) {
+        return -1;
+      }
+      if (o2 == null) {
+        return 1;
+      }
+
+      // Creating a BigDecimal from a String is expensive (involves copying the String into a char[])
+      // Converting the String to a Long first is faster.
+      // We optimize here with the assumption that integer values are more common than floating point.
+      Long long1 = GuavaUtils.tryParseLong(o1);
+      Long long2 = GuavaUtils.tryParseLong(o2);
+
+      if (long1 != null && long2 != null) {
+        return Long.compare(long1, long2);
+      }
+
+      final BigDecimal bd1 = long1 == null ? convertStringToBigDecimal(o1) : new BigDecimal(long1);
+      final BigDecimal bd2 = long2 == null ? convertStringToBigDecimal(o2) : new BigDecimal(long2);
+
+      if (bd1 != null && bd2 != null) {
+        return bd1.compareTo(bd2);
+      }
+
+      if (bd1 == null && bd2 == null) {
+        // both Strings are unparseable, just compare lexicographically to have a well-defined ordering
+        return StringComparators.LEXICOGRAPHIC.compare(o1, o2);
+      }
+
+      if (bd1 == null) {
+        return -1;
+      } else {
+        return 1;
+      }
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringComparators.NUMERIC_NAME;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) NUMERIC_CACHE_ID};
     }
   }
 }

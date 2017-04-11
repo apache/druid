@@ -23,12 +23,15 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.collections.bitmap.RoaringBitmapFactory;
-import com.metamx.collections.spatial.ImmutableRTree;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidFloatPredicate;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
@@ -63,16 +66,34 @@ public class DimensionPredicateFilterBenchmark
 
   private static final DimensionPredicateFilter IS_EVEN = new DimensionPredicateFilter(
       "foo",
-      new Predicate<String>()
+      new DruidPredicateFactory()
       {
         @Override
-        public boolean apply(String input)
+        public Predicate<String> makeStringPredicate()
         {
-          if (input == null) {
-            return false;
-          }
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              if (input == null) {
+                return false;
+              }
+              return Integer.parseInt(input.toString()) % 2 == 0;
+            }
+          };
+        }
 
-          return Integer.parseInt(input) % 2 == 0;
+        @Override
+        public DruidLongPredicate makeLongPredicate()
+        {
+          return DruidLongPredicate.ALWAYS_FALSE;
+        }
+
+        @Override
+        public DruidFloatPredicate makeFloatPredicate()
+        {
+          return DruidFloatPredicate.ALWAYS_FALSE;
         }
       },
       null

@@ -20,12 +20,63 @@
 package io.druid.query.topn;
 
 import com.google.common.base.Function;
+import io.druid.java.util.common.IAE;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Result;
+import io.druid.query.topn.types.TopNColumnSelectorStrategyFactory;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtils;
+import io.druid.segment.column.ValueType;
+
+import java.util.Objects;
 
 public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
 {
+  public static Function<Object, Object> getValueTransformer(ValueType outputType)
+  {
+    switch (outputType) {
+      case STRING:
+        return STRING_TRANSFORMER;
+      case LONG:
+        return LONG_TRANSFORMER;
+      case FLOAT:
+        return FLOAT_TRANSFORMER;
+      default:
+        throw new IAE("invalid type: %s", outputType);
+    }
+  }
+
+  private static Function<Object, Object> STRING_TRANSFORMER = new Function<Object, Object>()
+  {
+    @Override
+    public Object apply(Object input)
+    {
+      return Objects.toString(input, null);
+    }
+  };
+
+  private static Function<Object, Object> LONG_TRANSFORMER = new Function<Object, Object>()
+  {
+    @Override
+    public Object apply(Object input)
+    {
+      final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
+      return longVal == null ? 0L : longVal;
+    }
+  };
+
+  private static Function<Object, Object> FLOAT_TRANSFORMER = new Function<Object, Object>()
+  {
+    @Override
+    public Object apply(Object input)
+    {
+      final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
+      return floatVal == null ? 0.0f : floatVal;
+    }
+  };
+
+  private static final TopNColumnSelectorStrategyFactory STRATEGY_FACTORY = new TopNColumnSelectorStrategyFactory();
+
   private final TopNQuery query;
   private final TopNAlgorithm topNAlgorithm;
 
@@ -42,16 +93,19 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
   @SuppressWarnings("unchecked")
   public Result<TopNResultValue> apply(Cursor cursor)
   {
-    final DimensionSelector dimSelector = cursor.makeDimensionSelector(
-        query.getDimensionSpec()
+    final ColumnSelectorPlus selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
+        STRATEGY_FACTORY,
+        query.getDimensionSpec(),
+        cursor
     );
-    if (dimSelector == null) {
+
+    if (selectorPlus.getSelector() == null) {
       return null;
     }
 
     TopNParams params = null;
     try {
-      params = topNAlgorithm.makeInitParams(dimSelector, cursor);
+      params = topNAlgorithm.makeInitParams(selectorPlus, cursor);
 
       TopNResultBuilder resultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, query);
 

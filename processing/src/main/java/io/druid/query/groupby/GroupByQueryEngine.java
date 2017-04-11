@@ -27,20 +27,19 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.guava.FunctionalIterator;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.parsers.CloseableIterator;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
-import io.druid.query.Query;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.FunctionalIterator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.PostAggregator;
@@ -49,6 +48,7 @@ import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -68,7 +68,7 @@ import java.util.NoSuchElementException;
  */
 public class GroupByQueryEngine
 {
-  private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
+  private static final int MISSING_VALUE = -1;
 
   private final Supplier<GroupByQueryConfig> config;
   private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
@@ -101,6 +101,7 @@ public class GroupByQueryEngine
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
         filter,
         intervals.get(0),
+        query.getVirtualColumns(),
         query.getGranularity(),
         false
     );
@@ -191,7 +192,7 @@ public class GroupByQueryEngine
         final IndexedInts row = dimSelector.getRow();
         if (row == null || row.size() == 0) {
           ByteBuffer newKey = key.duplicate();
-          newKey.putInt(dimSelector.getValueCardinality());
+          newKey.putInt(MISSING_VALUE);
           unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
         } else {
           for (Integer dimValue : row) {
@@ -310,16 +311,12 @@ public class GroupByQueryEngine
 
     public RowIterator(GroupByQuery query, final Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
     {
+      final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
+
       this.query = query;
       this.cursor = cursor;
       this.metricsBuffer = metricsBuffer;
-
-      this.maxIntermediateRows = Math.min(
-          query.getContextValue(
-              CTX_KEY_MAX_INTERMEDIATE_ROWS,
-              config.getMaxIntermediateRows()
-          ), config.getMaxIntermediateRows()
-      );
+      this.maxIntermediateRows = querySpecificConfig.getMaxIntermediateRows();
 
       unprocessedKeys = null;
       delegate = Iterators.emptyIterator();
@@ -329,8 +326,18 @@ public class GroupByQueryEngine
 
       for (int i = 0; i < dimensionSpecs.size(); ++i) {
         final DimensionSpec dimSpec = dimensionSpecs.get(i);
+        if (dimSpec.getOutputType() != ValueType.STRING) {
+          throw new UnsupportedOperationException(
+              "GroupBy v1 only supports dimensions with an outputType of STRING."
+          );
+        }
+
         final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec);
         if (selector != null) {
+          if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+            throw new UnsupportedOperationException(
+                "GroupBy v1 does not support dimension selectors with unknown cardinality.");
+          }
           dimensions.add(selector);
           dimNames.add(dimSpec.getOutputName());
         }
@@ -411,7 +418,7 @@ public class GroupByQueryEngine
                   for (int i = 0; i < dimensions.size(); ++i) {
                     final DimensionSelector dimSelector = dimensions.get(i);
                     final int dimVal = keyBuffer.getInt();
-                    if (dimSelector.getValueCardinality() != dimVal) {
+                    if (MISSING_VALUE != dimVal) {
                       theEvent.put(dimNames.get(i), dimSelector.lookupName(dimVal));
                     }
                   }

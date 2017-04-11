@@ -24,6 +24,9 @@ import io.druid.segment.data.Indexed;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.Map;
+
 /**
  */
 public interface StorageAdapter extends CursorFactory
@@ -47,7 +50,20 @@ public interface StorageAdapter extends CursorFactory
   public Comparable getMinValue(String column);
   public Comparable getMaxValue(String column);
   public Capabilities getCapabilities();
+
+  /**
+   * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if
+   * the column does exist but the capabilities are unknown. The latter is possible with dynamically discovered
+   * columns.
+   *
+   * @param column column name
+   *
+   * @return capabilities, or null
+   */
+  @Nullable
   public ColumnCapabilities getColumnCapabilities(String column);
+
+  public Map<String, DimensionHandler> getDimensionHandlers();
 
   /**
    * Like {@link ColumnCapabilities#getType()}, but may return a more descriptive string for complex columns.

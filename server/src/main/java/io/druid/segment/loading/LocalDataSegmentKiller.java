@@ -19,8 +19,9 @@
 
 package io.druid.segment.loading;
 
-import com.metamx.common.MapUtils;
-import com.metamx.common.logger.Logger;
+import com.google.inject.Inject;
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
@@ -34,6 +35,13 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
   private static final Logger log = new Logger(LocalDataSegmentKiller.class);
 
   private static final String PATH_KEY = "path";
+
+  private final File storageDirectory;
+
+  @Inject
+  public LocalDataSegmentKiller(LocalDataSegmentPusherConfig config) {
+    this.storageDirectory = config.getStorageDirectory();
+  }
 
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
@@ -64,6 +72,13 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Unable to kill segment");
     }
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    log.info("Deleting all segment files from local dir [%s].", storageDirectory.getAbsolutePath());
+    FileUtils.deleteDirectory(storageDirectory);
   }
 
   private File getPath(DataSegment segment) throws SegmentLoadingException

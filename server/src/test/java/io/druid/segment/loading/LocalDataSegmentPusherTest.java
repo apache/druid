@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -48,15 +49,15 @@ public class LocalDataSegmentPusherTest
   LocalDataSegmentPusherConfig config;
   File dataSegmentFiles;
   DataSegment dataSegment = new DataSegment(
-      "ds",
-      new Interval(0, 1),
-      "v1",
-      null,
-      null,
-      null,
-      NoneShardSpec.instance(),
-      null,
-      -1
+    "ds",
+    new Interval(0, 1),
+    "v1",
+    null,
+    null,
+    null,
+    NoneShardSpec.instance(),
+    null,
+    -1
   );
 
   @Before
@@ -64,7 +65,7 @@ public class LocalDataSegmentPusherTest
   {
     config = new LocalDataSegmentPusherConfig();
     config.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusher = new LocalDataSegmentPusher(config, new ObjectMapper());
+    localDataSegmentPusher = new LocalDataSegmentPusher(config, new DefaultObjectMapper());
     dataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));
   }
@@ -104,10 +105,21 @@ public class LocalDataSegmentPusherTest
   }
 
   @Test
+  public void testFirstPushWinsForConcurrentPushes() throws IOException
+  {
+    File replicatedDataSegmentFiles = temporaryFolder.newFolder();
+    Files.asByteSink(new File(replicatedDataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x8));
+    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
+    DataSegment returnSegment2 = localDataSegmentPusher.push(replicatedDataSegmentFiles, dataSegment);
+
+    Assert.assertEquals(returnSegment1, returnSegment2);
+  }
+
+  @Test
   public void testPushCannotCreateDirectory() throws IOException
   {
     exception.expect(IOException.class);
-    exception.expectMessage("Cannot create directory");
+    exception.expectMessage("Unable to create directory");
     config.storageDirectory = new File(config.storageDirectory, "xxx");
     Assert.assertTrue(config.storageDirectory.mkdir());
     config.storageDirectory.setWritable(false);

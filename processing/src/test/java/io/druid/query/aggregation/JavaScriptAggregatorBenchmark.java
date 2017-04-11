@@ -23,7 +23,6 @@ import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.js.JavaScriptConfig;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.util.Map;
@@ -54,7 +53,6 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     Map<String, String> script = scriptDoubleSum;
 
     jsAggregator = new JavaScriptAggregator(
-        "billy",
         Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
         JavaScriptAggregatorFactory.compileScript(
             script.get("fnAggregate"),
@@ -63,7 +61,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
         )
     );
 
-    doubleAgg = new DoubleSumAggregator("billy", selector);
+    doubleAgg = new DoubleSumAggregator(selector);
   }
 
   public double timeJavaScriptDoubleSum(int reps)

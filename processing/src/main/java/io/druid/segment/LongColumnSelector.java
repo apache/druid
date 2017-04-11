@@ -19,9 +19,13 @@
 
 package io.druid.segment;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
+
 /**
  */
-public interface LongColumnSelector
+public interface LongColumnSelector extends ColumnValueSelector, HotLoopCallee
 {
+  @CalledFromHotLoop
   public long get();
 }

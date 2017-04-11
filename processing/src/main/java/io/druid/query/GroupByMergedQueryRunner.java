@@ -29,15 +29,14 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.ResourceClosingSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
@@ -56,8 +55,6 @@ import java.util.concurrent.TimeoutException;
 
 public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
 {
-  private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
-
   private static final Logger log = new Logger(GroupByMergedQueryRunner.class);
   private final Iterable<QueryRunner<T>> queryables;
   private final ListeningExecutorService exec;
@@ -84,16 +81,13 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> responseContext)
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
-
-    final boolean isSingleThreaded = query.getContextValue(
-        CTX_KEY_IS_SINGLE_THREADED,
-        configSupplier.get().isSingleThreaded()
-    );
-
+    final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
+    final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        configSupplier.get(),
-        bufferPool
+        querySpecificConfig,
+        bufferPool,
+        true
     );
     final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
     final boolean bySegment = BaseQuery.getContextBySegment(query, false);
@@ -159,7 +153,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
       return Sequences.simple(bySegmentAccumulatorPair.lhs);
     }
 
-    return new ResourceClosingSequence<T>(
+    return Sequences.withBaggage(
         Sequences.simple(
             Iterables.transform(
                 indexAccumulatorPair.lhs.iterableWithPostAggregations(null, query.isDescending()),

@@ -19,11 +19,12 @@
 
 package io.druid.query.select;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -59,22 +60,32 @@ public class PagingSpec
   private final Map<String, Integer> pagingIdentifiers;
   private final int threshold;
   private final boolean fromNext;
+  private final SelectQueryConfig config;
 
   @JsonCreator
   public PagingSpec(
       @JsonProperty("pagingIdentifiers") Map<String, Integer> pagingIdentifiers,
       @JsonProperty("threshold") int threshold,
-      @JsonProperty("fromNext") boolean fromNext
+      @JsonProperty("fromNext") Boolean fromNext,
+      @JacksonInject SelectQueryConfig config
   )
   {
     this.pagingIdentifiers = pagingIdentifiers == null ? Maps.<String, Integer>newHashMap() : pagingIdentifiers;
     this.threshold = threshold;
-    this.fromNext = fromNext;
+    this.config = config;
+
+    boolean defaultFromNext = config.getEnableFromNextDefault();
+    this.fromNext = fromNext == null ? defaultFromNext : fromNext;
   }
 
   public PagingSpec(Map<String, Integer> pagingIdentifiers, int threshold)
   {
-    this(pagingIdentifiers, threshold, false);
+    this(pagingIdentifiers, threshold, null, new SelectQueryConfig(true));
+  }
+
+  public PagingSpec(Map<String, Integer> pagingIdentifiers, int threshold, Boolean fromNext)
+  {
+    this(pagingIdentifiers, threshold, fromNext, new SelectQueryConfig(true));
   }
 
   @JsonProperty

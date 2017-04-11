@@ -1,23 +1,20 @@
 /*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- *  Licensed to Metamarkets Group Inc. (Metamarkets) under one
- *  or more contributor license agreements. See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership. Metamarkets licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- * /
- *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexing.overlord;
@@ -25,10 +22,10 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
-import com.metamx.common.concurrent.ScheduledExecutors;
+
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
-import io.druid.curator.cache.SimplePathChildrenCacheFactory;
+import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -39,6 +36,7 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -119,7 +117,7 @@ public class RemoteTaskRunnerTestUtils
             }, null, null, null, null, null
         ),
         cf,
-        new SimplePathChildrenCacheFactory.Builder().build(),
+        new PathChildrenCacheFactory.Builder(),
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
         ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
@@ -169,6 +167,12 @@ public class RemoteTaskRunnerTestUtils
   void mockWorkerCompleteSuccessfulTask(final String workerId, final Task task) throws Exception
   {
     TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.success(task.getId()), DUMMY_LOCATION);
+    cf.setData().forPath(joiner.join(statusPath, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
+  }
+
+  void mockWorkerCompleteFailedTask(final String workerId, final Task task) throws Exception
+  {
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.failure(task.getId()), DUMMY_LOCATION);
     cf.setData().forPath(joiner.join(statusPath, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
   }
 

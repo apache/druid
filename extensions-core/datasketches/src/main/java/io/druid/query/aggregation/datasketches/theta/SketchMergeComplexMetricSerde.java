@@ -19,15 +19,17 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.data.input.InputRow;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
+import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 
 import java.nio.ByteBuffer;
 
@@ -49,17 +51,17 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
       @Override
       public Class<?> extractedClass()
       {
-        return Sketch.class;
+        return Object.class;
       }
 
       @Override
       public Object extractValue(InputRow inputRow, String metricName)
       {
         final Object object = inputRow.getRaw(metricName);
-        if (object == null || object instanceof Sketch || object instanceof Memory) {
+        if (object == null) {
           return object;
         }
-        return SketchOperations.deserialize(object);
+        return SketchHolder.deserialize(object);
       }
     };
   }
@@ -75,6 +77,12 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
   public ObjectStrategy<Sketch> getObjectStrategy()
   {
     return strategy;
+  }
+
+  @Override
+  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  {
+    return LargeColumnSupportedComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
   }
 
 }

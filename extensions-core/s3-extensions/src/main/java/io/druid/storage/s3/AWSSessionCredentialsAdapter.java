@@ -27,10 +27,11 @@ public class AWSSessionCredentialsAdapter extends AWSSessionCredentials {
 
   public AWSSessionCredentialsAdapter(AWSCredentialsProvider provider) {
     super(null, null, null);
-    if(provider.getCredentials() instanceof com.amazonaws.auth.AWSSessionCredentials)
+    if(provider.getCredentials() instanceof com.amazonaws.auth.AWSSessionCredentials) {
       this.provider = provider;
-    else
+    } else {
       throw new IllegalArgumentException("provider does not contain session credentials");
+    }
   }
 
   @Override

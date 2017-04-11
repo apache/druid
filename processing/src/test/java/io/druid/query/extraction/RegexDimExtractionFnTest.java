@@ -88,6 +88,43 @@ public class RegexDimExtractionFnTest
   }
 
   @Test
+  public void testIndexZero()
+  {
+    String regex = "/([^/]{4})/";
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, 0, true, null);
+    Set<String> extracted = Sets.newLinkedHashSet();
+
+    for (String path : paths) {
+      extracted.add(extractionFn.apply(path));
+    }
+
+    Set<String> expected = Sets.newLinkedHashSet(
+        ImmutableList.of("/prod/", "/demo/", "/dash/")
+    );
+    Assert.assertEquals(expected, extracted);
+  }
+
+  @Test
+  public void testIndexTwo()
+  {
+    String regex = "^/([^/]+)/([^/]+)";
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, 2, true, null);
+    Set<String> extracted = Sets.newLinkedHashSet();
+
+    for (String path : paths) {
+      extracted.add(extractionFn.apply(path));
+    }
+
+    Set<String> expected = Sets.newLinkedHashSet(
+        ImmutableList.of(
+            "prod", "demo",
+            "aloe", "baloo"
+        )
+    );
+    Assert.assertEquals(expected, extracted);
+  }
+
+  @Test
   public void testStringExtraction()
   {
     String regex = "(.)";
@@ -164,8 +201,10 @@ public class RegexDimExtractionFnTest
 
     byte[] cacheKey = extractionFn.getCacheKey();
     byte[] expectedCacheKey = new byte[]{
-        0x01, 0x28, 0x61, 0x5C, 0x77, 0x2A, 0x29, (byte) 0xFF,
-        0x66, 0x6F, 0x6F, 0x62, 0x61, 0x72, (byte) 0xFF, 0x01
+        0x01, 0x28, 0x61, 0x5C, 0x77, 0x2A, 0x29, (byte) 0xFF, // expr
+        0x00, 0x00, 0x00, 0x01, // index
+        0x66, 0x6F, 0x6F, 0x62, 0x61, 0x72, (byte) 0xFF, // replaceMissingValueWith
+        0x01 // replaceMissingValue
     };
     Assert.assertArrayEquals(expectedCacheKey, cacheKey);
 
@@ -181,7 +220,12 @@ public class RegexDimExtractionFnTest
     Assert.assertEquals(expected2, extracted2);
 
     cacheKey = nullExtractionFn.getCacheKey();
-    expectedCacheKey = new byte[]{0x01, 0x28, 0x61, 0x5C, 0x77, 0x2A, 0x29, (byte) 0xFF, (byte) 0xFF, 0x01};
+    expectedCacheKey = new byte[]{
+        0x01, 0x28, 0x61, 0x5C, 0x77, 0x2A, 0x29, (byte) 0xFF, // expr
+        0x00, 0x00, 0x00, 0x01, // index
+        (byte) 0xFF, // replaceMissingValueWith
+        0x01 // replaceMissingValue
+    };
     Assert.assertArrayEquals(expectedCacheKey, cacheKey);
   }
 

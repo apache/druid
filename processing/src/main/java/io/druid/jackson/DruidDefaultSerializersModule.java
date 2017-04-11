@@ -29,10 +29,9 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.base.Throwables;
-import com.metamx.common.Granularity;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Yielder;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Yielder;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
@@ -48,18 +47,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
     super("Druid default serializers");
 
     JodaStuff.register(this);
-    addDeserializer(
-        Granularity.class,
-        new JsonDeserializer<Granularity>()
-        {
-          @Override
-          public Granularity deserialize(JsonParser jp, DeserializationContext ctxt)
-              throws IOException
-          {
-            return Granularity.valueOf(jp.getText().toUpperCase());
-          }
-        }
-    );
+
     addDeserializer(
         DateTimeZone.class,
         new JsonDeserializer<DateTimeZone>()

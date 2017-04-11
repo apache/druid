@@ -21,13 +21,12 @@ package io.druid.query.groupby.strategy;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
+import io.druid.java.util.common.ISE;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 
 public class GroupByStrategySelector
 {
-  public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String STRATEGY_V2 = "v2";
   public static final String STRATEGY_V1 = "v1";
 
@@ -49,7 +48,7 @@ public class GroupByStrategySelector
 
   public GroupByStrategy strategize(GroupByQuery query)
   {
-    final String strategyString = query.getContextValue(CTX_KEY_STRATEGY, config.getDefaultStrategy());
+    final String strategyString = config.withOverrides(query).getDefaultStrategy();
 
     switch (strategyString) {
       case STRATEGY_V2:

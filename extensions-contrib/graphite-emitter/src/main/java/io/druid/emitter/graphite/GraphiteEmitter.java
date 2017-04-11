@@ -1,32 +1,33 @@
 /*
- *  Licensed to Metamarkets Group Inc. (Metamarkets) under one
- *  or more contributor license agreements. See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership. Metamarkets licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.emitter.graphite;
 
 import com.codahale.metrics.graphite.PickledGraphite;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -57,7 +58,7 @@ public class GraphiteEmitter implements Emitter
       .setDaemon(true)
       .setNameFormat("GraphiteEmitter-%s")
       .build()); // Thread pool of two in order to schedule flush runnable
-  private AtomicLong  countLostEvents = new AtomicLong(0);
+  private AtomicLong countLostEvents = new AtomicLong(0);
 
   public GraphiteEmitter(
       GraphiteEmitterConfig graphiteEmitterConfig,
@@ -117,29 +118,32 @@ public class GraphiteEmitter implements Emitter
       catch (InterruptedException e) {
         log.error(e, "got interrupted with message [%s]", e.getMessage());
         Thread.currentThread().interrupt();
-
       }
     } else if (!emitterList.isEmpty() && event instanceof AlertEvent) {
       for (Emitter emitter : emitterList) {
         emitter.emit(event);
       }
+    } else if (event instanceof AlertEvent) {
+      AlertEvent alertEvent = (AlertEvent) event;
+      log.error(
+          "The following alert is dropped, description is [%s], severity is [%s]",
+          alertEvent.getDescription(), alertEvent.getSeverity()
+      );
     } else {
-      throw new ISE("unknown event type [%s]", event.getClass());
+      log.error("unknown event type [%s]", event.getClass());
     }
   }
 
   private class ConsumerRunnable implements Runnable
   {
-    private PickledGraphite pickledGraphite = new PickledGraphite(
-        graphiteEmitterConfig.getHostname(),
-        graphiteEmitterConfig.getPort(),
-        graphiteEmitterConfig.getBatchSize()
-    );
-
     @Override
     public void run()
     {
-      try {
+      try (PickledGraphite pickledGraphite = new PickledGraphite(
+          graphiteEmitterConfig.getHostname(),
+          graphiteEmitterConfig.getPort(),
+          graphiteEmitterConfig.getBatchSize()
+      )) {
         if (!pickledGraphite.isConnected()) {
           log.info("trying to connect to graphite server");
           pickledGraphite.connect();
@@ -168,12 +172,16 @@ public class GraphiteEmitter implements Emitter
             log.error(e, e.getMessage());
             if (e instanceof InterruptedException) {
               Thread.currentThread().interrupt();
-            } else if (e instanceof SocketException){
+              break;
+            } else if (e instanceof SocketException) {
+              // This is antagonistic to general Closeable contract in Java,
+              // it is needed to allow re-connection in case of the socket is closed due long period of inactivity
+              pickledGraphite.close();
+              log.warn("Trying to re-connect to graphite server");
               pickledGraphite.connect();
             }
           }
         }
-        pickledGraphite.flush();
       }
       catch (Exception e) {
         log.error(e, e.getMessage());

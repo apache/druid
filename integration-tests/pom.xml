@@ -26,7 +26,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.9.2-SNAPSHOT</version>
+        <version>0.10.0-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -63,6 +63,11 @@
         <dependency>
             <groupId>io.druid.extensions</groupId>
             <artifactId>mysql-metadata-storage</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.druid.extensions</groupId>
+            <artifactId>druid-kafka-indexing-service</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
@@ -109,6 +114,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>0.9.0.1</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -123,25 +133,25 @@
                 </configuration>
             </plugin>
             <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-jar-plugin</artifactId>
-              <configuration>
-		<archive>
-                  <manifest>
-                    <mainClass>org.testng.TestNG</mainClass>
-                  </manifest>
-		</archive>
-              </configuration>
-              <executions> 
-		<execution> 
-                  <id>test-jar</id>
-                  <phase>package</phase> 
-                  <goals> 
-                    <goal>test-jar</goal> 
-                  </goals>
-		</execution> 
-              </executions>
-	    </plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.testng.TestNG</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

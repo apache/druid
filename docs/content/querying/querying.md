@@ -66,3 +66,36 @@ For example, if the query ID is `abc123`, the query can be cancelled as follows:
 ```sh
 curl -X DELETE "http://host:port/druid/v2/abc123"
 ```
+
+Query Errors
+------------
+
+If a query fails, you will get an HTTP 500 response containing a JSON object with the following structure:
+
+```json
+{
+  "error" : "Query timeout",
+  "errorMessage" : "Timeout waiting for task.",
+  "errorClass" : "java.util.concurrent.TimeoutException",
+  "host" : "druid1.example.com:8083"
+}
+```
+
+The fields in the response are:
+
+|field|description|
+|-----|-----------|
+|error|A well-defined error code (see below).|
+|errorMessage|A free-form message with more information about the error. May be null.|
+|errorClass|The class of the exception that caused this error. May be null.|
+|host|The host on which this error occurred. May be null.|
+
+Possible codes for the *error* field include:
+
+|code|description|
+|----|-----------|
+|`Query timeout`|The query timed out.|
+|`Query interrupted`|The query was interrupted, possibly due to JVM shutdown.|
+|`Query cancelled`|The query was cancelled through the query cancellation API.|
+|`Resource limit exceeded`|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
+|`Unknown exception`|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|

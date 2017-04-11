@@ -21,14 +21,18 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.IdLookup;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -71,19 +75,31 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
   public DimensionSelector decorate(final DimensionSelector selector)
   {
     if (selector == null) {
-      return selector;
+      return null;
     }
 
-    int selectorCardinality = selector.getValueCardinality();
-    int cardinality = isWhitelist ? values.size() : selectorCardinality - values.size();
-
-    int count = 0;
-    final Map<Integer,Integer> forwardMapping = new HashMap<>(cardinality);
-    final int[] reverseMapping = new int[cardinality];
-
     if (isWhitelist) {
+      return filterWhiteList(selector);
+    } else {
+      return filterBlackList(selector);
+    }
+  }
+
+  private DimensionSelector filterWhiteList(DimensionSelector selector)
+  {
+    final int selectorCardinality = selector.getValueCardinality();
+    if (selectorCardinality < 0 || (selector.idLookup() == null && !selector.nameLookupPossibleInAdvance())) {
+      return new PredicateFilteredDimensionSelector(selector, Predicates.in(values));
+    }
+    final int maxPossibleFilteredCardinality = values.size();
+    int count = 0;
+    final Int2IntMap forwardMapping = new Int2IntOpenHashMap(maxPossibleFilteredCardinality);
+    forwardMapping.defaultReturnValue(-1);
+    final int[] reverseMapping = new int[maxPossibleFilteredCardinality];
+    IdLookup idLookup = selector.idLookup();
+    if (idLookup != null) {
       for (String value : values) {
-        int i = selector.lookupId(value);
+        int i = idLookup.lookupId(value);
         if (i >= 0) {
           forwardMapping.put(i, count);
           reverseMapping[count++] = i;
@@ -91,14 +107,43 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       }
     } else {
       for (int i = 0; i < selectorCardinality; i++) {
-        if (!values.contains(Strings.nullToEmpty(selector.lookupName(i)))) {
+        if (values.contains(Strings.nullToEmpty(selector.lookupName(i)))) {
           forwardMapping.put(i, count);
           reverseMapping[count++] = i;
         }
       }
     }
+    return new ForwardingFilteredDimensionSelector(selector, forwardMapping, reverseMapping);
+  }
 
-    return BaseFilteredDimensionSpec.decorate(selector, forwardMapping, reverseMapping);
+  private DimensionSelector filterBlackList(DimensionSelector selector)
+  {
+    final int selectorCardinality = selector.getValueCardinality();
+    if (selectorCardinality < 0 || !selector.nameLookupPossibleInAdvance()) {
+      return new PredicateFilteredDimensionSelector(
+          selector,
+          new Predicate<String>()
+          {
+            @Override
+            public boolean apply(@Nullable String input)
+            {
+              return !values.contains(input);
+            }
+          }
+      );
+    }
+    final int maxPossibleFilteredCardinality = selectorCardinality;
+    int count = 0;
+    final Int2IntMap forwardMapping = new Int2IntOpenHashMap(maxPossibleFilteredCardinality);
+    forwardMapping.defaultReturnValue(-1);
+    final int[] reverseMapping = new int[maxPossibleFilteredCardinality];
+    for (int i = 0; i < selectorCardinality; i++) {
+      if (!values.contains(Strings.nullToEmpty(selector.lookupName(i)))) {
+        forwardMapping.put(i, count);
+        reverseMapping[count++] = i;
+      }
+    }
+    return new ForwardingFilteredDimensionSelector(selector, forwardMapping, reverseMapping);
   }
 
   @Override

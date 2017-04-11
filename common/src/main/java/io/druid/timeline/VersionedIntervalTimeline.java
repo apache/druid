@@ -21,9 +21,11 @@ package io.druid.timeline;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.guava.Comparators;
+import io.druid.common.utils.JodaUtils;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
@@ -59,8 +61,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class VersionedIntervalTimeline<VersionType, ObjectType> implements TimelineLookup<VersionType, ObjectType>
 {
-  private static final Logger log = new Logger(VersionedIntervalTimeline.class);
-
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
 
   final NavigableMap<Interval, TimelineEntry> completePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
@@ -78,6 +78,15 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   )
   {
     this.versionComparator = versionComparator;
+  }
+
+  public static VersionedIntervalTimeline<String, DataSegment> forSegments(Iterable<DataSegment> segments)
+  {
+    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+    for (final DataSegment segment : segments) {
+      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+    }
+    return timeline;
   }
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
@@ -179,7 +188,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
    * @param interval interval to find objects for
    *
    * @return Holders representing the interval that the objects exist for, PartitionHolders
-   *         are guaranteed to be complete
+   * are guaranteed to be complete
    */
   public List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval)
   {
@@ -244,13 +253,55 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
               new TimelineObjectHolder<VersionType, ObjectType>(
                   object.getTrueInterval(),
                   object.getVersion(),
-                  object.getPartitionHolder()
+                  new PartitionHolder<ObjectType>(object.getPartitionHolder())
               )
           );
         }
       }
 
       return retVal;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  public boolean isOvershadowed(Interval interval, VersionType version)
+  {
+    try {
+      lock.readLock().lock();
+
+      TimelineEntry entry = completePartitionsTimeline.get(interval);
+      if (entry != null) {
+        return versionComparator.compare(version, entry.getVersion()) < 0;
+      }
+
+      Interval lower = completePartitionsTimeline.floorKey(
+          new Interval(interval.getStartMillis(), JodaUtils.MAX_INSTANT)
+      );
+
+      if (lower == null || !lower.overlaps(interval)) {
+        return false;
+      }
+
+      Interval prev = null;
+      Interval curr = lower;
+
+      do {
+        if (curr == null ||  //no further keys
+            (prev != null && curr.getStartMillis() > prev.getEndMillis()) || //a discontinuity
+            //lower or same version
+            versionComparator.compare(version, completePartitionsTimeline.get(curr).getVersion()) >= 0
+            ) {
+          return false;
+        }
+
+        prev = curr;
+        curr = completePartitionsTimeline.higherKey(curr);
+
+      } while (interval.getEndMillis() > prev.getEndMillis());
+
+      return true;
     }
     finally {
       lock.readLock().unlock();
@@ -293,10 +344,10 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   }
 
   /**
-   *
    * @param timeline
    * @param key
    * @param entry
+   *
    * @return boolean flag indicating whether or not we inserted or discarded something
    */
   private boolean addAtKey(
@@ -453,7 +504,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
             new TimelineObjectHolder<VersionType, ObjectType>(
                 timelineInterval,
                 val.getVersion(),
-                val.getPartitionHolder()
+                new PartitionHolder<ObjectType>(val.getPartitionHolder())
             )
         );
       }

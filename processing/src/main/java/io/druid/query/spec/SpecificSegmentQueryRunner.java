@@ -19,12 +19,15 @@
 
 package io.druid.query.spec;
 
-import com.google.common.base.Throwables;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.SequenceWrapper;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.guava.Yielder;
+import io.druid.java.util.common.guava.Yielders;
+import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
@@ -34,7 +37,6 @@ import io.druid.segment.SegmentMissingException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 /**
  */
@@ -62,42 +64,28 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
     final String newName = String.format("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
 
     final Sequence<T> baseSequence = doNamed(
-        currThread, currThreadName, newName, new Callable<Sequence<T>>()
+        currThread, currThreadName, newName, new Supplier<Sequence<T>>()
         {
           @Override
-          public Sequence<T> call() throws Exception
+          public Sequence<T> get()
           {
             return base.run(query, responseContext);
           }
         }
     );
 
-    return new Sequence<T>()
+    Sequence<T> segmentMissingCatchingSequence = new Sequence<T>()
     {
       @Override
       public <OutType> OutType accumulate(final OutType initValue, final Accumulator<OutType, T> accumulator)
       {
-        return doItNamed(
-            new Callable<OutType>()
-            {
-              @Override
-              public OutType call() throws Exception
-              {
-                try {
-                  return baseSequence.accumulate(initValue, accumulator);
-                }
-                catch (SegmentMissingException e) {
-                  List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
-                  if (missingSegments == null) {
-                    missingSegments = Lists.newArrayList();
-                    responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
-                  }
-                  missingSegments.add(specificSpec.getDescriptor());
-                  return initValue;
-                }
-              }
-            }
-        );
+        try {
+          return baseSequence.accumulate(initValue, accumulator);
+        }
+        catch (SegmentMissingException e) {
+          appendMissingSegment(responseContext);
+          return initValue;
+        }
       }
 
       @Override
@@ -106,16 +94,13 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
           final YieldingAccumulator<OutType, T> accumulator
       )
       {
-        return doItNamed(
-            new Callable<Yielder<OutType>>()
-            {
-              @Override
-              public Yielder<OutType> call() throws Exception
-              {
-                return makeYielder(baseSequence.toYielder(initValue, accumulator));
-              }
-            }
-        );
+        try {
+          return makeYielder(baseSequence.toYielder(initValue, accumulator));
+        }
+        catch (SegmentMissingException e) {
+          appendMissingSegment(responseContext);
+          return Yielders.done(initValue, null);
+        }
       }
 
       private <OutType> Yielder<OutType> makeYielder(final Yielder<OutType> yielder)
@@ -131,16 +116,13 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
           @Override
           public Yielder<OutType> next(final OutType initValue)
           {
-            return doItNamed(
-                new Callable<Yielder<OutType>>()
-                {
-                  @Override
-                  public Yielder<OutType> call() throws Exception
-                  {
-                    return yielder.next(initValue);
-                  }
-                }
-            );
+            try {
+              return yielder.next(initValue);
+            }
+            catch (SegmentMissingException e) {
+              appendMissingSegment(responseContext);
+              return Yielders.done(initValue, null);
+            }
           }
 
           @Override
@@ -156,22 +138,35 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
           }
         };
       }
-
-      private <RetType> RetType doItNamed(Callable<RetType> toRun)
-      {
-        return doNamed(currThread, currThreadName, newName, toRun);
-      }
     };
+    return Sequences.wrap(
+        segmentMissingCatchingSequence,
+        new SequenceWrapper()
+        {
+          @Override
+          public <RetType> RetType wrap(Supplier<RetType> sequenceProcessing)
+          {
+            return doNamed(currThread, currThreadName, newName, sequenceProcessing);
+          }
+        }
+    );
   }
 
-  private <RetType> RetType doNamed(Thread currThread, String currName, String newName, Callable<RetType> toRun)
+  private void appendMissingSegment(Map<String, Object> responseContext)
+  {
+    List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
+    if (missingSegments == null) {
+      missingSegments = Lists.newArrayList();
+      responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
+    }
+    missingSegments.add(specificSpec.getDescriptor());
+  }
+
+  private <RetType> RetType doNamed(Thread currThread, String currName, String newName, Supplier<RetType> toRun)
   {
     try {
       currThread.setName(newName);
-      return toRun.call();
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
+      return toRun.get();
     }
     finally {
       currThread.setName(currName);

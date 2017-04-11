@@ -21,6 +21,7 @@ package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -28,7 +29,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.common.lifecycle.Lifecycle;
+
 import io.druid.common.utils.SocketUtil;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
@@ -39,7 +40,11 @@ import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
+import io.druid.query.QueryToolChest;
 import io.druid.server.initialization.BaseJettyTest;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -80,8 +85,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
     port = node.getPort();
-    port1 = SocketUtil.findOpenPort(port + 1);
-    port2 = SocketUtil.findOpenPort(port1 + 1);
+    port1 = SocketUtil.findOpenPortFrom(port + 1);
+    port2 = SocketUtil.findOpenPortFrom(port1 + 1);
 
     lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.start();
@@ -211,9 +216,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         }
       };
 
+      ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
       ServletHolder holder = new ServletHolder(
           new AsyncQueryForwardingServlet(
-              injector.getInstance(ObjectMapper.class),
+              new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of()),
+              jsonMapper,
               injector.getInstance(Key.get(ObjectMapper.class, Smile.class)),
               hostFinder,
               injector.getProvider(org.eclipse.jetty.client.HttpClient.class),
@@ -226,7 +233,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 {
                   // noop
                 }
-              }
+              },
+              new DefaultGenericQueryMetricsFactory(jsonMapper)
           )
           {
             @Override
@@ -244,13 +252,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       root.addServlet(holder, "/proxy/*");
       root.addServlet(holder, "/druid/v2/*");
       JettyServerInitUtils.addExtensionFilters(root, injector);
-      root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/slow/*", null);
       root.addFilter(GuiceFilter.class, "/default/*", null);
       root.addFilter(GuiceFilter.class, "/exception/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{root});
+      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root)});
       server.setHandler(handlerList);
     }
   }

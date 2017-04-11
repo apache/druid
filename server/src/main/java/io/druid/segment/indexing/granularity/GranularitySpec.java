@@ -22,16 +22,18 @@ package io.druid.segment.indexing.granularity;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
-import com.metamx.common.Granularity;
-import io.druid.granularity.QueryGranularity;
+
+import io.druid.java.util.common.granularity.Granularity;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.SortedSet;
 
 /**
  * Tells the indexer how to group events based on timestamp. The events may then be further partitioned based
- *  on anything, using a ShardSpec.
+ * on anything, using a ShardSpec.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = UniformGranularitySpec.class)
 @JsonSubTypes(value = {
@@ -45,18 +47,29 @@ public interface GranularitySpec
    *
    * @return set of all time groups
    */
-   public Optional<SortedSet<Interval>> bucketIntervals();
+  public Optional<SortedSet<Interval>> bucketIntervals();
+
+  /**
+   * Returns user provided intervals as-is state. used for configuring granular path spec
+   *
+   * @return
+   */
+  public List<Interval> inputIntervals();
 
   /**
    * Time-grouping interval corresponding to some instant, if any.
    *
    * @param dt instant to return time interval for
+   *
    * @return optional time interval
-   * */
+   */
   public Optional<Interval> bucketInterval(DateTime dt);
 
-  public Granularity getSegmentGranularity();
+  Granularity getSegmentGranularity();
 
-  public QueryGranularity getQueryGranularity();
+  boolean isRollup();
 
+  public Granularity getQueryGranularity();
+
+  GranularitySpec withIntervals(List<Interval> inputIntervals);
 }

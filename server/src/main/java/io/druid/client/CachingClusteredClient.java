@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
@@ -32,18 +33,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.LazySequence;
-import com.metamx.common.guava.MergeSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -52,6 +49,12 @@ import io.druid.client.selector.ServerSelector;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.LazySequence;
+import io.druid.java.util.common.guava.MergeSequence;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
@@ -64,12 +67,14 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
+import io.druid.server.QueryResource;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
+import org.apache.commons.codec.binary.Base64;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -112,6 +117,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     this.cacheConfig = cacheConfig;
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
 
+    if (cacheConfig.isQueryCacheable(Query.GROUP_BY)) {
+      log.warn(
+          "Even though groupBy caching is enabled, v2 groupBys will not be cached. "
+          + "Consider disabling cache on your broker and enabling it on your data nodes to enable v2 groupBy caching."
+      );
+    }
+
     serverView.registerSegmentCallback(
         Execs.singleThreaded("CCClient-ServerView-CB-%d"),
         new ServerView.BaseSegmentCallback()
@@ -137,16 +149,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<Pair<Interval, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final boolean useCache = BaseQuery.getContextUseCache(query, true)
-                             && strategy != null
-                             && cacheConfig.isUseCache()
-                             && cacheConfig.isQueryCacheable(query);
-    final boolean populateCache = BaseQuery.getContextPopulateCache(query, true)
-                                  && strategy != null
-                                  && cacheConfig.isPopulateCache()
-                                  && cacheConfig.isQueryCacheable(query);
+    final boolean useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
+    final boolean populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
     final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
-
 
     final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
@@ -256,6 +261,30 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       queryCacheKey = strategy.computeCacheKey(query);
     } else {
       queryCacheKey = null;
+    }
+
+    if (query.getContext().get(QueryResource.HDR_IF_NONE_MATCH) != null) {
+      String prevEtag = (String) query.getContext().get(QueryResource.HDR_IF_NONE_MATCH);
+
+      //compute current Etag
+      Hasher hasher = Hashing.sha1().newHasher();
+      boolean hasOnlyHistoricalSegments = true;
+      for (Pair<ServerSelector, SegmentDescriptor> p : segments) {
+        if (!p.lhs.pick().getServer().isAssignable()) {
+          hasOnlyHistoricalSegments = false;
+          break;
+        }
+        hasher.putString(p.lhs.getSegment().getIdentifier(), Charsets.UTF_8);
+      }
+
+      if (hasOnlyHistoricalSegments) {
+        hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
+        String currEtag = Base64.encodeBase64String(hasher.hash().asBytes());
+        responseContext.put(QueryResource.HDR_ETAG, currEtag);
+        if (prevEtag.equals(currEtag)) {
+          return Sequences.empty();
+        }
+      }
     }
 
     if (queryCacheKey != null) {

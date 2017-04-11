@@ -20,7 +20,6 @@
 package io.druid.segment;
 
 import com.metamx.emitter.EmittingLogger;
-
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -180,5 +179,10 @@ public class ReferenceCountingSegment extends AbstractSegment
       isClosed = true;
       baseSegment.close();
     }
+  }
+
+  public <T> T as(Class<T> clazz)
+  {
+    return getBaseSegment().as(clazz);
   }
 }

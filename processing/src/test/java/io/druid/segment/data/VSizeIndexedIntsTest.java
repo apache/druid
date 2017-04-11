@@ -19,10 +19,9 @@
 
 package io.druid.segment.data;
 
+import com.google.common.primitives.Ints;
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.google.common.primitives.Ints;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -74,7 +73,7 @@ public class VSizeIndexedIntsTest
     int maxValue = Ints.max(array);
     VSizeIndexedInts ints = VSizeIndexedInts.fromList(list, maxValue);
     byte[] bytes1 = ints.getBytesNoPadding();
-    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingfromList(list, maxValue);
+    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingFromList(list, maxValue);
     Assert.assertArrayEquals(bytes1, bytes2);
   }
 }

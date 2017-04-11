@@ -23,8 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
@@ -68,10 +69,9 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   {
     DimensionSelector selector = makeDimensionSelector(columnFactory);
     if (selector == null) {
-      return new EmptyDistinctCountAggregator(name);
+      return new EmptyDistinctCountAggregator();
     } else {
       return new DistinctCountAggregator(
-          name,
           selector,
           bitMapFactory.makeEmptyMutableBitmap()
       );
@@ -83,7 +83,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   {
     DimensionSelector selector = makeDimensionSelector(columnFactory);
     if (selector == null) {
-      return new EmptyDistinctCountBufferAggregator();
+      return EmptyDistinctCountBufferAggregator.instance();
     } else {
       return new DistinctCountBufferAggregator(makeDimensionSelector(columnFactory));
     }
@@ -194,12 +194,6 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Longs.BYTES;
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return 0;
   }
 
   @Override

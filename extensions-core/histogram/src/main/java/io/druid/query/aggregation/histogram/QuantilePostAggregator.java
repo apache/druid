@@ -23,7 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -42,7 +46,7 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   };
 
   private final float probability;
-  private String fieldName;
+  private final String fieldName;
 
   @JsonCreator
   public QuantilePostAggregator(
@@ -75,8 +79,14 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
-    return ah.getQuantiles(new float[]{this.getProbability()})[0];
+    final ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
+    return ah.getQuantiles(new float[]{probability})[0];
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty
@@ -86,11 +96,46 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   }
 
   @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final QuantilePostAggregator that = (QuantilePostAggregator) o;
+
+    if (Float.compare(that.probability, probability) != 0) {
+      return false;
+    }
+    return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = (probability != +0.0f ? Float.floatToIntBits(probability) : 0);
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    return result;
+  }
+
+  @Override
   public String toString()
   {
     return "QuantilePostAggregator{" +
            "probability=" + probability +
            ", fieldName='" + fieldName + '\'' +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_QUANTILE)
+        .appendString(fieldName)
+        .appendFloat(probability)
+        .build();
   }
 }

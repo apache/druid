@@ -21,18 +21,18 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
-import com.metamx.common.FileUtils;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.RetryUtils;
-import com.metamx.common.logger.Logger;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
+import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusherUtil;
@@ -47,6 +47,7 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.joda.time.DateTime;
 
@@ -61,7 +62,6 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -75,9 +75,6 @@ import java.util.zip.ZipOutputStream;
 public class JobHelper
 {
   private static final Logger log = new Logger(JobHelper.class);
-
-  private static final Set<Path> existing = Sets.newHashSet();
-
   private static final int NUM_RETRIES = 8;
   private static final int SECONDS_BETWEEN_RETRIES = 2;
   private static final int DEFAULT_FS_BUFFER_SIZE = 1 << 18; // 256KB
@@ -91,6 +88,36 @@ public class JobHelper
   public static Path distributedClassPath(Path base)
   {
     return new Path(base, "classpath");
+  }
+  public static final String INDEX_ZIP = "index.zip";
+  public static final String DESCRIPTOR_JSON = "descriptor.json";
+
+  /**
+   * Dose authenticate against a secured hadoop cluster
+   * In case of any bug fix make sure to fix the code at HdfsStorageAuthentication#authenticate as well.
+   *
+   * @param config containing the principal name and keytab path.
+   */
+  public static void authenticate(HadoopDruidIndexerConfig config)
+  {
+    String principal = config.HADOOP_KERBEROS_CONFIG.getPrincipal();
+    String keytab = config.HADOOP_KERBEROS_CONFIG.getKeytab();
+    if (!Strings.isNullOrEmpty(principal) && !Strings.isNullOrEmpty(keytab)) {
+      Configuration conf = new Configuration();
+      UserGroupInformation.setConfiguration(conf);
+      if (UserGroupInformation.isSecurityEnabled()) {
+        try {
+          if (UserGroupInformation.getCurrentUser().hasKerberosCredentials() == false
+              || !UserGroupInformation.getCurrentUser().getUserName().equals(principal)) {
+            log.info("trying to authenticate user [%s] with keytab [%s]", principal, keytab);
+            UserGroupInformation.loginUserFromKeytab(principal, keytab);
+          }
+        }
+        catch (IOException e) {
+          throw new ISE(e, "Failed to authenticate user principal [%s] with keytab [%s]", principal, keytab);
+        }
+      }
+    }
   }
 
   /**
@@ -250,11 +277,9 @@ public class JobHelper
   {
     // Snapshot jars are uploaded to non shared intermediate directory.
     final Path hdfsPath = new Path(intermediateClassPath, jarFile.getName());
-
-    // existing is used to prevent uploading file multiple times in same run.
-    if (!existing.contains(hdfsPath)) {
+    // Prevent uploading same file multiple times in same run.
+    if (!fs.exists(hdfsPath)) {
       uploadJar(jarFile, hdfsPath, fs);
-      existing.add(hdfsPath);
     }
     job.addFileToClassPath(hdfsPath);
   }
@@ -297,6 +322,7 @@ public class JobHelper
 
   public static void ensurePaths(HadoopDruidIndexerConfig config)
   {
+    authenticate(config);
     // config.addInputPaths() can have side-effects ( boo! :( ), so this stuff needs to be done before anything else
     try {
       Job job = Job.getInstance(
@@ -350,14 +376,14 @@ public class JobHelper
       final DataSegment segmentTemplate,
       final Configuration configuration,
       final Progressable progressable,
-      final TaskAttemptID taskAttemptID,
       final File mergedBase,
-      final Path segmentBasePath
+      final Path finalIndexZipFilePath,
+      final Path finalDescriptorPath,
+      final Path tmpPath
   )
       throws IOException
   {
-    final FileSystem outputFS = FileSystem.get(segmentBasePath.toUri(), configuration);
-    final Path tmpPath = new Path(segmentBasePath, String.format("index.zip.%d", taskAttemptID.getId()));
+    final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
         DataPusher.class, new DataPusher()
@@ -386,17 +412,23 @@ public class JobHelper
     zipPusher.push();
     log.info("Zipped %,d bytes to [%s]", size.get(), tmpPath.toUri());
 
-    final Path finalIndexZipFilePath = new Path(segmentBasePath, "index.zip");
     final URI indexOutURI = finalIndexZipFilePath.toUri();
     final ImmutableMap<String, Object> loadSpec;
     // TODO: Make this a part of Pushers or Pullers
     switch (outputFS.getScheme()) {
       case "hdfs":
       case "viewfs":
-      case "gs":
+      case "maprfs":
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
+        );
+        break;
+      case "gs":
+        loadSpec = ImmutableMap.<String, Object>of(
+            "type", "google",
+            "bucket", indexOutURI.getHost(),
+            "path", indexOutURI.getPath().substring(1) // remove the leading "/"
         );
         break;
       case "s3":
@@ -430,10 +462,11 @@ public class JobHelper
           )
       );
     }
+
     writeSegmentDescriptor(
         outputFS,
         finalSegment,
-        new Path(segmentBasePath, "descriptor.json"),
+        finalDescriptorPath,
         progressable
     );
     return finalSegment;
@@ -543,16 +576,77 @@ public class JobHelper
     out.putNextEntry(new ZipEntry(file.getName()));
   }
 
-  public static Path makeSegmentOutputPath(
-      Path basePath,
-      FileSystem fileSystem,
-      DataSegment segment
+  public static boolean isHdfs(FileSystem fs)
+  {
+    return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme()) || "maprfs".equals(fs.getScheme());
+  }
+
+  public static Path makeFileNamePath(
+      final Path basePath,
+      final FileSystem fs,
+      final DataSegment segmentTemplate,
+      final String baseFileName
   )
   {
-    String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
-                        ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
-                        : DataSegmentPusherUtil.getStorageDir(segment);
-    return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
+    final Path finalIndexZipPath;
+    final String segmentDir;
+    if (isHdfs(fs)) {
+      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
+      finalIndexZipPath = new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_%s",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              baseFileName
+          )
+      );
+    } else {
+      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
+      finalIndexZipPath = new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%s",
+              segmentDir,
+              baseFileName
+          )
+      );
+    }
+    return finalIndexZipPath;
+  }
+
+  public static Path makeTmpPath(
+      final Path basePath,
+      final FileSystem fs,
+      final DataSegment segmentTemplate,
+      final TaskAttemptID taskAttemptID
+  )
+  {
+    final String segmentDir;
+
+    if (isHdfs(fs)) {
+      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
+      return new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_index.zip.%d",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              taskAttemptID.getId()
+          )
+      );
+    } else {
+      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
+      return new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_index.zip.%d",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              taskAttemptID.getId()
+          )
+      );
+    }
   }
 
   /**
@@ -703,6 +797,17 @@ public class JobHelper
       segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
     } else if ("hdfs".equals(type)) {
       segmentLocURI = URI.create(loadSpec.get("path").toString());
+    } else if ("google".equals(type)) {
+      // Segment names contain : in their path.
+      // Google Cloud Storage supports : but Hadoop does not.
+      // This becomes an issue when re-indexing using the current segments.
+      // The Hadoop getSplits code doesn't understand the : and returns "Relative path in absolute URI"
+      // This could be fixed using the same code that generates path names for hdfs segments using
+      // getHdfsStorageDir. But that wouldn't fix this issue for people who already have segments with ":".
+      // Because of this we just URL encode the : making everything work as it should.
+      segmentLocURI = URI.create(
+          String.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
+      );
     } else if ("local".equals(type)) {
       try {
         segmentLocURI = new URI("file", null, loadSpec.get("path").toString(), null, null);

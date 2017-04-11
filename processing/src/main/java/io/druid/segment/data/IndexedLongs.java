@@ -29,6 +29,7 @@ public interface IndexedLongs extends Closeable
   public int size();
   public long get(int index);
   public void fill(int index, long[] toFill);
-  int binarySearch(long key);
-  int binarySearch(long key, int from, int to);
+
+  @Override
+  void close();
 }

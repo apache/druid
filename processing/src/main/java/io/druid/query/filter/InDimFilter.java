@@ -22,35 +22,51 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.metamx.common.StringUtils;
+import com.google.common.primitives.Floats;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.filter.InFilter;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 public class InDimFilter implements DimFilter
 {
+  // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
+  // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
+  public static final int NUMERIC_HASHING_THRESHOLD = 16;
+
   private final ImmutableSortedSet<String> values;
   private final String dimension;
   private final ExtractionFn extractionFn;
+  private final Supplier<DruidLongPredicate> longPredicateSupplier;
+  private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
 
   @JsonCreator
   public InDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("values") List<String> values,
+      @JsonProperty("values") Collection<String> values,
       @JsonProperty("extractionFn") ExtractionFn extractionFn
   )
   {
@@ -71,6 +87,8 @@ public class InDimFilter implements DimFilter
     );
     this.dimension = dimension;
     this.extractionFn = extractionFn;
+    this.longPredicateSupplier = getLongPredicateSupplier();
+    this.floatPredicateSupplier = getFloatPredicateSupplier();
   }
 
   @JsonProperty
@@ -170,7 +188,7 @@ public class InDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new InFilter(dimension, values, extractionFn);
+    return new InFilter(dimension, values, longPredicateSupplier, floatPredicateSupplier, extractionFn);
   }
 
   @Override
@@ -215,5 +233,154 @@ public class InDimFilter implements DimFilter
     result = 31 * result + dimension.hashCode();
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    final StringBuilder builder = new StringBuilder();
+
+    if (extractionFn != null) {
+      builder.append(extractionFn).append("(");
+    }
+
+    builder.append(dimension);
+
+    if (extractionFn != null) {
+      builder.append(")");
+    }
+
+    builder.append(" IN (").append(Joiner.on(", ").join(values)).append(")");
+
+    return builder.toString();
+  }
+
+  // As the set of filtered values can be large, parsing them as longs should be done only if needed, and only once.
+  // Pass in a common long predicate supplier to all filters created by .toFilter(), so that
+  // we only compute the long hashset/array once per query.
+  // This supplier must be thread-safe, since this DimFilter will be accessed in the query runners.
+  private Supplier<DruidLongPredicate> getLongPredicateSupplier()
+  {
+    return new Supplier<DruidLongPredicate>()
+    {
+      private final Object initLock = new Object();
+      private DruidLongPredicate predicate;
+
+
+      private void initLongValues()
+      {
+        if (predicate != null) {
+          return;
+        }
+
+        synchronized (initLock) {
+          if (predicate != null) {
+            return;
+          }
+
+          LongArrayList longs = new LongArrayList(values.size());
+          for (String value : values) {
+            final Long longValue = DimensionHandlerUtils.getExactLongFromDecimalString(value);
+            if (longValue != null) {
+              longs.add(longValue);
+            }
+          }
+
+          if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
+            final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
+
+            predicate = new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return longHashSet.contains(input);
+              }
+            };
+          } else {
+            final long[] longArray = longs.toLongArray();
+            Arrays.sort(longArray);
+
+            predicate = new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return Arrays.binarySearch(longArray, input) >= 0;
+              }
+            };
+          }
+        }
+      }
+
+      @Override
+      public DruidLongPredicate get()
+      {
+        initLongValues();
+        return predicate;
+      }
+    };
+  }
+
+  private Supplier<DruidFloatPredicate> getFloatPredicateSupplier()
+  {
+    return new Supplier<DruidFloatPredicate>()
+    {
+      private final Object initLock = new Object();
+      private DruidFloatPredicate predicate;
+
+      private void initFloatValues()
+      {
+        if (predicate != null) {
+          return;
+        }
+
+        synchronized (initLock) {
+          if (predicate != null) {
+            return;
+          }
+
+          IntArrayList floatBits = new IntArrayList(values.size());
+          for (String value : values) {
+            Float floatValue = Floats.tryParse(value);
+            if (floatValue != null) {
+              floatBits.add(Float.floatToIntBits(floatValue));
+            }
+          }
+
+          if (floatBits.size() > NUMERIC_HASHING_THRESHOLD) {
+            final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
+
+            predicate = new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return floatBitsHashSet.contains(Float.floatToIntBits(input));
+              }
+            };
+          } else {
+            final int[] floatBitsArray = floatBits.toIntArray();
+            Arrays.sort(floatBitsArray);
+
+            predicate = new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
+              }
+            };
+          }
+        }
+      }
+
+      @Override
+      public DruidFloatPredicate get()
+      {
+        initFloatValues();
+        return predicate;
+      }
+    };
   }
 }

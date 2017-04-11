@@ -32,12 +32,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.Granularity;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -50,7 +45,6 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -65,11 +59,17 @@ import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskStorage;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.indexing.test.TestDataSegmentPusher;
 import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.metadata.EntryExistsException;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
@@ -805,8 +805,8 @@ public class RealtimeIndexTaskTest
             directory,
             task1.getId(),
             task1.getDataSource(),
-            Granularity.DAY.truncate(now),
-            Granularity.DAY.increment(Granularity.DAY.truncate(now))
+            Granularities.DAY.bucketStart(now),
+            Granularities.DAY.bucketEnd(now)
         )
     );
 
@@ -888,7 +888,7 @@ public class RealtimeIndexTaskTest
         "test_ds",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows"), new LongSumAggregatorFactory("met1", "met1")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
         objectMapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
@@ -910,7 +910,8 @@ public class RealtimeIndexTaskTest
         0,
         0,
         reportParseExceptions,
-        handoffTimeout
+        handoffTimeout,
+        null
     );
     return new RealtimeIndexTask(
         taskId,
@@ -960,7 +961,8 @@ public class RealtimeIndexTaskTest
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         mdc,
-        emitter
+        emitter,
+        EasyMock.createMock(SupervisorManager.class)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
@@ -1077,7 +1079,7 @@ public class RealtimeIndexTaskTest
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory(metric, metric)
                                       )
-                                  ).granularity(QueryGranularities.ALL)
+                                  ).granularity(Granularities.ALL)
                                   .intervals("2000/3000")
                                   .build();
 

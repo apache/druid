@@ -35,20 +35,20 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ConciseBitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.RoaringBitmapFactory;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
-import io.druid.granularity.QueryGranularities;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ConciseBitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -70,6 +70,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.QueryableIndexStorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
@@ -250,7 +251,8 @@ public class DumpSegment extends GuiceRunnable
     final Sequence<Cursor> cursors = adapter.makeCursors(
         Filters.toFilter(filter),
         index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
-        QueryGranularities.ALL,
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
         false
     );
 

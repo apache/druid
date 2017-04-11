@@ -23,9 +23,9 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.metamx.common.ISE;
-import com.metamx.common.RetryUtils;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
@@ -107,6 +107,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   protected abstract int getStreamingFetchSize();
 
+  /**
+   * @return the string that should be used to quote string fields
+   */
+  public abstract String getQuoteString();
+
   public String getValidationQuery() { return "SELECT 1"; }
 
   public abstract boolean tableExists(Handle handle, final String tableName);
@@ -157,7 +162,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public final boolean isTransientException(Throwable e)
   {
-    return e != null && (e instanceof SQLTransientException
+    return e != null && (e instanceof RetryTransactionException
+                         || e instanceof SQLTransientException
                          || e instanceof SQLRecoverableException
                          || e instanceof UnableToObtainConnectionException
                          || e instanceof UnableToExecuteStatementException
@@ -211,7 +217,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  start VARCHAR(255) NOT NULL,\n"
-                + "  \"end\" VARCHAR(255) NOT NULL,\n"
+                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
                 + "  sequence_name VARCHAR(255) NOT NULL,\n"
                 + "  sequence_prev_id VARCHAR(255) NOT NULL,\n"
                 + "  sequence_name_prev_id_sha1 VARCHAR(255) NOT NULL,\n"
@@ -219,7 +225,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  PRIMARY KEY (id),\n"
                 + "  UNIQUE (sequence_name_prev_id_sha1)\n"
                 + ")",
-                tableName, getPayloadType()
+                tableName, getPayloadType(), getQuoteString()
             )
         )
     );
@@ -255,14 +261,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  start VARCHAR(255) NOT NULL,\n"
-                + "  \"end\" VARCHAR(255) NOT NULL,\n"
+                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
                 + "  partitioned BOOLEAN NOT NULL,\n"
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getPayloadType()
+                tableName, getPayloadType(), getQuoteString()
             ),
             String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
             String.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
@@ -624,6 +630,33 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
+    }
+  }
+
+  public void deleteAllRecords(final String tableName)
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws Exception
+            {
+              if (tableExists(handle, tableName)) {
+                log.info("Deleting all records from table[%s]", tableName);
+                final Batch batch = handle.createBatch();
+                batch.add("DELETE FROM " + tableName);
+                batch.execute();
+              } else {
+                log.info("Table[%s] does not exit.", tableName);
+              }
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception while deleting records from table");
     }
   }
 }

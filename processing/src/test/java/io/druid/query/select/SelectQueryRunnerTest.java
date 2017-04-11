@@ -20,14 +20,18 @@
 package io.druid.query.select;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.ObjectArrays;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequences;
+import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -36,13 +40,20 @@ import io.druid.query.TableDataSource;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
-import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -56,42 +67,43 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
 @RunWith(Parameterized.class)
 public class SelectQueryRunnerTest
 {
-  // copied from druid.sample.tsv
+  // copied from druid.sample.numeric.tsv
   public static final String[] V_0112 = {
-      "2011-01-12T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	health	preferred	hpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	news	preferred	npreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	premium	preferred	ppreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	technology	preferred	tpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	travel	preferred	tpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1000.000000",
-      "2011-01-12T00:00:00.000Z	total_market	premium	preferred	ppreferred	1000.000000",
-      "2011-01-12T00:00:00.000Z	upfront	mezzanine	preferred	mpreferred	800.000000	value",
-      "2011-01-12T00:00:00.000Z	upfront	premium	preferred	ppreferred	800.000000	value"
+      "2011-01-12T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tnews\t1500\t15000.0\t150000\tpreferred\tnpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t170000\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\ttravel\t1800\t18000.0\t180000\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t1000.000000",
+      "2011-01-12T00:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1000.000000",
+      "2011-01-12T00:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t800.000000\tvalue",
+      "2011-01-12T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t800.000000\tvalue"
   };
   public static final String[] V_0113 = {
-      "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-      "2011-01-13T00:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-      "2011-01-13T00:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
-      "2011-01-13T00:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
-      "2011-01-13T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	104.465767",
-      "2011-01-13T00:00:00.000Z	spot	news	preferred	npreferred	102.851683",
-      "2011-01-13T00:00:00.000Z	spot	premium	preferred	ppreferred	108.863011",
-      "2011-01-13T00:00:00.000Z	spot	technology	preferred	tpreferred	111.356672",
-      "2011-01-13T00:00:00.000Z	spot	travel	preferred	tpreferred	106.236928",
-      "2011-01-13T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1040.945505",
-      "2011-01-13T00:00:00.000Z	total_market	premium	preferred	ppreferred	1689.012875",
-      "2011-01-13T00:00:00.000Z	upfront	mezzanine	preferred	mpreferred	826.060182	value",
-      "2011-01-13T00:00:00.000Z	upfront	premium	preferred	ppreferred	1564.617729	value"
+      "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t94.874713",
+      "2011-01-13T00:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t103.629399",
+      "2011-01-13T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
+      "2011-01-13T00:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t114.947403",
+      "2011-01-13T00:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t104.465767",
+      "2011-01-13T00:00:00.000Z\tspot\tnews\t1500\t15000.0\t150000\tpreferred\tnpreferred\t102.851683",
+      "2011-01-13T00:00:00.000Z\tspot\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t108.863011",
+      "2011-01-13T00:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t170000\tpreferred\ttpreferred\t111.356672",
+      "2011-01-13T00:00:00.000Z\tspot\ttravel\t1800\t18000.0\t180000\tpreferred\ttpreferred\t106.236928",
+      "2011-01-13T00:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t1040.945505",
+      "2011-01-13T00:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1689.012875",
+      "2011-01-13T00:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t826.060182\tvalue",
+      "2011-01-13T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1564.617729\tvalue"
   };
 
   public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
@@ -99,9 +111,17 @@ public class SelectQueryRunnerTest
   );
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
+  private static final boolean DEFAULT_FROM_NEXT = true;
+  private static final SelectQueryConfig config = new SelectQueryConfig(true);
+  {
+    config.setEnableFromNextDefault(DEFAULT_FROM_NEXT);
+  }
+  private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(config);
+
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),
-      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+      configSupplier
   );
 
   @Parameterized.Parameters(name = "{0}:descending={1}")
@@ -111,14 +131,13 @@ public class SelectQueryRunnerTest
         QueryRunnerTestHelper.makeQueryRunners(
             new SelectQueryRunnerFactory(
                 toolChest,
-                new SelectQueryEngine(),
+                new SelectQueryEngine(configSupplier),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         ),
         Arrays.asList(false, true)
     );
   }
-
   private final QueryRunner runner;
   private final boolean descending;
 
@@ -154,11 +173,13 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
-        toEvents(new String[]{EventHolder.timestampKey + ":TIME"}, V_0112_0114),
+        toFullEvents(V_0112_0114),
+        Lists.newArrayList("market", "quality", "qualityLong", "qualityFloat", "qualityNumericString", "placement", "placementish", "partial_null_column", "null_column"),
+        Lists.newArrayList("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
         offset.startOffset(),
         offset.threshold()
     );
-    verify(expectedResults, results);
+    verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   @Test
@@ -182,7 +203,7 @@ public class SelectQueryRunnerTest
       Assert.assertEquals(offset, pagingIdentifiers.get(QueryRunnerTestHelper.segmentId).intValue());
 
       Map<String, Integer> next = PagingSpec.next(pagingIdentifiers, descending);
-      query = query.withPagingSpec(new PagingSpec(next, 3));
+      query = query.withPagingSpec(new PagingSpec(next, 3, false));
     }
 
     query = newTestQuery().intervals(I_0112_0114).build();
@@ -242,6 +263,8 @@ public class SelectQueryRunnerTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
+                Sets.newHashSet("mar", "qual", "place"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -286,6 +309,8 @@ public class SelectQueryRunnerTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
+                Sets.newHashSet("mar", "qual", "place"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -352,10 +377,15 @@ public class SelectQueryRunnerTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 QueryRunnerTestHelper.indexMetric + ":FLOAT"
             },
             V_0112_0114
         ),
+        Lists.newArrayList("market"),
+        Lists.<String>newArrayList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -387,6 +417,8 @@ public class SelectQueryRunnerTest
             },
             V_0112_0114
         ),
+        Lists.newArrayList("quality"),
+        Lists.<String>newArrayList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -424,37 +456,92 @@ public class SelectQueryRunnerTest
           },
           // filtered values with day granularity
           new String[]{
-              "2011-01-12T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	health	preferred	hpreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	news	preferred	npreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	premium	preferred	ppreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	technology	preferred	tpreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	travel	preferred	tpreferred	100.000000"
+              "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\tbusiness\tpreferred\tbpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\tentertainment\tpreferred\tepreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\thealth\tpreferred\thpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\tmezzanine\tpreferred\tmpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\tnews\tpreferred\tnpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\tpremium\tpreferred\tppreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\ttechnology\tpreferred\ttpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\ttravel\tpreferred\ttpreferred\t100.000000"
           },
           new String[]{
-              "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-              "2011-01-13T00:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-              "2011-01-13T00:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
-              "2011-01-13T00:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
-              "2011-01-13T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	104.465767",
-              "2011-01-13T00:00:00.000Z	spot	news	preferred	npreferred	102.851683",
-              "2011-01-13T00:00:00.000Z	spot	premium	preferred	ppreferred	108.863011",
-              "2011-01-13T00:00:00.000Z	spot	technology	preferred	tpreferred	111.356672",
-              "2011-01-13T00:00:00.000Z	spot	travel	preferred	tpreferred	106.236928"
+              "2011-01-13T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t94.874713",
+              "2011-01-13T00:00:00.000Z\tspot\tbusiness\tpreferred\tbpreferred\t103.629399",
+              "2011-01-13T00:00:00.000Z\tspot\tentertainment\tpreferred\tepreferred\t110.087299",
+              "2011-01-13T00:00:00.000Z\tspot\thealth\tpreferred\thpreferred\t114.947403",
+              "2011-01-13T00:00:00.000Z\tspot\tmezzanine\tpreferred\tmpreferred\t104.465767",
+              "2011-01-13T00:00:00.000Z\tspot\tnews\tpreferred\tnpreferred\t102.851683",
+              "2011-01-13T00:00:00.000Z\tspot\tpremium\tpreferred\tppreferred\t108.863011",
+              "2011-01-13T00:00:00.000Z\tspot\ttechnology\tpreferred\ttpreferred\t111.356672",
+              "2011-01-13T00:00:00.000Z\tspot\ttravel\tpreferred\ttpreferred\t106.236928"
           }
       );
 
       PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
       List<Result<SelectResultValue>> expectedResults = toExpected(
           events,
+          Lists.newArrayList("quality"),
+          Lists.<String>newArrayList("index"),
           offset.startOffset(),
           offset.threshold()
       );
       verify(expectedResults, results);
     }
+  }
+
+  @Test
+  public void testFullOnSelectWithFilterOnVirtualColumn()
+  {
+    SelectQuery query = newTestQuery()
+        .intervals("2011-01-13/2011-01-14")
+        .filters(
+            new AndDimFilter(
+                Arrays.asList(
+                    new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null),
+                    new BoundDimFilter("expr", "11.1", null, false, false, null, null, StringComparators.NUMERIC)
+                )
+            )
+        )
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
+        .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
+        .pagingSpec(new PagingSpec(null, 10, true))
+        .virtualColumns(new ExpressionVirtualColumn("expr", "index / 10.0"))
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    final List<List<Map<String, Object>>> events = toEvents(
+        new String[]{
+            EventHolder.timestampKey + ":TIME",
+            null,
+            QueryRunnerTestHelper.qualityDimension + ":STRING",
+            null,
+            null,
+            QueryRunnerTestHelper.indexMetric + ":FLOAT"
+        },
+        // filtered values with all granularity
+        new String[]{
+            "2011-01-13T00:00:00.000Z\tspot\thealth\tpreferred\thpreferred\t114.947403",
+            "2011-01-13T00:00:00.000Z\tspot\ttechnology\tpreferred\ttpreferred\t111.356672"
+        }
+    );
+
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
+    List<Result<SelectResultValue>> expectedResults = toExpected(
+        events,
+        Lists.newArrayList("quality"),
+        Lists.<String>newArrayList("index"),
+        offset.startOffset(),
+        offset.threshold()
+    );
+    verify(expectedResults, results);
   }
 
   @Test
@@ -492,18 +579,20 @@ public class SelectQueryRunnerTest
         },
         // filtered values with day granularity
         new String[]{
-            "2011-01-12T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1000.000000",
-            "2011-01-12T00:00:00.000Z	total_market	premium	preferred	ppreferred	1000.000000"
+            "2011-01-12T00:00:00.000Z\ttotal_market\tmezzanine\tpreferred\tmpreferred\t1000.000000",
+            "2011-01-12T00:00:00.000Z\ttotal_market\tpremium\tpreferred\tppreferred\t1000.000000"
         },
         new String[]{
-            "2011-01-13T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1040.945505",
-            "2011-01-13T00:00:00.000Z	total_market	premium	preferred	ppreferred	1689.012875"
+            "2011-01-13T00:00:00.000Z\ttotal_market\tmezzanine\tpreferred\tmpreferred\t1040.945505",
+            "2011-01-13T00:00:00.000Z\ttotal_market\tpremium\tpreferred\tppreferred\t1689.012875"
         }
     );
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
+        Lists.newArrayList(QueryRunnerTestHelper.qualityDimension),
+        Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
         offset.startOffset(),
         offset.threshold()
     );
@@ -537,12 +626,14 @@ public class SelectQueryRunnerTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.<String, Integer>of(),
+                Sets.newHashSet("market", "quality", "qualityLong", "qualityFloat", "qualityNumericString", "placement", "placementish", "partial_null_column", "null_column"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
                 Lists.<EventHolder>newArrayList()
             )
         )
     );
 
-    verify(expectedResults, results);
+    verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   @Test
@@ -571,10 +662,245 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
+        Lists.newArrayList("foo"),
+        Lists.<String>newArrayList("foo2"),
         offset.startOffset(),
         offset.threshold()
     );
     verify(expectedResults, results);
+  }
+
+  @Test
+  public void testFullOnSelectWithLongAndFloat()
+  {
+    List<DimensionSpec> dimSpecs = Arrays.<DimensionSpec>asList(
+        new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", ValueType.FLOAT),
+        new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", ValueType.LONG)
+    );
+
+    SelectQuery query = newTestQuery()
+        .dimensionSpecs(dimSpecs)
+        .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
+        .intervals(I_0112_0114)
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
+                Sets.newHashSet("null_column", "floatIndex", "longTime"),
+                Sets.newHashSet("__time", "index"),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        0,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", 1294790400000L)
+                            .put("floatIndex", 100.0f)
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", 1294790400000L)
+                            .put("floatIndex", 100.0f)
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", 1294790400000L)
+                            .put("floatIndex", 100.0f)
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
+                Sets.newHashSet("null_column", "floatIndex", "longTime"),
+                Sets.newHashSet("__time", "index"),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", 1294876800000L)
+                            .put("floatIndex", 1564.6177f)
+                            .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", 1294876800000L)
+                            .put("floatIndex", 826.0602f)
+                            .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -3,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", 1294876800000L)
+                            .put("floatIndex", 1689.0128f)
+                            .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    verify(descending ? expectedResultsDsc : expectedResultsAsc, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
+  }
+
+  @Test
+  public void testFullOnSelectWithLongAndFloatWithExFn()
+  {
+    String jsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
+
+    List<DimensionSpec> dimSpecs = Arrays.<DimensionSpec>asList(
+        new ExtractionDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", jsExtractionFn),
+        new ExtractionDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", jsExtractionFn)
+    );
+
+    SelectQuery query = newTestQuery()
+        .dimensionSpecs(dimSpecs)
+        .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
+        .intervals(I_0112_0114)
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
+                Sets.newHashSet("null_column", "floatIndex", "longTime"),
+                Sets.newHashSet("__time", "index"),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        0,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", "super-1294790400000")
+                            .put("floatIndex", "super-100")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", "super-1294790400000")
+                            .put("floatIndex", "super-100")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", "super-1294790400000")
+                            .put("floatIndex", "super-100")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
+                Sets.newHashSet("null_column", "floatIndex", "longTime"),
+                Sets.newHashSet("__time", "index"),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", "super-1294876800000")
+                            .put("floatIndex", "super-1564.61767578125")
+                            .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", "super-1294876800000")
+                            .put("floatIndex", "super-826.0601806640625")
+                            .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -3,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", "super-1294876800000")
+                            .put("floatIndex", "super-1689.0128173828125")
+                            .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    verify(descending ? expectedResultsDsc : expectedResultsAsc, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   private Map<String, Integer> toPagingIdentifier(int startDelta, boolean descending)
@@ -583,6 +909,21 @@ public class SelectQueryRunnerTest
         QueryRunnerTestHelper.segmentId,
         PagingOffset.toOffset(startDelta, descending)
     );
+  }
+
+  private List<List<Map<String, Object>>> toFullEvents(final String[]... valueSet)
+  {
+    return toEvents(new String[]{EventHolder.timestampKey + ":TIME",
+                                 QueryRunnerTestHelper.marketDimension + ":STRING",
+                                 QueryRunnerTestHelper.qualityDimension + ":STRING",
+                                 "qualityLong" + ":LONG",
+                                 "qualityFloat" + ":FLOAT",
+                                 "qualityNumericString" + ":STRING",
+                                 QueryRunnerTestHelper.placementDimension + ":STRING",
+                                 QueryRunnerTestHelper.placementishDimension + ":STRINGS",
+                                 QueryRunnerTestHelper.indexMetric + ":FLOAT",
+                                 QueryRunnerTestHelper.partialNullDimension + ":STRING"},
+                    valueSet);
   }
 
   private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
@@ -600,17 +941,19 @@ public class SelectQueryRunnerTest
                       Map<String, Object> event = Maps.newHashMap();
                       String[] values = input.split("\\t");
                       for (int i = 0; i < dimSpecs.length; i++) {
-                        if (dimSpecs[i] == null || i >= dimSpecs.length) {
+                        if (dimSpecs[i] == null || i >= dimSpecs.length || i >= values.length) {
                           continue;
                         }
                         String[] specs = dimSpecs[i].split(":");
                         event.put(
                             specs[0],
+                            specs.length == 1 || specs[1].equals("STRING") ? values[i] :
                             specs[1].equals("TIME") ? new DateTime(values[i]) :
                             specs[1].equals("FLOAT") ? Float.valueOf(values[i]) :
                             specs[1].equals("DOUBLE") ? Double.valueOf(values[i]) :
                             specs[1].equals("LONG") ? Long.valueOf(values[i]) :
                             specs[1].equals("NULL") ? null :
+                            specs[1].equals("STRINGS") ? Arrays.asList(values[i].split("\u0001")) :
                             values[i]
                         );
                       }
@@ -626,6 +969,8 @@ public class SelectQueryRunnerTest
 
   private List<Result<SelectResultValue>> toExpected(
       List<List<Map<String, Object>>> targets,
+      List<String> dimensions,
+      List<String> metrics,
       final int offset,
       final int threshold
   )
@@ -653,7 +998,11 @@ public class SelectQueryRunnerTest
       expected.add(
           new Result(
               new DateTime(group.get(0).get(EventHolder.timestampKey)),
-              new SelectResultValue(ImmutableMap.of(QueryRunnerTestHelper.segmentId, lastOffset), holders)
+              new SelectResultValue(
+                  ImmutableMap.of(QueryRunnerTestHelper.segmentId, lastOffset),
+                  Sets.<String>newHashSet(dimensions),
+                  Sets.<String>newHashSet(metrics),
+                  holders)
           )
       );
     }
@@ -678,6 +1027,9 @@ public class SelectQueryRunnerTest
         Assert.assertEquals(entry.getValue(), actual.getValue().getPagingIdentifiers().get(entry.getKey()));
       }
 
+      Assert.assertEquals(expected.getValue().getDimensions(), actual.getValue().getDimensions());
+      Assert.assertEquals(expected.getValue().getMetrics(), actual.getValue().getMetrics());
+
       Iterator<EventHolder> expectedEvts = expected.getValue().getEvents().iterator();
       Iterator<EventHolder> actualEvts = actual.getValue().getEvents().iterator();
 
@@ -695,7 +1047,7 @@ public class SelectQueryRunnerTest
           if (acHolder.getEvent().get(ex.getKey()) instanceof Double) {
             actVal = ((Double) actVal).floatValue();
           }
-          Assert.assertEquals(ex.getValue(), actVal);
+          Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
         }
       }
 
@@ -708,4 +1060,19 @@ public class SelectQueryRunnerTest
       throw new ISE("This iterator should be exhausted!");
     }
   }
+
+  private static Iterable<Result<SelectResultValue>> populateNullColumnAtLastForQueryableIndexCase(Iterable<Result<SelectResultValue>> results, String columnName)
+  {
+    // A Queryable index does not have the null column when it has loaded a index.
+    for (Result<SelectResultValue> value : results) {
+      Set<String> dimensions = value.getValue().getDimensions();
+      if (dimensions.contains(columnName)) {
+        break;
+      }
+      dimensions.add(columnName);
+    }
+
+    return results;
+  }
+
 }

@@ -25,6 +25,8 @@ import io.druid.segment.data.CompressedFloatsIndexedSupplier;
  */
 public class FloatColumn extends AbstractColumn
 {
+  public static final int ROW_SIZE = 1;
+
   private static final ColumnCapabilitiesImpl CAPABILITIES = new ColumnCapabilitiesImpl()
       .setType(ValueType.FLOAT);
 

@@ -21,30 +21,42 @@ package io.druid.segment.incremental;
 
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
-import io.druid.granularity.QueryGranularities;
+import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.VirtualColumns;
 
 /**
  */
 public class IncrementalIndexSchema
 {
+  public static final boolean DEFAULT_ROLLUP = true;
   private final long minTimestamp;
-  private final QueryGranularity gran;
+  private final TimestampSpec timestampSpec;
+  private final Granularity gran;
+  private final VirtualColumns virtualColumns;
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metrics;
+  private final boolean rollup;
 
   public IncrementalIndexSchema(
       long minTimestamp,
-      QueryGranularity gran,
+      TimestampSpec timestampSpec,
+      Granularity gran,
+      VirtualColumns virtualColumns,
       DimensionsSpec dimensionsSpec,
-      AggregatorFactory[] metrics
+      AggregatorFactory[] metrics,
+      boolean rollup
   )
   {
     this.minTimestamp = minTimestamp;
+    this.timestampSpec = timestampSpec;
     this.gran = gran;
+    this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
+    this.rollup = rollup;
   }
 
   public long getMinTimestamp()
@@ -52,9 +64,19 @@ public class IncrementalIndexSchema
     return minTimestamp;
   }
 
-  public QueryGranularity getGran()
+  public TimestampSpec getTimestampSpec()
+  {
+    return timestampSpec;
+  }
+
+  public Granularity getGran()
   {
     return gran;
+  }
+
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   public DimensionsSpec getDimensionsSpec()
@@ -67,19 +89,29 @@ public class IncrementalIndexSchema
     return metrics;
   }
 
+  public boolean isRollup()
+  {
+    return rollup;
+  }
+
   public static class Builder
   {
     private long minTimestamp;
-    private QueryGranularity gran;
+    private TimestampSpec timestampSpec;
+    private Granularity gran;
+    private VirtualColumns virtualColumns;
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
+    private boolean rollup;
 
     public Builder()
     {
       this.minTimestamp = 0L;
-      this.gran = QueryGranularities.NONE;
+      this.gran = Granularities.NONE;
+      this.virtualColumns = VirtualColumns.EMPTY;
       this.dimensionsSpec = new DimensionsSpec(null, null, null);
       this.metrics = new AggregatorFactory[]{};
+      this.rollup = true;
     }
 
     public Builder withMinTimestamp(long minTimestamp)
@@ -88,15 +120,39 @@ public class IncrementalIndexSchema
       return this;
     }
 
-    public Builder withQueryGranularity(QueryGranularity gran)
+    public Builder withTimestampSpec(TimestampSpec timestampSpec)
+    {
+      this.timestampSpec = timestampSpec;
+      return this;
+    }
+
+    public Builder withTimestampSpec(InputRowParser parser)
+    {
+      if (parser != null
+          && parser.getParseSpec() != null
+          && parser.getParseSpec().getTimestampSpec() != null) {
+        this.timestampSpec = parser.getParseSpec().getTimestampSpec();
+      } else {
+        this.timestampSpec = new TimestampSpec(null, null, null);
+      }
+      return this;
+    }
+
+    public Builder withQueryGranularity(Granularity gran)
     {
       this.gran = gran;
       return this;
     }
 
+    public Builder withVirtualColumns(VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = virtualColumns;
+      return this;
+    }
+
     public Builder withDimensionsSpec(DimensionsSpec dimensionsSpec)
     {
-      this.dimensionsSpec = dimensionsSpec;
+      this.dimensionsSpec = dimensionsSpec == null ? DimensionsSpec.ofEmpty() : dimensionsSpec;
       return this;
     }
 
@@ -119,10 +175,16 @@ public class IncrementalIndexSchema
       return this;
     }
 
+    public Builder withRollup(boolean rollup)
+    {
+      this.rollup = rollup;
+      return this;
+    }
+
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
-          minTimestamp, gran, dimensionsSpec, metrics
+          minTimestamp, timestampSpec, gran, virtualColumns, dimensionsSpec, metrics, rollup
       );
     }
   }

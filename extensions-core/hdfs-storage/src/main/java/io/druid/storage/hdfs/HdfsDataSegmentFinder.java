@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,10 +22,12 @@ package io.druid.storage.hdfs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -78,8 +80,16 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
       while (it.hasNext()) {
         final LocatedFileStatus locatedFileStatus = it.next();
         final Path path = locatedFileStatus.getPath();
-        if (path.getName().equals("descriptor.json")) {
-          final Path indexZip = new Path(path.getParent(), "index.zip");
+        if (path.getName().endsWith("descriptor.json")) {
+          final Path indexZip;
+          final String descriptorParts[] = path.getName().split("_");
+          if (descriptorParts.length == 2
+              && descriptorParts[1].equals("descriptor.json")
+              && StringUtils.isNumeric(descriptorParts[0])) {
+            indexZip = new Path(path.getParent(),  String.format("%s_index.zip", descriptorParts[0]));
+          } else {
+            indexZip = new Path(path.getParent(), "index.zip");
+          }
           if (fs.exists(indexZip)) {
             final DataSegment dataSegment = mapper.readValue(fs.open(path), DataSegment.class);
             log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);

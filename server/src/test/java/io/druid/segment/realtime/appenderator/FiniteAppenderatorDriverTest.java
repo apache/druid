@@ -29,12 +29,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.metamx.common.Granularity;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
@@ -93,7 +95,7 @@ public class FiniteAppenderatorDriverTest
   public void setUp()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
-    allocator = new TestSegmentAllocator(DATA_SOURCE, Granularity.HOUR);
+    allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     driver = new FiniteAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
@@ -101,7 +103,8 @@ public class FiniteAppenderatorDriverTest
         new TestUsedSegmentChecker(),
         OBJECT_MAPPER,
         MAX_ROWS_PER_SEGMENT,
-        HANDOFF_CONDITION_TIMEOUT
+        HANDOFF_CONDITION_TIMEOUT,
+        new FireDepartmentMetrics()
     );
   }
 
@@ -246,7 +249,7 @@ public class FiniteAppenderatorDriverTest
     ) throws IOException
     {
       synchronized (counters) {
-        final long timestampTruncated = granularity.truncate(timestamp).getMillis();
+        final long timestampTruncated = granularity.bucketStart(timestamp).getMillis();
         if (!counters.containsKey(timestampTruncated)) {
           counters.put(timestampTruncated, new AtomicInteger());
         }

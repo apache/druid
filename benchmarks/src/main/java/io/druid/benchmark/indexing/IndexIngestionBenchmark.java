@@ -19,15 +19,14 @@
 
 package io.druid.benchmark.indexing;
 
-import com.google.common.hash.Hashing;
-import com.metamx.common.logger.Logger;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
-
+import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -63,6 +62,9 @@ public class IndexIngestionBenchmark
   @Param({"basic"})
   private String schema;
 
+  @Param({"true", "false"})
+  private boolean rollup;
+
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
@@ -73,7 +75,7 @@ public class IndexIngestionBenchmark
   @Setup
   public void setup() throws IOException
   {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
     rows = new ArrayList<InputRow>();
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
@@ -94,7 +96,7 @@ public class IndexIngestionBenchmark
     }
   }
 
-  @Setup(Level.Iteration)
+  @Setup(Level.Invocation)
   public void setup2() throws IOException
   {
     incIndex = makeIncIndex();
@@ -104,14 +106,15 @@ public class IndexIngestionBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(rollup)
             .build(),
         true,
         false,
         true,
-        rowsPerSegment
+        rowsPerSegment * 2
     );
   }
 

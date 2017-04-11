@@ -19,6 +19,8 @@
 
 package io.druid.cli;
 
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
@@ -30,22 +32,38 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.util.List;
+import java.util.Set;
+
 /**
-*/
+ */
 public class QueryJettyServerInitializer implements JettyServerInitializer
 {
+  private final List<Handler> extensionHandlers;
+
+  @Inject
+  public QueryJettyServerInitializer(Set<Handler> extensionHandlers)
+  {
+    this.extensionHandlers = ImmutableList.copyOf(extensionHandlers);
+  }
+
   @Override
   public void initialize(Server server, Injector injector)
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     JettyServerInitUtils.addExtensionFilters(root, injector);
-    root.addFilter(JettyServerInitUtils.defaultGzipFilterHolder(), "/*", null);
 
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
+    final Handler[] handlers = new Handler[extensionHandlers.size() + 2];
+    handlers[0] = JettyServerInitUtils.getJettyRequestLogHandler();
+    handlers[handlers.length - 1] = JettyServerInitUtils.wrapWithDefaultGzipHandler(root);
+    for (int i = 0; i < extensionHandlers.size(); i++) {
+      handlers[i + 1] = extensionHandlers.get(i);
+    }
+    handlerList.setHandlers(handlers);
     server.setHandler(handlerList);
   }
 }

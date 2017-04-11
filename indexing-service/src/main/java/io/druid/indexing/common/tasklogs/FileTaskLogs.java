@@ -23,11 +23,13 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.config.FileTaskLogsConfig;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -80,5 +82,46 @@ public class FileTaskLogs implements TaskLogs
   private File fileForTask(final String taskid)
   {
     return new File(config.getDirectory(), String.format("%s.log", taskid));
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    log.info("Deleting all task logs from local dir [%s].", config.getDirectory().getAbsolutePath());
+    FileUtils.deleteDirectory(config.getDirectory());
+  }
+
+  @Override
+  public void killOlderThan(final long timestamp) throws IOException
+  {
+    File taskLogDir = config.getDirectory();
+    if (taskLogDir.exists()) {
+
+      if (!taskLogDir.isDirectory()) {
+        throw new IOException(String.format("taskLogDir [%s] must be a directory.", taskLogDir));
+      }
+
+      File[] files = taskLogDir.listFiles(
+          new FileFilter()
+          {
+            @Override
+            public boolean accept(File f)
+            {
+              return f.lastModified() < timestamp;
+            }
+          }
+      );
+
+      for (File file : files) {
+        log.info("Deleting local task log [%s].", file.getAbsolutePath());
+        FileUtils.forceDelete(file);
+
+        if (Thread.currentThread().isInterrupted()) {
+          throw new IOException(
+              new InterruptedException("Thread interrupted. Couldn't delete all tasklogs.")
+          );
+        }
+      }
+    }
   }
 }

@@ -29,7 +29,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -39,11 +38,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.metamx.common.ISE;
-import com.metamx.common.RetryUtils;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
@@ -51,10 +46,14 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.DruidMetrics;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -97,8 +96,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -117,10 +116,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     PUBLISHING
   }
 
-  private static final Logger log = new Logger(KafkaIndexTask.class);
+  private static final EmittingLogger log = new EmittingLogger(KafkaIndexTask.class);
   private static final String TYPE = "index_kafka";
   private static final Random RANDOM = new Random();
   private static final long POLL_TIMEOUT = 100;
+  private static final long POLL_RETRY_MS = 30000;
+  private static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
 
   private final DataSchema dataSchema;
@@ -161,6 +162,22 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final Lock pauseLock = new ReentrantLock();
   private final Condition hasPaused = pauseLock.newCondition();
   private final Condition shouldResume = pauseLock.newCondition();
+
+  // [pollRetryLock] and [isAwaitingRetry] is used when the Kafka consumer returns an OffsetOutOfRangeException and we
+  // pause polling from Kafka for POLL_RETRY_MS before trying again. This allows us to signal the sleeping thread and
+  // resume the main run loop in the case of a pause or stop request from a Jetty thread.
+  private final Lock pollRetryLock = new ReentrantLock();
+  private final Condition isAwaitingRetry = pollRetryLock.newCondition();
+
+  // [statusLock] is used to synchronize the Jetty thread calling stopGracefully() with the main run thread. It prevents
+  // the main run thread from switching into a publishing state while the stopGracefully() thread thinks it's still in
+  // a pre-publishing state. This is important because stopGracefully() will try to use the [stopRequested] flag to stop
+  // the main thread where possible, but this flag is not honored once publishing has begun so in this case we must
+  // interrupt the thread. The lock ensures that if the run thread is about to transition into publishing state, it
+  // blocks until after stopGracefully() has set [stopRequested] and then does a final check on [stopRequested] before
+  // transitioning to publishing state.
+  private final Object statusLock = new Object();
+
   private volatile boolean pauseRequested = false;
   private volatile long pauseMillis = 0;
 
@@ -241,7 +258,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     if (chatHandlerProvider.isPresent()) {
       log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
-      chatHandlerProvider.get().register(getId(), this);
+      chatHandlerProvider.get().register(getId(), this, false);
     } else {
       log.warn("No chat handler detected");
     }
@@ -264,7 +281,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     try (
         final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-        final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox);
+        final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
         final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
       appenderator = appenderator0;
@@ -342,6 +359,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       // Main loop.
       // Could eventually support leader/follower mode (for keeping replicas more in sync)
       boolean stillReading = !assignment.isEmpty();
+      status = Status.READING;
       try {
         while (stillReading) {
           if (possiblyPause(assignment)) {
@@ -363,30 +381,15 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           // The retrying business is because the KafkaConsumer throws OffsetOutOfRangeException if the seeked-to
           // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
           // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
-          final ConsumerRecords<byte[], byte[]> records = RetryUtils.retry(
-              new Callable<ConsumerRecords<byte[], byte[]>>()
-              {
-                @Override
-                public ConsumerRecords<byte[], byte[]> call() throws Exception
-                {
-                  try {
-                    return consumer.poll(POLL_TIMEOUT);
-                  }
-                  finally {
-                    status = Status.READING;
-                  }
-                }
-              },
-              new Predicate<Throwable>()
-              {
-                @Override
-                public boolean apply(Throwable input)
-                {
-                  return input instanceof OffsetOutOfRangeException;
-                }
-              },
-              Integer.MAX_VALUE
-          );
+          ConsumerRecords<byte[], byte[]> records = ConsumerRecords.empty();
+          try {
+            records = consumer.poll(POLL_TIMEOUT);
+          }
+          catch (OffsetOutOfRangeException e) {
+            log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
+            possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, toolbox);
+            stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+          }
 
           for (ConsumerRecord<byte[], byte[]> record : records) {
             if (log.isTraceEnabled()) {
@@ -409,7 +412,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               }
 
               try {
-                final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(record.value())), "row");
+                final byte[] valueBytes = record.value();
+                if (valueBytes == null) {
+                  throw new ParseException("null value");
+                }
+
+                final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(valueBytes)), "row");
 
                 if (!ioConfig.getMinimumMessageTime().isPresent() ||
                     !ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp())) {
@@ -463,11 +471,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         driver.persist(committerSupplier.get()); // persist pending data
       }
 
-      if (stopRequested && !publishOnStop) {
-        throw new InterruptedException("Stopping without publishing");
+      synchronized (statusLock) {
+        if (stopRequested && !publishOnStop) {
+          throw new InterruptedException("Stopping without publishing");
+        }
+
+        status = Status.PUBLISHING;
       }
 
-      status = Status.PUBLISHING;
       final TransactionalSegmentPublisher publisher = new TransactionalSegmentPublisher()
       {
         @Override
@@ -524,7 +535,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         );
       }
     }
-    catch (InterruptedException e) {
+    catch (InterruptedException | RejectedExecutionException e) {
+      // handle the InterruptedException that gets wrapped in a RejectedExecutionException
+      if (e instanceof RejectedExecutionException
+          && (e.getCause() == null || !(e.getCause() instanceof InterruptedException))) {
+        throw e;
+      }
+
       // if we were interrupted because we were asked to stop, handle the exception and return success, else rethrow
       if (!stopRequested) {
         Thread.currentThread().interrupt();
@@ -532,6 +549,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
 
       log.info("The task was asked to stop before completing");
+    }
+    finally {
+      if (chatHandlerProvider.isPresent()) {
+        chatHandlerProvider.get().unregister(getId());
+      }
     }
 
     return success();
@@ -548,11 +570,47 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Override
   public void stopGracefully()
   {
-    log.info("Stopping gracefully.");
+    log.info("Stopping gracefully (status: [%s])", status);
     stopRequested = true;
-    if (runThread.isAlive()) {
-      log.info("Interrupting run thread (status: [%s])", status);
-      runThread.interrupt();
+
+    synchronized (statusLock) {
+      if (status == Status.PUBLISHING) {
+        runThread.interrupt();
+        return;
+      }
+    }
+
+    try {
+      if (pauseLock.tryLock(LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        try {
+          if (pauseRequested) {
+            pauseRequested = false;
+            shouldResume.signalAll();
+          }
+        }
+        finally {
+          pauseLock.unlock();
+        }
+      } else {
+        log.warn("While stopping: failed to acquire pauseLock before timeout, interrupting run thread");
+        runThread.interrupt();
+        return;
+      }
+
+      if (pollRetryLock.tryLock(LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        try {
+          isAwaitingRetry.signalAll();
+        }
+        finally {
+          pollRetryLock.unlock();
+        }
+      } else {
+        log.warn("While stopping: failed to acquire pollRetryLock before timeout, interrupting run thread");
+        runThread.interrupt();
+      }
+    }
+    catch (Exception e) {
+      Throwables.propagate(e);
     }
   }
 
@@ -684,6 +742,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       pauseMillis = timeout <= 0 ? PAUSE_FOREVER : timeout;
       pauseRequested = true;
 
+      pollRetryLock.lockInterruptibly();
+      try {
+        isAwaitingRetry.signalAll();
+      }
+      finally {
+        pollRetryLock.unlock();
+      }
+
       if (isPaused()) {
         shouldResume.signalAll(); // kick the monitor so it re-awaits with the new pauseMillis
       }
@@ -753,9 +819,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
+    final int maxRowsInMemoryPerPartition = (tuningConfig.getMaxRowsInMemory() /
+                                             ioConfig.getStartPartitions().getPartitionOffsetMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist")),
+        tuningConfig.withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+                    .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
@@ -772,7 +841,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private FiniteAppenderatorDriver newDriver(
       final Appenderator appenderator,
-      final TaskToolbox toolbox
+      final TaskToolbox toolbox,
+      final FireDepartmentMetrics metrics
   )
   {
     return new FiniteAppenderatorDriver(
@@ -782,7 +852,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getObjectMapper(),
         tuningConfig.getMaxRowsPerSegment(),
-        tuningConfig.getHandoffConditionTimeout()
+        tuningConfig.getHandoffConditionTimeout(),
+        metrics
     );
   }
 
@@ -868,14 +939,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
    * Checks if the pauseRequested flag was set and if so blocks:
    * a) if pauseMillis == PAUSE_FOREVER, until pauseRequested is cleared
    * b) if pauseMillis != PAUSE_FOREVER, until pauseMillis elapses -or- pauseRequested is cleared
-   * <p>
+   * <p/>
    * If pauseMillis is changed while paused, the new pause timeout will be applied. This allows adjustment of the
    * pause timeout (making a timed pause into an indefinite pause and vice versa is valid) without having to resume
    * and ensures that the loop continues to stay paused without ingesting any new events. You will need to signal
    * shouldResume after adjusting pauseMillis for the new value to take effect.
-   * <p>
+   * <p/>
    * Sets paused = true and signals paused so callers can be notified when the pause command has been accepted.
-   * <p>
+   * <p/>
    * Additionally, pauses if all partitions assignments have been read and pauseAfterRead flag is set.
    *
    * @return true if a pause request was handled, false otherwise
@@ -922,5 +993,82 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
 
     return false;
+  }
+
+  private void possiblyResetOffsetsOrWait(
+      Map<TopicPartition, Long> outOfRangePartitions,
+      KafkaConsumer<byte[], byte[]> consumer,
+      TaskToolbox taskToolbox
+  ) throws InterruptedException, IOException
+  {
+    final Map<TopicPartition, Long> resetPartitions = Maps.newHashMap();
+    boolean doReset = false;
+    if (tuningConfig.isResetOffsetAutomatically()) {
+      for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
+        final TopicPartition topicPartition = outOfRangePartition.getKey();
+        final long nextOffset = outOfRangePartition.getValue();
+        // seek to the beginning to get the least available offset
+        consumer.seekToBeginning(topicPartition);
+        final long leastAvailableOffset = consumer.position(topicPartition);
+        // reset the seek
+        consumer.seek(topicPartition, nextOffset);
+        // Reset consumer offset if resetOffsetAutomatically is set to true
+        // and the current message offset in the kafka partition is more than the
+        // next message offset that we are trying to fetch
+        if (leastAvailableOffset > nextOffset) {
+          doReset = true;
+          resetPartitions.put(topicPartition, nextOffset);
+        }
+      }
+    }
+
+    if (doReset) {
+      sendResetRequestAndWait(resetPartitions, taskToolbox);
+    } else {
+      log.warn("Retrying in %dms", POLL_RETRY_MS);
+      pollRetryLock.lockInterruptibly();
+      try {
+        long nanos = TimeUnit.MILLISECONDS.toNanos(POLL_RETRY_MS);
+        while (nanos > 0L && !pauseRequested && !stopRequested) {
+          nanos = isAwaitingRetry.awaitNanos(nanos);
+        }
+      }
+      finally {
+        pollRetryLock.unlock();
+      }
+    }
+  }
+
+  private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
+      throws IOException
+  {
+    Map<Integer, Long> partitionOffsetMap = Maps.newHashMap();
+    for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
+      partitionOffsetMap.put(outOfRangePartition.getKey().partition(), outOfRangePartition.getValue());
+    }
+    boolean result = taskToolbox.getTaskActionClient()
+                                .submit(new ResetDataSourceMetadataAction(
+                                    getDataSource(),
+                                    new KafkaDataSourceMetadata(new KafkaPartitions(
+                                        ioConfig.getStartPartitions()
+                                                .getTopic(),
+                                        partitionOffsetMap
+                                    ))
+                                ));
+
+    if (result) {
+      log.makeAlert("Resetting Kafka offsets for datasource [%s]", getDataSource())
+         .addData("partitions", partitionOffsetMap.keySet())
+         .emit();
+      // wait for being killed by supervisor
+      try {
+        Thread.sleep(Long.MAX_VALUE);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException("Got interrupted while waiting to be killed");
+      }
+    } else {
+      log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
+    }
   }
 }

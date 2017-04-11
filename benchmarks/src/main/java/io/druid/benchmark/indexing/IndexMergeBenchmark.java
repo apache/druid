@@ -20,16 +20,16 @@
 package io.druid.benchmark.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.metamx.common.logger.Logger;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -41,6 +41,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -51,6 +52,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -75,6 +77,9 @@ public class IndexMergeBenchmark
   @Param({"basic"})
   private String schema;
 
+  @Param({"true", "false"})
+  private boolean rollup;
+
   private static final Logger log = new Logger(IndexMergeBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMerger INDEX_MERGER;
@@ -84,6 +89,7 @@ public class IndexMergeBenchmark
 
   private List<QueryableIndex> indexesToMerge;
   private BenchmarkSchemaInfo schemaInfo;
+  private File tmpDir;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -108,7 +114,7 @@ public class IndexMergeBenchmark
     log.info("SETUP CALLED AT " + + System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
 
     indexesToMerge = new ArrayList<>();
@@ -133,13 +139,12 @@ public class IndexMergeBenchmark
         incIndex.add(row);
       }
 
-      File tmpFile = Files.createTempDir();
-      log.info("Using temp dir: " + tmpFile.getAbsolutePath());
-      tmpFile.deleteOnExit();
+      tmpDir = Files.createTempDir();
+      log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
       File indexFile = INDEX_MERGER_V9.persist(
           incIndex,
-          tmpFile,
+          tmpDir,
           new IndexSpec()
       );
 
@@ -148,13 +153,20 @@ public class IndexMergeBenchmark
     }
   }
 
+  @TearDown
+  public void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(tmpDir);
+  }
+
   private IncrementalIndex makeIncIndex()
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(rollup)
             .build(),
         true,
         false,
@@ -171,14 +183,23 @@ public class IndexMergeBenchmark
     File tmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-" + System.currentTimeMillis(), ".TEMPFILE");
     tmpFile.delete();
     tmpFile.mkdirs();
-    log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
-    tmpFile.deleteOnExit();
+    try {
+      log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
 
-    File mergedFile = INDEX_MERGER.mergeQueryableIndex(indexesToMerge, schemaInfo.getAggsArray(), tmpFile, new IndexSpec());
+      File mergedFile = INDEX_MERGER.mergeQueryableIndex(
+          indexesToMerge,
+          rollup,
+          schemaInfo.getAggsArray(),
+          tmpFile,
+          new IndexSpec()
+      );
 
-    blackhole.consume(mergedFile);
+      blackhole.consume(mergedFile);
+    }
+    finally {
+      tmpFile.delete();
+    }
 
-    tmpFile.delete();
   }
 
   @Benchmark
@@ -189,13 +210,23 @@ public class IndexMergeBenchmark
     File tmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
     tmpFile.delete();
     tmpFile.mkdirs();
-    log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
-    tmpFile.deleteOnExit();
+    try {
+      log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
 
-    File mergedFile = INDEX_MERGER_V9.mergeQueryableIndex(indexesToMerge, schemaInfo.getAggsArray(), tmpFile, new IndexSpec());
+      File mergedFile = INDEX_MERGER_V9.mergeQueryableIndex(
+          indexesToMerge,
+          rollup,
+          schemaInfo.getAggsArray(),
+          tmpFile,
+          new IndexSpec()
+      );
 
-    blackhole.consume(mergedFile);
+      blackhole.consume(mergedFile);
+    }
+    finally {
+      tmpFile.delete();
 
-    tmpFile.delete();
+    }
+
   }
 }

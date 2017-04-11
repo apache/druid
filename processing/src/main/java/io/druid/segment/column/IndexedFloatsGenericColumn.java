@@ -19,11 +19,10 @@
 
 package io.druid.segment.column;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedLongs;
-
-import java.io.IOException;
 
 /**
 */
@@ -92,8 +91,14 @@ public class IndexedFloatsGenericColumn implements GenericColumn
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     column.close();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("column", column);
   }
 }

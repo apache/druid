@@ -1,28 +1,29 @@
 /*
-* Licensed to Metamarkets Group Inc. (Metamarkets) under one
-* or more contributor license agreements. See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership. Metamarkets licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License. You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import io.druid.granularity.QueryGranularities;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -50,7 +51,8 @@ public class MetadataTest
             new LongSumAggregatorFactory("out", "in")
         };
     metadata.setAggregators(aggregators);
-    metadata.setQueryGranularity(QueryGranularities.ALL);
+    metadata.setQueryGranularity(Granularities.ALL);
+    metadata.setRollup(Boolean.FALSE);
 
     Metadata other = jsonMapper.readValue(
         jsonMapper.writeValueAsString(metadata),
@@ -78,12 +80,16 @@ public class MetadataTest
     Metadata m1 = new Metadata();
     m1.put("k", "v");
     m1.setAggregators(aggs);
-    m1.setQueryGranularity(QueryGranularities.ALL);
+    m1.setTimestampSpec(new TimestampSpec("ds", "auto", null));
+    m1.setQueryGranularity(Granularities.ALL);
+    m1.setRollup(Boolean.FALSE);
 
     Metadata m2 = new Metadata();
     m2.put("k", "v");
     m2.setAggregators(aggs);
-    m2.setQueryGranularity(QueryGranularities.ALL);
+    m2.setTimestampSpec(new TimestampSpec("ds", "auto", null));
+    m2.setQueryGranularity(Granularities.ALL);
+    m2.setRollup(Boolean.FALSE);
 
     Metadata merged = new Metadata();
     merged.put("k", "v");
@@ -92,7 +98,9 @@ public class MetadataTest
             new LongMaxAggregatorFactory("n", "n")
         }
     );
-    merged.setQueryGranularity(QueryGranularities.ALL);
+    merged.setTimestampSpec(new TimestampSpec("ds", "auto", null));
+    merged.setRollup(Boolean.FALSE);
+    merged.setQueryGranularity(Granularities.ALL);
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
     //merge check with one metadata being null
@@ -102,7 +110,9 @@ public class MetadataTest
     metadataToBeMerged.add(null);
 
     merged.setAggregators(null);
+    merged.setTimestampSpec(null);
     merged.setQueryGranularity(null);
+    merged.setRollup(null);
     Assert.assertEquals(merged, Metadata.merge(metadataToBeMerged, null));
 
     //merge check with client explicitly providing merged aggregators
@@ -116,7 +126,9 @@ public class MetadataTest
         Metadata.merge(metadataToBeMerged, explicitAggs)
     );
 
-    merged.setQueryGranularity(QueryGranularities.ALL);
+    merged.setTimestampSpec(new TimestampSpec("ds", "auto", null));
+    merged.setQueryGranularity(Granularities.ALL);
+    m1.setRollup(Boolean.TRUE);
     Assert.assertEquals(
         merged,
         Metadata.merge(ImmutableList.of(m1, m2), explicitAggs)

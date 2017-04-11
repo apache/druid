@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
-import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import java.util.List;
@@ -36,12 +35,12 @@ import java.util.Set;
  */
 public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWorkerSelectStrategy
 {
-  private final FillCapacityWithAffinityConfig affinityConfig;
+  private final AffinityConfig affinityConfig;
   private final Set<String> affinityWorkerHosts = Sets.newHashSet();
 
   @JsonCreator
   public FillCapacityWithAffinityWorkerSelectStrategy(
-      @JsonProperty("affinityConfig") FillCapacityWithAffinityConfig affinityConfig
+      @JsonProperty("affinityConfig") AffinityConfig affinityConfig
   )
   {
     this.affinityConfig = affinityConfig;
@@ -53,7 +52,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWo
   }
 
   @JsonProperty
-  public FillCapacityWithAffinityConfig getAffinityConfig()
+  public AffinityConfig getAffinityConfig()
   {
     return affinityConfig;
   }

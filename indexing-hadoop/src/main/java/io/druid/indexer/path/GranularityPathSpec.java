@@ -20,13 +20,14 @@
 package io.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
-import com.metamx.common.Granularity;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.FSSpideringIterator;
+import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.common.logger.Logger;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -111,13 +112,10 @@ public class GranularityPathSpec implements PathSpec
   @Override
   public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
-    final Set<Interval> intervals = Sets.newTreeSet(Comparators.intervals());
-    Optional<Set<Interval>> optionalIntervals = config.getSegmentGranularIntervals();
-    if (optionalIntervals.isPresent()) {
-      for (Interval segmentInterval : optionalIntervals.get()) {
-        for (Interval dataInterval : dataGranularity.getIterable(segmentInterval)) {
-          intervals.add(dataInterval);
-        }
+    final Set<Interval> intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    for (Interval inputInterval : config.getInputIntervals()) {
+      for (Interval interval : dataGranularity.getIterable(inputInterval)) {
+        intervals.add(trim(inputInterval, interval));
       }
     }
 
@@ -156,4 +154,22 @@ public class GranularityPathSpec implements PathSpec
 
     return job;
   }
+
+  private Interval trim(Interval inputInterval, Interval interval)
+  {
+    long start = interval.getStartMillis();
+    long end = interval.getEndMillis();
+
+    boolean makeNew = false;
+    if (start < inputInterval.getStartMillis()) {
+      start = inputInterval.getStartMillis();
+      makeNew = true;
+    }
+    if (end > inputInterval.getEndMillis()) {
+      end = inputInterval.getEndMillis();
+      makeNew = true;
+    }
+    return makeNew ? new Interval(start, end) : interval;
+  }
+
 }

@@ -21,6 +21,9 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.DruidFloatPredicate;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 
 import java.util.regex.Pattern;
 
@@ -36,12 +39,45 @@ public class RegexFilter extends DimensionPredicateFilter
   {
     super(
         dimension,
-        new Predicate<String>()
+        new DruidPredicateFactory()
         {
           @Override
-          public boolean apply(String input)
+          public Predicate<String> makeStringPredicate()
           {
-            return (input != null) && pattern.matcher(input).find();
+            return new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                return (input != null) && pattern.matcher(input).find();
+              }
+            };
+          }
+
+          @Override
+          public DruidLongPredicate makeLongPredicate()
+          {
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return pattern.matcher(String.valueOf(input)).find();
+              }
+            };
+          }
+
+          @Override
+          public DruidFloatPredicate makeFloatPredicate()
+          {
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return pattern.matcher(String.valueOf(input)).find();
+              }
+            };
           }
 
           @Override

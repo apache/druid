@@ -22,10 +22,15 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.Cacheable;
+import io.druid.segment.column.ValueType;
+
+import java.util.Map;
 
 /**
  * A "having" clause that filters aggregated/dimension value. This is similar to SQL's "having"
- * clause.
+ * clause. HavingSpec objects are *not* thread-safe and must not be used simultaneously by multiple
+ * threads.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -36,14 +41,23 @@ import io.druid.data.input.Row;
     @JsonSubTypes.Type(name = "lessThan", value = LessThanHavingSpec.class),
     @JsonSubTypes.Type(name = "equalTo", value = EqualToHavingSpec.class),
     @JsonSubTypes.Type(name = "dimSelector", value = DimensionSelectorHavingSpec.class),
-    @JsonSubTypes.Type(name = "always", value = AlwaysHavingSpec.class)
+    @JsonSubTypes.Type(name = "always", value = AlwaysHavingSpec.class),
+    @JsonSubTypes.Type(name = "filter", value = DimFilterHavingSpec.class)
 })
-public interface HavingSpec
+public interface HavingSpec extends Cacheable
 {
   // Atoms for easy combination, but for now they are mostly useful
   // for testing.
-  public static final HavingSpec NEVER = new NeverHavingSpec();
-  public static final HavingSpec ALWAYS = new AlwaysHavingSpec();
+  HavingSpec NEVER = new NeverHavingSpec();
+  HavingSpec ALWAYS = new AlwaysHavingSpec();
+
+  /**
+   * Informs this HavingSpec that rows passed to "eval" will have a certain signature. Will be called
+   * before "eval".
+   *
+   * @param rowSignature signature of the rows
+   */
+  void setRowSignature(Map<String, ValueType> rowSignature);
 
   /**
    * Evaluates if a given row satisfies the having spec.
@@ -52,7 +66,5 @@ public interface HavingSpec
    *
    * @return true if the given row satisfies the having spec. False otherwise.
    */
-  public boolean eval(Row row);
-
-  public byte[] getCacheKey();
+  boolean eval(Row row);
 }

@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -37,10 +37,25 @@ public class ArbitraryGranularityTest
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
+  public void testDefaultQueryGranularity()
+  {
+    final GranularitySpec spec = new ArbitraryGranularitySpec(
+        null,
+        Lists.newArrayList(
+            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+            new Interval("2012-02-01T00Z/2012-03-01T00Z"),
+            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        ));
+    Assert.assertNotNull(spec.getQueryGranularity());
+  }
+
+  @Test
   public void testSimple()
   {
     final GranularitySpec spec = new ArbitraryGranularitySpec(
-        QueryGranularities.NONE,
+        Granularities.NONE,
         Lists.newArrayList(
         new Interval("2012-01-08T00Z/2012-01-11T00Z"),
         new Interval("2012-02-01T00Z/2012-03-01T00Z"),
@@ -48,6 +63,8 @@ public class ArbitraryGranularityTest
         new Interval("2012-01-03T00Z/2012-01-04T00Z"),
         new Interval("2012-01-01T00Z/2012-01-03T00Z")
     ));
+
+    Assert.assertTrue(spec.isRollup());
 
     Assert.assertEquals(
         Lists.newArrayList(
@@ -114,12 +131,27 @@ public class ArbitraryGranularityTest
 
     boolean thrown = false;
     try {
-      final GranularitySpec spec = new ArbitraryGranularitySpec(QueryGranularities.NONE, intervals);
+      final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, intervals);
     } catch(IllegalArgumentException e) {
       thrown = true;
     }
 
     Assert.assertTrue("Exception thrown", thrown);
+  }
+
+  @Test
+  public void testRollupSetting()
+  {
+    List<Interval> intervals = Lists.newArrayList(
+        new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+        new Interval("2012-02-01T00Z/2012-03-01T00Z"),
+        new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+        new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+        new Interval("2012-01-01T00Z/2012-01-03T00Z")
+    );
+    final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, false, intervals);
+
+    Assert.assertFalse(spec.isRollup());
   }
 
   @Test
@@ -132,7 +164,7 @@ public class ArbitraryGranularityTest
 
     boolean thrown = false;
     try {
-      final GranularitySpec spec = new ArbitraryGranularitySpec(QueryGranularities.NONE, intervals);
+      final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, intervals);
     } catch(IllegalArgumentException e) {
       thrown = true;
     }
@@ -143,7 +175,7 @@ public class ArbitraryGranularityTest
   @Test
   public void testJson()
   {
-    final GranularitySpec spec = new ArbitraryGranularitySpec(QueryGranularities.NONE, Lists.newArrayList(
+    final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, Lists.newArrayList(
         new Interval("2012-01-08T00Z/2012-01-11T00Z"),
         new Interval("2012-02-01T00Z/2012-03-01T00Z"),
         new Interval("2012-01-07T00Z/2012-01-08T00Z"),

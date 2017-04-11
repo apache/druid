@@ -31,11 +31,12 @@ import java.io.OutputStream;
 import java.util.Map;
 
 /**
-*/
+ */
 public class TmpFileIOPeon implements IOPeon
 {
+  private final File dir;
   private final boolean allowOverwrite;
-  Map<String, File> createdFiles = Maps.newLinkedHashMap();
+  private final Map<String, File> createdFiles = Maps.newLinkedHashMap();
 
   public TmpFileIOPeon()
   {
@@ -44,6 +45,12 @@ public class TmpFileIOPeon implements IOPeon
 
   public TmpFileIOPeon(boolean allowOverwrite)
   {
+    this(null, allowOverwrite);
+  }
+
+  public TmpFileIOPeon(File dir, boolean allowOverwrite)
+  {
+    this.dir = dir;
     this.allowOverwrite = allowOverwrite;
   }
 
@@ -52,8 +59,7 @@ public class TmpFileIOPeon implements IOPeon
   {
     File retFile = createdFiles.get(filename);
     if (retFile == null) {
-      retFile = File.createTempFile("filePeon", filename);
-      retFile.deleteOnExit();
+      retFile = File.createTempFile("filePeon", filename, dir);
       createdFiles.put(filename, retFile);
       return new BufferedOutputStream(new FileOutputStream(retFile));
     } else if (allowOverwrite) {
@@ -72,7 +78,7 @@ public class TmpFileIOPeon implements IOPeon
   }
 
   @Override
-  public void cleanup() throws IOException
+  public void close() throws IOException
   {
     for (File file : createdFiles.values()) {
       file.delete();
@@ -84,4 +90,11 @@ public class TmpFileIOPeon implements IOPeon
   {
     return allowOverwrite;
   }
+
+  @Override
+  public File getFile(String filename)
+  {
+    return createdFiles.get(filename);
+  }
+
 }

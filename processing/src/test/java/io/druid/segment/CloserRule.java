@@ -19,8 +19,8 @@
 
 package io.druid.segment;
 
-import com.google.common.io.Closer;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.io.Closer;
+import io.druid.java.util.common.logger.Logger;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;

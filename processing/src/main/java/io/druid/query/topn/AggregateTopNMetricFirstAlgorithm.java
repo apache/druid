@@ -19,15 +19,15 @@
 
 package io.druid.query.topn;
 
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
 import io.druid.collections.StupidPool;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -55,13 +55,12 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
   @Override
   public TopNParams makeInitParams(
-      DimensionSelector dimSelector, Cursor cursor
+      ColumnSelectorPlus selectorPlus, Cursor cursor
   )
   {
     return new TopNParams(
-        dimSelector,
+        selectorPlus,
         cursor,
-        dimSelector.getValueCardinality(),
         Integer.MAX_VALUE
     );
   }
@@ -82,17 +81,17 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       throw new ISE("WTF! Can't find the metric to do topN over?");
     }
     // Run topN for only a single metric
-    TopNQuery singleMetricQuery = new TopNQueryBuilder().copy(query)
-                                                        .aggregators(condensedAggPostAggPair.lhs)
-                                                        .postAggregators(condensedAggPostAggPair.rhs)
-                                                        .build();
+    TopNQuery singleMetricQuery = new TopNQueryBuilder(query)
+        .aggregators(condensedAggPostAggPair.lhs)
+        .postAggregators(condensedAggPostAggPair.rhs)
+        .build();
     final TopNResultBuilder singleMetricResultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, singleMetricQuery);
 
     PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(capabilities, singleMetricQuery, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;
     int[] dimValSelector = null;
     try {
-      singleMetricParam = singleMetricAlgo.makeInitParams(params.getDimSelector(), params.getCursor());
+      singleMetricParam = singleMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor());
       singleMetricAlgo.run(
           singleMetricParam,
           singleMetricResultBuilder,
@@ -110,7 +109,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     PooledTopNAlgorithm.PooledTopNParams allMetricsParam = null;
     try {
       // Run topN for all metrics for top N dimension values
-      allMetricsParam = allMetricAlgo.makeInitParams(params.getDimSelector(), params.getCursor());
+      allMetricsParam = allMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor());
       allMetricAlgo.run(
           allMetricsParam,
           resultBuilder,
@@ -129,7 +128,11 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
   private int[] getDimValSelectorForTopNMetric(TopNParams params, TopNResultBuilder resultBuilder)
   {
-    int[] dimValSelector = new int[params.getDimSelector().getValueCardinality()];
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
+
+    int[] dimValSelector = new int[params.getCardinality()];
     Arrays.fill(dimValSelector, SKIP_POSITION_VALUE);
 
     Iterator<DimValHolder> dimValIter = resultBuilder.getTopNIterator();

@@ -21,17 +21,23 @@ package io.druid.segment;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.hash.Hashing;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
-import com.metamx.common.logger.Logger;
 import io.druid.data.input.impl.DelimitedParseSpec;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -39,6 +45,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -46,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -56,26 +64,60 @@ public class TestIndex
       "ts",
       "market",
       "quality",
+      "qualityLong",
+      "qualityFloat",
+      "qualityNumericString",
       "placement",
       "placementish",
       "index",
       "partial_null_column",
       "null_column",
-      "quality_uniques"
+      "quality_uniques",
+      "indexMin",
+      "indexMaxPlusTen"
   };
   public static final String[] DIMENSIONS = new String[]{
       "market",
       "quality",
+      "qualityLong",
+      "qualityFloat",
+      "qualityNumericString",
       "placement",
       "placementish",
       "partial_null_column",
-      "null_column",
-      };
-  public static final String[] METRICS = new String[]{"index"};
+      "null_column"
+  };
+
+  public static final List<DimensionSchema> DIMENSION_SCHEMAS = Arrays.asList(
+      new StringDimensionSchema("market"),
+      new StringDimensionSchema("quality"),
+      new LongDimensionSchema("qualityLong"),
+      new FloatDimensionSchema("qualityFloat"),
+      new StringDimensionSchema("qualityNumericString"),
+      new StringDimensionSchema("placement"),
+      new StringDimensionSchema("placementish"),
+      new StringDimensionSchema("partial_null_column"),
+      new StringDimensionSchema("null_column")
+  );
+
+  public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
+      DIMENSION_SCHEMAS,
+      null,
+      null
+  );
+
+  public static final String[] METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
+  private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
+      Arrays.<VirtualColumn>asList(
+          new ExpressionVirtualColumn("expr", "index + 10")
+      )
+  );
   public static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
+      new DoubleMinAggregatorFactory(METRICS[1], METRICS[0]),
+      new DoubleMaxAggregatorFactory(METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
   private static final IndexSpec indexSpec = new IndexSpec();
@@ -85,12 +127,14 @@ public class TestIndex
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
   }
 
   private static IncrementalIndex realtimeIndex = null;
+  private static IncrementalIndex noRollupRealtimeIndex = null;
   private static QueryableIndex mmappedIndex = null;
+  private static QueryableIndex noRollupMmappedIndex = null;
   private static QueryableIndex mergedRealtime = null;
 
   public static IncrementalIndex getIncrementalTestIndex()
@@ -101,7 +145,18 @@ public class TestIndex
       }
     }
 
-    return realtimeIndex = makeRealtimeIndex("druid.sample.tsv");
+    return realtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv");
+  }
+
+  public static IncrementalIndex getNoRollupIncrementalTestIndex()
+  {
+    synchronized (log) {
+      if (noRollupRealtimeIndex != null) {
+        return noRollupRealtimeIndex;
+      }
+    }
+
+    return noRollupRealtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv", false);
   }
 
   public static QueryableIndex getMMappedTestIndex()
@@ -118,6 +173,20 @@ public class TestIndex
     return mmappedIndex;
   }
 
+  public static QueryableIndex getNoRollupMMappedTestIndex()
+  {
+    synchronized (log) {
+      if (noRollupMmappedIndex != null) {
+        return noRollupMmappedIndex;
+      }
+    }
+
+    IncrementalIndex incrementalIndex = getNoRollupIncrementalTestIndex();
+    noRollupMmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
+
+    return noRollupMmappedIndex;
+  }
+
   public static QueryableIndex mergedRealtimeIndex()
   {
     synchronized (log) {
@@ -126,8 +195,8 @@ public class TestIndex
       }
 
       try {
-        IncrementalIndex top = makeRealtimeIndex("druid.sample.tsv.top");
-        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.tsv.bottom");
+        IncrementalIndex top = makeRealtimeIndex("druid.sample.numeric.tsv.top");
+        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
 
         File tmpFile = File.createTempFile("yay", "who");
         tmpFile.delete();
@@ -149,6 +218,7 @@ public class TestIndex
         mergedRealtime = INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
                 Arrays.asList(INDEX_IO.loadIndex(topFile), INDEX_IO.loadIndex(bottomFile)),
+                true,
                 METRIC_AGGS,
                 mergedFile,
                 indexSpec
@@ -165,21 +235,35 @@ public class TestIndex
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
   {
+    return makeRealtimeIndex(resourceFilename, true);
+  }
+
+  public static IncrementalIndex makeRealtimeIndex(final String resourceFilename, boolean rollup)
+  {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     if (resource == null) {
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
     }
     log.info("Realtime loading index file[%s]", resource);
     CharSource stream = Resources.asByteSource(resource).asCharSource(Charsets.UTF_8);
-    return makeRealtimeIndex(stream);
+    return makeRealtimeIndex(stream, rollup);
   }
 
   public static IncrementalIndex makeRealtimeIndex(final CharSource source)
   {
+    return makeRealtimeIndex(source, true);
+  }
+
+  public static IncrementalIndex makeRealtimeIndex(final CharSource source, boolean rollup)
+  {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
-        .withQueryGranularity(QueryGranularities.NONE)
+        .withTimestampSpec(new TimestampSpec("ds", "auto", null))
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(DIMENSIONS_SPEC)
+        .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
+        .withRollup(rollup)
         .build();
     final IncrementalIndex retVal = new OnheapIncrementalIndex(schema, true, 10000);
 
@@ -187,7 +271,11 @@ public class TestIndex
       return loadIncrementalIndex(retVal, source);
     }
     catch (Exception e) {
-      realtimeIndex = null;
+      if (rollup) {
+        realtimeIndex = null;
+      } else {
+        noRollupRealtimeIndex = null;
+      }
       throw Throwables.propagate(e);
     }
   }
@@ -200,7 +288,7 @@ public class TestIndex
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(
             new TimestampSpec("ts", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)), null, null),
+            new DimensionsSpec(DIMENSION_SCHEMAS, null, null),
             "\t",
             "\u0001",
             Arrays.asList(COLUMNS)

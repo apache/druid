@@ -23,23 +23,26 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -66,7 +69,7 @@ import java.util.TreeMap;
  */
 public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResultValue>, SelectQuery>
 {
-  private static final byte SELECT_QUERY = 0x13;
+  private static final byte SELECT_QUERY = 0x16;
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
@@ -77,15 +80,31 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       };
 
   private final ObjectMapper jsonMapper;
-
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final Supplier<SelectQueryConfig> configSupplier;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
+
+  public SelectQueryQueryToolChest(
+      ObjectMapper jsonMapper,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      Supplier<SelectQueryConfig> configSupplier
+  )
+  {
+    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, new DefaultGenericQueryMetricsFactory(jsonMapper));
+  }
 
   @Inject
-  public SelectQueryQueryToolChest(ObjectMapper jsonMapper,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
+  public SelectQueryQueryToolChest(
+      ObjectMapper jsonMapper,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      Supplier<SelectQueryConfig> configSupplier,
+      GenericQueryMetricsFactory queryMetricsFactory
+  )
   {
     this.jsonMapper = jsonMapper;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.configSupplier = configSupplier;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -119,9 +138,9 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(SelectQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(SelectQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query);
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override
@@ -141,20 +160,39 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public CacheStrategy<Result<SelectResultValue>, Object, SelectQuery> getCacheStrategy(final SelectQuery query)
   {
+
     return new CacheStrategy<Result<SelectResultValue>, Object, SelectQuery>()
     {
+      private final List<DimensionSpec> dimensionSpecs =
+          query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
+      private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
+          Lists.transform(
+              dimensionSpecs,
+              new Function<DimensionSpec, String>() {
+                @Override
+                public String apply(DimensionSpec input) {
+                  return input.getOutputName();
+                }
+              }
+          )
+          :
+          Collections.<String>emptyList();
+
+      @Override
+      public boolean isCacheable(SelectQuery query, boolean willMergeRunners)
+      {
+        return true;
+      }
+
       @Override
       public byte[] computeCacheKey(SelectQuery query)
       {
         final DimFilter dimFilter = query.getDimensionsFilter();
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] granularityBytes = query.getGranularity().cacheKey();
+        final byte[] granularityBytes = query.getGranularity().getCacheKey();
 
-        List<DimensionSpec> dimensionSpecs = query.getDimensions();
-        if (dimensionSpecs == null) {
-          dimensionSpecs = Collections.emptyList();
-        }
-
+        final List<DimensionSpec> dimensionSpecs =
+            query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
         final byte[][] dimensionsBytes = new byte[dimensionSpecs.size()][];
         int dimensionsBytesSize = 0;
         int index = 0;
@@ -178,6 +216,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
+        final byte[] virtualColumnsCacheKey = query.getVirtualColumns().getCacheKey();
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1
@@ -186,6 +225,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
                 + query.getPagingSpec().getCacheKey().length
                 + dimensionsBytesSize
                 + metricBytesSize
+                + virtualColumnsCacheKey.length
             )
             .put(SELECT_QUERY)
             .put(granularityBytes)
@@ -199,6 +239,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         for (byte[] metricByte : metricBytes) {
           queryCacheKey.put(metricByte);
         }
+
+        queryCacheKey.put(virtualColumnsCacheKey);
 
         return queryCacheKey.array();
       }
@@ -217,9 +259,21 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           @Override
           public Object apply(final Result<SelectResultValue> input)
           {
+            if (!dimOutputNames.isEmpty()) {
+              return Arrays.asList(
+                  input.getTimestamp().getMillis(),
+                  input.getValue().getPagingIdentifiers(),
+                  input.getValue().getDimensions(),
+                  input.getValue().getMetrics(),
+                  input.getValue().getEvents(),
+                  dimOutputNames
+              );
+            }
             return Arrays.asList(
                 input.getTimestamp().getMillis(),
                 input.getValue().getPagingIdentifiers(),
+                input.getValue().getDimensions(),
+                input.getValue().getMetrics(),
                 input.getValue().getEvents()
             );
           }
@@ -231,7 +285,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       {
         return new Function<Object, Result<SelectResultValue>>()
         {
-          private final QueryGranularity granularity = query.getGranularity();
+          private final Granularity granularity = query.getGranularity();
 
           @Override
           public Result<SelectResultValue> apply(Object input)
@@ -241,19 +295,43 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
             DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
-            return new Result<SelectResultValue>(
+            Map<String, Integer> pageIdentifier = jsonMapper.convertValue(
+                resultIter.next(), new TypeReference<Map<String, Integer>>() {}
+                );
+            Set<String> dimensionSet = jsonMapper.convertValue(
+                resultIter.next(), new TypeReference<Set<String>>() {}
+            );
+            Set<String> metricSet = jsonMapper.convertValue(
+                resultIter.next(), new TypeReference<Set<String>>() {}
+            );
+            List<EventHolder> eventHolders = jsonMapper.convertValue(
+                resultIter.next(), new TypeReference<List<EventHolder>>() {}
+                );
+            // check the condition that outputName of cached result should be updated
+            if (resultIter.hasNext()) {
+              List<String> cachedOutputNames = (List<String>) resultIter.next();
+              Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
+                  "Cache hit but different number of dimensions??");
+              for (int idx = 0; idx < dimOutputNames.size(); idx++) {
+                if (!cachedOutputNames.get(idx).equals(dimOutputNames.get(idx))) {
+                  // rename outputName in the EventHolder
+                  for (EventHolder eventHolder: eventHolders) {
+                    Object obj = eventHolder.getEvent().remove(cachedOutputNames.get(idx));
+                    if (obj != null) {
+                      eventHolder.getEvent().put(dimOutputNames.get(idx), obj);
+                    }
+                  }
+                }
+              }
+            }
+
+            return new Result<>(
                 timestamp,
                 new SelectResultValue(
-                    (Map<String, Integer>) jsonMapper.convertValue(
-                        resultIter.next(), new TypeReference<Map<String, Integer>>()
-                        {
-                        }
-                    ),
-                    (List<EventHolder>) jsonMapper.convertValue(
-                        resultIter.next(), new TypeReference<List<EventHolder>>()
-                        {
-                        }
-                    )
+                    pageIdentifier,
+                    dimensionSet,
+                    metricSet,
+                    eventHolders
                 )
             );
           }
@@ -286,7 +364,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   public <T extends LogicalSegment> List<T> filterSegments(SelectQuery query, List<T> segments)
   {
     // at the point where this code is called, only one datasource should exist.
-    String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+    final String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
     PagingSpec pagingSpec = query.getPagingSpec();
     Map<String, Integer> paging = pagingSpec.getPagingIdentifiers();
@@ -294,10 +372,24 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       return segments;
     }
 
-    final QueryGranularity granularity = query.getGranularity();
+    final Granularity granularity = query.getGranularity();
+
+    // A paged select query using a UnionDataSource will return pagingIdentifiers from segments in more than one
+    // dataSource which confuses subsequent queries and causes a failure. To avoid this, filter only the paging keys
+    // that are applicable to this dataSource so that each dataSource in a union query gets the appropriate keys.
+    final Iterable<String> filteredPagingKeys = Iterables.filter(
+        paging.keySet(), new Predicate<String>()
+        {
+          @Override
+          public boolean apply(String input)
+          {
+            return DataSegmentUtils.valueOf(dataSource, input) != null;
+          }
+        }
+    );
 
     List<Interval> intervals = Lists.newArrayList(
-        Iterables.transform(paging.keySet(), DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
+        Iterables.transform(filteredPagingKeys, DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
     );
     Collections.sort(
         intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()
@@ -307,13 +399,13 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();
     for (Interval interval : intervals) {
       if (query.isDescending()) {
-        long granularEnd = granularity.truncate(interval.getEndMillis());
+        long granularEnd = granularity.bucketStart(interval.getEnd()).getMillis();
         Long currentEnd = granularThresholds.get(granularEnd);
         if (currentEnd == null || interval.getEndMillis() > currentEnd) {
           granularThresholds.put(granularEnd, interval.getEndMillis());
         }
       } else {
-        long granularStart = granularity.truncate(interval.getStartMillis());
+        long granularStart = granularity.bucketStart(interval.getStart()).getMillis();
         Long currentStart = granularThresholds.get(granularStart);
         if (currentStart == null || interval.getStartMillis() < currentStart) {
           granularThresholds.put(granularStart, interval.getStartMillis());
@@ -327,7 +419,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     if (query.isDescending()) {
       while (it.hasNext()) {
         Interval interval = it.next().getInterval();
-        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.truncate(interval.getEndMillis()));
+        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.bucketStart(interval.getEnd()).getMillis());
         if (ceiling == null || interval.getStartMillis() >= ceiling.getValue()) {
           it.remove();
         }
@@ -335,7 +427,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     } else {
       while (it.hasNext()) {
         Interval interval = it.next().getInterval();
-        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.truncate(interval.getStartMillis()));
+        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.bucketStart(interval.getStart()).getMillis());
         if (floor == null || interval.getEndMillis() <= floor.getValue()) {
           it.remove();
         }

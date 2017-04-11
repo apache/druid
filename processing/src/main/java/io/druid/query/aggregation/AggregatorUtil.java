@@ -20,7 +20,12 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
+import io.druid.java.util.common.Pair;
+import io.druid.math.expr.Parser;
+import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -83,5 +88,37 @@ public class AggregatorUtil
       }
     }
     return new Pair(condensedAggs, condensedPostAggs);
+  }
+
+  public static FloatColumnSelector getFloatColumnSelector(
+      final ColumnSelectorFactory metricFactory,
+      final String fieldName,
+      final String fieldExpression,
+      final float nullValue
+  )
+  {
+    if (fieldName != null && fieldExpression == null) {
+      return metricFactory.makeFloatColumnSelector(fieldName);
+    }
+    if (fieldName == null && fieldExpression != null) {
+      return ExpressionSelectors.makeFloatColumnSelector(metricFactory, Parser.parse(fieldExpression), nullValue);
+    }
+    throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
+  }
+
+  public static LongColumnSelector getLongColumnSelector(
+      final ColumnSelectorFactory metricFactory,
+      final String fieldName,
+      final String fieldExpression,
+      final long nullValue
+  )
+  {
+    if (fieldName != null && fieldExpression == null) {
+      return metricFactory.makeLongColumnSelector(fieldName);
+    }
+    if (fieldName == null && fieldExpression != null) {
+      return ExpressionSelectors.makeLongColumnSelector(metricFactory, Parser.parse(fieldExpression), nullValue);
+    }
+    throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 }

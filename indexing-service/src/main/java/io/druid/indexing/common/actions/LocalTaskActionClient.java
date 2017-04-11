@@ -19,10 +19,10 @@
 
 package io.druid.indexing.common.actions;
 
-import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskStorage;
+import io.druid.java.util.common.ISE;
 
 import java.io.IOException;
 

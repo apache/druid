@@ -22,8 +22,8 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
-import com.metamx.common.StringUtils;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -32,7 +32,7 @@ import java.util.Arrays;
  * The "=" operator in a "having" clause. This is similar to SQL's "having aggregation = value",
  * except that in SQL an aggregation is an expression instead of an aggregation name as in Druid.
  */
-public class EqualToHavingSpec implements HavingSpec
+public class EqualToHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = 0x3;
 

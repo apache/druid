@@ -20,9 +20,9 @@
 package io.druid.query.datasourcemetadata;
 
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.Sequence;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -42,12 +42,16 @@ import java.util.concurrent.ExecutorService;
 public class DataSourceMetadataQueryRunnerFactory
     implements QueryRunnerFactory<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
-  private static final DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest();
+  private final DataSourceQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
   @Inject
-  public DataSourceMetadataQueryRunnerFactory(QueryWatcher queryWatcher)
+  public DataSourceMetadataQueryRunnerFactory(
+      DataSourceQueryQueryToolChest toolChest,
+      QueryWatcher queryWatcher
+  )
   {
+    this.toolChest = toolChest;
     this.queryWatcher = queryWatcher;
   }
 

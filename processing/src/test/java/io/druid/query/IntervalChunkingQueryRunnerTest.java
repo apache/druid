@@ -21,8 +21,8 @@ package io.druid.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids.TimeseriesQueryBuilder;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -80,7 +80,23 @@ public class IntervalChunkingQueryRunnerTest
 
     EasyMock.replay(executors);
     EasyMock.replay(toolChest);
-    
+
+    QueryRunner runner = decorator.decorate(baseRunner, toolChest);
+    runner.run(query, Collections.EMPTY_MAP);
+
+    EasyMock.verify(executors);
+  }
+
+  @Test
+  public void testChunkingOnMonths() {
+    Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-02-11T00:00:00.000").context(ImmutableMap.<String, Object>of("chunkPeriod", "P1M")).build();
+
+    executors.execute(EasyMock.anyObject(Runnable.class));
+    EasyMock.expectLastCall().times(2);
+
+    EasyMock.replay(executors);
+    EasyMock.replay(toolChest);
+
     QueryRunner runner = decorator.decorate(baseRunner, toolChest);
     runner.run(query, Collections.EMPTY_MAP);
 

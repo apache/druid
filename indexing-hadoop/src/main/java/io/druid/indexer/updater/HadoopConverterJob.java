@@ -28,12 +28,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.indexer.hadoop.WindowedDataSegment;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -527,9 +528,7 @@ public class HadoopConverterJob
       context.setStatus("CONVERTING");
       context.progress();
       final File outDir = new File(tmpDir, "out");
-      if (!outDir.mkdir() && (!outDir.exists() || !outDir.isDirectory())) {
-        throw new IOException(String.format("Could not create output directory [%s]", outDir));
-      }
+      FileUtils.forceMkdir(outDir);
       HadoopDruidConverterConfig.INDEX_MERGER.convert(
           inDir,
           outDir,
@@ -552,13 +551,25 @@ public class HadoopConverterJob
           finalSegmentTemplate,
           context.getConfiguration(),
           context,
-          context.getTaskAttemptID(),
           outDir,
-          JobHelper.makeSegmentOutputPath(
+          JobHelper.makeFileNamePath(
               baseOutputPath,
               outputFS,
-              finalSegmentTemplate
-          )
+              finalSegmentTemplate,
+              JobHelper.INDEX_ZIP
+          ),
+          JobHelper.makeFileNamePath(
+              baseOutputPath,
+              outputFS,
+              finalSegmentTemplate,
+              JobHelper.DESCRIPTOR_JSON
+          ),
+          JobHelper.makeTmpPath(
+              baseOutputPath,
+              outputFS,
+              finalSegmentTemplate,
+              context.getTaskAttemptID()
+              )
       );
       context.progress();
       context.setStatus("Finished PUSH");

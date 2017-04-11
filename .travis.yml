@@ -1,11 +1,10 @@
 language: java
 
 jdk:
-  - oraclejdk7
   - oraclejdk8
 
 script:
-  - mvn test -B && mvn clean -Pstrict compile test-compile -B
+  - mvn test -B -Pparallel-test -Dmaven.fork.count=2 && mvn clean -Pstrict compile test-compile -B
 
 sudo: false
 

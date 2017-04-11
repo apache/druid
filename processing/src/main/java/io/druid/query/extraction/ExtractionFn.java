@@ -42,10 +42,12 @@ import io.druid.query.lookup.RegisteredLookupExtractionFn;
     @JsonSubTypes.Type(name = "stringFormat", value = StringFormatExtractionFn.class),
     @JsonSubTypes.Type(name = "upper", value = UpperExtractionFn.class),
     @JsonSubTypes.Type(name = "lower", value = LowerExtractionFn.class),
-    @JsonSubTypes.Type(name = "bucket", value = BucketExtractionFn.class)
+    @JsonSubTypes.Type(name = "bucket", value = BucketExtractionFn.class),
+    @JsonSubTypes.Type(name = "strlen", value = StrlenExtractionFn.class)
 })
 /**
- * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension)
+ * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension).
+ * Note that ExtractionFn implementations are expected to be Threadsafe.
  *
  * A simple example of the type of operation this enables is the RegexDimExtractionFn which applies a
  * regular expression with a capture group.  When the regular expression matches the value of a dimension,

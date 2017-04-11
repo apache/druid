@@ -19,6 +19,8 @@
 
 package io.druid.indexing.overlord.supervisor;
 
+import io.druid.indexing.overlord.DataSourceMetadata;
+
 public interface Supervisor
 {
   void start();
@@ -32,4 +34,6 @@ public interface Supervisor
   void stop(boolean stopGracefully);
 
   SupervisorReport getStatus();
+
+  void reset(DataSourceMetadata dataSourceMetadata);
 }

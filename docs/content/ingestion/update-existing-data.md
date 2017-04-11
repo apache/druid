@@ -43,7 +43,7 @@ This is a type of `inputSpec` that reads data already stored inside Druid.
 |-----|----|-----------|--------|
 |type|String.|This should always be 'dataSource'.|yes|
 |ingestionSpec|JSON object.|Specification of Druid segments to be loaded. See below.|yes|
-|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. Default is none. |no|
+|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. With -1, druid calculates max split size based on user specified number of map task(mapred.map.tasks or mapreduce.job.maps). By default, one split is made for one segment. |no|
 
 Here is what goes inside `ingestionSpec`:
 
@@ -52,7 +52,6 @@ Here is what goes inside `ingestionSpec`:
 |dataSource|String|Druid dataSource name from which you are loading the data.|yes|
 |intervals|List|A list of strings representing ISO-8601 Intervals.|yes|
 |segments|List|List of segments from which to read data from, by default it is obtained automatically. You can obtain list of segments to put here by making a POST query to coordinator at url /druid/coordinator/v1/metadata/datasources/segments?full with list of intervals specified in the request paylod e.g. ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]. You may want to provide this list manually in order to ensure that segments read are exactly same as they were at the time of task submission, task would fail if the list provided by the user does not match with state of database when the task actually runs.|no|
-|granularity|String|Defines the granularity of the query while loading data. Default value is "none". See [Granularities](../querying/granularities.html).|no|
 |filter|JSON|See [Filters](../querying/filters.html)|no|
 |dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have an explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
 |metrics|Array of String|Name of metric columns to load. By default, the list will be constructed from the "name" of all the configured aggregators.|no|

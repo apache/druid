@@ -26,11 +26,13 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 /**
  * Implement this for different ways to (optionally securely) access db passwords.
  */
-@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type", defaultImpl = DefaultPasswordProvider.class)
-@JsonSubTypes(value={
-    @JsonSubTypes.Type(name="default", value=DefaultPasswordProvider.class),
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultPasswordProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "default", value = DefaultPasswordProvider.class),
+    @JsonSubTypes.Type(name = "environment", value = EnvironmentVariablePasswordProvider.class),
+
 })
-public interface PasswordProvider 
+public interface PasswordProvider
 {
   public String getPassword();
 }

@@ -57,7 +57,9 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     INTERVAL,
     AGGREGATORS,
     MINMAX,
-    QUERYGRANULARITY;
+    TIMESTAMPSPEC,
+    QUERYGRANULARITY,
+    ROLLUP;
 
     @JsonValue
     @Override
@@ -84,7 +86,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 
   public static final EnumSet<AnalysisType> DEFAULT_ANALYSIS_TYPES = EnumSet.of(
       AnalysisType.CARDINALITY,
-      AnalysisType.SIZE,
       AnalysisType.INTERVAL,
       AnalysisType.MINMAX
   );
@@ -188,9 +189,19 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return analysisTypes.contains(AnalysisType.AGGREGATORS);
   }
 
+  public boolean hasTimestampSpec()
+  {
+    return analysisTypes.contains(AnalysisType.TIMESTAMPSPEC);
+  }
+
   public boolean hasQueryGranularity()
   {
     return analysisTypes.contains(AnalysisType.QUERYGRANULARITY);
+  }
+
+  public boolean hasRollup()
+  {
+    return analysisTypes.contains(AnalysisType.ROLLUP);
   }
 
   public boolean hasMinMax()

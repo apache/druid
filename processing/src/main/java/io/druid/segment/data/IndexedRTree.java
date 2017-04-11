@@ -20,8 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.spatial.ImmutableRTree;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.spatial.ImmutableRTree;
 
 import java.nio.ByteBuffer;
 
@@ -86,9 +86,8 @@ public class IndexedRTree implements Comparable<IndexedRTree>
     @Override
     public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
-      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new ImmutableRTree(readOnlyBuffer, bitmapFactory);
+      buffer.limit(buffer.position() + numBytes);
+      return new ImmutableRTree(buffer, bitmapFactory);
     }
 
     @Override

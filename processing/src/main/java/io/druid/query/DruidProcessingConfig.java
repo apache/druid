@@ -19,7 +19,7 @@
 
 package io.druid.query;
 
-import com.metamx.common.concurrent.ExecutorServiceConfig;
+import io.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import io.druid.segment.column.ColumnConfig;
 import org.skife.config.Config;
 
@@ -49,7 +49,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   @Config("${base_path}.numMergeBuffers")
   public int getNumMergeBuffers()
   {
-    return 0;
+    return Math.max(2, getNumThreads() / 4);
   }
 
   @Config(value = "${base_path}.columnCache.sizeBytes")
@@ -62,5 +62,10 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public boolean isFifo()
   {
     return false;
+  }
+
+  @Config(value = "${base_path}.tmpDir")
+  public String getTmpDir() {
+    return System.getProperty("java.io.tmpdir");
   }
 }

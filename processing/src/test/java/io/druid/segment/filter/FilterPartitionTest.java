@@ -20,39 +20,31 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.aggregation.FilteredAggregatorFactory;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidFloatPredicate;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
-import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -61,7 +53,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -91,11 +82,11 @@ public class FilterPartitionTest extends BaseFilterTest
   {
     public NoBitmapDimensionPredicateFilter(
         final String dimension,
-        final Predicate<String> predicate,
+        final DruidPredicateFactory predicateFactory,
         final ExtractionFn extractionFn
     )
     {
-      super(dimension, predicate, extractionFn);
+      super(dimension, predicateFactory, extractionFn);
     }
 
     @Override
@@ -125,21 +116,56 @@ public class FilterPartitionTest extends BaseFilterTest
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
         final String valueOrNull = Strings.emptyToNull(value);
-        final Predicate<String> predicate = new Predicate<String>()
+        final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
-          public boolean apply(String input)
+          public Predicate<String> makeStringPredicate()
           {
-            return Objects.equals(valueOrNull, input);
+            return new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                return Objects.equals(valueOrNull, input);
+              }
+            };
           }
+
+          @Override
+          public DruidLongPredicate makeLongPredicate()
+          {
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return Objects.equals(valueOrNull, String.valueOf(input));
+              }
+            };
+          }
+
+          @Override
+          public DruidFloatPredicate makeFloatPredicate()
+          {
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return Objects.equals(valueOrNull, String.valueOf(input));
+              }
+            };
+          }
+
         };
-        return new NoBitmapDimensionPredicateFilter(dimension, predicate, extractionFn);
+
+        return new NoBitmapDimensionPredicateFilter(dimension, predicateFactory, extractionFn);
       }
     }
   }
 
   private static String JS_FN = "function(str) { return 'super-' + str; }";
-  private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getDefault());
+  private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
 
   private static final String TIMESTAMP_COLUMN = "timestamp";
 
@@ -171,10 +197,11 @@ public class FilterPartitionTest extends BaseFilterTest
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -538,12 +565,6 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of("4", "6")
     );
 
-    assertFilterMatchesCNF(
-        dimFilter1,
-        ImmutableList.of("4", "6")
-    );
-
-
     DimFilter dimFilter2 = new OrDimFilter(Arrays.<DimFilter>asList(
         new SelectorDimFilter("dim0", "2", null),
         new SelectorDimFilter("dim0", "3", null),
@@ -559,12 +580,6 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of("2", "3", "7")
     );
 
-    assertFilterMatchesCNF(
-        dimFilter2,
-        ImmutableList.of("2", "3", "7")
-    );
-
-
     DimFilter dimFilter3 = new OrDimFilter(Arrays.<DimFilter>asList(
         dimFilter1,
         dimFilter2,
@@ -575,20 +590,11 @@ public class FilterPartitionTest extends BaseFilterTest
         ))
     );
 
-    Filter filter3 = dimFilter3.toFilter();
-    Filter filter3CNF = Filters.convertToCNF(dimFilter3.toFilter());
-
     assertFilterMatches(
         dimFilter3,
         ImmutableList.of("2", "3", "4", "6", "7", "9")
     );
-
-    assertFilterMatchesCNF(
-        dimFilter3,
-        ImmutableList.of("2", "3", "4", "6", "7", "9")
-    );
   }
-
 
   @Test
   public void testDistributeOrCNFExtractionFn()
@@ -613,12 +619,6 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of("4", "6")
     );
 
-    assertFilterMatchesCNF(
-        dimFilter1,
-        ImmutableList.of("4", "6")
-    );
-
-
     DimFilter dimFilter2 = new OrDimFilter(Arrays.<DimFilter>asList(
         new SelectorDimFilter("dim0", "super-2", JS_EXTRACTION_FN),
         new SelectorDimFilter("dim0", "super-3", JS_EXTRACTION_FN),
@@ -633,12 +633,6 @@ public class FilterPartitionTest extends BaseFilterTest
         dimFilter2,
         ImmutableList.of("2", "3", "7")
     );
-
-    assertFilterMatchesCNF(
-        dimFilter2,
-        ImmutableList.of("2", "3", "7")
-    );
-
 
     DimFilter dimFilter3 = new OrDimFilter(Arrays.<DimFilter>asList(
         dimFilter1,
@@ -657,62 +651,5 @@ public class FilterPartitionTest extends BaseFilterTest
         dimFilter3,
         ImmutableList.of("2", "3", "4", "6", "7", "9")
     );
-
-    assertFilterMatchesCNF(
-        dimFilter3,
-        ImmutableList.of("2", "3", "4", "6", "7", "9")
-    );
   }
-
-
-  private void assertFilterMatches(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
-  }
-
-  private void assertFilterMatchesCNF(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilterCNF(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
-  }
-
-  protected List<String> selectColumnValuesMatchingFilterCNF(final DimFilter dimFilter, final String selectColumn)
-  {
-    final Filter filter = Filters.convertToCNF(maybeOptimize(dimFilter).toFilter());
-
-    final Sequence<Cursor> cursors = makeCursorSequence(filter);
-    Sequence<List<String>> seq = Sequences.map(
-        cursors,
-        new Function<Cursor, List<String>>()
-        {
-          @Override
-          public List<String> apply(Cursor input)
-          {
-            final DimensionSelector selector = input.makeDimensionSelector(
-                new DefaultDimensionSpec(selectColumn, selectColumn)
-            );
-
-            final List<String> values = Lists.newArrayList();
-
-            while (!input.isDone()) {
-              IndexedInts row = selector.getRow();
-              Preconditions.checkState(row.size() == 1);
-              values.add(selector.lookupName(row.get(0)));
-              input.advance();
-            }
-
-            return values;
-          }
-        }
-    );
-    return Sequences.toList(seq, new ArrayList<List<String>>()).get(0);
-  }
-
 }

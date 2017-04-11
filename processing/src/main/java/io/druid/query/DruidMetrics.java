@@ -20,14 +20,7 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.aggregation.AggregatorFactory;
-import org.joda.time.Interval;
 
 import java.util.List;
 
@@ -41,7 +34,6 @@ public class DruidMetrics
   public final static String ID = "id";
   public final static String TASK_ID = "taskId";
   public final static String STATUS = "status";
-  public final static String VERSION = "version";
 
   // task metrics
   public final static String TASK_TYPE = "taskType";
@@ -62,44 +54,21 @@ public class DruidMetrics
     return retVal;
   }
 
-  public static <T> ServiceMetricEvent.Builder makePartialQueryTimeMetric(Query<T> query)
-  {
-    return new ServiceMetricEvent.Builder()
-        .setDimension(VERSION, Strings.nullToEmpty(DruidMetrics.class.getPackage().getImplementationVersion()))
-        .setDimension(DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()))
-        .setDimension(TYPE, query.getType())
-        .setDimension(
-            INTERVAL,
-            Lists.transform(
-                query.getIntervals(),
-                new Function<Interval, String>()
-                {
-                  @Override
-                  public String apply(Interval input)
-                  {
-                    return input.toString();
-                  }
-                }
-            ).toArray(new String[query.getIntervals().size()])
-        )
-        .setDimension("hasFilters", String.valueOf(query.hasFilters()))
-        .setDimension("duration", query.getDuration().toString());
-  }
-
-  public static <T> ServiceMetricEvent.Builder makeQueryTimeMetric(
-      final ObjectMapper jsonMapper, final Query<T> query, final String remoteAddr
+  public static <T> QueryMetrics<?> makeRequestMetrics(
+      final GenericQueryMetricsFactory queryMetricsFactory,
+      final QueryToolChest<T, Query<T>> toolChest,
+      final Query<T> query,
+      final String remoteAddr
   ) throws JsonProcessingException
   {
-    return makePartialQueryTimeMetric(query)
-        .setDimension(
-            "context",
-            jsonMapper.writeValueAsString(
-                query.getContext() == null
-                ? ImmutableMap.of()
-                : query.getContext()
-            )
-        )
-        .setDimension("remoteAddress", remoteAddr)
-        .setDimension(ID, query.getId());
+    QueryMetrics<? super Query<T>> queryMetrics;
+    if (toolChest != null) {
+      queryMetrics = toolChest.makeMetrics(query);
+    } else {
+      queryMetrics = queryMetricsFactory.makeMetrics(query);
+    }
+    queryMetrics.context(query);
+    queryMetrics.remoteAddress(remoteAddr);
+    return queryMetrics;
   }
 }

@@ -23,11 +23,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Shorts;
-import com.metamx.common.IAE;
-import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.CompressedPools;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -147,7 +149,11 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     return baseBuffers;
   }
 
-  public static CompressedVSizeIntsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  public static CompressedVSizeIntsIndexedSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      SmooshedFileMapper fileMapper
+  )
   {
     byte versionFromBuffer = buffer.get();
 
@@ -167,7 +173,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
           numBytes,
           GenericIndexed.read(
               buffer,
-              CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, chunkBytes)
+              CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, chunkBytes),
+              fileMapper
           ),
           compression
       );
@@ -366,7 +373,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     }
 
     @Override
-    public Iterator<Integer> iterator()
+    public IntIterator iterator()
     {
       return new IndexedIntsIterator(this);
     }

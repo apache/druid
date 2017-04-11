@@ -22,14 +22,13 @@ package io.druid.cli.validate;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
-import com.metamx.common.Granularity;
 import io.airlift.airline.Cli;
-import io.druid.granularity.QueryGranularities;
 import io.druid.guice.FirehoseModule;
 import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -150,7 +149,7 @@ public class DruidJsonValidatorTest
                 "foo",
                 null,
                 new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
+                new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
                 jsonMapper
             ),
             new RealtimeIOConfig(
@@ -181,6 +180,7 @@ public class DruidJsonValidatorTest
                 0,
                 0,
                 true,
+                null,
                 null
             )
         ),

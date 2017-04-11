@@ -19,47 +19,35 @@
 
 package io.druid.server.initialization.jetty;
 
-import com.google.common.base.Joiner;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
+
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlets.AsyncGzipFilter;
-import org.eclipse.jetty.servlets.GzipFilter;
 
 import javax.ws.rs.HttpMethod;
 import java.util.Set;
 
 public class JettyServerInitUtils
 {
+  private static final String[] GZIP_METHODS = new String[]{HttpMethod.GET, HttpMethod.POST};
 
-  public static final String GZIP_METHODS = Joiner.on(",").join(HttpMethod.GET, HttpMethod.POST);
-
-  public static FilterHolder defaultGzipFilterHolder()
+  public static GzipHandler wrapWithDefaultGzipHandler(final Handler handler)
   {
-    final FilterHolder gzipFilterHolder = new FilterHolder(GzipFilter.class);
-    setDefaultGzipFilterHolderParameters(gzipFilterHolder);
-    return gzipFilterHolder;
-  }
-
-  public static FilterHolder defaultAsyncGzipFilterHolder()
-  {
-    final FilterHolder gzipFilterHolder = new FilterHolder(AsyncGzipFilter.class);
-    setDefaultGzipFilterHolderParameters(gzipFilterHolder);
-    return gzipFilterHolder;
-  }
-
-  private static void setDefaultGzipFilterHolderParameters(final FilterHolder filterHolder)
-  {
-    filterHolder.setInitParameter("minGzipSize", "0");
-    filterHolder.setInitParameter("methods", GZIP_METHODS);
+    GzipHandler gzipHandler = new GzipHandler();
+    gzipHandler.setMinGzipSize(0);
+    gzipHandler.setIncludedMethods(GZIP_METHODS);
 
     // We don't actually have any precomputed .gz resources, and checking for them inside jars is expensive.
-    filterHolder.setInitParameter("checkGzExists", String.valueOf(false));
+    gzipHandler.setCheckGzExists(false);
+    gzipHandler.setHandler(handler);
+    return gzipHandler;
   }
 
   public static void addExtensionFilters(ServletContextHandler handler, Injector injector)

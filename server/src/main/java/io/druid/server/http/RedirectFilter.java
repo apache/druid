@@ -20,7 +20,8 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -67,7 +68,7 @@ public class RedirectFilter implements Filter
       throw new ServletException("non-HTTP request or response");
     }
 
-    if (redirectInfo.doLocal()) {
+    if (redirectInfo.doLocal(request.getRequestURI())) {
       chain.doFilter(request, response);
     } else {
       URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());

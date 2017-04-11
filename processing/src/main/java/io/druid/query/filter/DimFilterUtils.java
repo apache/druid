@@ -47,8 +47,11 @@ public class DimFilterUtils
   static final byte JAVASCRIPT_CACHE_ID = 0x7;
   static final byte SPATIAL_CACHE_ID = 0x8;
   static final byte IN_CACHE_ID = 0x9;
+  static final byte BOUND_CACHE_ID = 0xA;
+  static final byte INTERVAL_CACHE_ID = 0xB;
+  static final byte LIKE_CACHE_ID = 0xC;
+  static final byte COLUMN_COMPARISON_CACHE_ID = 0xD;
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
-  public static byte BOUND_CACHE_ID = 0xA;
 
   static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)
   {

@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -31,12 +31,13 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.server.lookup.namespace.cache.CacheHandler;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -78,10 +79,12 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final ListeningExecutorService executorService;
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
-  private final String factoryId = UUID.randomUUID().toString();
+  private final String factoryId;
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
+  private CacheHandler cacheHandler;
 
+  private volatile ConsumerConnector consumerConnector;
   private volatile ListenableFuture<?> future = null;
 
   @JsonProperty
@@ -114,6 +117,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.cacheManager = cacheManager;
     this.connectTimeout = connectTimeout;
     this.injective = injective;
+    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID().toString();
   }
 
   public KafkaLookupExtractorFactory(
@@ -179,7 +183,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       kafkaProperties.setProperty("group.id", factoryId);
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
-      final Map<String, String> map = cacheManager.getCacheMap(factoryId);
+      cacheHandler = cacheManager.createCache();
+      final Map<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
       // Enable publish-subscribe
       kafkaProperties.setProperty("auto.offset.reset", "smallest");
@@ -192,9 +197,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
             @Override
             public void run()
             {
-              while (!executorService.isShutdown() && !Thread.currentThread().isInterrupted()) {
-                final ConsumerConnector consumerConnector = buildConnector(kafkaProperties);
+              while (!executorService.isShutdown()) {
+                consumerConnector = buildConnector(kafkaProperties);
                 try {
+                  if (executorService.isShutdown()) {
+                    break;
+                  }
+
                   final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
                       new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
                   );
@@ -268,11 +277,12 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
-        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+        executorService.shutdown();
+        if (!future.isDone() && !future.cancel(false)) {
           LOG.warn("Could not cancel kafka listening thread");
         }
         LOG.error(e, "Failed to start kafka extraction factory");
-        cacheManager.delete(factoryId);
+        cacheHandler.close();
         return false;
       }
 
@@ -281,7 +291,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     }
   }
 
-  // Overriden in tests
+  // Overridden in tests
   ConsumerConnector buildConnector(Properties properties)
   {
     return new kafka.javaapi.consumer.ZookeeperConsumerConnector(
@@ -298,18 +308,20 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         return !started.get();
       }
       started.set(false);
-      executorService.shutdownNow();
+      executorService.shutdown();
+
+      if (consumerConnector != null) {
+        consumerConnector.shutdown();
+      }
+
       final ListenableFuture<?> future = this.future;
       if (future != null) {
-        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+        if (!future.isDone() && !future.cancel(false)) {
           LOG.error("Error cancelling future for topic [%s]", getKafkaTopic());
           return false;
         }
       }
-      if (!cacheManager.delete(factoryId)) {
-        LOG.error("Error removing [%s] for topic [%s] from cache", factoryId, getKafkaTopic());
-        return false;
-      }
+      cacheHandler.close();
       return true;
     }
   }
@@ -321,11 +333,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       return false;
     }
 
-    if (other == null) {
-      return false;
-    }
-
-    if (getClass() != other.getClass()) {
+    if (other == null || getClass() != other.getClass()) {
       return true;
     }
 
@@ -365,7 +373,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               .putLong(startCount)
               .array();
         } else {
-          // If the number of things added HAS changed during the coruse of this extractor's life, we CANNOT cache
+          // If the number of things added HAS changed during the course of this extractor's life, we CANNOT cache
           final byte[] scrambler = StringUtils.toUtf8(UUID.randomUUID().toString());
           return ByteBuffer
               .allocate(idutf8.length + 1 + scrambler.length + 1)

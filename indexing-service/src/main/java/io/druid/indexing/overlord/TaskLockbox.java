@@ -32,14 +32,15 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.common.guava.FunctionalIterable;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -64,7 +65,7 @@ public class TaskLockbox
   // Datasource -> Interval -> Tasks + TaskLock
   private final Map<String, NavigableMap<Interval, TaskLockPosse>> running = Maps.newHashMap();
   private final TaskStorage taskStorage;
-  private final ReentrantLock giant = new ReentrantLock();
+  private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition lockReleaseCondition = giant.newCondition();
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);

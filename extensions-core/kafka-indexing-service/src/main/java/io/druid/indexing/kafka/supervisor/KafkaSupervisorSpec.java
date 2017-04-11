@@ -24,10 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import io.druid.guice.annotations.Json;
-import io.druid.indexing.kafka.KafkaIndexTaskClient;
 import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
-import io.druid.indexing.kafka.KafkaTuningConfig;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskStorage;
@@ -35,11 +34,15 @@ import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.segment.indexing.DataSchema;
 
+import java.util.List;
+import java.util.Map;
+
 public class KafkaSupervisorSpec implements SupervisorSpec
 {
   private final DataSchema dataSchema;
-  private final KafkaTuningConfig tuningConfig;
+  private final KafkaSupervisorTuningConfig tuningConfig;
   private final KafkaSupervisorIOConfig ioConfig;
+  private final Map<String, Object> context;
 
   private final TaskStorage taskStorage;
   private final TaskMaster taskMaster;
@@ -50,8 +53,9 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   @JsonCreator
   public KafkaSupervisorSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") KafkaTuningConfig tuningConfig,
+      @JsonProperty("tuningConfig") KafkaSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaSupervisorIOConfig ioConfig,
+      @JsonProperty("context") Map<String, Object> context,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
@@ -62,8 +66,25 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.tuningConfig = tuningConfig != null
                         ? tuningConfig
-                        : new KafkaTuningConfig(null, null, null, null, null, null, null, null, null);
+                        : new KafkaSupervisorTuningConfig(
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null
+                        );
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
+    this.context = context;
 
     this.taskStorage = taskStorage;
     this.taskMaster = taskMaster;
@@ -79,7 +100,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   }
 
   @JsonProperty
-  public KafkaTuningConfig getTuningConfig()
+  public KafkaSupervisorTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
@@ -88,6 +109,12 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   public KafkaSupervisorIOConfig getIoConfig()
   {
     return ioConfig;
+  }
+
+  @JsonProperty
+  public Map<String, Object> getContext()
+  {
+    return context;
   }
 
   @Override
@@ -107,5 +134,21 @@ public class KafkaSupervisorSpec implements SupervisorSpec
         mapper,
         this
     );
+  }
+
+  @Override
+  public List<String> getDataSources()
+  {
+    return ImmutableList.of(getDataSchema().getDataSource());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "KafkaSupervisorSpec{" +
+           "dataSchema=" + dataSchema +
+           ", tuningConfig=" + tuningConfig +
+           ", ioConfig=" + ioConfig +
+           '}';
   }
 }

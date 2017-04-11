@@ -26,8 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.CloseQuietly;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.concurrent.Execs;
@@ -50,8 +48,12 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.indexing.overlord.helpers.OverlordHelperManager;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.server.DruidNode;
+import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -182,8 +184,10 @@ public class OverlordTest
             announcementLatch.countDown();
           }
         },
+        new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
-        supervisorManager
+        supervisorManager,
+        EasyMock.createNiceMock(OverlordHelperManager.class)
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }

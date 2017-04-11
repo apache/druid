@@ -27,49 +27,66 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+import com.google.common.collect.Sets;
 import io.druid.collections.StupidPool;
-import io.druid.granularity.QueryGranularity;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.aggregation.last.LongLastAggregatorFactory;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
-import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -89,8 +106,25 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class TopNQueryRunnerTest
 {
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
+  {
+    List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
+    List<Object[]> parameters = new ArrayList<>();
+    for (int i = 0; i < 8; i++) {
+      for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
+        Object[] params = new Object[4];
+        params[0] = firstParameter;
+        params[1] = (i & 1) != 0;
+        params[2] = (i & 2) != 0;
+        params[3] = (i & 4) != 0;
+        parameters.add(params);
+      }
+    }
+    return parameters;
+  }
+
+  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners() throws IOException
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();
     retVal.addAll(
@@ -99,7 +133,7 @@ public class TopNQueryRunnerTest
                 TestQueryRunners.getPool(),
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
-                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
                 ),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -109,6 +143,7 @@ public class TopNQueryRunnerTest
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
                 new StupidPool<ByteBuffer>(
+                    "TopNQueryRunnerFactory-bufferPool",
                     new Supplier<ByteBuffer>()
                     {
                       @Override
@@ -120,23 +155,59 @@ public class TopNQueryRunnerTest
                 ),
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
-                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
                 ),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )
     );
-
-    return QueryRunnerTestHelper.transformToConstructionFeeder(retVal);
+    return retVal;
   }
 
   private final QueryRunner<Result<TopNResultValue>> runner;
+  private final boolean duplicateSingleAggregatorQueries;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   public TopNQueryRunnerTest(
-      QueryRunner<Result<TopNResultValue>> runner
+      QueryRunner<Result<TopNResultValue>> runner,
+      boolean specializeGeneric1AggPooledTopN,
+      boolean specializeGeneric2AggPooledTopN,
+      boolean duplicateSingleAggregatorQueries
   )
   {
     this.runner = runner;
+    PooledTopNAlgorithm.specializeGeneric1AggPooledTopN = specializeGeneric1AggPooledTopN;
+    PooledTopNAlgorithm.specializeGeneric2AggPooledTopN = specializeGeneric2AggPooledTopN;
+    this.duplicateSingleAggregatorQueries = duplicateSingleAggregatorQueries;
+  }
+
+  private List<AggregatorFactory> duplicateAggregators(AggregatorFactory aggregatorFactory, AggregatorFactory duplicate)
+  {
+    if (duplicateSingleAggregatorQueries) {
+      return ImmutableList.of(aggregatorFactory, duplicate);
+    } else {
+      return Collections.singletonList(aggregatorFactory);
+    }
+  }
+
+  private List<Map<String, Object>> withDuplicateResults(
+      List<? extends Map<String, Object>> results,
+      String key,
+      String duplicateKey
+  )
+  {
+    if (!duplicateSingleAggregatorQueries) {
+      return (List<Map<String, Object>>) results;
+    }
+    List<Map<String, Object>> resultsWithDuplicates = new ArrayList<>();
+    for (Map<String, Object> result : results) {
+      resultsWithDuplicates.add(
+          ImmutableMap.<String, Object>builder().putAll(result).put(duplicateKey, result.get(key)).build()
+      );
+    }
+    return resultsWithDuplicates;
   }
 
   private Sequence<Result<TopNResultValue>> assertExpectedResults(
@@ -164,8 +235,45 @@ public class TopNQueryRunnerTest
         new TopNQueryConfig(),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
+    final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
+        chest.mergeResults(runner),
+        chest
+    );
     return mergeRunner.run(query, context);
+  }
+
+  @Test
+  public void testEmptyTopN()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.emptyInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index"),
+                        new DoubleFirstAggregatorFactory("first", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            new DateTime("2020-04-02T00:00:00.000Z"),
+            new TopNResultValue(ImmutableList.of())
+        )
+    );
+    assertExpectedResults(expectedResults, query);
   }
 
   @Test
@@ -293,7 +401,6 @@ public class TopNQueryRunnerTest
     );
     assertExpectedResults(expectedResults, query);
   }
-
 
   @Test
   public void testFullOnTopNOverUniques()
@@ -443,6 +550,231 @@ public class TopNQueryRunnerTest
         )
     );
     assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOverFirstLastAggregator()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.monthGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(
+                new LongFirstAggregatorFactory("first", "index"),
+                new LongLastAggregatorFactory("last", "index")
+            )
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1000L)
+                        .put("last", 1127L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 800L)
+                        .put("last", 943L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 100L)
+                        .put("last", 155L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-02-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1203L)
+                        .put("last", 1292L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1667L)
+                        .put("last", 1101L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 132L)
+                        .put("last", 114L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-03-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1124L)
+                        .put("last", 1366L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1166L)
+                        .put("last", 1063L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 153L)
+                        .put("last", 125L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1314L)
+                        .put("last", 1029L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1447L)
+                        .put("last", 780L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 135L)
+                        .put("last", 120L)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOverFirstLastAggregatorChunkPeriod()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.monthGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(
+                new LongFirstAggregatorFactory("first", "index"),
+                new LongLastAggregatorFactory("last", "index")
+            )
+        )
+        .context(ImmutableMap.<String, Object>of("chunkPeriod", "P1D"))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1000L)
+                        .put("last", 1127L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 800L)
+                        .put("last", 943L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 100L)
+                        .put("last", 155L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-02-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1203L)
+                        .put("last", 1292L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1667L)
+                        .put("last", 1101L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 132L)
+                        .put("last", 114L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-03-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1124L)
+                        .put("last", 1366L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1166L)
+                        .put("last", 1063L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 153L)
+                        .put("last", 125L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1314L)
+                        .put("last", 1029L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1447L)
+                        .put("last", 780L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 135L)
+                        .put("last", 120L)
+                        .build()
+                )
+            )
+        )
+    );
+
+    final Sequence<Result<TopNResultValue>> retval = runWithPreMergeAndMerge(query);
+    TestHelper.assertExpectedResults(expectedResults, retval);
   }
 
   @Test
@@ -1299,7 +1631,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec(""))
+        .metric(new DimensionTopNMetricSpec("", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1346,7 +1678,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec(""))
+        .metric(new DimensionTopNMetricSpec("", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .build();
@@ -1379,7 +1711,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec("spot"))
+        .metric(new DimensionTopNMetricSpec("spot", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1419,7 +1751,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec("t"))
+        .metric(new DimensionTopNMetricSpec("t", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1459,7 +1791,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("upfront")))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("upfront", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1499,7 +1831,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("u")))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("u", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1543,8 +1875,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false, JavaScriptConfig.getDefault()),
-                null
+                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false, JavaScriptConfig.getEnabledInstance())
             )
         )
         .metric("rows")
@@ -1554,7 +1885,7 @@ public class TopNQueryRunnerTest
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
-    QueryGranularity gran = QueryGranularities.DAY;
+    Granularity gran = Granularities.DAY;
     TimeseriesQuery tsQuery = Druids.newTimeseriesQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(gran)
@@ -1602,7 +1933,7 @@ public class TopNQueryRunnerTest
         .dimension(
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.qualityDimension,
-                new RegexDimExtractionFn(".(.)", false, null), null
+                new RegexDimExtractionFn(".(.)", false, null)
             )
         )
         .metric("index")
@@ -1638,6 +1969,27 @@ public class TopNQueryRunnerTest
             )
         )
     );
+
+    assertExpectedResults(expectedResults, query);
+
+    query = query.withAggregatorSpecs(
+        Arrays.asList(
+            QueryRunnerTestHelper.rowsCount,
+            new DoubleSumAggregatorFactory("index", null, "-index + 100")
+        )
+    );
+
+    expectedResults = Arrays.asList(
+        TopNQueryRunnerTestHelper.createExpectedRows(
+            "2011-01-12T00:00:00.000Z",
+            new String[]{QueryRunnerTestHelper.qualityDimension, "rows", "index", "addRowsIndexConstant"},
+            Arrays.asList(
+                new Object[]{"n", 93L, -2786.472755432129, -2692.472755432129},
+                new Object[]{"u", 186L, -3949.824363708496, -3762.824363708496}
+            )
+        )
+    );
+
     assertExpectedResults(expectedResults, query);
   }
 
@@ -1651,8 +2003,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)", false, null),
-                null
+                new RegexDimExtractionFn("(.)", false, null)
             )
         )
         .metric("rows")
@@ -1695,6 +2046,44 @@ public class TopNQueryRunnerTest
     assertExpectedResults(expectedResults, query);
   }
 
+  @Test
+  public void testTopNDimExtractionNoAggregators()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new RegexDimExtractionFn("(.)", false, null)
+            )
+        )
+        .metric(new LexicographicTopNMetricSpec(QueryRunnerTestHelper.marketDimension))
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "s"
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "t"
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "u"
+                    )
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
 
   @Test
   public void testTopNDimExtractionFastTopNOptimalWithReplaceMissing()
@@ -1716,8 +2105,7 @@ public class TopNQueryRunnerTest
                         false
                     ), false, "MISSING", true,
                     false
-                ),
-                null
+                )
             )
         )
         .metric("rows")
@@ -1781,8 +2169,7 @@ public class TopNQueryRunnerTest
                         false
                     ), false, "MISSING", false,
                     false
-                ),
-                null
+                )
             )
         )
         .metric("rows")
@@ -1847,8 +2234,7 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, true,
                     false
-                ),
-                null
+                )
             )
         )
         .metric("rows")
@@ -1915,8 +2301,7 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, false,
                     false
-                ),
-                null
+                )
             )
         )
         .metric("rows")
@@ -1982,11 +2367,10 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, true,
                     false
-                ),
-                null
+                )
             )
         )
-        .metric(new LexicographicTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2049,11 +2433,10 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, false,
                     false
-                ),
-                null
+                )
             )
         )
-        .metric(new LexicographicTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2117,11 +2500,10 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, true,
                     false
-                ),
-                null
+                )
             )
         )
-        .metric(new LexicographicTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2171,11 +2553,10 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)", false, null),
-                null
+                new RegexDimExtractionFn("(.)", false, null)
             )
         )
-        .metric(new LexicographicTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2225,11 +2606,10 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("..(.)", false, null),
-                null
+                new RegexDimExtractionFn("..(.)", false, null)
             )
         )
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec(null)))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2279,11 +2659,10 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)", false, null),
-                null
+                new RegexDimExtractionFn("(.)", false, null)
             )
         )
-        .metric(new LexicographicTopNMetricSpec("s"))
+        .metric(new DimensionTopNMetricSpec("s", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2350,10 +2729,10 @@ public class TopNQueryRunnerTest
                   {
                     return ExtractionType.MANY_TO_ONE;
                   }
-                }, null
+                }
             )
         )
-        .metric(new LexicographicTopNMetricSpec("s"))
+        .metric(new DimensionTopNMetricSpec("s", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2397,11 +2776,10 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)", false, null),
-                null
+                new RegexDimExtractionFn("(.)", false, null)
             )
         )
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("u")))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("u", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2444,11 +2822,10 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("..(.)", false, null),
-                null
+                new RegexDimExtractionFn("..(.)", false, null)
             )
         )
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("p")))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("p", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2523,8 +2900,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                nullStringDimExtraction,
-                null
+                nullStringDimExtraction
             )
         )
         .build();
@@ -2613,8 +2989,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                emptyStringDimExtraction,
-                null
+                emptyStringDimExtraction
             )
         )
         .build();
@@ -2706,6 +3081,10 @@ public class TopNQueryRunnerTest
   @Test
   public void testTopNQueryByComplexMetric()
   {
+    ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec(
+        QueryRunnerTestHelper.qualityDimension,
+        QueryRunnerTestHelper.qualityDimension
+    ));
     TopNQuery query =
         new TopNQueryBuilder()
             .dataSource(QueryRunnerTestHelper.dataSource)
@@ -2714,32 +3093,82 @@ public class TopNQueryRunnerTest
             .metric(new NumericTopNMetricSpec("numVals"))
             .threshold(10)
             .intervals(QueryRunnerTestHelper.firstToThird)
-            .aggregators(
-                Lists.<AggregatorFactory>newArrayList(
-                    new CardinalityAggregatorFactory(
-                        "numVals", ImmutableList.of(QueryRunnerTestHelper.marketDimension), false
-                    )
-                )
-            )
+            .aggregators(duplicateAggregators(
+                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false),
+                new CardinalityAggregatorFactory("numVals1", aggregatorDimensionSpecs, false)
+            ))
             .build();
 
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>of(
-                        "market", "spot",
-                        "numVals", 1.0002442201269182d
+                withDuplicateResults(
+                    Arrays.<Map<String, Object>>asList(
+                        ImmutableMap.<String, Object>of(
+                            "market", "spot",
+                            "numVals", 9.019833517963864d
+                        ),
+                        ImmutableMap.<String, Object>of(
+                            "market", "total_market",
+                            "numVals", 2.000977198748901d
+                        ),
+                        ImmutableMap.<String, Object>of(
+                            "market", "upfront",
+                            "numVals", 2.000977198748901d
+                        )
                     ),
-                    ImmutableMap.<String, Object>of(
-                        "market", "total_market",
-                        "numVals", 1.0002442201269182d
+                    "numVals",
+                    "numVals1"
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNQueryCardinalityAggregatorWithExtractionFn()
+  {
+    String helloJsFn = "function(str) { return 'hello' }";
+    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
+
+    DimensionSpec dimSpec = new ExtractionDimensionSpec(QueryRunnerTestHelper.marketDimension,
+                                                        QueryRunnerTestHelper.marketDimension,
+                                                        helloFn);
+
+    ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.<DimensionSpec>of(new ExtractionDimensionSpec(
+        QueryRunnerTestHelper.qualityDimension,
+        QueryRunnerTestHelper.qualityDimension,
+        helloFn
+    ));
+    TopNQuery query =
+        new TopNQueryBuilder()
+            .dataSource(QueryRunnerTestHelper.dataSource)
+            .granularity(QueryRunnerTestHelper.allGran)
+            .dimension(dimSpec)
+            .metric(new NumericTopNMetricSpec("numVals"))
+            .threshold(10)
+            .intervals(QueryRunnerTestHelper.firstToThird)
+            .aggregators(duplicateAggregators(
+                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs,false),
+                new CardinalityAggregatorFactory("numVals1",aggregatorDimensionSpecs,false)
+            ))
+            .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                withDuplicateResults(
+                    Collections.singletonList(
+                        ImmutableMap.<String, Object>of(
+                            "market", "hello",
+                            "numVals", 1.0002442201269182d
+                        )
                     ),
-                    ImmutableMap.<String, Object>of(
-                        "market", "upfront",
-                        "numVals", 1.0002442201269182d
-                    )
+                    "numVals",
+                    "numVals1"
                 )
             )
         )
@@ -2984,8 +3413,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 Column.TIME_COLUMN_NAME,
                 "dayOfWeek",
-                new TimeFormatExtractionFn("EEEE", null, null),
-                null
+                new TimeFormatExtractionFn("EEEE", null, null, null, false)
             )
         )
         .metric("index")
@@ -3122,7 +3550,7 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryGranularities.ALL)
+        .granularity(Granularities.ALL)
         .dimension("partial_null_column")
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(1000)
@@ -3159,7 +3587,7 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryGranularities.ALL)
+        .granularity(Granularities.ALL)
         .dimension("partial_null_column")
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .filters(new SelectorDimFilter("partial_null_column", null, null))
@@ -3191,7 +3619,7 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryGranularities.ALL)
+        .granularity(Granularities.ALL)
         .dimension("partial_null_column")
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .filters(new SelectorDimFilter("partial_null_column", "value", null))
@@ -3223,32 +3651,79 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryGranularities.ALL)
+        .granularity(Granularities.ALL)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new AlphaNumericTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
         .intervals(QueryRunnerTestHelper.secondOnly)
-        .aggregators(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+        .aggregators(duplicateAggregators(
+            QueryRunnerTestHelper.rowsCount,
+            new CountAggregatorFactory("rows1")
+        ))
         .build();
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             new DateTime("2011-04-02T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.asList(
-                    ImmutableMap.<String, Object>of(
-                        "market", "spot",
-                        "rows", 9L
+                withDuplicateResults(
+                    Arrays.asList(
+                        ImmutableMap.<String, Object>of(
+                            "market", "spot",
+                            "rows", 9L
+                        ),
+                        ImmutableMap.<String, Object>of(
+                            "market", "total_market",
+                            "rows", 2L
+                        )
                     ),
-                    ImmutableMap.<String, Object>of(
-                        "market", "total_market",
-                        "rows", 2L
-                    )
+                    "rows",
+                    "rows1"
                 )
             )
         )
     );
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
   }
+
+  @Test
+  public void testNumericDimensionTopNWithNullPreviousStop()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(Granularities.ALL)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(2)
+        .intervals(QueryRunnerTestHelper.secondOnly)
+        .aggregators(duplicateAggregators(
+            QueryRunnerTestHelper.rowsCount,
+            new CountAggregatorFactory("rows1")
+        ))
+        .build();
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                withDuplicateResults(
+                    Arrays.asList(
+                        ImmutableMap.<String, Object>of(
+                            "market", "spot",
+                            "rows", 9L
+                        ),
+                        ImmutableMap.<String, Object>of(
+                            "market", "total_market",
+                            "rows", 2L
+                        )
+                    ),
+                    "rows",
+                    "rows1"
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+  }
+
 
   @Test
   public void testTopNWithExtractionFilter()
@@ -3364,7 +3839,10 @@ public class TopNQueryRunnerTest
         new TopNQueryConfig(),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    final QueryRunner<Result<TopNResultValue>> Runner = chest.mergeResults(chest.preMergeQueryDecoration(runner));
+    final QueryRunner<Result<TopNResultValue>> Runner = new FinalizeResultsQueryRunner(
+        chest.mergeResults(chest.preMergeQueryDecoration(runner)),
+        chest
+    );
     return Runner.run(query, context);
   }
 
@@ -3416,5 +3894,1151 @@ public class TopNQueryRunnerTest
     // Assert the optimization path as well
     final Sequence<Result<TopNResultValue>> retval = runWithPreMergeAndMerge(topNQueryWithNULLValueExtraction);
     TestHelper.assertExpectedResults(expectedResults, retval);
+  }
+
+  @Test
+  public void testFullOnTopNFloatColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "index_alias", ValueType.FLOAT))
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1000.0f)
+                        .put(QueryRunnerTestHelper.indexMetric, 2000.0D)
+                        .put("rows", 2L)
+                        .put("addRowsIndexConstant", 2003.0D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1000.0D)
+                        .put("minIndex", 1000.0D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1870.06103515625f)
+                        .put(QueryRunnerTestHelper.indexMetric, 1870.06103515625D)
+                        .put("rows", 1L)
+                        .put("addRowsIndexConstant", 1872.06103515625D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 1870.06103515625D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1862.7379150390625f)
+                        .put(QueryRunnerTestHelper.indexMetric, 1862.7379150390625D)
+                        .put("rows", 1L)
+                        .put("addRowsIndexConstant", 1864.7379150390625D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 1862.7379150390625D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1743.9217529296875f)
+                        .put(QueryRunnerTestHelper.indexMetric, 1743.9217529296875D)
+                        .put("rows", 1L)
+                        .put("addRowsIndexConstant", 1745.9217529296875D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1743.9217529296875D)
+                        .put("minIndex", 1743.9217529296875D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNFloatColumnWithExFn()
+  {
+    String jsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new ExtractionDimensionSpec(QueryRunnerTestHelper.indexMetric, "index_alias", jsExtractionFn))
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", "super-1000")
+                        .put(QueryRunnerTestHelper.indexMetric, 2000.0D)
+                        .put("rows", 2L)
+                        .put("addRowsIndexConstant", 2003.0D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1000.0D)
+                        .put("minIndex", 1000.0D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", "super-1870.06103515625")
+                        .put(QueryRunnerTestHelper.indexMetric, 1870.06103515625D)
+                        .put("rows", 1L)
+                        .put("addRowsIndexConstant", 1872.06103515625D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 1870.06103515625D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", "super-1862.7379150390625")
+                        .put(QueryRunnerTestHelper.indexMetric, 1862.7379150390625D)
+                        .put("rows", 1L)
+                        .put("addRowsIndexConstant", 1864.7379150390625D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 1862.7379150390625D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", "super-1743.9217529296875")
+                        .put(QueryRunnerTestHelper.indexMetric, 1743.9217529296875D)
+                        .put("rows", 1L)
+                        .put("addRowsIndexConstant", 1745.9217529296875D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1743.9217529296875D)
+                        .put("minIndex", 1743.9217529296875D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNFloatColumnAsString()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("qualityFloat", "qf_alias"))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("qf_alias", "14000.0")
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qf_alias", "16000.0")
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qf_alias", "10000.0")
+                        .put(QueryRunnerTestHelper.indexMetric, 12270.807106018066D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12364.807106018066D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 71.31593322753906D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qf_alias", "12000.0")
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNLongColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1400L)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1600L)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12270.807106018066D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12364.807106018066D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 71.31593322753906D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1200L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNVirtualColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("ql_expr", "ql_alias", ValueType.LONG))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .virtualColumns(new ExpressionVirtualColumn("ql_expr", "qualityLong"))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1400L)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1600L)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12270.807106018066D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12364.807106018066D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 71.31593322753906D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1200L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNLongColumnWithExFn()
+  {
+    String jsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new ExtractionDimensionSpec("qualityLong", "ql_alias", jsExtractionFn))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", "super-1400")
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", "super-1600")
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", "super-1000")
+                        .put(QueryRunnerTestHelper.indexMetric, 12270.807106018066D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12364.807106018066D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 71.31593322753906D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", "super-1200")
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNLongColumnAsString()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("qualityLong", "ql_alias"))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", "1400")
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", "1600")
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", "1000")
+                        .put(QueryRunnerTestHelper.indexMetric, 12270.807106018066D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12364.807106018066D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 71.31593322753906D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", "1200")
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNNumericStringColumnAsLong()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("qualityNumericString", "qns_alias", ValueType.LONG))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 140000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 160000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 100000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12270.807106018066D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12364.807106018066D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 71.31593322753906D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 120000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNNumericStringColumnAsFloat()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("qualityNumericString", "qns_alias", ValueType.FLOAT))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 140000.0f)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 160000.0f)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 100000.0f)
+                        .put(QueryRunnerTestHelper.indexMetric, 12270.807106018066D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12364.807106018066D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 71.31593322753906D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 120000.0f)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNLongTimeColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias", ValueType.LONG))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("time_alias", 1296345600000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 5497.331253051758D)
+                        .put("rows", 13L)
+                        .put("addRowsIndexConstant", 5511.331253051758D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 97.02391052246094D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("time_alias", 1298678400000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 6541.463027954102D)
+                        .put("rows", 13L)
+                        .put("addRowsIndexConstant", 6555.463027954102D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 83.099365234375D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("time_alias", 1301529600000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 6814.467971801758D)
+                        .put("rows", 13L)
+                        .put("addRowsIndexConstant", 6828.467971801758D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 1734.27490234375D)
+                        .put("minIndex", 93.39083862304688D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("time_alias", 1294876800000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 6077.949111938477D)
+                        .put("rows", 13L)
+                        .put("addRowsIndexConstant", 6091.949111938477D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 1689.0128173828125D)
+                        .put("minIndex", 94.87471008300781D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNLongTimeColumnWithExFn()
+  {
+    String jsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new ExtractionDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias", jsExtractionFn))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("time_alias", "super-1296345600000")
+                        .put(QueryRunnerTestHelper.indexMetric, 5497.331253051758D)
+                        .put("rows", 13L)
+                        .put("addRowsIndexConstant", 5511.331253051758D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 97.02391052246094D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("time_alias", "super-1298678400000")
+                        .put(QueryRunnerTestHelper.indexMetric, 6541.463027954102D)
+                        .put("rows", 13L)
+                        .put("addRowsIndexConstant", 6555.463027954102D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 83.099365234375D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("time_alias", "super-1301529600000")
+                        .put(QueryRunnerTestHelper.indexMetric, 6814.467971801758D)
+                        .put("rows", 13L)
+                        .put("addRowsIndexConstant", 6828.467971801758D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 1734.27490234375D)
+                        .put("minIndex", 93.39083862304688D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("time_alias", "super-1294876800000")
+                        .put(QueryRunnerTestHelper.indexMetric, 6077.949111938477D)
+                        .put("rows", 13L)
+                        .put("addRowsIndexConstant", 6091.949111938477D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 1689.0128173828125D)
+                        .put("minIndex", 94.87471008300781D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNDimExtractionAllNulls()
+  {
+    String jsFn = "function(str) { return null; }";
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new ExtractionDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.marketDimension,
+            jsExtractionFn
+        ))
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    Map<String, Object> expectedMap = new HashMap<>();
+    expectedMap.put(QueryRunnerTestHelper.marketDimension, null);
+    expectedMap.put("rows", 1209L);
+    expectedMap.put("index", 503332.5071372986D);
+    expectedMap.put("addRowsIndexConstant", 504542.5071372986D);
+    expectedMap.put("uniques", 9.019833517963864);
+    expectedMap.put("maxIndex", 1870.06103515625D);
+    expectedMap.put("minIndex", 59.02102279663086D);
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    expectedMap
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNStringOutputAsLong()
+  {
+    ExtractionFn strlenFn = StrlenExtractionFn.instance();
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new ExtractionDimensionSpec(QueryRunnerTestHelper.qualityDimension, "alias", ValueType.LONG, strlenFn))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", 9L)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", 7L)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", 10L)
+                        .put(QueryRunnerTestHelper.indexMetric, 20479.497562408447D)
+                        .put("rows", 186L)
+                        .put("addRowsIndexConstant", 20666.497562408447D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 59.02102279663086D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", 13L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNNumericStringColumnWithDecoration()
+  {
+    ListFilteredDimensionSpec filteredSpec = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("qualityNumericString", "qns_alias", ValueType.LONG),
+        Sets.newHashSet("120000", "140000", "160000"),
+        true
+    );
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(filteredSpec)
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 140000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 160000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("qns_alias", 120000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNDecorationOnNumeric()
+  {
+    ListFilteredDimensionSpec filteredSpec = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
+        Sets.newHashSet("1200", "1400", "1600"),
+        true
+    );
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(filteredSpec)
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1400L)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1600L)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1200L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNWithAggsOnNumericDims()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index"),
+                        new LongSumAggregatorFactory("qlLong", "qualityLong"),
+                        new DoubleSumAggregatorFactory("qlFloat", "qualityLong"),
+                        new DoubleSumAggregatorFactory("qfFloat", "qualityFloat"),
+                        new LongSumAggregatorFactory("qfLong", "qualityFloat")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put(QueryRunnerTestHelper.marketDimension, "total_market")
+                        .put("rows", 186L)
+                        .put("index", 215679.82879638672D)
+                        .put("addRowsIndexConstant", 215866.82879638672D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1743.9217529296875D)
+                        .put("minIndex", 792.3260498046875D)
+                        .put("qlLong", 279000L)
+                        .put("qlFloat", 279000.0)
+                        .put("qfFloat", 2790000.0)
+                        .put("qfLong", 2790000L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put(QueryRunnerTestHelper.marketDimension, "upfront")
+                        .put("rows", 186L)
+                        .put("index", 192046.1060180664D)
+                        .put("addRowsIndexConstant", 192233.1060180664D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 545.9906005859375D)
+                        .put("qlLong", 279000L)
+                        .put("qlFloat", 279000.0)
+                        .put("qfFloat", 2790000.0)
+                        .put("qfLong", 2790000L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put(QueryRunnerTestHelper.marketDimension, "spot")
+                        .put("rows", 837L)
+                        .put("index", 95606.57232284546D)
+                        .put("addRowsIndexConstant", 96444.57232284546D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 59.02102279663086D)
+                        .put("qlLong", 1171800L)
+                        .put("qlFloat", 1171800.0)
+                        .put("qfFloat", 11718000.0)
+                        .put("qfLong", 11718000L)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
   }
 }

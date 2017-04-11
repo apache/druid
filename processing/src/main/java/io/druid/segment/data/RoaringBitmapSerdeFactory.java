@@ -22,10 +22,10 @@ package io.druid.segment.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Ordering;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.RoaringBitmapFactory;
-import com.metamx.collections.bitmap.WrappedImmutableRoaringBitmap;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
 import java.nio.ByteBuffer;
@@ -102,9 +102,8 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     @Override
     public ImmutableBitmap fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
-      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new WrappedImmutableRoaringBitmap(new ImmutableRoaringBitmap(readOnlyBuffer));
+      buffer.limit(buffer.position() + numBytes);
+      return new WrappedImmutableRoaringBitmap(new ImmutableRoaringBitmap(buffer));
     }
 
     @Override

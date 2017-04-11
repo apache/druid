@@ -25,19 +25,21 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.common.MapUtils;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -59,7 +61,6 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -76,6 +77,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycle
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
 {
+  private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
 
 
@@ -194,10 +196,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                         ) throws SQLException
                         {
                           try {
-                            DataSegment segment = jsonMapper.readValue(
+                            final DataSegment segment = DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(
                                 payload,
                                 DataSegment.class
-                            );
+                            ));
 
                             timeline.add(
                                 segment.getInterval(),
@@ -464,7 +466,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                             throws SQLException
                         {
                           try {
-                            return jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                            return DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(
+                                r.getBytes("payload"),
+                                DataSegment.class
+                            ));
                           }
                           catch (IOException e) {
                             log.makeAlert(e, "Failed to read segment from db.");
@@ -549,11 +554,12 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             Iterator<Interval> iter = handle
                 .createQuery(
                     String.format(
-                        "SELECT start, \"end\" FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false ORDER BY start, \"end\"",
-                        getSegmentsTable()
+                        "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false ORDER BY start, %2$send%2$s",
+                        getSegmentsTable(), connector.getQuoteString()
                     )
                 )
                 .setFetchSize(connector.getStreamingFetchSize())
+                .setMaxRows(limit)
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
                 .bind("end", interval.getEnd().toString())

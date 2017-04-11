@@ -21,20 +21,12 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
 
 import java.nio.ByteBuffer;
-import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
 
@@ -60,8 +52,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
-    final ValueMatcherFactory valueMatcherFactory = new FilteredAggregatorValueMatcherFactory(columnSelectorFactory);
-    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(valueMatcherFactory);
+    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(columnSelectorFactory);
     return new FilteredAggregator(
         valueMatcher,
         delegate.factorize(columnSelectorFactory)
@@ -71,8 +62,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory)
   {
-    final ValueMatcherFactory valueMatcherFactory = new FilteredAggregatorValueMatcherFactory(columnSelectorFactory);
-    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(valueMatcherFactory);
+    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(columnSelectorFactory);
     return new FilteredBufferAggregator(
         valueMatcher,
         delegate.factorizeBuffered(columnSelectorFactory)
@@ -146,12 +136,6 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     return delegate.getMaxIntermediateSize();
   }
 
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return delegate.getAggregatorStartValue();
-  }
-
   @JsonProperty
   public AggregatorFactory getAggregator()
   {
@@ -174,7 +158,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   public String toString()
   {
     return "FilteredAggregatorFactory{" +
-           ", delegate=" + delegate +
+           "delegate=" + delegate +
            ", filter=" + filter +
            '}';
   }
@@ -207,97 +191,5 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     int result = delegate != null ? delegate.hashCode() : 0;
     result = 31 * result + (filter != null ? filter.hashCode() : 0);
     return result;
-  }
-
-  private static class FilteredAggregatorValueMatcherFactory implements ValueMatcherFactory
-  {
-    private final ColumnSelectorFactory columnSelectorFactory;
-
-    public FilteredAggregatorValueMatcherFactory(ColumnSelectorFactory columnSelectorFactory)
-    {
-      this.columnSelectorFactory = columnSelectorFactory;
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Comparable value)
-    {
-      final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
-
-      // Compare "value" as a String.
-      final String valueString = value == null ? null : Strings.emptyToNull(value.toString());
-
-      // Missing columns match a null or empty string value, and don't match anything else.
-      if (selector == null) {
-        return new BooleanValueMatcher(valueString == null);
-      }
-
-      final int valueId = selector.lookupId(valueString);
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return valueString == null;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (row.get(i) == valueId) {
-                return true;
-              }
-            }
-            return false;
-          }
-        }
-      };
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Predicate predicate)
-    {
-      final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
-
-      final boolean doesMatchNull = predicate.apply(null);
-
-      if (selector == null) {
-        return new BooleanValueMatcher(doesMatchNull);
-      }
-
-      // Check every value in the dimension, as a String.
-      final int cardinality = selector.getValueCardinality();
-      final BitSet valueIds = new BitSet(cardinality);
-      for (int i = 0; i < cardinality; i++) {
-        if (predicate.apply(selector.lookupName(i))) {
-          valueIds.set(i);
-        }
-      }
-
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return doesMatchNull;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (valueIds.get(row.get(i))) {
-                return true;
-              }
-            }
-            return false;
-          }
-        }
-      };
-    }
   }
 }

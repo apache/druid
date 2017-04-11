@@ -28,22 +28,27 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.guava.Yielder;
+import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryToolChest;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
@@ -71,29 +76,40 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
 @Path("/druid/v2/")
-public class QueryResource
+public class QueryResource implements QueryCountStatsProvider
 {
-  private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
+  protected static final EmittingLogger log = new EmittingLogger(QueryResource.class);
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
-  private static final String APPLICATION_SMILE = "application/smile";
+  protected static final String APPLICATION_SMILE = "application/smile";
 
-  private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7*1024;
+  protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
-  private final ServerConfig config;
-  private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
-  private final QuerySegmentWalker texasRanger;
-  private final ServiceEmitter emitter;
-  private final RequestLogger requestLogger;
-  private final QueryManager queryManager;
-  private final AuthConfig authConfig;
+  public static final String HDR_IF_NONE_MATCH = "If-None-Match";
+  public static final String HDR_ETAG = "ETag";
+
+  protected final QueryToolChestWarehouse warehouse;
+  protected final ServerConfig config;
+  protected final ObjectMapper jsonMapper;
+  protected final ObjectMapper smileMapper;
+  protected final QuerySegmentWalker texasRanger;
+  protected final ServiceEmitter emitter;
+  protected final RequestLogger requestLogger;
+  protected final QueryManager queryManager;
+  protected final AuthConfig authConfig;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final AtomicLong successfulQueryCount = new AtomicLong();
+  private final AtomicLong failedQueryCount = new AtomicLong();
+  private final AtomicLong interruptedQueryCount = new AtomicLong();
 
   @Inject
   public QueryResource(
+      QueryToolChestWarehouse warehouse,
       ServerConfig config,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
@@ -101,9 +117,11 @@ public class QueryResource
       ServiceEmitter emitter,
       RequestLogger requestLogger,
       QueryManager queryManager,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
+    this.warehouse = warehouse;
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
@@ -112,6 +130,7 @@ public class QueryResource
     this.requestLogger = requestLogger;
     this.queryManager = queryManager;
     this.authConfig = authConfig;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @DELETE
@@ -157,23 +176,16 @@ public class QueryResource
       @Context final HttpServletRequest req // used to get request content-type, remote address and AuthorizationInfo
   ) throws IOException
   {
-    final long start = System.currentTimeMillis();
+    final long startNs = System.nanoTime();
     Query query = null;
+    QueryToolChest toolChest = null;
     String queryId = null;
 
-    final String reqContentType = req.getContentType();
-    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
-                            || APPLICATION_SMILE.equals(reqContentType);
-    final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
-
-    ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
-    final ObjectWriter jsonWriter = pretty != null
-                                    ? objectMapper.writerWithDefaultPrettyPrinter()
-                                    : objectMapper.writer();
+    final ResponseContext context = createContext(req.getContentType(), pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      query = objectMapper.readValue(in, Query.class);
+      query = context.getObjectMapper().readValue(in, Query.class);
       queryId = query.getId();
       if (queryId == null) {
         queryId = UUID.randomUUID().toString();
@@ -187,9 +199,10 @@ public class QueryResource
             )
         );
       }
+      toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
-            .setName(String.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource(), queryId));
+            .setName(String.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource().getNames(), queryId));
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }
@@ -212,8 +225,20 @@ public class QueryResource
         }
       }
 
+      String prevEtag = req.getHeader(HDR_IF_NONE_MATCH);
+      if (prevEtag != null) {
+        query = query.withOverriddenContext(
+            ImmutableMap.of (HDR_IF_NONE_MATCH, prevEtag)
+        );
+      }
+
       final Map<String, Object> responseContext = new MapMaker().makeMap();
       final Sequence res = query.run(texasRanger, responseContext);
+
+      if (prevEtag != null && prevEtag.equals(responseContext.get(HDR_ETAG))) {
+        return Response.notModified().build();
+      }
+
       final Sequence results;
       if (res == null) {
         results = Sequences.empty();
@@ -221,21 +246,12 @@ public class QueryResource
         results = res;
       }
 
-      final Yielder yielder = results.toYielder(
-          null,
-          new YieldingAccumulator()
-          {
-            @Override
-            public Object accumulate(Object accumulated, Object in)
-            {
-              yield();
-              return in;
-            }
-          }
-      );
+      final Yielder yielder = Yielders.each(results);
 
       try {
         final Query theQuery = query;
+        final QueryToolChest theToolChest = toolChest;
+        final ObjectWriter jsonWriter = context.newOutputWriter();
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
@@ -243,43 +259,59 @@ public class QueryResource
                   @Override
                   public void write(OutputStream outputStream) throws IOException, WebApplicationException
                   {
-                    // json serializer will always close the yielder
-                    CountingOutputStream os = new CountingOutputStream(outputStream);
-                    jsonWriter.writeValue(os, yielder);
+                    try {
+                      // json serializer will always close the yielder
+                      CountingOutputStream os = new CountingOutputStream(outputStream);
+                      jsonWriter.writeValue(os, yielder);
 
-                    os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
-                    os.close();
+                      os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
+                      os.close();
+                      successfulQueryCount.incrementAndGet();
+                      final long queryTimeNs = System.nanoTime() - startNs;
+                      QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+                          queryMetricsFactory,
+                          theToolChest,
+                          theQuery,
+                          req.getRemoteAddr()
+                      );
+                      queryMetrics.success(true);
+                      queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
 
-                    final long queryTime = System.currentTimeMillis() - start;
-                    emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
-                                    .setDimension("success", "true")
-                                    .build("query/time", queryTime)
-                    );
-                    emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
-                                    .build("query/bytes", os.getCount())
-                    );
+                      DruidMetrics.makeRequestMetrics(
+                          queryMetricsFactory,
+                          theToolChest,
+                          theQuery,
+                          req.getRemoteAddr()
+                      ).reportQueryBytes(os.getCount()).emit(emitter);
 
-                    requestLogger.log(
-                        new RequestLogLine(
-                            new DateTime(start),
-                            req.getRemoteAddr(),
-                            theQuery,
-                            new QueryStats(
-                                ImmutableMap.<String, Object>of(
-                                    "query/time", queryTime,
-                                    "query/bytes", os.getCount(),
-                                    "success", true
-                                )
-                            )
-                        )
-                    );
+                      requestLogger.log(
+                          new RequestLogLine(
+                              new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
+                              req.getRemoteAddr(),
+                              theQuery,
+                              new QueryStats(
+                                  ImmutableMap.<String, Object>of(
+                                      "query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
+                                      "query/bytes", os.getCount(),
+                                      "success", true
+                                  )
+                              )
+                          )
+                      );
+                    }
+                    finally {
+                      Thread.currentThread().setName(currThreadName);
+                    }
                   }
                 },
-                contentType
+                context.getContentType()
             )
             .header("X-Druid-Query-Id", queryId);
+
+        if (responseContext.get(HDR_ETAG) != null) {
+          builder.header(HDR_ETAG, responseContext.get(HDR_ETAG));
+          responseContext.remove(HDR_ETAG);
+        }
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
@@ -306,22 +338,26 @@ public class QueryResource
     }
     catch (QueryInterruptedException e) {
       try {
-        log.info("%s [%s]", e.getMessage(), queryId);
-        final long queryTime = System.currentTimeMillis() - start;
-        emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
-                        .setDimension("success", "false")
-                        .build("query/time", queryTime)
+        log.warn(e, "Exception while processing queryId [%s]", queryId);
+        interruptedQueryCount.incrementAndGet();
+        final long queryTimeNs = System.nanoTime() - startNs;
+        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+            queryMetricsFactory,
+            toolChest,
+            query,
+            req.getRemoteAddr()
         );
+        queryMetrics.success(false);
+        queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(start),
+                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
                     ImmutableMap.<String, Object>of(
                         "query/time",
-                        queryTime,
+                        TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
                         "success",
                         false,
                         "interrupted",
@@ -336,13 +372,7 @@ public class QueryResource
       catch (Exception e2) {
         log.error(e2, "Unable to log query [%s]!", query);
       }
-      return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(
-              ImmutableMap.of(
-                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
-              )
-          )
-      ).build();
+      return context.gotError(e);
     }
     catch (Exception e) {
       // Input stream has already been consumed by the json object mapper if query == null
@@ -352,22 +382,26 @@ public class QueryResource
           : query.toString();
 
       log.warn(e, "Exception occurred on request [%s]", queryString);
+      failedQueryCount.incrementAndGet();
 
       try {
-        final long queryTime = System.currentTimeMillis() - start;
-        emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
-                        .setDimension("success", "false")
-                        .build("query/time", queryTime)
+        final long queryTimeNs = System.nanoTime() - startNs;
+        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+            queryMetricsFactory,
+            toolChest,
+            query,
+            req.getRemoteAddr()
         );
+        queryMetrics.success(false);
+        queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(start),
+                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(ImmutableMap.<String, Object>of(
                     "query/time",
-                    queryTime,
+                    TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
                     "success",
                     false,
                     "exception",
@@ -386,16 +420,78 @@ public class QueryResource
          .addData("peer", req.getRemoteAddr())
          .emit();
 
-      return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(
-              ImmutableMap.of(
-                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
-              )
-          )
-      ).build();
+      return context.gotError(e);
     }
     finally {
       Thread.currentThread().setName(currThreadName);
     }
+  }
+
+  protected ResponseContext createContext(String requestType, boolean pretty)
+  {
+    boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType) ||
+                      APPLICATION_SMILE.equals(requestType);
+    String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
+    return new ResponseContext(contentType, isSmile ? smileMapper : jsonMapper, pretty);
+  }
+
+  protected static class ResponseContext
+  {
+    private final String contentType;
+    private final ObjectMapper inputMapper;
+    private final boolean isPretty;
+
+    ResponseContext(String contentType, ObjectMapper inputMapper, boolean isPretty)
+    {
+      this.contentType = contentType;
+      this.inputMapper = inputMapper;
+      this.isPretty = isPretty;
+    }
+
+    String getContentType()
+    {
+      return contentType;
+    }
+
+    public ObjectMapper getObjectMapper()
+    {
+      return inputMapper;
+    }
+
+    ObjectWriter newOutputWriter()
+    {
+      return isPretty ? inputMapper.writerWithDefaultPrettyPrinter() : inputMapper.writer();
+    }
+
+    Response ok(Object object) throws IOException
+    {
+      return Response.ok(newOutputWriter().writeValueAsString(object), contentType).build();
+    }
+
+    Response gotError(Exception e) throws IOException
+    {
+      return Response.serverError()
+                     .type(contentType)
+                     .entity(newOutputWriter().writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e)))
+                     .build();
+    }
+  }
+
+  @Override
+  public long getSuccessfulQueryCount()
+  {
+    return successfulQueryCount.get();
+  }
+
+  @Override
+  public long getFailedQueryCount()
+  {
+    return failedQueryCount.get();
+  }
+
+  @Override
+  public long getInterruptedQueryCount()
+  {
+    return interruptedQueryCount.get();
   }
 }

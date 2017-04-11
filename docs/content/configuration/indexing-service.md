@@ -19,11 +19,21 @@ The indexing service uses several of the global configs in [Configuration](../co
 
 #### Task Logging
 
-If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store or HDFS.
+If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.type`|Choices:noop, s3, azure, hdfs, file. Where to store task logs|file|
+|`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
+
+You can also configure the Overlord to automatically retain the task logs only for last x milliseconds by configuring following additional properties.
+Caution: Automatic log file deletion typically works based on log file modification timestamp on the backing store, so large clock skews between druid nodes and backing store nodes might result in un-intended behavior.  
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. |false|
+|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs to be retained created in last x milliseconds. |None|
+|`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
+|`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
 ##### File Task Logs
 
@@ -50,6 +60,16 @@ Note: this uses the same storage account as the deep storage module for azure.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.container`|The Azure Blob Store container to write logs to|none|
+|`druid.indexer.logs.prefix`|The path to prepend to logs|none|
+
+#### Google Cloud Storage Task Logs
+Store task logs in Google Cloud Storage.
+
+Note: this uses the same storage settings as the deep storage module for google.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.bucket`|The Google Cloud Storage bucket to write logs to|none|
 |`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
 ##### HDFS Task Logs
@@ -82,7 +102,11 @@ The following configs only apply if the overlord is running in remote mode:
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
 |`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a middle manager is disconnected from Zookeeper.|PT15M|
 |`druid.indexer.runner.taskShutdownLinkTimeout`|How long to wait on a shutdown request to a middle manager before timing out|PT1M|
-|`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|3|
+|`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|1|
+|`druid.indexer.runner.maxRetriesBeforeBlacklist`|Number of consecutive times the middle manager can fail tasks,  before the worker is blacklisted, must be at least 1|5|
+|`druid.indexer.runner.workerBlackListBackoffTime`|How long to wait before a task is whitelisted again. This value should be greater that the value set for taskBlackListCleanupPeriod.|PT15M|
+|`druid.indexer.runner.workerBlackListCleanupPeriod`|A duration after which the cleanup thread will startup to clean blacklisted workers.|PT5M|
+|`druid.indexer.runner.maxPercentageBlacklistWorkers`|The maximum percentage of workers to blacklist, this must be between 0 and 100.|20|
 
 There are additional configs for autoscaling (if it is enabled):
 
@@ -159,7 +183,7 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution` and `javascript`.|fillCapacity|
+|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution`, `equalDistributionWithAffinity` and `javascript`.|fillCapacity|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
 
 To view the audit history of worker config issue a GET request to the URL -
@@ -186,6 +210,8 @@ Workers are assigned tasks until capacity.
 |--------|-----------|-------|
 |`type`|`fillCapacity`.|required; must be `fillCapacity`|
 
+Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n workers upto capacity simultaneously and then moving on.
+
 ##### Fill Capacity With Affinity
 
 An affinity config can be provided.
@@ -197,6 +223,8 @@ An affinity config can be provided.
 
 Tasks will try to be assigned to preferred workers. Fill capacity strategy is used if no preference for a datasource specified.
 
+Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n preferred workers upto capacity simultaneously and then moving on.
+
 ##### Equal Distribution
 
 The workers with the least amount of tasks is assigned the task.
@@ -204,6 +232,18 @@ The workers with the least amount of tasks is assigned the task.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`equalDistribution`.|required; must be `equalDistribution`|
+
+##### Equal Distribution With Affinity
+
+An affinity config can be provided.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`equalDistributionWithAffinity`.|required; must be `equalDistributionWithAffinity`|
+|`affinity`|Exactly same with `fillCapacityWithAffinity` 's affinity.|{}|
+
+Tasks will try to be assigned to preferred workers. Equal Distribution strategy is used if no preference for a datasource specified.
+
 
 ##### Javascript
 
@@ -226,12 +266,11 @@ Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2
 "type":"javascript",
 "function":"function (config, zkWorkers, task) {\nvar batch_workers = new java.util.ArrayList();\nbatch_workers.add(\"10.0.0.1\");\nbatch_workers.add(\"10.0.0.2\");\nworkers = zkWorkers.keySet().toArray();\nvar sortedWorkers = new Array()\n;for(var i = 0; i < workers.length; i++){\n sortedWorkers[i] = workers[i];\n}\nArray.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\nvar minWorkerVer = config.getMinWorkerVersion();\nfor (var i = 0; i < sortedWorkers.length; i++) {\n var worker = sortedWorkers[i];\n  var zkWorker = zkWorkers.get(worker);\n  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){\n    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){\n      return worker;\n    } else {\n      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){\n        return worker;\n      }\n    }\n  }\n}\nreturn null;\n}"
 }
-
-
 ```
 
-
-
+<div class="note info">
+JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+</div>
 
 #### Autoscaler
 

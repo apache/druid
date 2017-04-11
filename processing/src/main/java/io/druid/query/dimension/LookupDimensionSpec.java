@@ -24,13 +24,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -109,6 +110,13 @@ public class LookupDimensionSpec implements DimensionSpec
     return outputName;
   }
 
+  @Override
+  public ValueType getOutputType()
+  {
+    // Extraction functions always output String
+    return ValueType.STRING;
+  }
+
   @JsonProperty
   @Nullable
   public LookupExtractor getLookup()
@@ -150,6 +158,12 @@ public class LookupDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public boolean mustDecorate()
+  {
+    return false;
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
@@ -174,7 +188,7 @@ public class LookupDimensionSpec implements DimensionSpec
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(replaceWithBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(retainMissingValue == true ? (byte) 1 : (byte) 0)
+                     .put(retainMissingValue ? (byte) 1 : (byte) 0)
                      .array();
   }
 

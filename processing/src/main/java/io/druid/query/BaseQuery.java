@@ -24,8 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -94,6 +94,13 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
       return (boolean) val;
     } else {
       throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
+    }
+  }
+
+  public static void checkInterrupted()
+  {
+    if (Thread.interrupted()) {
+      throw new QueryInterruptedException(new InterruptedException());
     }
   }
 

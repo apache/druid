@@ -22,9 +22,6 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.curator.discovery.ServiceAnnouncer;
@@ -34,8 +31,13 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.indexing.overlord.helpers.OverlordHelperManager;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.DruidNode;
+import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
@@ -72,17 +74,23 @@ public class TaskMaster
       final TaskLockbox taskLockbox,
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
-      @Self final DruidNode node,
+      @Self final DruidNode selfNode,
       final IndexerZkConfig zkPaths,
       final TaskRunnerFactory runnerFactory,
       final CuratorFramework curator,
       final ServiceAnnouncer serviceAnnouncer,
+      final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       final ServiceEmitter emitter,
-      final SupervisorManager supervisorManager
+      final SupervisorManager supervisorManager,
+      final OverlordHelperManager overlordHelperManager
   )
   {
     this.supervisorManager = supervisorManager;
     this.taskActionClientFactory = taskActionClientFactory;
+
+    final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
+                           selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
+
     this.leaderSelector = new LeaderSelector(
         curator,
         zkPaths.getLeaderLatchPath(),
@@ -120,6 +128,7 @@ public class TaskMaster
               leaderLifecycle.addManagedInstance(taskRunner);
               leaderLifecycle.addManagedInstance(taskQueue);
               leaderLifecycle.addManagedInstance(supervisorManager);
+              leaderLifecycle.addManagedInstance(overlordHelperManager);
 
               leaderLifecycle.addHandler(
                   new Lifecycle.Handler()

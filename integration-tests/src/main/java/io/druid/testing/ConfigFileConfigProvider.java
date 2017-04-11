@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,18 +32,21 @@ import java.util.Map;
 public class ConfigFileConfigProvider implements IntegrationTestingConfigProvider
 {
   private final static Logger LOG = new Logger(ConfigFileConfigProvider.class);
-  private String routerHost = "";
-  private String brokerHost = "";
-  private String historicalHost = "";
-  private String coordinatorHost = "";
-  private String indexerHost = "";
-  private String middleManagerHost = "";
-  private String zookeeperHosts = "";        // comma-separated list of host:port
-  private String kafkaHost = "";
+  private String routerUrl;
+  private String brokerUrl;
+  private String historicalUrl;
+  private String coordinatorUrl;
+  private String indexerUrl;
+  private String middleManagerHost;
+  private String zookeeperHosts;        // comma-separated list of host:port
+  private String kafkaHost;
   private Map<String, String> props = null;
+  private String username;
+  private String password;
 
   @JsonCreator
-  ConfigFileConfigProvider(@JsonProperty("configFile") String configFile){
+  ConfigFileConfigProvider(@JsonProperty("configFile") String configFile)
+  {
     loadProperties(configFile);
   }
 
@@ -52,34 +55,58 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     ObjectMapper jsonMapper = new ObjectMapper();
     try {
       props = jsonMapper.readValue(
-          new File(configFile), new TypeReference<Map<String, String>>()
-      {
-      }
+        new File(configFile), new TypeReference<Map<String, String>>()
+        {
+        }
       );
     }
     catch (IOException ex) {
       throw new RuntimeException(ex);
     }
     // there might not be a router; we want routerHost to be null in that case
-    routerHost = props.get("router_host");
-    if (null != routerHost) {
-	routerHost += ":" + props.get("router_port");
+    routerUrl = props.get("router_url");
+    if (routerUrl == null) {
+      String routerHost = props.get("router_host");
+      if (null != routerHost) {
+        routerUrl = String.format("http://%s:%s", routerHost, props.get("router_port"));
+      }
     }
-    brokerHost = props.get("broker_host") + ":" + props.get("broker_port");
-    historicalHost = props.get("historical_host") + ":" + props.get("historical_port");
-    coordinatorHost = props.get("coordinator_host") + ":" + props.get("coordinator_port");
-    indexerHost = props.get("indexer_host") + ":" + props.get("indexer_port");
-    middleManagerHost = props.get("middlemanager_host");
-    zookeeperHosts = props.get("zookeeper_hosts");
-    kafkaHost = props.get("kafka_host") + ":" + props.get ("kafka_port");
+    brokerUrl = props.get("broker_url");
+    if (brokerUrl == null) {
+      brokerUrl = String.format("http://%s:%s", props.get("broker_host"), props.get("broker_port"));
+    }
 
-    LOG.info ("router: [%s]", routerHost);
-    LOG.info ("broker: [%s]", brokerHost);
-    LOG.info ("coordinator: [%s]", coordinatorHost);
-    LOG.info ("overlord: [%s]", indexerHost);
-    LOG.info ("middle manager: [%s]", middleManagerHost);
-    LOG.info ("zookeepers: [%s]", zookeeperHosts);
-    LOG.info ("kafka: [%s]", kafkaHost);
+    historicalUrl = props.get("historical_url");
+    if (historicalUrl == null) {
+      historicalUrl = String.format("http://%s:%s", props.get("historical_host"), props.get("historical_port"));
+    }
+
+    coordinatorUrl = props.get("coordinator_url");
+    if (coordinatorUrl == null) {
+      coordinatorUrl = String.format("http://%s:%s", props.get("coordinator_host"), props.get("coordinator_port"));
+    }
+
+    indexerUrl = props.get("indexer_url");
+    if (indexerUrl == null) {
+      indexerUrl = String.format("http://%s:%s", props.get("indexer_host"), props.get("indexer_port"));
+    }
+    middleManagerHost = props.get("middlemanager_host");
+
+    zookeeperHosts = props.get("zookeeper_hosts");
+    kafkaHost = props.get("kafka_host") + ":" + props.get("kafka_port");
+
+    username = props.get("username");
+
+    password = props.get("password");
+
+    LOG.info("router: [%s]", routerUrl);
+    LOG.info("broker: [%s]", brokerUrl);
+    LOG.info("coordinator: [%s]", coordinatorUrl);
+    LOG.info("overlord: [%s]", indexerUrl);
+    LOG.info("middle manager: [%s]", middleManagerHost);
+    LOG.info("zookeepers: [%s]", zookeeperHosts);
+    LOG.info("kafka: [%s]", kafkaHost);
+    LOG.info("Username: [%s]", username);
   }
 
   @Override
@@ -87,34 +114,35 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   {
     return new IntegrationTestingConfig()
     {
+
       @Override
-      public String getCoordinatorHost()
+      public String getCoordinatorUrl()
       {
-        return coordinatorHost;
+        return coordinatorUrl;
       }
 
       @Override
-      public String getIndexerHost()
+      public String getIndexerUrl()
       {
-        return indexerHost;
+        return indexerUrl;
       }
 
       @Override
-      public String getRouterHost()
+      public String getRouterUrl()
       {
-        return routerHost;
+        return routerUrl;
       }
 
       @Override
-      public String getBrokerHost()
+      public String getBrokerUrl()
       {
-        return brokerHost;
+        return brokerUrl;
       }
 
       @Override
-      public String getHistoricalHost()
+      public String getHistoricalUrl()
       {
-        return historicalHost;
+        return historicalUrl;
       }
 
       @Override
@@ -139,6 +167,18 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getProperty(String keyword)
       {
         return props.get(keyword);
+      }
+
+      @Override
+      public String getUsername()
+      {
+        return username;
+      }
+
+      @Override
+      public String getPassword()
+      {
+        return password;
       }
     };
   }

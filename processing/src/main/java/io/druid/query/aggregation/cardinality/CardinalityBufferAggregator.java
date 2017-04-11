@@ -19,26 +19,27 @@
 
 package io.druid.query.aggregation.cardinality;
 
+import io.druid.hll.HyperLogLogCollector;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
-import io.druid.segment.DimensionSelector;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 public class CardinalityBufferAggregator implements BufferAggregator
 {
-  private final List<DimensionSelector> selectorList;
+  private final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses;
   private final boolean byRow;
 
   private static final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
 
-  public CardinalityBufferAggregator(
-      List<DimensionSelector> selectorList,
+  CardinalityBufferAggregator(
+      ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses,
       boolean byRow
   )
   {
-    this.selectorList = selectorList;
+    this.selectorPluses = selectorPluses;
     this.byRow = byRow;
   }
 
@@ -53,16 +54,23 @@ public class CardinalityBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(
-        (ByteBuffer) buf.duplicate().position(position).limit(
-            position
-            + HyperLogLogCollector.getLatestNumBytesForDenseStorage()
-        )
-    );
-    if (byRow) {
-      CardinalityAggregator.hashRow(selectorList, collector);
-    } else {
-      CardinalityAggregator.hashValues(selectorList, collector);
+    // Save position, limit and restore later instead of allocating a new ByteBuffer object
+    final int oldPosition = buf.position();
+    final int oldLimit = buf.limit();
+    buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+    buf.position(position);
+
+    try {
+      final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
+      if (byRow) {
+        CardinalityAggregator.hashRow(selectorPluses, collector);
+      } else {
+        CardinalityAggregator.hashValues(selectorPluses, collector);
+      }
+    }
+    finally {
+      buf.limit(oldLimit);
+      buf.position(oldPosition);
     }
   }
 
@@ -93,5 +101,11 @@ public class CardinalityBufferAggregator implements BufferAggregator
   public void close()
   {
     // no resources to cleanup
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selectorPluses", selectorPluses);
   }
 }
