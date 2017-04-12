@@ -115,13 +115,12 @@ public class IndexIO
 
   private final ObjectMapper mapper;
   private final DefaultIndexIOHandler defaultIndexIOHandler;
-  private final ColumnConfig columnConfig;
 
   @Inject
   public IndexIO(ObjectMapper mapper, ColumnConfig columnConfig)
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
-    this.columnConfig = Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
+    Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     defaultIndexIOHandler = new DefaultIndexIOHandler(mapper);
     indexLoaders = ImmutableMap.<Integer, IndexLoader>builder()
         .put(0, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
@@ -135,8 +134,6 @@ public class IndexIO
         .put(8, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
         .put(9, new V9IndexLoader(columnConfig))
         .build();
-
-
   }
 
   public void validateTwoSegments(File dir1, File dir2) throws IOException
