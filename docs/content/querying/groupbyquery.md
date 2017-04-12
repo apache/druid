@@ -164,13 +164,16 @@ number of concurrently running groupBy queries.
 - druid.query.groupBy.maxMergingDictionarySize: size of the on-heap dictionary used when grouping on strings, per query,
 in bytes. Note that this is based on a rough estimate of the dictionary size, not the actual size.
 - druid.query.groupBy.maxOnDiskStorage: amount of space on disk used for aggregation, per query, in bytes. By default,
-this is 0, which means all aggregation is done in-memory.
+this is 0, which means aggregation will not use disk.
 
 If maxOnDiskStorage is 0 (the default) then a query that exceeds either the on-heap dictionary limit, or the off-heap
-aggregation table limit, will fail with a "Resource limit exceeded" error describing the limit that was exceeded. If
-maxOnDiskStorage is greater than 0, queries that exceed the in-memory limits will start using disk for aggregation.
-Queries that then also exceed maxOnDiskStorage will fail with a "Resource limit exceeded" error indicating that they
-ran out of disk space.
+aggregation table limit, will fail with a "Resource limit exceeded" error describing the limit that was exceeded.
+
+If maxOnDiskStorage is greater than 0, queries that exceed the in-memory limits will start using disk for aggregation.
+In this case, when either the on-heap dictionary or off-heap hash table fills up, partially aggregated records will be
+sorted and flushed to disk. Then, both in-memory structures will be cleared out for further aggregation. Queries that
+then go on to exceed maxOnDiskStorage will fail with a "Resource limit exceeded" error indicating that they ran out of
+disk space.
 
 With groupBy v2, cluster operators should make sure that the off-heap hash tables and on-heap merging dictionaries
 will not exceed available memory for the maximum possible concurrent query load (given by
