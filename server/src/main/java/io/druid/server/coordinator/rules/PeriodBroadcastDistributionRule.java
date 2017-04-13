@@ -31,7 +31,7 @@ import java.util.Objects;
 
 public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
 {
-  static final String TYPE = "broadcastByPeriod";
+  static final String TYPE = "broadcastToDataSourcesByPeriod";
 
   private final Period period;
   private final List<String> colocatedDataSources;

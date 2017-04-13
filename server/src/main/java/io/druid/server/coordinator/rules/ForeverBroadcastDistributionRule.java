@@ -30,7 +30,7 @@ import java.util.Objects;
 
 public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
 {
-  static final String TYPE = "broadcastForever";
+  static final String TYPE = "broadcastToDataSourcesForever";
 
   private final List<String> colocatedDataSources;
 

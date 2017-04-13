@@ -141,12 +141,12 @@ Forever broadcast rules are of the form:
 
 ```json
 {
-  "type" : "broadcastForever",
+  "type" : "broadcastToDataSourcesForever",
   "colocatedDataSources" : [ "target_source1", "target_source2" ]
 }
 ```
 
-* `type` - this should always be "broadcastForever"
+* `type` - this should always be "broadcastToDataSourcesForever"
 * `colocatedDataSources` - A JSON List containing data source names to be co-located. `null` and empty list means broadcasting to every node in the cluster.
 
 ### Interval Broadcast Rule
@@ -155,13 +155,13 @@ Interval broadcast rules are of the form:
 
 ```json
 {
-  "type" : "broadcastByInterval",
+  "type" : "broadcastToDataSourcesByInterval",
   "colocatedDataSources" : [ "target_source1", "target_source2" ],
   "interval" : "2012-01-01/2013-01-01"
 }
 ```
 
-* `type` - this should always be "broadcastByInterval"
+* `type` - this should always be "broadcastToDataSourcesByInterval"
 * `colocatedDataSources` - A JSON List containing data source names to be co-located. `null` and empty list means broadcasting to every node in the cluster.
 * `interval` - A JSON Object representing ISO-8601 Periods. Only the segments of the interval will be broadcasted.
 
@@ -171,17 +171,22 @@ Period broadcast rules are of the form:
 
 ```json
 {
-  "type" : "broadcastByPeriod",
+  "type" : "broadcastToDataSourcesByPeriod",
   "colocatedDataSources" : [ "target_source1", "target_source2" ],
   "period" : "P1M"
 }
 ```
 
-* `type` - this should always be "broadcastByPeriod"
+* `type` - this should always be "broadcastToDataSourcesByPeriod"
 * `colocatedDataSources` - A JSON List containing data source names to be co-located. `null` and empty list means broadcasting to every node in the cluster.
 * `period` - A JSON Object representing ISO-8601 Periods
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the current time. The rule matches if the period contains the interval.
+
+<div class="note caution">
+broadcastToDataSources rules don't guarantee that segments of the data sources are always co-located.
+If you want to always co-locate the segments of some data sources together, it is recommended to leave colocatedDataSources empty.
+</div>
 
 # Permanently Deleting Data
  
