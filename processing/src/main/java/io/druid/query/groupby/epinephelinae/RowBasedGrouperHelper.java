@@ -72,7 +72,7 @@ public class RowBasedGrouperHelper
    * been applied to the input rows yet, for example, in a nested query, if an extraction function is being
    * applied in the outer query to a field of the inner query. This method must apply those transformations.
    */
-  public static Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> createGrouperAccumulatorPair(
+  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
       final GroupByQuery query,
       final boolean isInputRaw,
       final Map<String, ValueType> rawInputRowSignature,
@@ -144,23 +144,23 @@ public class RowBasedGrouperHelper
         valueTypes
     );
 
-    final Accumulator<Grouper<RowBasedKey>, Row> accumulator = new Accumulator<Grouper<RowBasedKey>, Row>()
+    final Accumulator<AggregateResult, Row> accumulator = new Accumulator<AggregateResult, Row>()
     {
       @Override
-      public Grouper<RowBasedKey> accumulate(
-          final Grouper<RowBasedKey> theGrouper,
+      public AggregateResult accumulate(
+          final AggregateResult priorResult,
           final Row row
       )
       {
         BaseQuery.checkInterrupted();
 
-        if (theGrouper == null) {
-          // Pass-through null returns without doing more work.
-          return null;
+        if (priorResult != null && !priorResult.isOk()) {
+          // Pass-through error returns without doing more work.
+          return priorResult;
         }
 
-        if (!theGrouper.isInitialized()) {
-          theGrouper.init();
+        if (!grouper.isInitialized()) {
+          grouper.init();
         }
 
         columnSelectorRow.set(row);
@@ -168,14 +168,10 @@ public class RowBasedGrouperHelper
         final Comparable[] key = new Comparable[keySize];
         valueExtractFn.apply(row, key);
 
-        final boolean didAggregate = theGrouper.aggregate(new RowBasedKey(key));
-        if (!didAggregate) {
-          // null return means grouping resources were exhausted.
-          return null;
-        }
+        final AggregateResult aggregateResult = grouper.aggregate(new RowBasedKey(key));
         columnSelectorRow.set(null);
 
-        return theGrouper;
+        return aggregateResult;
       }
     };
 
@@ -346,7 +342,7 @@ public class RowBasedGrouperHelper
               Object dimVal = entry.getKey().getKey()[i];
               theMap.put(
                   query.getDimensions().get(i - dimStart).getOutputName(),
-                  dimVal instanceof String ? Strings.emptyToNull((String)dimVal) : dimVal
+                  dimVal instanceof String ? Strings.emptyToNull((String) dimVal) : dimVal
               );
             }
 
@@ -636,7 +632,7 @@ public class RowBasedGrouperHelper
       }
 
       return 0;
-    };
+    }
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedKey>
@@ -935,6 +931,7 @@ public class RowBasedGrouperHelper
        *
        * @param key RowBasedKey containing the grouping key values for a row.
        * @param idx Index of the grouping key column within that this SerdeHelper handles
+       *
        * @return true if the value was added to the key, false otherwise
        */
       boolean putToKeyBuffer(RowBasedKey key, int idx);
@@ -945,11 +942,11 @@ public class RowBasedGrouperHelper
        *
        * The value to be read resides in the buffer at position (`initialOffset` + the SerdeHelper's keyBufferPosition).
        *
-       * @param buffer ByteBuffer containing an array of grouping keys for a row
+       * @param buffer        ByteBuffer containing an array of grouping keys for a row
        * @param initialOffset Offset where non-timestamp grouping key columns start, needed because timestamp is not
        *                      always included in the buffer.
-       * @param dimValIdx Index within dimValues to store the value read from the buffer
-       * @param dimValues Output array containing grouping key values for a row
+       * @param dimValIdx     Index within dimValues to store the value read from the buffer
+       * @param dimValues     Output array containing grouping key values for a row
        */
       void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues);
 
@@ -957,10 +954,11 @@ public class RowBasedGrouperHelper
        * Compare the values at lhsBuffer[lhsPosition] and rhsBuffer[rhsPosition] using the natural ordering
        * for this SerdeHelper's value type.
        *
-       * @param lhsBuffer ByteBuffer containing an array of grouping keys for a row
-       * @param rhsBuffer ByteBuffer containing an array of grouping keys for a row
+       * @param lhsBuffer   ByteBuffer containing an array of grouping keys for a row
+       * @param rhsBuffer   ByteBuffer containing an array of grouping keys for a row
        * @param lhsPosition Position of value within lhsBuffer
        * @param rhsPosition Position of value within rhsBuffer
+       *
        * @return Negative number if lhs < rhs, positive if lhs > rhs, 0 if lhs == rhs
        */
       int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);

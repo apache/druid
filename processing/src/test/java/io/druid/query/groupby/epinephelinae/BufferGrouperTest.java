@@ -97,16 +97,16 @@ public class BufferGrouperTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize));
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     // Aggregate slightly different row
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
     for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize));
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     final List<Grouper.Entry<Integer>> expected = Lists.newArrayList();
     for (int i = 0; i < expectedMaxSize; i++) {
@@ -125,16 +125,16 @@ public class BufferGrouperTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize));
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     // Aggregate slightly different row
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
     for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize));
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     final List<Grouper.Entry<Integer>> expected = Lists.newArrayList();
     for (int i = 0; i < expectedMaxSize; i++) {

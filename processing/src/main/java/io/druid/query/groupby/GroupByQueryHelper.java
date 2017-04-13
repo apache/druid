@@ -256,18 +256,4 @@ public class GroupByQueryHelper
     // Don't include post-aggregators since we don't know what types they are.
     return types.build();
   }
-
-  /**
-   * Throw a {@link ResourceLimitExceededException}. Only used by groupBy v2 when accumulation resources
-   * are exceeded, triggered by false return from {@link io.druid.query.groupby.epinephelinae.Grouper#aggregate(Object)}.
-   *
-   * @return nothing will ever be returned; this return type is for your convenience, similar to
-   * Throwables.propagate in Guava.
-   */
-  public static ResourceLimitExceededException throwAccumulationResourceLimitExceededException()
-  {
-    throw new ResourceLimitExceededException(
-        "Not enough resources to execute this query. Try increasing druid.query.groupBy.maxOnDiskStorage, "
-        + "druid.query.groupBy.maxMergingDictionarySize, or druid.processing.buffer.sizeBytes.");
-  }
 }

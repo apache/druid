@@ -60,9 +60,9 @@ public interface Grouper<KeyType> extends Closeable
    * @param key     key object
    * @param keyHash result of {@link Groupers#hash(Object)} on the key
    *
-   * @return true if the row was aggregated, false if not due to hitting resource limits
+   * @return result that is ok if the row was aggregated, not ok if a resource limit was hit
    */
-  boolean aggregate(KeyType key, int keyHash);
+  AggregateResult aggregate(KeyType key, int keyHash);
 
   /**
    * Aggregate the current row with the provided key. Some implementations are thread-safe and
@@ -70,9 +70,9 @@ public interface Grouper<KeyType> extends Closeable
    *
    * @param key key
    *
-   * @return true if the row was aggregated, false if not due to hitting resource limits
+   * @return result that is ok if the row was aggregated, not ok if a resource limit was hit
    */
-  boolean aggregate(KeyType key);
+  AggregateResult aggregate(KeyType key);
 
   /**
    * Reset the grouper to its initial state.

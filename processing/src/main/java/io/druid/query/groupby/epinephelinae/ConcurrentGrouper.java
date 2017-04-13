@@ -145,7 +145,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public boolean aggregate(KeyType key, int keyHash)
+  public AggregateResult aggregate(KeyType key, int keyHash)
   {
     if (!initialized) {
       throw new ISE("Grouper is not initialized");
@@ -160,8 +160,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
       synchronized (hashBasedGrouper) {
         if (!spilling) {
-          if (hashBasedGrouper.aggregate(key, keyHash)) {
-            return true;
+          if (hashBasedGrouper.aggregate(key, keyHash).isOk()) {
+            return AggregateResult.ok();
           } else {
             spilling = true;
           }
@@ -179,7 +179,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public boolean aggregate(KeyType key)
+  public AggregateResult aggregate(KeyType key)
   {
     return aggregate(key, Groupers.hash(key));
   }

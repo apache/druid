@@ -299,7 +299,7 @@ outer:
           // Aggregate additional grouping for this row
           if (doAggregate) {
             keyBuffer.rewind();
-            if (!grouper.aggregate(keyBuffer)) {
+            if (!grouper.aggregate(keyBuffer).isOk()) {
               // Buffer full while aggregating; break out and resume later
               currentRowWasPartiallyAggregated = true;
               break outer;
