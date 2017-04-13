@@ -19,6 +19,8 @@
 
 package io.druid.client.cache;
 
+import io.druid.java.util.common.logger.Logger;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-
-import io.druid.java.util.common.logger.Logger;
 
 /**
 */
@@ -104,7 +104,11 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
       remove(keyToRemove);
     }
 
-    return super.put(key, value);
+    byte[] old = super.put(key, value);
+    if (old != null) {
+      numBytes.addAndGet(-key.remaining() - old.length);
+    }
+    return old;
   }
 
   @Override
