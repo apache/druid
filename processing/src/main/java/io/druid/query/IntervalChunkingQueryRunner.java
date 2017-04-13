@@ -115,7 +115,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                         ),
                         executor, queryWatcher
                     ).run(
-                        query.replaceQuerySegmentSpecWith(
+                        query.withQuerySegmentSpec(
                             Iterables.getOnlyElement(spec.getDataSource().getNames()),
                             new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))
                         ),

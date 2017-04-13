@@ -62,7 +62,7 @@ public class QueryManager implements QueryWatcher
   public void registerQuery(Query query, final ListenableFuture future)
   {
     final String id = query.getId();
-    final Iterable<DataSourceWithSegmentSpec> sources = query.getDataSources();
+    final List<DataSourceWithSegmentSpec> sources = query.getDataSources();
     final List<String> dataSourceNames = new ArrayList<>();
     for (DataSourceWithSegmentSpec eachSource : sources) {
       dataSourceNames.addAll(eachSource.getDataSource().getNames());

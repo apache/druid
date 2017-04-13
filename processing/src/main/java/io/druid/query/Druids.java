@@ -452,7 +452,7 @@ public class Druids
         context = new HashMap<>();
       }
       context.put(
-          QueryContextKeys.DIST_TARGET_SOURCE,
+          QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
           new DataSourceWithSegmentSpec(
               SingleSourceBaseQuery.getLeafDataSource(dataSource),
               querySegmentSpec
@@ -661,7 +661,7 @@ public class Druids
         context = new HashMap<>();
       }
       context.put(
-          QueryContextKeys.DIST_TARGET_SOURCE,
+          QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
           new DataSourceWithSegmentSpec(
               SingleSourceBaseQuery.getLeafDataSource(dataSource),
               querySegmentSpec
@@ -886,7 +886,7 @@ public class Druids
         context = new HashMap<>();
       }
       context.put(
-          QueryContextKeys.DIST_TARGET_SOURCE,
+          QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
           new DataSourceWithSegmentSpec(
               SingleSourceBaseQuery.getLeafDataSource(dataSource),
               querySegmentSpec
@@ -1239,7 +1239,7 @@ public class Druids
         context = new HashMap<>();
       }
       context.put(
-          QueryContextKeys.DIST_TARGET_SOURCE,
+          QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
           new DataSourceWithSegmentSpec(
               SingleSourceBaseQuery.getLeafDataSource(dataSource),
               querySegmentSpec

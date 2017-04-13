@@ -244,7 +244,7 @@ public class TimewarpOperatorTest
   {
     return query.withOverriddenContext(
         ImmutableMap.of(
-            QueryContextKeys.DIST_TARGET_SOURCE,
+            QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
             new DataSourceWithSegmentSpec(
                 Iterables.getOnlyElement(query.getDataSources()).getDataSource(),
                 Iterables.getOnlyElement(query.getDataSources()).getQuerySegmentSpec()

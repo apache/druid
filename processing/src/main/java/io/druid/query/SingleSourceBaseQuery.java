@@ -55,7 +55,7 @@ public abstract class SingleSourceBaseQuery<T extends Comparable<T>> extends Bas
   public abstract Query<T> withDataSource(DataSource dataSource);
 
   @Override
-  public Iterable<DataSourceWithSegmentSpec> getDataSources()
+  public List<DataSourceWithSegmentSpec> getDataSources()
   {
     return ImmutableList.of(dataSourceWithSegment);
   }
@@ -98,14 +98,14 @@ public abstract class SingleSourceBaseQuery<T extends Comparable<T>> extends Bas
   public Duration getDuration()
   {
     if (duration == null) {
-      duration = initDuration(dataSourceWithSegment.getQuerySegmentSpec());
+      duration = getTotalDuration(dataSourceWithSegment.getQuerySegmentSpec());
     }
 
     return duration;
   }
 
   @Override
-  public Query<T> replaceQuerySegmentSpecWith(DataSource dataSource, QuerySegmentSpec spec)
+  public Query<T> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec)
   {
     Preconditions.checkArgument(this.dataSourceWithSegment.getDataSource().equals(dataSource));
     final Query<T> query = withQuerySegmentSpec(spec);
@@ -118,7 +118,7 @@ public abstract class SingleSourceBaseQuery<T extends Comparable<T>> extends Bas
   }
 
   @Override
-  public Query<T> replaceQuerySegmentSpecWith(String dataSource, QuerySegmentSpec spec)
+  public Query<T> withQuerySegmentSpec(String dataSource, QuerySegmentSpec spec)
   {
     Preconditions.checkArgument(Iterables.getOnlyElement(this.dataSourceWithSegment.getDataSource().getNames()).equals(dataSource));
     final Query<T> query = withQuerySegmentSpec(spec);

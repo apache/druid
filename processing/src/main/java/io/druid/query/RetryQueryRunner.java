@@ -82,7 +82,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
             context.put(Result.MISSING_SEGMENTS_KEY, new HashMap<>());
             Query<T> retryQuery = query;
             for (Entry<String, List<SegmentDescriptor>> entry : missingSegments.entrySet()) {
-              retryQuery = query.replaceQuerySegmentSpecWith(
+              retryQuery = query.withQuerySegmentSpec(
                   entry.getKey(),
                   new MultipleSpecificSegmentSpec(entry.getValue())
               );

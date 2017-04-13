@@ -37,8 +37,8 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
 
+import java.util.List;
 import java.util.Map;
-import java.util.stream.StreamSupport;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
 @JsonSubTypes(value = {
@@ -65,7 +65,7 @@ public interface Query<T>
   String DATASOURCE_METADATA = "dataSourceMetadata";
   String JOIN = "join";
 
-  Iterable<DataSourceWithSegmentSpec> getDataSources();
+  List<DataSourceWithSegmentSpec> getDataSources();
 
   boolean hasFilters();
 
@@ -81,9 +81,11 @@ public interface Query<T>
 
   default Duration getTotalDuration()
   {
-    return StreamSupport.stream(getDataSources().spliterator(), false)
-        .map(spec -> BaseQuery.initDuration(spec.getQuerySegmentSpec()))
-        .reduce(new Duration(0), Duration::plus);
+    Duration totalDuration = new Duration(0);
+    for (DataSourceWithSegmentSpec spec : getDataSources()) {
+      totalDuration = totalDuration.plus(BaseQuery.getTotalDuration(spec.getQuerySegmentSpec()));
+    }
+    return totalDuration;
   }
 
   Map<String, Object> getContext();
@@ -104,19 +106,19 @@ public interface Query<T>
 
   default DataSourceWithSegmentSpec getDistributionTarget()
   {
-    return getContextValue(QueryContextKeys.DIST_TARGET_SOURCE);
+    return getContextValue(QueryContextKeys.DISTRIBUTION_TARGET_SOURCE);
   }
 
   default Query<T> distributeBy(DataSourceWithSegmentSpec spec)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContextKeys.DIST_TARGET_SOURCE, spec));
+    return withOverriddenContext(ImmutableMap.of(QueryContextKeys.DISTRIBUTION_TARGET_SOURCE, spec));
   }
 
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
-  Query<T> replaceQuerySegmentSpecWith(DataSource dataSource, QuerySegmentSpec spec);
+  Query<T> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec);
 
-  Query<T> replaceQuerySegmentSpecWith(String dataSource, QuerySegmentSpec spec);
+  Query<T> withQuerySegmentSpec(String dataSource, QuerySegmentSpec spec);
 
   Query<T> replaceDataSourceWith(DataSource src, DataSource dst);
 }

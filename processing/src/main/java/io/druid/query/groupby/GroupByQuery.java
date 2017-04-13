@@ -663,7 +663,7 @@ public class GroupByQuery extends SingleSourceBaseQuery<Row>
         context = new HashMap<>();
       }
       context.put(
-          QueryContextKeys.DIST_TARGET_SOURCE,
+          QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
           new DataSourceWithSegmentSpec(getLeafDataSource(dataSource), querySegmentSpec)
       );
       return this;

@@ -79,7 +79,7 @@ public class JoinQuery extends BaseQuery<Row>
   }
 
   @Override
-  public Iterable<DataSourceWithSegmentSpec> getDataSources()
+  public List<DataSourceWithSegmentSpec> getDataSources()
   {
     final List<DataSourceWithSegmentSpec> found = new ArrayList<>();
     final JoinSpecVisitor visitor = new JoinSpecVisitor()
@@ -128,7 +128,7 @@ public class JoinQuery extends BaseQuery<Row>
   {
     for (DataSourceWithSegmentSpec sourceWithSegmentSpec : getDataSources()) {
       if (sourceWithSegmentSpec.getDataSource().equals(dataSource)) {
-        return initDuration(sourceWithSegmentSpec.getQuerySegmentSpec());
+        return getTotalDuration(sourceWithSegmentSpec.getQuerySegmentSpec());
       }
     }
     return null;
@@ -179,13 +179,13 @@ public class JoinQuery extends BaseQuery<Row>
   }
 
   @Override
-  public Query<Row> replaceQuerySegmentSpecWith(DataSource dataSource, QuerySegmentSpec spec)
+  public Query<Row> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec)
   {
-    return replaceQuerySegmentSpecWith(dataSource.getFirstName(), spec);
+    return withQuerySegmentSpec(dataSource.getFirstName(), spec);
   }
 
   @Override
-  public Query<Row> replaceQuerySegmentSpecWith(String dataSource, QuerySegmentSpec spec)
+  public Query<Row> withQuerySegmentSpec(String dataSource, QuerySegmentSpec spec)
   {
     final JoinSpecVisitor visitor = new JoinSpecVisitor()
     {

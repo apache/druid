@@ -178,7 +178,7 @@ public class QueryResource implements QueryCountStatsProvider
   ) throws IOException
   {
     final long startNs = System.nanoTime();
-    Query query = null;
+    Query<?> query = null;
     QueryToolChest toolChest = null;
     String queryId = null;
 
@@ -212,8 +212,7 @@ public class QueryResource implements QueryCountStatsProvider
         // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
         AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
         if (authorizationInfo != null) {
-          final Iterable<DataSourceWithSegmentSpec> sources = query.getDataSources();
-          for (DataSourceWithSegmentSpec eachSource : sources) {
+          for (DataSourceWithSegmentSpec eachSource : query.getDataSources()) {
             for (String dataSource : eachSource.getDataSource().getNames()) {
               Access authResult = authorizationInfo.isAuthorized(
                   new Resource(dataSource, ResourceType.DATASOURCE),

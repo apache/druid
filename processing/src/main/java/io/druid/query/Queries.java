@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  */
@@ -85,6 +84,14 @@ public class Queries
     return postAggs;
   }
 
+  /**
+   * Make string representations of data sources and intervals of a given query.
+   * The lhs of the result pair is the list of data source names.
+   * The rhs of the result pair is the list of interval strings in ISO8601 interval format ({@link Interval#toString()}).
+   *
+   * @param query a query
+   * @return a pair of strings of data sources and intervals
+   */
   public static <T> Pair<String, String> getDataSourceAndIntervalStrings(final Query<T> query)
   {
     final List<String> datasourceNames = new ArrayList<>();
@@ -92,14 +99,9 @@ public class Queries
 
     query.getDataSources().forEach(spec -> {
       datasourceNames.addAll(spec.getDataSource().getNames());
-      intervals.addAll(
-          spec.getQuerySegmentSpec().getIntervals().stream().map(Interval::toString).collect(Collectors.toList())
-      );
+      spec.getQuerySegmentSpec().getIntervals().stream().map(Interval::toString).forEach(intervals::add);
     });
 
-    return new Pair<>(
-        datasourceNames.stream().collect(Collectors.joining(",", "[", "]")),
-        intervals.stream().collect(Collectors.joining(",", "[", "]"))
-    );
+    return new Pair<>(datasourceNames.toString(), intervals.toString());
   }
 }

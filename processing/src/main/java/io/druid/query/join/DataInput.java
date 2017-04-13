@@ -76,7 +76,7 @@ public class DataInput implements JoinInputSpec
   public Duration getDuration()
   {
     if (duration == null) {
-      this.duration = BaseQuery.initDuration(querySegmentSpec);
+      this.duration = BaseQuery.getTotalDuration(querySegmentSpec);
     }
     return duration;
   }

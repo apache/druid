@@ -76,7 +76,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  */
@@ -530,17 +529,17 @@ public class QueryRunnerTestHelper
               @Override
               public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
               {
-                final List<TimelineObjectHolder> segments = StreamSupport
-                    .stream(query.getDataSources().spliterator(), false)
-                    .flatMap(spec -> spec.getQuerySegmentSpec().getIntervals().stream())
-                    .flatMap(interval -> timeline.lookup(interval).stream())
-                    .collect(Collectors.toList());
+                final List<TimelineObjectHolder> segments = query.getDataSources().stream()
+                                                                 .flatMap(spec -> spec.getQuerySegmentSpec()
+                                                                                      .getIntervals().stream())
+                                                                 .flatMap(interval -> timeline.lookup(interval).stream())
+                                                                 .collect(Collectors.toList());
                 List<Sequence<T>> sequences = Lists.newArrayList();
                 for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
                   Segment segment = holder.getObject().getChunk(0).getObject();
                   Query running = query;
                   for (DataSourceWithSegmentSpec spec : query.getDataSources()) {
-                    running = query.replaceQuerySegmentSpecWith(
+                    running = query.withQuerySegmentSpec(
                         spec.getDataSource(),
                         new SpecificSegmentSpec(
                             new SegmentDescriptor(

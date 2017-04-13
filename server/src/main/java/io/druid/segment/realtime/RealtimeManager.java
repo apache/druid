@@ -199,7 +199,7 @@ public class RealtimeManager implements QuerySegmentWalker
                            return retVal == null
                                   ? new NoopQueryRunner<T>()
                                   : retVal.getQueryRunner(
-                                      query.replaceQuerySegmentSpecWith(dataSourceName, new SpecificSegmentSpec(spec))
+                                      query.withQuerySegmentSpec(dataSourceName, new SpecificSegmentSpec(spec))
                                   );
                          }
                        }

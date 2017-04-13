@@ -21,7 +21,6 @@ package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -107,8 +106,8 @@ public class BrokerQueryResource extends QueryResource
       Query<?> query = context.getObjectMapper().readValue(in, Query.class);
 
       final DataSourceWithSegmentSpec spec = (DataSourceWithSegmentSpec) query.getContext().computeIfAbsent(
-          QueryContextKeys.DIST_TARGET_SOURCE,
-          key -> Iterables.getFirst(query.getDataSources(), null)
+          QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
+          key -> query.getDataSources().get(0)
       );
       return context.ok(
           ServerViewUtil.getTargetLocations(

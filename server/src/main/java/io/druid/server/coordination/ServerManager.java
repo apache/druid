@@ -267,9 +267,9 @@ public class ServerManager implements QuerySegmentWalker
     }
     final DataSource nonBroadcastDataSource = query.getDistributionTarget().getDataSource();
     final String nonBroadcastDataSourceName = getDataSourceName(nonBroadcastDataSource);
-    final List<String> dataSourceNames = StreamSupport.stream(query.getDataSources().spliterator(), false)
-                                                      .map(spec -> getDataSourceName(spec.getDataSource()))
-                                                      .collect(Collectors.toList());
+    final List<String> dataSourceNames = query.getDataSources().stream()
+                                              .map(spec -> getDataSourceName(spec.getDataSource()))
+                                              .collect(Collectors.toList());
 
     if (dataSourceNames.stream().anyMatch(name -> !dataSources.containsKey(name))) {
       return new NoopQueryRunner<>();
@@ -406,9 +406,9 @@ public class ServerManager implements QuerySegmentWalker
 
     final DataSource nonBroadcastDataSource = query.getDistributionTarget().getDataSource();
     final String nonBroadcastDataSourceName = getDataSourceName(nonBroadcastDataSource);
-    final List<String> dataSourceNames = StreamSupport.stream(query.getDataSources().spliterator(), false)
-                                                      .map(spec -> getDataSourceName(spec.getDataSource()))
-                                                      .collect(Collectors.toList());
+    final List<String> dataSourceNames = query.getDataSources().stream()
+                                              .map(spec -> getDataSourceName(spec.getDataSource()))
+                                              .collect(Collectors.toList());
 
     if (dataSourceNames.stream().anyMatch(name -> !dataSources.containsKey(name))) {
       return new NoopQueryRunner<>();

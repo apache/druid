@@ -19,12 +19,9 @@
 
 package io.druid.query;
 
-import org.joda.time.Interval;
+import com.google.common.collect.Iterables;
 
 import java.util.List;
-import java.util.StringJoiner;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public class DataSourceUtil
 {
@@ -34,21 +31,8 @@ public class DataSourceUtil
     return names.size() == 1 ? names.get(0) : names.toString();
   }
 
-  public static String getMetricName(Iterable<DataSourceWithSegmentSpec> dataSources)
+  public static String getMetricName(List<DataSourceWithSegmentSpec> dataSources)
   {
-    return StreamSupport.stream(dataSources.spliterator(), false)
-                 .map(DataSourceUtil::getMetricName)
-                 .collect(Collectors.joining(",", "[", "]"));
-  }
-
-  private static String getMetricName(DataSourceWithSegmentSpec spec)
-  {
-    final StringJoiner joiner = new StringJoiner("=", "[", "]");
-    joiner.add(getMetricName(spec.getDataSource()));
-    joiner.add(spec.getQuerySegmentSpec().getIntervals().stream()
-                   .map(Interval::toString)
-                   .collect(Collectors.joining(",", "[", "]"))
-    );
-    return joiner.toString();
+    return Iterables.toString(dataSources);
   }
 }

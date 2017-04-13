@@ -319,7 +319,7 @@ public class ScanQuery extends SingleSourceBaseQuery<ScanResultValue>
         context = new HashMap<>();
       }
       context.put(
-          QueryContextKeys.DIST_TARGET_SOURCE,
+          QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
           new DataSourceWithSegmentSpec(
               SingleSourceBaseQuery.getLeafDataSource(dataSource),
               querySegmentSpec

@@ -128,7 +128,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return runner.run(this, context);
   }
 
-  public static Duration initDuration(QuerySegmentSpec querySegmentSpec)
+  public static Duration getTotalDuration(QuerySegmentSpec querySegmentSpec)
   {
     Duration totalDuration = new Duration(0);
     for (Interval interval : querySegmentSpec.getIntervals()) {

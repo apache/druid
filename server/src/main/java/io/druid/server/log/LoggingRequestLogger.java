@@ -57,9 +57,9 @@ public class LoggingRequestLogger implements RequestLogger
     try {
       if (setMDC) {
         try {
-          final Query query = requestLogLine.getQuery();
+          final Query<?> query = requestLogLine.getQuery();
           MDC.put("queryId", query.getId());
-          MDC.put("dataSource", (String) Queries.getDataSourceAndIntervalStrings(query).lhs);
+          MDC.put("dataSource", Queries.getDataSourceAndIntervalStrings(query).lhs);
           MDC.put("queryType", query.getType());
           MDC.put("hasFilters", Boolean.toString(query.hasFilters()));
           MDC.put("remoteAddr", requestLogLine.getRemoteAddr());

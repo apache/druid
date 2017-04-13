@@ -437,7 +437,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               if (!server.isAssignable() || !populateCache || isBySegment) { // Direct server queryable
                 if (!isBySegment) {
                   resultSeqToAdd = clientQueryable.run(
-                      query.replaceQuerySegmentSpecWith(dataSourceName, segmentSpec),
+                      query.withQuerySegmentSpec(dataSourceName, segmentSpec),
                       responseContext
                   );
                 } else {
@@ -449,7 +449,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
                   @SuppressWarnings("unchecked")
                   final Sequence<Result<BySegmentResultValueClass<T>>> resultSequence = clientQueryable.run(
-                      bySegmentQuery.replaceQuerySegmentSpecWith(dataSourceName, segmentSpec),
+                      bySegmentQuery.withQuerySegmentSpec(dataSourceName, segmentSpec),
                       responseContext
                   );
 
@@ -482,7 +482,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               } else { // Requires some manipulation on broker side
                 @SuppressWarnings("unchecked")
                 final Sequence<Result<BySegmentResultValueClass<T>>> runningSequence = clientQueryable.run(
-                    rewrittenQuery.replaceQuerySegmentSpecWith(dataSourceName, segmentSpec),
+                    rewrittenQuery.withQuerySegmentSpec(dataSourceName, segmentSpec),
                     responseContext
                 );
                 resultSeqToAdd = new MergeSequence(

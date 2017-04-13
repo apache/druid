@@ -2002,7 +2002,7 @@ public class CachingClusteredClientTest
                 TestHelper.assertExpectedResults(
                     expected,
                     runner.run(
-                        query.replaceQuerySegmentSpecWith(
+                        query.withQuerySegmentSpec(
                             Iterables.getOnlyElement(spec.getDataSource().getNames()),
                             new MultipleIntervalSegmentSpec(
                                 ImmutableList.of(
@@ -2229,7 +2229,7 @@ public class CachingClusteredClientTest
                             )
                     ),
                     runner.run(
-                        query.replaceQuerySegmentSpecWith(
+                        query.withQuerySegmentSpec(
                             Iterables.getOnlyElement(spec.getDataSource().getNames()),
                             new MultipleIntervalSegmentSpec(
                                 ImmutableList.of(

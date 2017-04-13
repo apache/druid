@@ -28,8 +28,10 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
@@ -55,7 +57,10 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void dataSources(QueryType query)
   {
-    builder.setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSources()));
+    final List<String> specs = query.getDataSources().stream()
+                                    .map(DataSourceWithSegmentSpec::toString)
+                                    .collect(Collectors.toList());
+    builder.setDimension(DruidMetrics.DATASOURCE, specs.toArray(new String[specs.size()]));
   }
 
   @Override

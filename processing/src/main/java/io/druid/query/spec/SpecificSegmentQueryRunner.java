@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  */
@@ -64,14 +63,14 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> input, final Map<String, Object> responseContext)
   {
-    final Query<T> query = input.replaceQuerySegmentSpecWith(dataSourceName, specificSpec);
+    final Query<T> query = input.withQuerySegmentSpec(dataSourceName, specificSpec);
 
     final Thread currThread = Thread.currentThread();
     final String currThreadName = currThread.getName();
-    final List<DataSourceWithSegmentSpec> specs = StreamSupport
-        .stream(input.getDataSources().spliterator(), false)
-        .filter(spec -> spec.getDataSource().getNames().contains(dataSourceName))
-        .collect(Collectors.toList());
+    final List<DataSourceWithSegmentSpec> specs = input.getDataSources().stream()
+                                                       .filter(spec -> spec.getDataSource().getNames()
+                                                                           .contains(dataSourceName))
+                                                       .collect(Collectors.toList());
     Preconditions.checkState(specs.size() == 1);
 
     final String newName = String.format(
