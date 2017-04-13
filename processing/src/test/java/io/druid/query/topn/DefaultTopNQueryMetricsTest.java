@@ -24,7 +24,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.CachingEmitter;
-import io.druid.query.DataSourceUtil;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.DefaultQueryMetricsTest;
 import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunnerTestHelper;
@@ -37,6 +37,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class DefaultTopNQueryMetricsTest
 {
@@ -74,7 +75,12 @@ public class DefaultTopNQueryMetricsTest
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals(DataSourceUtil.getMetricName(query.getDataSources()), actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(
+        query.getDataSources().stream()
+             .map(DataSourceWithSegmentSpec::toString)
+             .collect(Collectors.toList()),
+        actualEvent.get(DruidMetrics.DATASOURCE)
+    );
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     Assert.assertEquals("true", actualEvent.get("hasFilters"));
     Assert.assertEquals(query.getTotalDuration().toString(), actualEvent.get("duration"));
