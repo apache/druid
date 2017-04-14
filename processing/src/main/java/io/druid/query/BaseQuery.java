@@ -112,7 +112,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
       Map<String, Object> context
   )
   {
-    this.context = context;
+    this.context = context == null ? Maps.newTreeMap() : context;
     this.descending = descending;
   }
 
@@ -149,7 +149,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public <ContextType> ContextType getContextValue(String key)
   {
-    return context == null ? null : (ContextType) context.get(key);
+    return (ContextType) context.get(key);
   }
 
   @Override
@@ -169,9 +169,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   {
     Map<String, Object> overridden = Maps.newTreeMap();
     final Map<String, Object> context = getContext();
-    if (context != null) {
-      overridden.putAll(context);
-    }
+    overridden.putAll(context);
     overridden.putAll(overrides);
 
     return overridden;
@@ -211,7 +209,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     if (descending != baseQuery.descending) {
       return false;
     }
-    if (context != null ? !context.equals(baseQuery.context) : baseQuery.context != null) {
+    if (!context.equals(baseQuery.context)) {
       return false;
     }
 
@@ -222,7 +220,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   public int hashCode()
   {
     int result = (descending ? 1 : 0);
-    result = 31 * result + (context != null ? context.hashCode() : 0);
+    result = 31 * result + context.hashCode();
     return result;
   }
 }

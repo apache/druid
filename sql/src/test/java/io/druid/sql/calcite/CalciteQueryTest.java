@@ -2148,6 +2148,7 @@ public class CalciteQueryTest
                 .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
                 .threshold(5)
                 .context(QUERY_CONTEXT_DEFAULT)
+                .updateDistributionTarget()
                 .build()
         ),
         ImmutableList.of(

@@ -152,7 +152,7 @@ public abstract class SingleSourceBaseQuery<T extends Comparable<T>> extends Bas
     if (isDescending() != baseQuery.isDescending()) {
       return false;
     }
-    if (getContext() != null ? !getContext().equals(baseQuery.getContext()) : baseQuery.getContext() != null) {
+    if (!getContext().equals(baseQuery.getContext())) {
       return false;
     }
     if (!dataSourceWithSegment.equals(baseQuery.dataSourceWithSegment)) {
@@ -170,7 +170,7 @@ public abstract class SingleSourceBaseQuery<T extends Comparable<T>> extends Bas
   {
     int result = dataSourceWithSegment.hashCode();
     result = 31 * result + (isDescending() ? 1 : 0);
-    result = 31 * result + (getContext() != null ? getContext().hashCode() : 0);
+    result = 31 * result + getContext().hashCode();
     result = 31 * result + (duration != null ? duration.hashCode() : 0);
     return result;
   }

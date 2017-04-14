@@ -43,7 +43,7 @@ public class ScanQuerySpecTest
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
         + "\"limit\":3,"
-        + "\"context\":null}";
+        + "\"context\":{}}";
 
     String current =
         "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
@@ -53,7 +53,7 @@ public class ScanQuerySpecTest
         + "\"limit\":3,"
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
-        + "\"context\":null,"
+        + "\"context\":{},"
         + "\"descending\":false}";
 
     ScanQuery query = new ScanQuery(

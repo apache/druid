@@ -22,7 +22,6 @@ package io.druid.query;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
@@ -93,11 +92,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     try {
       builder.setDimension(
           "context",
-          jsonMapper.writeValueAsString(
-              query.getContext() == null
-              ? ImmutableMap.of()
-              : query.getContext()
-          )
+          jsonMapper.writeValueAsString(query.getContext())
       );
     }
     catch (JsonProcessingException e) {

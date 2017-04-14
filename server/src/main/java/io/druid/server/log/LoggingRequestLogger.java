@@ -20,7 +20,6 @@
 package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Queries;
 import io.druid.query.Query;
@@ -66,9 +65,7 @@ public class LoggingRequestLogger implements RequestLogger
           MDC.put("duration", query.getTotalDuration().toString());
           MDC.put("descending", Boolean.toString(query.isDescending()));
           if (setContextMDC) {
-            final Iterable<Map.Entry<String, Object>> entries = query.getContext() == null
-                                                                ? ImmutableList.<Map.Entry<String, Object>>of()
-                                                                : query.getContext().entrySet();
+            final Iterable<Map.Entry<String, Object>> entries = query.getContext().entrySet();
             for (Map.Entry<String, Object> entry : entries) {
               MDC.put(entry.getKey(), entry.getValue() == null ? "NULL" : entry.getValue().toString());
             }
