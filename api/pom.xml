@@ -87,7 +87,11 @@
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>net.thisptr</groupId>
+            <artifactId>jackson-jq</artifactId>
+            <version>0.0.7</version>
+        </dependency>
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>

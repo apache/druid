@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum JSONPathFieldType
 {
   ROOT,
-  PATH;
+  PATH,
+  JQ;
 
   @JsonValue
   @Override

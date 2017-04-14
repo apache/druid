@@ -106,6 +106,11 @@ public class JSONPathParserTest
     fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.ROOT, "INVALID_ROOT", "INVALID_ROOT_EXPR"));
     fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "INVALID_PATH", "INVALID_PATH_EXPR"));
 
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-nested-foo.bar1", ".foo.bar1"));
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-nested-foo.bar2", ".foo.bar2"));
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-met-array", ".met.a"));
+
 
     final Parser<String, Object> jsonParser = new JSONPathParser(fields, true, null);
     final Map<String, Object> jsonMap = jsonParser.parse(nestedJson);
@@ -138,6 +143,11 @@ public class JSONPathParserTest
     Assert.assertEquals("bbb", jsonMap.get("nested-foo.bar2"));
     Assert.assertEquals("asdf", jsonMap.get("heybarx0"));
     Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("met-array"));
+
+    Assert.assertEquals("aaa", jsonMap.get("jq-nested-foo.bar1"));
+    Assert.assertEquals("bbb", jsonMap.get("jq-nested-foo.bar2"));
+    Assert.assertEquals("asdf", jsonMap.get("jq-heybarx0"));
+    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
 
     // Fields that should not be discovered
     Assert.assertNull(jsonMap.get("hey"));

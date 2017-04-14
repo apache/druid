@@ -20,6 +20,7 @@
 package io.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.jayway.jsonpath.Configuration;
@@ -29,11 +30,14 @@ import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import net.thisptr.jackson.jq.JsonQuery;
+import net.thisptr.jackson.jq.exception.JsonQueryException;
 
 import java.math.BigInteger;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +47,7 @@ import java.util.Map;
  */
 public class JSONPathParser implements Parser<String, Object>
 {
-  private final Map<String, Pair<FieldType, JsonPath>> fieldPathMap;
+  private final Map<String, Pair<FieldType, FlattenExpr>> fieldPathMap;
   private final boolean useFieldDiscovery;
   private final ObjectMapper mapper;
   private final CharsetEncoder enc = Charsets.UTF_8.newEncoder();
@@ -100,20 +104,25 @@ public class JSONPathParser implements Parser<String, Object>
           {
           }
       );
-      for (Map.Entry<String, Pair<FieldType, JsonPath>> entry : fieldPathMap.entrySet()) {
+      JsonNode jsonNode = mapper.readValue(input, JsonNode.class);
+
+      for (Map.Entry<String, Pair<FieldType, FlattenExpr>> entry : fieldPathMap.entrySet()) {
         String fieldName = entry.getKey();
-        Pair<FieldType, JsonPath> pair = entry.getValue();
-        JsonPath path = pair.rhs;
+        Pair<FieldType, FlattenExpr> pair = entry.getValue();
+        FlattenExpr path = pair.rhs;
         Object parsedVal;
         if (pair.lhs == FieldType.ROOT) {
-          parsedVal = document.get(fieldName);
+          parsedVal = valueConversionFunction(document.get(fieldName));
+        } else if (pair.lhs == FieldType.PATH) {
+          parsedVal = valueConversionFunction(path.read(document, jsonPathConfig));
+        } else if (pair.lhs == FieldType.JQ) {
+          parsedVal = jsonNodeValueConversionFunction(path.read(jsonNode));
         } else {
-          parsedVal = path.read(document, jsonPathConfig);
+          throw new ParseException("Unknown FieldType", pair.lhs);
         }
         if (parsedVal == null) {
           continue;
         }
-        parsedVal = valueConversionFunction(parsedVal);
         map.put(fieldName, parsedVal);
       }
       if (useFieldDiscovery) {
@@ -126,16 +135,26 @@ public class JSONPathParser implements Parser<String, Object>
     }
   }
 
-  private Map<String, Pair<FieldType, JsonPath>> generateFieldPaths(List<FieldSpec> fieldSpecs)
+  private Map<String, Pair<FieldType, FlattenExpr>> generateFieldPaths(List<FieldSpec> fieldSpecs)
   {
-    Map<String, Pair<FieldType, JsonPath>> map = new LinkedHashMap<>();
+    Map<String, Pair<FieldType, FlattenExpr>> map = new LinkedHashMap<>();
     for (FieldSpec fieldSpec : fieldSpecs) {
       String fieldName = fieldSpec.getName();
       if (map.get(fieldName) != null) {
         throw new IllegalArgumentException("Cannot have duplicate field definition: " + fieldName);
       }
-      JsonPath path = fieldSpec.getType() == FieldType.PATH ? JsonPath.compile(fieldSpec.getExpr()) : null;
-      Pair<FieldType, JsonPath> pair = new Pair<>(fieldSpec.getType(), path);
+      FlattenExpr path = null;
+      if (fieldSpec.getType() == FieldType.PATH) {
+        path = new FlattenExpr(JsonPath.compile(fieldSpec.getExpr()));
+      } else if (fieldSpec.getType() == FieldType.JQ) {
+        try {
+          path = new FlattenExpr(JsonQuery.compile(fieldSpec.getExpr()));
+        }
+        catch (JsonQueryException e) {
+          throw new ParseException(e, "Unable to flatten expression row [%s]", fieldSpec.getExpr());
+        }
+      }
+      Pair<FieldType, FlattenExpr> pair = new Pair<>(fieldSpec.getType(), path);
       map.put(fieldName, pair);
     }
     return map;
@@ -166,6 +185,10 @@ public class JSONPathParser implements Parser<String, Object>
 
   private Object valueConversionFunction(Object val)
   {
+    if (val == null) {
+      return null;
+    }
+
     if (val instanceof Integer) {
       return Long.valueOf((Integer) val);
     }
@@ -191,6 +214,42 @@ public class JSONPathParser implements Parser<String, Object>
       Map<String, Object> valMap = (Map<String, Object>) val;
       for (Map.Entry<String, Object> entry : valMap.entrySet()) {
         newMap.put(entry.getKey(), valueConversionFunction(entry.getValue()));
+      }
+      return newMap;
+    }
+
+    return val;
+  }
+
+  private Object jsonNodeValueConversionFunction(JsonNode val)
+  {
+    if (val.isInt() || val.isLong()) {
+      return val.asLong();
+    }
+
+    if (val.isNumber()) {
+      return val.asDouble();
+    }
+
+    if (val.isTextual()) {
+      return charsetFix(val.asText());
+    }
+
+    if (val.isArray()) {
+      List<Object> newList = new ArrayList<>();
+      for (Iterator<JsonNode> it = val.iterator(); it.hasNext(); ) {
+        JsonNode entry = it.next();
+        newList.add(jsonNodeValueConversionFunction(entry));
+      }
+      return newList;
+    }
+
+    if (val.isObject()) {
+      Map<String, Object> newMap = new LinkedHashMap<>();
+      Map<String, Object> valMap = (Map<String, Object>) val;
+      for (Iterator<Map.Entry<String, JsonNode>> it = val.fields(); it.hasNext(); ) {
+        Map.Entry<String, JsonNode> entry = it.next();
+        newMap.put(entry.getKey(), jsonNodeValueConversionFunction(entry.getValue()));
       }
       return newMap;
     }
@@ -233,7 +292,12 @@ public class JSONPathParser implements Parser<String, Object>
     /**
      * A PATH field uses a JsonPath expression to retrieve the field value
      */
-    PATH;
+    PATH,
+
+    /**
+     * A JQ field uses a JsonQuery expression to retrieve the field value
+     */
+    JQ;
   }
 
   /**

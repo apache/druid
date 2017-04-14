@@ -115,6 +115,9 @@ public class JSONParseSpec extends ParseSpec
         case PATH:
           type = JSONPathParser.FieldType.PATH;
           break;
+        case JQ:
+          type = JSONPathParser.FieldType.JQ;
+          break;
         default:
           throw new IllegalArgumentException("Invalid type for field " + druidSpec.getName());
       }

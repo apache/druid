@@ -107,6 +107,11 @@
             <scope>test</scope>
             <optional>true</optional>
         </dependency>
+      <dependency>
+        <groupId>net.thisptr</groupId>
+        <artifactId>jackson-jq</artifactId>
+        <version>RELEASE</version>
+      </dependency>
     </dependencies>
 
     <build>
