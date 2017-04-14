@@ -169,6 +169,9 @@ public class JSONPathParserTest
     fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "nested-foo.bar2", "$.foo.bar2"));
     fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "heybarx0", "$.hey[0].barx"));
     fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-nested-foo.bar2", ".foo.bar2"));
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-met-array", ".met.a"));
 
     final Parser<String, Object> jsonParser = new JSONPathParser(fields, false, null);
     final Map<String, Object> jsonMap = jsonParser.parse(nestedJson);
@@ -181,6 +184,9 @@ public class JSONPathParserTest
     Assert.assertEquals("bbb", jsonMap.get("nested-foo.bar2"));
     Assert.assertEquals("asdf", jsonMap.get("heybarx0"));
     Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("met-array"));
+    Assert.assertEquals("bbb", jsonMap.get("jq-nested-foo.bar2"));
+    Assert.assertEquals("asdf", jsonMap.get("jq-heybarx0"));
+    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
 
     // Fields that should not be discovered
     Assert.assertNull(jsonMap.get("newmet"));
@@ -200,6 +206,20 @@ public class JSONPathParserTest
     List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
     fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
     fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
+
+    thrown.expect(IllegalArgumentException.class);
+    thrown.expectMessage("Cannot have duplicate field definition: met-array");
+
+    final Parser<String, Object> jsonParser = new JSONPathParser(fields, false, null);
+    final Map<String, Object> jsonMap = jsonParser.parse(nestedJson);
+  }
+
+  @Test
+  public void testRejectDuplicates2()
+  {
+    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
+    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "met-array", ".met.a"));
 
     thrown.expect(IllegalArgumentException.class);
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
