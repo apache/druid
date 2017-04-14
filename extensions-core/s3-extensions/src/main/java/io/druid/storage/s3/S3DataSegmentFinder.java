@@ -87,9 +87,9 @@ public class S3DataSegmentFinder implements DataSegmentFinder
               log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);
 
               final Map<String, Object> loadSpec = dataSegment.getLoadSpec();
-              if ((!loadSpec.containsKey("type") || !loadSpec.get("type").equals(S3StorageDruidModule.SCHEME)) ||
-                  (!loadSpec.containsKey("key") || !loadSpec.get("key").equals(indexZip)) ||
-                  (!loadSpec.containsKey("bucket") || !loadSpec.get("bucket").equals(config.getBucket()))) {
+              if (!S3StorageDruidModule.SCHEME.equals(loadSpec.get("type")) ||
+                  !indexZip.equals(loadSpec.get("key")) ||
+                  !config.getBucket().equals(loadSpec.get("bucket"))) {
                 loadSpec.put("type", S3StorageDruidModule.SCHEME);
                 loadSpec.put("key", indexZip);
                 loadSpec.put("bucket", config.getBucket());
