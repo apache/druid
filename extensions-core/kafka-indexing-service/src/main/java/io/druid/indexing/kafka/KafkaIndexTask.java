@@ -279,6 +279,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         )
     );
 
+    boolean publishedSuccessfully = false;
     try (
         final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
         final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
@@ -516,6 +517,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       if (published == null) {
         throw new ISE("Transaction failure publishing segments, aborting");
       } else {
+        publishedSuccessfully = true;
         log.info(
             "Published segments[%s] with metadata[%s].",
             Joiner.on(", ").join(
@@ -545,6 +547,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       // if we were interrupted because we were asked to stop, handle the exception and return success, else rethrow
       if (!stopRequested) {
         Thread.currentThread().interrupt();
+        throw e;
+      }
+
+      if (!publishedSuccessfully){
+        log.error("The task did NOT publish the segments successfully, check the value of [completionTimeout]");
         throw e;
       }
 
