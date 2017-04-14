@@ -1469,7 +1469,9 @@ public class CalciteQueryTest
         + "COUNT(CASE WHEN dim1 <> '1' THEN 'dummy' END), "
         + "SUM(CASE WHEN dim1 <> '1' THEN 1 ELSE 0 END), "
         + "SUM(cnt) filter(WHERE dim2 = 'a'), "
-        + "SUM(case when dim1 <> '1' then cnt end) filter(WHERE dim2 = 'a') "
+        + "SUM(case when dim1 <> '1' then cnt end) filter(WHERE dim2 = 'a'), "
+        + "SUM(CASE WHEN dim1 <> '1' THEN cnt ELSE 0 END), "
+        + "MAX(CASE WHEN dim1 <> '1' THEN cnt END) "
         + "FROM druid.foo",
         ImmutableList.<Query>of(
             Druids.newTimeseriesQueryBuilder()
@@ -1511,6 +1513,14 @@ public class CalciteQueryTest
                               SELECTOR("dim2", "a", null),
                               NOT(SELECTOR("dim1", "1", null))
                           )
+                      ),
+                      new FilteredAggregatorFactory(
+                          new LongSumAggregatorFactory("a8", "cnt"),
+                          NOT(SELECTOR("dim1", "1", null))
+                      ),
+                      new FilteredAggregatorFactory(
+                          new LongMaxAggregatorFactory("a9", "cnt"),
+                          NOT(SELECTOR("dim1", "1", null))
                       )
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -1518,7 +1528,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 5L, 1L, 5L, 5L, 5, 2L, 1L}
+            new Object[]{1L, 5L, 1L, 5L, 5L, 5, 2L, 1L, 5L, 1L}
         )
     );
   }
@@ -2121,6 +2131,30 @@ public class CalciteQueryTest
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5) OFFSET 2",
         ImmutableList.of(),
         ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testSelectDistinctWithSortAsOuterQuery4() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 DESC LIMIT 5) LIMIT 10",
+        ImmutableList.<Query>of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim2", "d0"))
+                .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
+                .threshold(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"abc"},
+            new Object[]{"a"}
+        )
     );
   }
 

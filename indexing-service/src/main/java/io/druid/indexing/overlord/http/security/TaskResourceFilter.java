@@ -51,7 +51,8 @@ public class TaskResourceFilter extends AbstractResourceFilter
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
 
   @Inject
-  public TaskResourceFilter(TaskStorageQueryAdapter taskStorageQueryAdapter, AuthConfig authConfig) {
+  public TaskResourceFilter(TaskStorageQueryAdapter taskStorageQueryAdapter, AuthConfig authConfig)
+  {
     super(authConfig);
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
   }
@@ -114,7 +115,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
   {
     List<String> applicablePaths = ImmutableList.of("druid/indexer/v1/task/");
     for (String path : applicablePaths) {
-      if(requestPath.startsWith(path) && !requestPath.equals(path)) {
+      if (requestPath.startsWith(path) && !requestPath.equals(path)) {
         return true;
       }
     }

@@ -120,7 +120,7 @@ public class StatsDEmitter implements Emitter
             break;
         }
       } else {
-        log.error("Metric=[%s] has no StatsD type mapping", statsDMetric);
+        log.debug("Metric=[%s] has no StatsD type mapping", statsDMetric);
       }
     }
   }
