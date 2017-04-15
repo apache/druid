@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.collect.JavaCompatUtils;
@@ -155,6 +154,24 @@ public class SupervisorManager
     }
 
     supervisor.lhs.reset(dataSourceMetadata);
+    return true;
+  }
+
+  public boolean checkPointDataSourceMetadata(
+      String supervisorId,
+      String sequenceName,
+      @Nullable DataSourceMetadata previousDataSourceMetadata,
+      @Nullable DataSourceMetadata currentDataSourceMetadata
+  )
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
+
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+
+    Preconditions.checkNotNull(supervisor, "supervisor could not be found");
+
+    supervisor.lhs.checkPoint(sequenceName, previousDataSourceMetadata, currentDataSourceMetadata);
     return true;
   }
 

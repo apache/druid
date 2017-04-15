@@ -186,6 +186,7 @@ public class KafkaIndexTaskClient
       final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
       while (true) {
         if (getStatus(id) == KafkaIndexTask.Status.PAUSED) {
+          log.info("Task [%s] paused successfully", id);
           return getCurrentOffsets(id, true);
         }
 
@@ -257,9 +258,11 @@ public class KafkaIndexTaskClient
       return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>() {});
     }
     catch (NoTaskLocationException e) {
+      log.error("No location available for task [%s]", id);
       return ImmutableMap.of();
     }
     catch (IOException e) {
+      log.error("Exception while getting current offsets [%s]", e.getMessage());
       throw Throwables.propagate(e);
     }
   }
@@ -280,21 +283,16 @@ public class KafkaIndexTaskClient
     }
   }
 
-  public boolean setEndOffsets(final String id, final Map<Integer, Long> endOffsets)
+  public boolean setEndOffsets(final String id, final Map<Integer, Long> endOffsets, final boolean resume, final boolean finalize)
   {
-    return setEndOffsets(id, endOffsets, false);
-  }
-
-  public boolean setEndOffsets(final String id, final Map<Integer, Long> endOffsets, final boolean resume)
-  {
-    log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s]", id, endOffsets, resume);
+    log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s] finalize[%s]", id, endOffsets, resume, finalize);
 
     try {
       final FullResponseHolder response = submitRequest(
           id,
           HttpMethod.POST,
           "offsets/end",
-          resume ? "resume=true" : null,
+          String.format("resume=%s&finish=%s", resume, finalize),
           jsonMapper.writeValueAsBytes(endOffsets),
           true
       );
@@ -411,13 +409,8 @@ public class KafkaIndexTaskClient
     );
   }
 
-  public ListenableFuture<Boolean> setEndOffsetsAsync(final String id, final Map<Integer, Long> endOffsets)
-  {
-    return setEndOffsetsAsync(id, endOffsets, false);
-  }
-
   public ListenableFuture<Boolean> setEndOffsetsAsync(
-      final String id, final Map<Integer, Long> endOffsets, final boolean resume
+      final String id, final Map<Integer, Long> endOffsets, final boolean resume, final boolean finalize
   )
   {
     return executorService.submit(
@@ -426,7 +419,7 @@ public class KafkaIndexTaskClient
           @Override
           public Boolean call() throws Exception
           {
-            return setEndOffsets(id, endOffsets, resume);
+            return setEndOffsets(id, endOffsets, resume, finalize);
           }
         }
     );

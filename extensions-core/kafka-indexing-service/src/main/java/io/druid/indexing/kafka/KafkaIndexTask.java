@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
@@ -38,7 +39,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
@@ -46,11 +51,14 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.indexing.overlord.DataSourceMetadata;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.parsers.ParseException;
@@ -58,6 +66,7 @@ import io.druid.query.DruidMetrics;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
@@ -89,17 +98,27 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
-import java.util.Collections;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -133,16 +152,18 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private final Map<Integer, Long> endOffsets = new ConcurrentHashMap<>();
   private final Map<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
+  private final Map<Integer, Long> maxEndOffsets = new HashMap<>();
 
-  private ObjectMapper mapper;
+  private TaskToolbox toolbox;
 
-  private volatile Appenderator appenderator = null;
   private volatile FireDepartmentMetrics fireDepartmentMetrics = null;
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
   private volatile Thread runThread = null;
-  private volatile boolean stopRequested = false;
-  private volatile boolean publishOnStop = false;
+
+  private final AtomicBoolean stopRequested = new AtomicBoolean(false);
+  private final AtomicBoolean publishOnStop = new AtomicBoolean(false);
+  private final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<>(null);
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
@@ -182,6 +203,23 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private volatile boolean pauseRequested = false;
   private volatile long pauseMillis = 0;
 
+  private volatile int nextDriverIndex = 0;
+  // Reverse sorted list of DriverHolders i.e. the most recent driverHolder is at front and the oldest at last
+  private final List<DriverHolder> driverHolders = new CopyOnWriteArrayList<>();
+  private final Lock driversListLock = new ReentrantLock();
+
+  private final BlockingDeque<DriverHolder> publishQueue = new LinkedBlockingDeque<>();
+  private final BlockingDeque<DriverHolder> handOffQueue = new LinkedBlockingDeque<>();
+
+  private final ListeningExecutorService persistExecService;
+  private final ListeningExecutorService publishExecService;
+  private final ListeningExecutorService handOffExecService;
+
+  private File driversRestoreFile;
+
+  private final CountDownLatch persistLatch = new CountDownLatch(1);
+  private final CountDownLatch handOffLatch = new CountDownLatch(1);
+
   @JsonCreator
   public KafkaIndexTask(
       @JsonProperty("id") String id,
@@ -208,6 +246,15 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
 
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
+    for (Integer partition : endOffsets.keySet()) {
+      maxEndOffsets.put(partition, Long.MAX_VALUE);
+    }
+    this.persistExecService = MoreExecutors.listeningDecorator(Execs.newBlockingSingleThreaded("persist-%d", 0));
+    this.publishExecService = MoreExecutors.listeningDecorator(Execs.newBlockingSingleThreaded("publish-driver-%d", 1));
+    this.handOffExecService = MoreExecutors.listeningDecorator(Execs.newBlockingSingleThreaded(
+        "handoff-checker-%d",
+        1
+    ));
   }
 
   private static String makeTaskId(String dataSource, int randomBits)
@@ -249,13 +296,177 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return ioConfig;
   }
 
+  private void startExecutors()
+  {
+    // start publish executor service
+    publishExecService.submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            while (true) {
+              DriverHolder driverHolder = null;
+              try {
+                driverHolder = publishQueue.take();
+
+                Preconditions.checkState(
+                    driverHolder.driverStatus == DriverHolder.DriverStatus.PERSISTED,
+                    String.format(
+                        "WTH?! driver trying to publish but not yet persisted, driver status: [%s]",
+                        driverHolder.driverStatus
+                    )
+                );
+
+                driverHolder.driverStatus = DriverHolder.DriverStatus.PUBLISHING;
+
+                log.info("Publishing driver [%s]", driverHolder.getMetadata());
+
+                final SegmentsAndMetadata result = driverHolder.finish(toolbox, ioConfig.isUseTransaction());
+
+                if (result == null) {
+                  if (driverHolder.getMetadata().getDriverIndex() == -1) {
+                    // indicates all drivers are finished, ok to shutdown
+                    log.info("All drivers have published segments to the metadata store");
+                  } else {
+                    throw new ISE(
+                        "Transaction failure publishing segments for driver [%s]",
+                        driverHolder.getMetadata()
+                    );
+                  }
+                } else {
+                  log.info(
+                      "Published segments[%s] with metadata[%s].",
+                      Joiner.on(", ").join(
+                          Iterables.transform(
+                              result.getSegments(),
+                              new Function<DataSegment, String>()
+                              {
+                                @Override
+                                public String apply(DataSegment input)
+                                {
+                                  return input.getIdentifier();
+                                }
+                              }
+                          )
+                      ),
+                      result.getCommitMetadata()
+                  );
+                }
+
+                driverHolder.driverStatus = DriverHolder.DriverStatus.PUBLISHED;
+
+                handOffQueue.addLast(driverHolder);
+              }
+              catch (Throwable t) {
+                if ((t instanceof InterruptedException || (t instanceof RejectedExecutionException
+                                                           && t.getCause() instanceof InterruptedException))) {
+                  if (stopRequested.get() || handOffLatch.getCount() == 0) {
+                    // we are shutting down, ignore the interrupt
+                    log.warn("Stopping publish thread as we are interrupted and shutting down");
+                    break;
+                  } else {
+                    // enqueue back
+                    if (driverHolder != null) {
+                      log.error(
+                          t,
+                          "Error in publish thread, enqueueing driver [%d] back to publish queue",
+                          driverHolder.driverIndex
+                      );
+                      driverHolder.driverStatus = DriverHolder.DriverStatus.PERSISTED;
+                      publishQueue.addFirst(driverHolder);
+                    }
+                    continue;
+                  }
+                }
+                log.makeAlert(t, "Error in publish thread, dying").emit();
+                throwableAtomicReference.set(t);
+                handOffLatch.countDown();
+                Throwables.propagate(t);
+              }
+            }
+          }
+        }
+    );
+
+    handOffExecService.submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            while (true) {
+              try {
+                final DriverHolder driverHolder = handOffQueue.take();
+
+                Preconditions.checkState(
+                    driverHolder.driverStatus == DriverHolder.DriverStatus.PUBLISHED,
+                    String.format(
+                        "WTH?! cannot wait for hand off for not published driver [%d], status: [%s]",
+                        driverHolder.driverIndex,
+                        driverHolder.driverStatus
+                    )
+                );
+
+                log.info("Waiting for driver [%s] to hand off", driverHolder.getMetadata());
+                try {
+                  if (driverHolder.driverIndex != -1) {
+                    driverHolder.waitForHandOff();
+                  }
+                  log.info("Handoff complete for driver [%d]", driverHolder.driverIndex);
+                }
+                catch (InterruptedException t) {
+                  if (stopRequested.get()) {
+                    log.warn("Stopping handoff thread as we are interrupted and shutting down");
+                    break;
+                  } else {
+                    // enqueue back
+                    handOffQueue.addFirst(driverHolder);
+                  }
+                }
+                finally {
+                  driverHolder.close();
+                  if (!driverHolders.remove(driverHolder)) {
+                    log.warn("Unable to remove driver [%d], it was not in the drivers list", driverHolder.driverIndex);
+                  } else {
+                    try {
+                      lockDriversList();
+                      persistDriversList();
+                      log.info("Driver [%s] removed from drivers list", driverHolder.getMetadata());
+                    }
+                    finally {
+                      unlockDriversList();
+                    }
+                  }
+                }
+              }
+              catch (Throwable t) {
+                if (t instanceof InterruptedException && (stopRequested.get() || handOffLatch.getCount() == 0)) {
+                  log.warn("Stopping handoff thread as we are interrupted and shutting down");
+                  break;
+                }
+                log.makeAlert(t, "Error in handoff thread, dying").emit();
+                throwableAtomicReference.set(t);
+                handOffLatch.countDown();
+                Throwables.propagate(t);
+              }
+            }
+          }
+        }
+    );
+  }
+
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     log.info("Starting up!");
     startTime = DateTime.now();
-    mapper = toolbox.getObjectMapper();
+    this.toolbox = toolbox;
     status = Status.STARTING;
+
+    startExecutors();
+
+    toolbox.getTaskWorkDir().mkdirs();
 
     if (chatHandlerProvider.isPresent()) {
       log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
@@ -280,80 +491,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         )
     );
 
-    try (
-        final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-        final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
-        final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
-    ) {
-      appenderator = appenderator0;
+    final KafkaConsumer<byte[], byte[]> consumer = newConsumer();
 
+    try {
       final String topic = ioConfig.getStartPartitions().getTopic();
 
-      // Start up, set up initial offsets.
-      final Object restoredMetadata = driver.startJob();
-      if (restoredMetadata == null) {
-        nextOffsets.putAll(ioConfig.getStartPartitions().getPartitionOffsetMap());
-      } else {
-        final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
-        final KafkaPartitions restoredNextPartitions = toolbox.getObjectMapper().convertValue(
-            restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
-            KafkaPartitions.class
-        );
-        nextOffsets.putAll(restoredNextPartitions.getPartitionOffsetMap());
-
-        // Sanity checks.
-        if (!restoredNextPartitions.getTopic().equals(ioConfig.getStartPartitions().getTopic())) {
-          throw new ISE(
-              "WTF?! Restored topic[%s] but expected topic[%s]",
-              restoredNextPartitions.getTopic(),
-              ioConfig.getStartPartitions().getTopic()
-          );
-        }
-
-        if (!nextOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionOffsetMap().keySet())) {
-          throw new ISE(
-              "WTF?! Restored partitions[%s] but expected partitions[%s]",
-              nextOffsets.keySet(),
-              ioConfig.getStartPartitions().getPartitionOffsetMap().keySet()
-          );
-        }
-      }
-
-      // Set up sequenceNames.
-      final Map<Integer, String> sequenceNames = Maps.newHashMap();
-      for (Integer partitionNum : nextOffsets.keySet()) {
-        sequenceNames.put(partitionNum, String.format("%s_%s", ioConfig.getBaseSequenceName(), partitionNum));
-      }
-
-      // Set up committer.
-      final Supplier<Committer> committerSupplier = new Supplier<Committer>()
-      {
-        @Override
-        public Committer get()
-        {
-          final Map<Integer, Long> snapshot = ImmutableMap.copyOf(nextOffsets);
-
-          return new Committer()
-          {
-            @Override
-            public Object getMetadata()
-            {
-              return ImmutableMap.of(
-                  METADATA_NEXT_PARTITIONS, new KafkaPartitions(
-                      ioConfig.getStartPartitions().getTopic(),
-                      snapshot
-                  )
-              );
-            }
-
-            @Override
-            public void run()
-            {
-              // Do nothing.
-            }
-          };
-        }
-      };
+      restoreState(toolbox);
 
       Set<Integer> assignment = assignPartitionsAndSeekToNext(consumer, topic);
 
@@ -361,8 +504,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       // Could eventually support leader/follower mode (for keeping replicas more in sync)
       boolean stillReading = !assignment.isEmpty();
       status = Status.READING;
+
       try {
         while (stillReading) {
+          checkAndMayBeThrowException();
           if (possiblyPause(assignment)) {
             // The partition assignments may have changed while paused by a call to setEndOffsets() so reassign
             // partitions upon resuming. This is safe even if the end offsets have not been modified.
@@ -370,12 +515,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
             if (assignment.isEmpty()) {
               log.info("All partitions have been fully read");
-              publishOnStop = true;
-              stopRequested = true;
+              publishOnStop.set(true);
+              stopRequested.set(true);
             }
           }
 
-          if (stopRequested) {
+          if (stopRequested.get()) {
             break;
           }
 
@@ -393,6 +538,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
 
           for (ConsumerRecord<byte[], byte[]> record : records) {
+
             if (log.isTraceEnabled()) {
               log.trace(
                   "Got topic[%s] partition[%d] offset[%,d].",
@@ -412,7 +558,24 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 );
               }
 
+              DriverHolder driverHolder = null;
               try {
+                // find a Driver to consume this record
+                for (DriverHolder holder : driverHolders) {
+                  if (holder.canHandle(record)) {
+                    driverHolder = holder;
+                    break;
+                  }
+                }
+                if (driverHolder == null) {
+                  throw new ISE(
+                      "WTH?! Could not find a driver to handle record: partition [%d] offset [%d], current drivers list: [%s]",
+                      record.partition(),
+                      record.offset(),
+                      driverHolders
+                  );
+                }
+
                 final byte[] valueBytes = record.value();
                 if (valueBytes == null) {
                   throw new ParseException("null value");
@@ -423,19 +586,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 if (!ioConfig.getMinimumMessageTime().isPresent() ||
                     !ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp())) {
 
-                  final SegmentIdentifier identifier = driver.add(
-                      row,
-                      sequenceNames.get(record.partition()),
-                      committerSupplier
-                  );
-
-                  if (identifier == null) {
-                    // Failure to allocate segment puts determinism at risk, bail out to be safe.
-                    // May want configurable behavior here at some point.
-                    // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
-                    throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
-                  }
-
+                  driverHolder.add(row);
                   fireDepartmentMetrics.incrementProcessed();
                 } else {
                   fireDepartmentMetrics.incrementThrownAway();
@@ -456,7 +607,34 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 }
               }
 
+              driverHolder.incrementNextOffsets(record);
               nextOffsets.put(record.partition(), record.offset() + 1);
+              if (driverHolder.isComplete()) {
+                if (driverHolders.get(0) == driverHolder && ioConfig.isPauseAfterRead()) {
+                  // this is the latest driver and isPauseAfterRead is set
+                  // means that setEndOffset will be called, so create
+                  // a new driver whose end offset will be set by that call
+                  try {
+                    log.info("Creating new driver as pauseAfterRead is set and the latest driver is not the last driver");
+                    lockDriversList();
+                    final DriverHolder nextDriverHolder = DriverHolder.getNextDriverHolder(
+                        this,
+                        driverHolders.get(0).endOffsets,
+                        maxEndOffsets,
+                        ioConfig.getBaseSequenceName(),
+                        fireDepartmentMetrics,
+                        toolbox
+                    );
+                    driverHolders.add(0, nextDriverHolder);
+                    nextDriverHolder.startJob(toolbox.getObjectMapper());
+                    persistDriversList();
+                  }
+                  finally {
+                    unlockDriversList();
+                  }
+                }
+                persistAndPossiblyPublish(driverHolder);
+              }
             }
 
             if (nextOffsets.get(record.partition()).equals(endOffsets.get(record.partition()))
@@ -466,98 +644,339 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
             }
           }
+
+          // check if we hit the maxRowsInSegment limit for the latest driver
+          DriverHolder latestDriver;
+          try {
+            lockDriversList();
+            latestDriver = driverHolders.size() > 0 ? driverHolders.get(0) : null;
+          }
+          finally {
+            unlockDriversList();
+          }
+          if (latestDriver != null && latestDriver.isCheckPointingRequired()) {
+            // time to finish this driver
+            // send a call to Supervisor to check point the current highest offsets for all replicas
+            // supervisor will resume the tasks with a check point which will be set as end offset of the latest driver
+            pause(-1L);
+
+            KafkaDataSourceMetadata previousCheckPoint = null;
+            if (!latestDriver.startOffsets.equals(ioConfig.getStartPartitions().getPartitionOffsetMap())) {
+              previousCheckPoint = new KafkaDataSourceMetadata(new KafkaPartitions(
+                  topic,
+                  latestDriver.startOffsets
+              ));
+            }
+
+            if (!toolbox.getTaskActionClient().submit(new CheckPointDataSourceMetadataAction(
+                getDataSource(),
+                ioConfig.getBaseSequenceName(),
+                previousCheckPoint,
+                new KafkaDataSourceMetadata(new KafkaPartitions(topic, nextOffsets))
+            ))) {
+              throw new ISE("Checkpoint request with offsets [%s] failed, dying", nextOffsets);
+            }
+          }
         }
+      }
+      catch (Throwable t) {
+        // if any exception is thrown in the ingestion loop, task should persist pending drivers and die (skip publish)
+        stopRequested.set(true);
+        publishOnStop.set(false);
+        throw t;
       }
       finally {
-        driver.persist(committerSupplier.get()); // persist pending data
-      }
-
-      synchronized (statusLock) {
-        if (stopRequested && !publishOnStop) {
-          throw new InterruptedException("Stopping without publishing");
-        }
-
-        status = Status.PUBLISHING;
-      }
-
-      final TransactionalSegmentPublisher publisher = new TransactionalSegmentPublisher()
-      {
-        @Override
-        public boolean publishSegments(Set<DataSegment> segments, Object commitMetadata) throws IOException
-        {
-          final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(
-              ((Map) commitMetadata).get(METADATA_NEXT_PARTITIONS),
-              KafkaPartitions.class
-          );
-
-          // Sanity check, we should only be publishing things that match our desired end state.
-          if (!endOffsets.equals(finalPartitions.getPartitionOffsetMap())) {
-            throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
+        synchronized (statusLock) {
+          // If either publish on stop is set or if stop is not requested (this happens when end offsets were already set
+          // to some meaningful value when the task started and the task has consumed till the end offsets)
+          if (publishOnStop.get() || !stopRequested.get()) {
+            status = Status.PUBLISHING;
           }
-
-          final SegmentTransactionalInsertAction action;
-
-          if (ioConfig.isUseTransaction()) {
-            action = new SegmentTransactionalInsertAction(
-                segments,
-                new KafkaDataSourceMetadata(ioConfig.getStartPartitions()),
-                new KafkaDataSourceMetadata(finalPartitions)
-            );
+        }
+        log.info("Ingestion loop finished, Persisting all pending drivers...");
+        for (DriverHolder driverHolder : driverHolders) {
+          if (driverHolder.driverStatus == DriverHolder.DriverStatus.OPEN || driverHolder.isComplete()) {
+            driverHolder.driverStatus = DriverHolder.DriverStatus.COMPLETE;
+            persistAndPossiblyPublish(driverHolder);
           } else {
-            action = new SegmentTransactionalInsertAction(segments, null, null);
+            log.warn(
+                "Not adding driver [%s] to persist and publish queue as it should already be there",
+                driverHolder.getMetadata()
+            );
           }
-
-          log.info("Publishing with isTransaction[%s].", ioConfig.isUseTransaction());
-
-          return toolbox.getTaskActionClient().submit(action).isSuccess();
         }
-      };
-
-      final SegmentsAndMetadata published = driver.finish(publisher, committerSupplier.get());
-      if (published == null) {
-        throw new ISE("Transaction failure publishing segments, aborting");
-      } else {
-        log.info(
-            "Published segments[%s] with metadata[%s].",
-            Joiner.on(", ").join(
-                Iterables.transform(
-                    published.getSegments(),
-                    new Function<DataSegment, String>()
-                    {
-                      @Override
-                      public String apply(DataSegment input)
-                      {
-                        return input.getIdentifier();
-                      }
-                    }
-                )
-            ),
-            published.getCommitMetadata()
-        );
+        // add Sentinel Driver at the end so that task can wait till the persistLatch and handOffLatch is countdown
+        persistAndPossiblyPublish(new SentinelDriverHolder(persistLatch, handOffLatch));
       }
+
+      persistLatch.await();
+      log.info("[Shutting Down]: All drivers persisted");
+      checkAndMayBeThrowException();
+      handOffLatch.await();
+      log.info("[Shutting Down]: All drivers handed-off");
+      checkAndMayBeThrowException();
     }
-    catch (InterruptedException | RejectedExecutionException e) {
-      // handle the InterruptedException that gets wrapped in a RejectedExecutionException
-      if (e instanceof RejectedExecutionException
-          && (e.getCause() == null || !(e.getCause() instanceof InterruptedException))) {
-        throw e;
-      }
-
-      // if we were interrupted because we were asked to stop, handle the exception and return success, else rethrow
-      if (!stopRequested) {
-        Thread.currentThread().interrupt();
-        throw e;
-      }
-
-      log.info("The task was asked to stop before completing");
+    catch (Throwable t) {
+      // so that when executors are interrupted by shutdownNow call, they know it is expected
+      stopRequested.set(true);
+      throw t;
     }
     finally {
+      persistExecService.shutdownNow();
+      // interrupts the publish thread so that no drivers are closed or enqueued again
+      // as we will be closing all of them so that segments will be unannounced
+
+      // all the executors should be shutdown before closing the driver to prevent deadlocks
+      // persistExecutor and pushExecutor (in AppenderatorImpl) depend on each other and if there are
+      // two threads trying to use them deadlock is possible
+      publishExecService.shutdownNow();
+      handOffExecService.shutdownNow();
+      consumer.close();
+      for (DriverHolder driverHolder : driverHolders) {
+        driverHolder.close();
+      }
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
       }
     }
 
     return success();
+  }
+
+  private void checkAndMayBeThrowException()
+  {
+    // check for any exception set by other executor threads than the task runner thread because of which the task should fail
+    if (throwableAtomicReference.get() != null) {
+      Throwables.propagate(throwableAtomicReference.get());
+    }
+  }
+
+  private ListenableFuture<Object> persistAndPossiblyPublish(final DriverHolder driverHolder)
+  {
+    log.info("Persisting and possibly publishing driver [%s]", driverHolder.getMetadata());
+    Preconditions.checkState(
+        driverHolder.driverStatus == DriverHolder.DriverStatus.COMPLETE,
+        String.format(
+            "WTH?! Cannot persist driver which is not complete, driver status: [%s]",
+            driverHolder.driverStatus
+        )
+    );
+    driverHolder.driverStatus = DriverHolder.DriverStatus.PERSISTING;
+    return persistExecService.submit(
+        new Callable<Object>()
+        {
+          @Override
+          public Object call() throws Exception
+          {
+            Object result = null;
+            try {
+              result = driverHolder.persist();
+              driverHolder.driverStatus = DriverHolder.DriverStatus.PERSISTED;
+              log.info("Driver [%d] persisted with result [%s]", driverHolder.driverIndex, result);
+
+              if (stopRequested.get() && !publishOnStop.get()) {
+                log.warn("Skipping publish of driver [%d] as we are asked to stop", driverHolder.driverIndex);
+              } else {
+                log.info("Adding driver to publish queue, [%s]", driverHolder.getMetadata());
+                publishQueue.addLast(driverHolder);
+              }
+            }
+            catch (Exception e) {
+              if (e instanceof InterruptedException && (stopRequested.get() || handOffLatch.getCount() == 0)) {
+                log.warn("Interrupted while persisting driver [%d], aborting persist", driverHolder.driverIndex);
+                return null;
+              }
+              log.error("Error [%s] while persisting driver [%s]", e.getMessage(), driverHolder.getMetadata());
+              throwableAtomicReference.set(e);
+              handOffLatch.countDown();
+            }
+            return result;
+          }
+        }
+    );
+  }
+
+  private void lockDriversList() throws InterruptedException
+  {
+    log.debug("Thread [%s] locking drivers list", Thread.currentThread());
+    driversListLock.lockInterruptibly();
+  }
+
+  private void unlockDriversList()
+  {
+    log.debug("Thread [%s] unlocking drivers list", Thread.currentThread());
+    driversListLock.unlock();
+  }
+
+  private void restoreState(TaskToolbox toolbox) throws IOException, InterruptedException
+  {
+    driversRestoreFile = new File(toolbox.getTaskWorkDir(), "drivers.json");
+    List<DriverHolder.DriverMetadata> persistedDrivers = ImmutableList.of();
+    // check for persisted Drivers information
+    if (driversRestoreFile.exists()) {
+      persistedDrivers = toolbox.getObjectMapper().readValue(
+          driversRestoreFile,
+          new TypeReference<List<DriverHolder.DriverMetadata>>()
+          {
+          }
+      );
+    }
+    if (persistedDrivers.size() > 0) {
+      Collections.sort(persistedDrivers);
+      log.info("Trying to restore drivers list [%s]", persistedDrivers);
+
+      for (DriverHolder.DriverMetadata driverMetadata : persistedDrivers) {
+        Preconditions.checkState(
+            driverMetadata.getSequenceName().startsWith(ioConfig.getBaseSequenceName()),
+            String.format(
+                "Sequence Name validation failed while restoring driver with metadata [%s]",
+                driverMetadata
+            )
+        );
+        final DriverHolder driverHolder = DriverHolder.createDriverHolder(
+            this,
+            driverMetadata.getStartOffsets(),
+            driverMetadata.getEndOffsets(),
+            driverMetadata.getDriverIndex(),
+            driverMetadata.getSequenceName().substring(0, driverMetadata.getSequenceName().lastIndexOf("_")),
+            fireDepartmentMetrics,
+            toolbox,
+            driverMetadata.isLast(),
+            driverMetadata.isCheckPointed(),
+            driverMetadata.isMaxRowsPerSegmentLimitReached()
+        );
+        driverHolders.add(0, driverHolder);
+        final Map<Integer, Long> restoredNextPartitionsOffset = driverHolder.startJob(toolbox.getObjectMapper());
+        // Set nextOffset to be the highest offset for each partition among all persisted drivers
+        for (Map.Entry<Integer, Long> partitionOffset : restoredNextPartitionsOffset.entrySet()) {
+          if (!nextOffsets.containsKey(partitionOffset.getKey()) || partitionOffset.getValue() > nextOffsets.get(
+              partitionOffset.getKey())) {
+            nextOffsets.put(partitionOffset.getKey(), partitionOffset.getValue());
+          }
+        }
+        nextDriverIndex = driverMetadata.getDriverIndex() + 1;
+
+        if (driverHolder.isComplete()) {
+          persistAndPossiblyPublish(driverHolder);
+        }
+      }
+    } else {
+      // create a new driver
+      driverHolders.add(
+          0,
+          DriverHolder.getNextDriverHolder(
+              this,
+              ioConfig.getStartPartitions().getPartitionOffsetMap(),
+              endOffsets,
+              ioConfig.getBaseSequenceName(),
+              fireDepartmentMetrics,
+              toolbox
+          )
+      );
+      // Start up, set up initial offsets.
+      nextOffsets.putAll(driverHolders.get(0).startJob(toolbox.getObjectMapper()));
+    }
+
+    final Object checkPointsObject = getContextValue("check_points");
+    List<DataSourceMetadata> checkPoints = ImmutableList.of();
+    if (checkPointsObject != null) {
+      checkPoints = toolbox.getObjectMapper().readValue(
+          (String) checkPointsObject,
+          new TypeReference<List<DataSourceMetadata>>()
+          {
+          }
+      );
+    }
+
+    log.info("Trying to restore check points: [%s]", checkPoints);
+
+    if (checkPoints.size() > 0) {
+      // check consistency and create and start new drivers if necessary
+      Collections.reverse(checkPoints);
+      int checkPointIdx = checkPoints.size() - 1;
+      int driverIdx = driverHolders.size() - 1;
+
+      // Either there will be one driver that was created in earlier step
+      // or if we restored drivers list then there cannot be more check points than drivers
+      Preconditions.checkState(
+          driverIdx == 0 || checkPointIdx <= driverIdx,
+          "Found more checkpoints than drivers, checkpoints: [%s], drivers [%s]",
+          checkPoints,
+          persistedDrivers
+      );
+
+      // find out the latest check point which does not align to a driver
+      while (driverIdx >= 0) {
+        if (!driverHolders.get(driverIdx).endOffsets.equals(
+            ((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx))
+                .getKafkaPartitions()
+                .getPartitionOffsetMap())) {
+          break;
+        }
+        driverIdx--;
+        checkPointIdx--;
+      }
+
+      // Since the task was sent check points by supervisor so only the latest driver can mismatch with the check point
+      if (driverIdx > 0) {
+        throw new ISE(
+            "Check Point [%s] mismatch with end offset of driver [%d] offset [%s]",
+            (((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx)).getKafkaPartitions()
+                                                                       .getPartitionOffsetMap()),
+            driverIdx,
+            driverHolders.get(driverIdx).endOffsets
+        );
+      }
+
+      // if latest driver did not match up with the check point that means it is a new task with no persisted drivers
+      if (driverIdx == 0) {
+        Preconditions.checkState(
+            driverHolders.size() == 1,
+            "Found more than one driver for new task [%s]",
+            driverHolders
+        );
+        driverHolders.get(0)
+                     .setEndOffsets((((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx)).getKafkaPartitions()
+                                                                                               .getPartitionOffsetMap()));
+
+        if (driverHolders.get(0).isComplete()) {
+          persistAndPossiblyPublish(driverHolders.get(0));
+        }
+        checkPointIdx--;
+      }
+
+      // create more drivers corresponding to the check points that this task does not know about
+      // checkPointIdx refers to the check point that this task does know about
+      while (checkPointIdx >= 0) {
+        driverHolders.add(
+            0,
+            DriverHolder.getNextDriverHolder(
+                this,
+                (((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx + 1)).getKafkaPartitions()
+                                                                               .getPartitionOffsetMap()),
+                (((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx)).getKafkaPartitions()
+                                                                           .getPartitionOffsetMap()),
+                ioConfig.getBaseSequenceName(),
+                fireDepartmentMetrics,
+                toolbox,
+                true
+            )
+        );
+        driverHolders.get(0).startJob(toolbox.getObjectMapper());
+        if (driverHolders.get(0).isComplete()) {
+          persistAndPossiblyPublish(driverHolders.get(0));
+        }
+        checkPointIdx--;
+      }
+    }
+    // save latest state on disk
+    persistDriversList();
+
+    if (driverHolders.get(0).last) {
+      // recovered a driver which happens to be the last driver for this task
+      // set the end offsets for this task so that the task shutdowns eventually
+      endOffsets.putAll(driverHolders.get(0).endOffsets);
+    }
   }
 
   @Override
@@ -572,11 +991,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   public void stopGracefully()
   {
     log.info("Stopping gracefully (status: [%s])", status);
-    stopRequested = true;
+    stopRequested.set(true);
+    // don't wait for publishes/handoff to complete
+    handOffLatch.countDown();
 
     synchronized (statusLock) {
       if (status == Status.PUBLISHING) {
-        runThread.interrupt();
+        // no need to try to resume, return immediately
         return;
       }
     }
@@ -618,19 +1039,35 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
-    if (appenderator == null) {
+    if (driverHolders == null || driverHolders.size() == 0 || toolbox == null) {
       // Not yet initialized, no data yet, just return a noop runner.
       return new NoopQueryRunner<>();
     }
-
-    return new QueryRunner<T>()
-    {
-      @Override
-      public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
-      {
-        return query.run(appenderator, responseContext);
-      }
-    };
+    final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = toolbox.getQueryRunnerFactoryConglomerate()
+                                                                      .findFactory(query);
+    return queryRunnerFactory.getToolchest().mergeResults(
+        queryRunnerFactory.mergeRunners(
+            toolbox.getQueryExecutorService(),
+            Iterables.transform(
+                driverHolders,
+                new Function<DriverHolder, QueryRunner<T>>()
+                {
+                  @Override
+                  public QueryRunner<T> apply(final DriverHolder input)
+                  {
+                    return new QueryRunner<T>()
+                    {
+                      @Override
+                      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+                      {
+                        return query.run(input.driver.getAppenderator(), responseContext);
+                      }
+                    };
+                  }
+                }
+            )
+        )
+    );
   }
 
   @GET
@@ -663,7 +1100,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response setEndOffsets(
       Map<Integer, Long> offsets,
-      @QueryParam("resume") @DefaultValue("false") final boolean resume
+      @QueryParam("resume") @DefaultValue("false") final boolean resume,
+      @QueryParam("finish") @DefaultValue("true") final boolean finish
+      // this field is only for internal purposes, should never be set by users
   ) throws InterruptedException
   {
     if (offsets == null) {
@@ -679,6 +1118,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                          )
                      )
                      .build();
+    }
+
+    if (status == Status.NOT_STARTED || status == Status.STARTING) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Task has not started running yet!").build();
     }
 
     pauseLock.lockInterruptibly();
@@ -703,8 +1146,67 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         }
       }
 
-      endOffsets.putAll(offsets);
-      log.info("endOffsets changed to %s", endOffsets);
+      lockDriversList();
+      Preconditions.checkState(driverHolders.size() > 0, "WTH?! No drivers found to set end offsets");
+      final DriverHolder driverHolder = driverHolders.get(0);
+
+      try {
+        if (driverHolder.checkPointed) {
+          // this should only happen when we got another setEndOffsets call after the final setEndOffsets call
+          // check for consistency and duplicate request
+          Preconditions.checkState(
+              endOffsets.equals(driverHolder.endOffsets),
+              "WTH?! End offsets for task [%s] and latest driver [%s] do not match",
+              endOffsets,
+              driverHolder.getMetadata()
+          );
+          // ignore duplicate requests
+          if (offsets.equals(driverHolder.endOffsets)) {
+            log.warn(
+                "end offsets already set to [%s], ignoring duplicate request to set to [%s]",
+                driverHolder.endOffsets,
+                offsets
+            );
+            return Response.ok(endOffsets).build();
+          } else {
+            throw new ISE(
+                "WTH?! end offsets set to [%s], ignoring request to set to [%s]",
+                driverHolder.endOffsets,
+                offsets
+            );
+          }
+        }
+        driverHolder.setEndOffsets(offsets);
+
+        if (finish) {
+          // set the last flag, useful while restoring state from disk to set endOffsets
+          driverHolder.last = true;
+          endOffsets.putAll(offsets);
+        } else {
+          // create next driver
+          final DriverHolder nextDriverHolder = DriverHolder.getNextDriverHolder(
+              this,
+              driverHolder.endOffsets, //previous driver endOffsets
+              endOffsets, // task endOffsets
+              ioConfig.getBaseSequenceName(),
+              fireDepartmentMetrics,
+              toolbox
+          );
+          driverHolders.add(0, nextDriverHolder);
+          nextDriverHolder.startJob(toolbox.getObjectMapper());
+        }
+        persistDriversList();
+        if (driverHolder.isComplete()) {
+          persistAndPossiblyPublish(driverHolder);
+        }
+      }
+      catch (Exception e) {
+        log.error(e, "Exception while setting end offsets [%s]", offsets);
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+      }
+      finally {
+        unlockDriversList();
+      }
     }
     finally {
       pauseLock.unlock();
@@ -715,6 +1217,29 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
 
     return Response.ok(endOffsets).build();
+  }
+
+  private void persistDriversList() throws IOException, InterruptedException
+  {
+    try {
+      lockDriversList();
+      log.info("Persisting drivers list [%s]", driverHolders);
+      toolbox.getObjectMapper().writerWithType(new TypeReference<List<DriverHolder.DriverMetadata>>()
+      {
+      }).writeValue(driversRestoreFile, Lists.newArrayList(Iterables.transform(
+          driverHolders, new Function<DriverHolder, DriverHolder.DriverMetadata>()
+          {
+            @Override
+            public DriverHolder.DriverMetadata apply(DriverHolder input)
+            {
+              return input.getMetadata();
+            }
+          }
+      )));
+    }
+    finally {
+      unlockDriversList();
+    }
   }
 
   /**
@@ -770,7 +1295,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
 
     try {
-      return Response.ok().entity(mapper.writeValueAsString(getCurrentOffsets())).build();
+      return Response.ok().entity(toolbox.getObjectMapper().writeValueAsString(getCurrentOffsets())).build();
     }
     catch (JsonProcessingException e) {
       throw Throwables.propagate(e);
@@ -818,14 +1343,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return status == Status.PAUSED;
   }
 
-  private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
+  private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox, File basePersistDirectory)
   {
-    final int maxRowsInMemoryPerPartition = (tuningConfig.getMaxRowsInMemory() /
-                                             ioConfig.getStartPartitions().getPartitionOffsetMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
-                    .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
+        tuningConfig.withBasePersistDirectory(basePersistDirectory),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
@@ -1030,7 +1552,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       pollRetryLock.lockInterruptibly();
       try {
         long nanos = TimeUnit.MILLISECONDS.toNanos(POLL_RETRY_MS);
-        while (nanos > 0L && !pauseRequested && !stopRequested) {
+        while (nanos > 0L && !pauseRequested && !stopRequested.get()) {
           nanos = isAwaitingRetry.awaitNanos(nanos);
         }
       }
@@ -1070,6 +1592,609 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
+    }
+  }
+
+  private static class DriverHolder implements Closeable
+  {
+    public enum DriverStatus
+    {
+      NOT_OPEN,
+      OPEN,
+      COMPLETE,
+      PERSISTING,
+      PERSISTED,
+      PUBLISHING,
+      PUBLISHED,
+      CLOSED
+    }
+
+    private volatile DriverStatus driverStatus = DriverStatus.NOT_OPEN;
+
+    private final FiniteAppenderatorDriver driver;
+    private final Set<Integer> assignment;
+    private Supplier<Committer> committerSupplier;
+
+    private final Map<Integer, Long> nextPartitionOffsets = Maps.newHashMap();
+
+    /*********** Driver Metadata **********/
+    private final String topic;
+    private final Map<Integer, Long> startOffsets;
+    private final Map<Integer, Long> endOffsets;
+    private final String sequenceName;
+    // this uniquely identifies the persist dir for this driver
+    private final int driverIndex;
+    // whether this is the last driver for the task
+    private volatile boolean last;
+    // whether the end offsets for this driver is set
+    private volatile boolean checkPointed;
+    private boolean maxRowsPerSegmentLimitReached;
+
+    /***************************************/
+
+    private DriverHolder(
+        String topic,
+        FiniteAppenderatorDriver driver,
+        Map<Integer, Long> startOffsets,
+        Map<Integer, Long> endOffsets,
+        int driverIndex,
+        String sequenceName,
+        boolean last,
+        boolean checkPointed,
+        boolean maxRowsPerSegmentLimitReached
+    )
+    {
+      this.topic = topic;
+      this.driver = driver;
+      this.startOffsets = startOffsets;
+      // endOffsets will change when a check point is set so make a local copy of it
+      this.endOffsets = Maps.newHashMap(endOffsets);
+      this.driverIndex = driverIndex;
+      this.sequenceName = sequenceName;
+      this.assignment = Sets.newHashSet(endOffsets.keySet());
+      this.last = last;
+      this.checkPointed = checkPointed;
+      this.maxRowsPerSegmentLimitReached = maxRowsPerSegmentLimitReached;
+    }
+
+    Map<Integer, Long> startJob(final ObjectMapper mapper)
+    {
+      final Object restored = driver.startJob();
+      Preconditions.checkState(
+          driverStatus == DriverStatus.NOT_OPEN,
+          "WTH?! Cannot change driver status to [%s] from [%s]",
+          DriverStatus.OPEN,
+          driverStatus
+      );
+      driverStatus = DriverStatus.OPEN;
+      if (restored == null) {
+        nextPartitionOffsets.putAll(startOffsets);
+      } else {
+        Map<String, Object> restoredMetadataMap = (Map) restored;
+        final KafkaPartitions restoredNextPartitions = mapper.convertValue(
+            restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
+            KafkaPartitions.class
+        );
+        nextPartitionOffsets.putAll(restoredNextPartitions.getPartitionOffsetMap());
+
+        // Sanity checks.
+        if (!restoredNextPartitions.getTopic().equals(topic)) {
+          throw new ISE(
+              "WTF?! Restored topic[%s] but expected topic[%s]",
+              restoredNextPartitions.getTopic(),
+              topic
+          );
+        }
+
+        if (!nextPartitionOffsets.keySet().equals(startOffsets.keySet())) {
+          throw new ISE(
+              "WTF?! Restored partitions[%s] but expected partitions[%s]",
+              nextPartitionOffsets.keySet(),
+              startOffsets.keySet()
+          );
+        }
+      }
+      committerSupplier = new Supplier<Committer>()
+      {
+        @Override
+        public Committer get()
+        {
+          final Map<Integer, Long> snapshot = ImmutableMap.copyOf(nextPartitionOffsets);
+
+          return new Committer()
+          {
+            @Override
+            public Object getMetadata()
+            {
+              return ImmutableMap.of(
+                  METADATA_NEXT_PARTITIONS, new KafkaPartitions(
+                      topic,
+                      snapshot
+                  )
+              );
+            }
+
+            @Override
+            public void run()
+            {
+              // Do nothing
+            }
+          };
+        }
+      };
+
+      // remove partition for which offsets have been consumed fully
+      for (Map.Entry<Integer, Long> partitionOffset : nextPartitionOffsets.entrySet()) {
+        if (endOffsets.get(partitionOffset.getKey()).equals(partitionOffset.getValue())) {
+          logInfo("[Start-Job] read partition [%d]", partitionOffset.getKey());
+          assignment.remove(partitionOffset.getKey());
+        }
+      }
+      if (assignment.isEmpty()) {
+        // finish the driver
+        logInfo("[Start-Job] read all partitions");
+        Preconditions.checkState(
+            driverStatus == DriverStatus.OPEN,
+            "WTH?! Cannot change driver status to [%s] from [%s]",
+            DriverStatus.COMPLETE,
+            driverStatus
+        );
+        driverStatus = DriverStatus.COMPLETE;
+      }
+
+      return nextPartitionOffsets;
+    }
+
+    boolean canHandle(ConsumerRecord<byte[], byte[]> record)
+    {
+      return driverStatus == DriverStatus.OPEN
+             && endOffsets.get(record.partition()) != null
+             && record.offset() >= startOffsets.get(record.partition())
+             && record.offset() < endOffsets.get(record.partition());
+    }
+
+    public SegmentIdentifier add(InputRow row) throws IOException
+    {
+      Preconditions.checkState(driverStatus == DriverStatus.OPEN, "Cannot add to driver which is not open!");
+
+      SegmentIdentifier identifier = driver.add(row, sequenceName, committerSupplier, false);
+
+      if (identifier == null) {
+        // Failure to allocate segment puts determinism at risk, bail out to be safe.
+        // May want configurable behavior here at some point.
+        // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
+        throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
+      }
+
+      // remember to call incrementNextOffsets before using any other method
+      // which relies on updated value of nextPartitionOffsets
+      if (driver.numRowsInSegment(identifier) >= driver.getMaxRowPerSegment()) {
+        maxRowsPerSegmentLimitReached = true;
+      }
+      return identifier;
+    }
+
+    void incrementNextOffsets(ConsumerRecord<byte[], byte[]> record)
+    {
+      // we do not automatically increment next offset with add call
+      // as in case record cannot be parsed add method will not be called
+      // however we still need to increment next offsets irrespective
+
+      // update local nextOffset to be used by committer at some point
+      nextPartitionOffsets.put(record.partition(), nextPartitionOffsets.get(record.partition()) + 1);
+
+      if (nextPartitionOffsets.get(record.partition()).equals(endOffsets.get(record.partition()))) {
+        logInfo("[Increment-Offsets] read partition [%d]", record.partition());
+        // done with this partition, remove it from end offsets
+        assignment.remove(record.partition());
+        if (assignment.isEmpty()) {
+          logInfo("[Increment-Offsets] read all partitions");
+          Preconditions.checkState(
+              driverStatus == DriverStatus.OPEN,
+              "WTH?! Cannot change driver status to [%s] from [%s]",
+              DriverStatus.COMPLETE,
+              driverStatus
+          );
+          driverStatus = DriverStatus.COMPLETE;
+        }
+      }
+    }
+
+    boolean isCheckPointingRequired()
+    {
+      return maxRowsPerSegmentLimitReached && !checkPointed;
+    }
+
+    boolean isComplete()
+    {
+      return driverStatus == DriverStatus.COMPLETE;
+    }
+
+    void setEndOffsets(Map<Integer, Long> offsets)
+    {
+      // sanity check again with driver's local offsets
+      if (!endOffsets.keySet().containsAll(offsets.keySet())) {
+        throw new IAE(
+            "Got request to set some offsets not handled by driver [%d], handling [%s] partitions",
+            endOffsets.keySet()
+        );
+      }
+      for (Map.Entry<Integer, Long> entry : offsets.entrySet()) {
+        if (entry.getValue().compareTo(nextPartitionOffsets.get(entry.getKey())) < 0) {
+          throw new IAE(
+              "End offset must be >= current offset for driver [%d] for partition [%s] (current: %s)",
+              driverIndex,
+              entry.getKey(),
+              nextPartitionOffsets.get(entry.getKey())
+          );
+        }
+      }
+      endOffsets.putAll(offsets);
+      // check if any or all partitions have been consumed
+      for (Map.Entry<Integer, Long> entry : endOffsets.entrySet()) {
+        if (entry.getValue().compareTo(nextPartitionOffsets.get(entry.getKey())) == 0) {
+          assignment.remove(entry.getKey());
+          logInfo("[Set-End-Offsets] read partition [%d]", entry.getKey());
+        }
+      }
+      logInfo("endOffsets changed to [%s]", endOffsets);
+      if (assignment.isEmpty()) {
+        logInfo("[Set-End-Offsets] read all partitions");
+        Preconditions.checkState(
+            driverStatus == DriverStatus.OPEN,
+            "WTH?! Cannot change driver status to [%s] from [%s]",
+            DriverStatus.COMPLETE,
+            driverStatus
+        );
+        driverStatus = DriverStatus.COMPLETE;
+      }
+      checkPointed = true;
+      logInfo("check-pointed");
+    }
+
+    SegmentsAndMetadata finish(final TaskToolbox toolbox, final boolean isUseTransaction)
+        throws InterruptedException
+    {
+      try {
+        final TransactionalSegmentPublisher publisher = new TransactionalSegmentPublisher()
+        {
+          @Override
+          public boolean publishSegments(Set<DataSegment> segments, Object commitMetadata) throws IOException
+          {
+            final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(
+                ((Map) commitMetadata).get(METADATA_NEXT_PARTITIONS),
+                KafkaPartitions.class
+            );
+
+            // Sanity check, we should only be publishing things that match our desired end state.
+            if (!endOffsets.equals(finalPartitions.getPartitionOffsetMap())) {
+              throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
+            }
+
+            final SegmentTransactionalInsertAction action;
+
+            if (isUseTransaction) {
+              action = new SegmentTransactionalInsertAction(
+                  segments,
+                  new KafkaDataSourceMetadata(new KafkaPartitions(topic, startOffsets)),
+                  new KafkaDataSourceMetadata(finalPartitions)
+              );
+            } else {
+              action = new SegmentTransactionalInsertAction(segments, null, null);
+            }
+
+            logInfo("Publishing with isTransaction[%s].", isUseTransaction);
+
+            return toolbox.getTaskActionClient().submit(action).isSuccess();
+          }
+        };
+
+        return driver.finish(publisher, committerSupplier.get());
+      }
+      catch (InterruptedException | RejectedExecutionException e) {
+        logError("Interrupted in finish");
+        throw e;
+      }
+    }
+
+    void waitForHandOff() throws InterruptedException
+    {
+      driver.waitForHandOff();
+    }
+
+    Object persist() throws InterruptedException
+    {
+      return driver.persist(committerSupplier.get());
+    }
+
+    public DriverMetadata getMetadata()
+    {
+      return new DriverMetadata(
+          topic,
+          startOffsets,
+          endOffsets,
+          driverIndex,
+          sequenceName,
+          last,
+          checkPointed,
+          maxRowsPerSegmentLimitReached
+      );
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      if (driverStatus == DriverStatus.CLOSED) {
+        logWarn("already closed");
+      } else {
+        synchronized (this) {
+          if (driverStatus == DriverStatus.CLOSED) {
+            logWarn("already closed");
+            return;
+          }
+          driverStatus = DriverStatus.CLOSED;
+        }
+        driver.getAppenderator().close();
+        driver.close();
+      }
+    }
+
+    private void logInfo(String msg, Object... formatArgs)
+    {
+      log.info("Driver [%d], status [%s]: [%s]", driverIndex, driverStatus, String.format(msg, formatArgs));
+    }
+
+    private void logWarn(String msg, Object... formatArgs)
+    {
+      log.warn("Driver [%d], status [%s]: [%s]", driverIndex, driverStatus, String.format(msg, formatArgs));
+    }
+
+    private void logError(String msg, Object... formatArgs)
+    {
+      log.error("Driver [%d], status [%s]: [%s]", driverIndex, driverStatus, String.format(msg, formatArgs));
+    }
+
+    @Override
+    public String toString()
+    {
+      return "DriverHolder{" +
+             "driverStatus=" + driverStatus +
+             ", driver=" + driver +
+             ", assignment=" + assignment +
+             ", committerSupplier=" + committerSupplier +
+             ", nextPartitionOffsets=" + nextPartitionOffsets +
+             ", topic='" + topic + '\'' +
+             ", startOffsets=" + startOffsets +
+             ", endOffsets=" + endOffsets +
+             ", sequenceName='" + sequenceName + '\'' +
+             ", driverIndex=" + driverIndex +
+             ", last=" + last +
+             ", checkPointed=" + checkPointed +
+             ", maxRowsPerSegmentLimitReached=" + maxRowsPerSegmentLimitReached +
+             '}';
+    }
+
+    static DriverHolder getNextDriverHolder(
+        KafkaIndexTask taskContext,
+        Map<Integer, Long> startOffsets,
+        Map<Integer, Long> endOffsets,
+        String baseSequenceName,
+        FireDepartmentMetrics fireDepartmentMetrics,
+        TaskToolbox taskToolbox
+    )
+    {
+      return createDriverHolder(
+          taskContext,
+          startOffsets,
+          endOffsets,
+          taskContext.nextDriverIndex++,
+          baseSequenceName,
+          fireDepartmentMetrics,
+          taskToolbox,
+          false,
+          false,
+          false
+      );
+    }
+
+    static DriverHolder getNextDriverHolder(
+        KafkaIndexTask taskContext,
+        Map<Integer, Long> startOffsets,
+        Map<Integer, Long> endOffsets,
+        String baseSequenceName,
+        FireDepartmentMetrics fireDepartmentMetrics,
+        TaskToolbox taskToolbox,
+        boolean checkPointed
+    )
+    {
+      return createDriverHolder(
+          taskContext,
+          startOffsets,
+          endOffsets,
+          taskContext.nextDriverIndex++,
+          baseSequenceName,
+          fireDepartmentMetrics,
+          taskToolbox,
+          false,
+          checkPointed,
+          false
+      );
+    }
+
+    static DriverHolder createDriverHolder(
+        KafkaIndexTask taskContext,
+        Map<Integer, Long> startOffsets,
+        Map<Integer, Long> endOffsets,
+        int basePersistDirectoryIndex,
+        String baseSequenceName,
+        FireDepartmentMetrics fireDepartmentMetrics,
+        TaskToolbox taskToolbox,
+        boolean last,
+        boolean checkPointed,
+        boolean maxRowsPerSegmentLimitReached
+    )
+    {
+      final File basePersistDir = new File(
+          taskToolbox.getTaskWorkDir(),
+          String.format("%s%s", "persist", basePersistDirectoryIndex > 0 ? basePersistDirectoryIndex : "")
+      );
+      DriverHolder holder = new DriverHolder(
+          taskContext.getIOConfig().getStartPartitions().getTopic(),
+          taskContext.newDriver(taskContext.newAppenderator(
+              fireDepartmentMetrics,
+              taskToolbox,
+              basePersistDir
+          ), taskToolbox, fireDepartmentMetrics),
+          startOffsets,
+          endOffsets,
+          basePersistDirectoryIndex,
+          String.format("%s_%d", baseSequenceName, basePersistDirectoryIndex),
+          last,
+          checkPointed,
+          maxRowsPerSegmentLimitReached
+      );
+      log.info("Created new Driver with metadata [%s]", holder.getMetadata());
+      return holder;
+    }
+
+    public static class DriverMetadata implements Comparable<DriverMetadata>
+    {
+      private final String topic;
+      private final Map<Integer, Long> startOffsets;
+      private final Map<Integer, Long> endOffsets;
+      private final int driverIndex;
+      private final String sequenceName;
+      private final boolean last;
+      private final boolean checkPointed;
+      private final boolean maxRowsPerSegmentLimitReached;
+
+      @JsonCreator
+      public DriverMetadata(
+          @JsonProperty("topic") String topic,
+          @JsonProperty("startOffsets") Map<Integer, Long> startOffsets,
+          @JsonProperty("endOffsets") Map<Integer, Long> endOffsets,
+          @JsonProperty("driverIndex") int driverIndex,
+          @JsonProperty("sequenceName") String sequenceName,
+          @JsonProperty("last") boolean last,
+          @JsonProperty("checkPointed") boolean checkPointed,
+          @JsonProperty("maxRowsPerSegmentLimitReached") boolean maxRowsPerSegmentLimitReached
+      )
+      {
+        this.topic = topic;
+        this.startOffsets = startOffsets;
+        this.endOffsets = endOffsets;
+        this.driverIndex = driverIndex;
+        this.sequenceName = sequenceName;
+        this.last = last;
+        this.checkPointed = checkPointed;
+        this.maxRowsPerSegmentLimitReached = maxRowsPerSegmentLimitReached;
+      }
+
+      @JsonProperty
+      public int getDriverIndex()
+      {
+        return driverIndex;
+      }
+
+      @JsonProperty
+      public String getSequenceName()
+      {
+        return sequenceName;
+      }
+
+      @JsonProperty
+      public Map<Integer, Long> getEndOffsets()
+      {
+        return endOffsets;
+      }
+
+      @JsonProperty
+      public Map<Integer, Long> getStartOffsets()
+      {
+        return startOffsets;
+      }
+
+      @JsonProperty
+      public String getTopic()
+      {
+        return topic;
+      }
+
+      @JsonProperty
+      public boolean isLast()
+      {
+        return last;
+      }
+
+      @JsonProperty
+      public boolean isCheckPointed()
+      {
+        return checkPointed;
+      }
+
+      @JsonProperty
+      public boolean isMaxRowsPerSegmentLimitReached()
+      {
+        return maxRowsPerSegmentLimitReached;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "DriverMetadata{" +
+               "topic='" + topic + '\'' +
+               ", startOffsets=" + startOffsets +
+               ", endOffsets=" + endOffsets +
+               ", driverIndex=" + driverIndex +
+               ", sequenceName='" + sequenceName + '\'' +
+               ", last=" + last +
+               ", checkPointed=" + checkPointed +
+               ", maxRowsPerSegmentLimitReached=" + maxRowsPerSegmentLimitReached +
+               '}';
+      }
+
+      @Override
+      public int compareTo(DriverMetadata o)
+      {
+        return driverIndex - o.driverIndex;
+      }
+    }
+  }
+
+  private static class SentinelDriverHolder extends DriverHolder
+  {
+    final CountDownLatch persistLatch;
+    final CountDownLatch handOffLatch;
+
+    private SentinelDriverHolder(
+        CountDownLatch persistLatch,
+        CountDownLatch handOffLatch
+    )
+    {
+      super(null, null, ImmutableMap.<Integer, Long>of(), ImmutableMap.<Integer, Long>of(), -1, null, true, true, true);
+      super.driverStatus = DriverStatus.COMPLETE;
+      this.persistLatch = persistLatch;
+      this.handOffLatch = handOffLatch;
+    }
+
+    @Override
+    Object persist() throws InterruptedException
+    {
+      persistLatch.countDown();
+      return null;
+    }
+
+    @Override
+    SegmentsAndMetadata finish(TaskToolbox toolbox, boolean isUseTransaction) throws InterruptedException
+    {
+      // Do nothing
+      return null;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      handOffLatch.countDown();
     }
   }
 }

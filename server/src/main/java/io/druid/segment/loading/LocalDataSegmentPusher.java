@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;

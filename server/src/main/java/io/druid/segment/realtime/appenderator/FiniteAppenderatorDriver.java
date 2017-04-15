@@ -35,7 +35,6 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
@@ -90,6 +89,11 @@ public class FiniteAppenderatorDriver implements Closeable
 
   // Notified when segments are dropped.
   private final Object handoffMonitor = new Object();
+
+  // SegmentIdentifier -> Number of Summarized rows in the segment
+  // Used by Kafka Indexing Task to create new appenderator driver when limit is reached
+  private final Map<String, Integer> rowsInSegment = Maps.newHashMap();
+
 
   /**
    * Create a driver.
@@ -194,6 +198,16 @@ public class FiniteAppenderatorDriver implements Closeable
       final Supplier<Committer> committerSupplier
   ) throws IOException
   {
+    return add(row, sequenceName, committerSupplier, true);
+  }
+
+  public SegmentIdentifier add(
+      final InputRow row,
+      final String sequenceName,
+      final Supplier<Committer> committerSupplier,
+      final boolean moveOutSegmentOnMaxRowsInSegmentLimit
+  ) throws IOException
+  {
     Preconditions.checkNotNull(row, "row");
     Preconditions.checkNotNull(sequenceName, "sequenceName");
     Preconditions.checkNotNull(committerSupplier, "committerSupplier");
@@ -204,8 +218,11 @@ public class FiniteAppenderatorDriver implements Closeable
       try {
         final int numRows = appenderator.add(identifier, row, wrapCommitterSupplier(committerSupplier));
         if (numRows >= maxRowsPerSegment) {
-          moveSegmentOut(sequenceName, ImmutableList.of(identifier));
+          if(moveOutSegmentOnMaxRowsInSegmentLimit) {
+            moveSegmentOut(sequenceName, ImmutableList.of(identifier));
+          }
         }
+        rowsInSegment.put(identifier.toString(), numRows);
       }
       catch (SegmentNotWritableException e) {
         throw new ISE(e, "WTF?! Segment[%s] not writable when it should have been.", identifier);
@@ -213,6 +230,14 @@ public class FiniteAppenderatorDriver implements Closeable
     }
 
     return identifier;
+  }
+
+  public Integer numRowsInSegment(SegmentIdentifier identifier) {
+    return rowsInSegment.get(identifier.toString());
+  }
+
+  public Integer getMaxRowPerSegment() {
+    return maxRowsPerSegment;
   }
 
   /**
@@ -259,43 +284,37 @@ public class FiniteAppenderatorDriver implements Closeable
       final Committer committer
   ) throws InterruptedException
   {
-    final SegmentsAndMetadata segmentsAndMetadata = publishAll(publisher, wrapCommitter(committer));
+    return publishAll(publisher, wrapCommitter(committer));
+  }
 
-    if (segmentsAndMetadata != null) {
-      final long giveUpAt = handoffConditionTimeout > 0
-                            ? System.currentTimeMillis() + handoffConditionTimeout
-                            : 0;
+  public void waitForHandOff() throws InterruptedException
+  {
+    final long giveUpAt = handoffConditionTimeout > 0
+                          ? System.currentTimeMillis() + handoffConditionTimeout
+                          : 0;
 
-      log.info("Awaiting handoff of segments: [%s]", Joiner.on(", ").join(appenderator.getSegments()));
+    log.info("Awaiting handoff of segments: [%s]", Joiner.on(", ").join(appenderator.getSegments()));
 
-      synchronized (handoffMonitor) {
-        while (!appenderator.getSegments().isEmpty()) {
+    synchronized (handoffMonitor) {
+      while (!appenderator.getSegments().isEmpty()) {
 
-          if (giveUpAt == 0) {
-            handoffMonitor.wait();
+        if (giveUpAt == 0) {
+          handoffMonitor.wait();
+        } else {
+          final long remaining = giveUpAt - System.currentTimeMillis();
+          if (remaining > 0) {
+            handoffMonitor.wait(remaining);
           } else {
-            final long remaining = giveUpAt - System.currentTimeMillis();
-            if (remaining > 0) {
-              handoffMonitor.wait(remaining);
-            } else {
-              throw new ISE(
-                  "Segment handoff wait timeout. Segments not yet handed off: [%s]",
-                  Joiner.on(", ").join(appenderator.getSegments())
-              );
-            }
+            throw new ISE(
+                "Segment handoff wait timeout. Segments not yet handed off: [%s]",
+                Joiner.on(", ").join(appenderator.getSegments())
+            );
           }
         }
       }
-
-      log.info("All segments handed off.");
-
-      return new SegmentsAndMetadata(
-          segmentsAndMetadata.getSegments(),
-          ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata()).getCallerMetadata()
-      );
-    } else {
-      return null;
     }
+
+    log.info("All segments handed off.");
   }
 
   /**
@@ -305,6 +324,10 @@ public class FiniteAppenderatorDriver implements Closeable
   public void close()
   {
     handoffNotifier.close();
+  }
+
+  public Appenderator getAppenderator() {
+    return appenderator;
   }
 
   private SegmentIdentifier getActiveSegment(final DateTime timestamp, final String sequenceName)

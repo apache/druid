@@ -138,8 +138,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertEquals(null, client.getStartTime(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.getCurrentOffsets(TEST_ID, true));
     Assert.assertEquals(ImmutableMap.of(), client.getEndOffsets(TEST_ID));
-    Assert.assertEquals(false, client.setEndOffsets(TEST_ID, ImmutableMap.<Integer, Long>of()));
-    Assert.assertEquals(false, client.setEndOffsets(TEST_ID, ImmutableMap.<Integer, Long>of(), true));
+    Assert.assertEquals(false, client.setEndOffsets(TEST_ID, ImmutableMap.<Integer, Long>of(), false, true));
+    Assert.assertEquals(false, client.setEndOffsets(TEST_ID, ImmutableMap.<Integer, Long>of(), true, true));
 
     verifyAll();
   }
@@ -537,13 +537,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.setEndOffsets(TEST_ID, endOffsets);
+    client.setEndOffsets(TEST_ID, endOffsets, false, true);
     verifyAll();
 
     Request request = captured.getValue();
     Assert.assertEquals(HttpMethod.POST, request.getMethod());
     Assert.assertEquals(
-        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/offsets/end"),
+        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/offsets/end?resume=false&finish=true"),
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
@@ -562,13 +562,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.setEndOffsets(TEST_ID, endOffsets, true);
+    client.setEndOffsets(TEST_ID, endOffsets, true, true);
     verifyAll();
 
     Request request = captured.getValue();
     Assert.assertEquals(HttpMethod.POST, request.getMethod());
     Assert.assertEquals(
-        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/offsets/end?resume=true"),
+        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/offsets/end?resume=true&finish=true"),
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
@@ -897,8 +897,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "offsets/end")));
-      futures.add(client.setEndOffsetsAsync(TEST_IDS.get(i), endOffsets));
+      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "offsets/end?resume=false&finish=true")));
+      futures.add(client.setEndOffsetsAsync(TEST_IDS.get(i), endOffsets, false, true));
     }
 
     List<Boolean> responses = Futures.allAsList(futures).get();
@@ -937,11 +937,11 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
                   TEST_HOST,
                   TEST_PORT,
                   TEST_IDS.get(i),
-                  "offsets/end?resume=true"
+                  "offsets/end?resume=true&finish=true"
               )
           )
       );
-      futures.add(client.setEndOffsetsAsync(TEST_IDS.get(i), endOffsets, true));
+      futures.add(client.setEndOffsetsAsync(TEST_IDS.get(i), endOffsets, true, true));
     }
 
     List<Boolean> responses = Futures.allAsList(futures).get();

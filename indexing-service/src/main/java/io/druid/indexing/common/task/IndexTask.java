@@ -483,6 +483,7 @@ public class IndexTask extends AbstractTask
         log.error("Failed to publish segments, aborting!");
         return false;
       } else {
+        driver.waitForHandOff();
         log.info(
             "Published segments[%s]", Joiner.on(", ").join(
                 Iterables.transform(

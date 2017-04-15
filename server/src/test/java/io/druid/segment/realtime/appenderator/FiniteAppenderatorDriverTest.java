@@ -140,7 +140,7 @@ public class FiniteAppenderatorDriverTest
         asIdentifiers(segmentsAndMetadata.getSegments())
     );
 
-    Assert.assertEquals(3, segmentsAndMetadata.getCommitMetadata());
+    Assert.assertEquals(3, ((FiniteAppenderatorDriverMetadata)segmentsAndMetadata.getCommitMetadata()).getCallerMetadata());
   }
 
   @Test
@@ -167,7 +167,7 @@ public class FiniteAppenderatorDriverTest
 
     final SegmentsAndMetadata segmentsAndMetadata = driver.finish(makeOkPublisher(), committerSupplier.get());
     Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
-    Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndMetadata.getCommitMetadata());
+    Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, ((FiniteAppenderatorDriverMetadata)segmentsAndMetadata.getCommitMetadata()).getCallerMetadata());
   }
 
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)

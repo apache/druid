@@ -54,5 +54,7 @@ public interface MetadataStorageConnector
 
   void createSupervisorsTable();
 
+  void createTaskCheckPointsTable();
+
   void deleteAllRecords(String tableName);
 }

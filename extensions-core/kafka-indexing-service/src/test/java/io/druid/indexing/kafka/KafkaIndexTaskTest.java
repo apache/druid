@@ -245,7 +245,7 @@ public class KafkaIndexTaskTest
         zkServer.getConnectString(),
         tempFolder.newFolder(),
         1,
-        ImmutableMap.of("num.partitions", "2")
+        ImmutableMap.of("num.partitions", "2", "advertised.host.name", "localhost")
     );
     kafkaServer.start();
 
@@ -875,7 +875,7 @@ public class KafkaIndexTaskTest
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2011/P1D", 1);
+    SegmentDescriptor desc3 = SD(task, "2011/P1D", 0);
     SegmentDescriptor desc4 = SD(task, "2012/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
@@ -889,7 +889,7 @@ public class KafkaIndexTaskTest
 
     // Check desc2/desc3 without strong ordering because two partitions are interleaved nondeterministically
     Assert.assertEquals(
-        ImmutableSet.of(ImmutableList.of("d", "e"), ImmutableList.of("h")),
+        ImmutableSet.of(ImmutableList.of("d", "e", "h")),
         ImmutableSet.of(readSegmentDim1(desc2), readSegmentDim1(desc3))
     );
   }
@@ -1170,7 +1170,7 @@ public class KafkaIndexTaskTest
 
     Assert.assertEquals(ImmutableMap.of(0, 3L), task.getEndOffsets());
     Map<Integer, Long> newEndOffsets = ImmutableMap.of(0, 4L);
-    task.setEndOffsets(newEndOffsets, false);
+    task.setEndOffsets(newEndOffsets, false, true);
     Assert.assertEquals(newEndOffsets, task.getEndOffsets());
     Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
     task.resume();
@@ -1185,7 +1185,7 @@ public class KafkaIndexTaskTest
 
     // try again but with resume flag == true
     newEndOffsets = ImmutableMap.of(0, 6L);
-    task.setEndOffsets(newEndOffsets, true);
+    task.setEndOffsets(newEndOffsets, true, true);
     Assert.assertEquals(newEndOffsets, task.getEndOffsets());
     Assert.assertNotEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
 
@@ -1209,7 +1209,8 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc1 = SD(task, "2009/P1D", 0);
     SegmentDescriptor desc2 = SD(task, "2010/P1D", 0);
     SegmentDescriptor desc3 = SD(task, "2011/P1D", 0);
-    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
+    SegmentDescriptor desc4 = SD(task, "2011/P1D", 1);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new KafkaPartitions("topic0", ImmutableMap.of(0, 6L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1218,7 +1219,8 @@ public class KafkaIndexTaskTest
     // Check segments in deep storage
     Assert.assertEquals(ImmutableList.of("b"), readSegmentDim1(desc1));
     Assert.assertEquals(ImmutableList.of("c"), readSegmentDim1(desc2));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc3));
+    Assert.assertEquals(ImmutableList.of("d"), readSegmentDim1(desc3));
+    Assert.assertEquals(ImmutableList.of("e"), readSegmentDim1(desc4));
   }
 
   @Test(timeout = 30_000L)

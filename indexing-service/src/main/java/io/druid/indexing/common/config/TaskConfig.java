@@ -162,4 +162,19 @@ public class TaskConfig
 
     return configParameter;
   }
+
+  @Override
+  public String toString()
+  {
+    return "TaskConfig{" +
+           "baseDir='" + baseDir + '\'' +
+           ", baseTaskDir=" + baseTaskDir +
+           ", hadoopWorkingPath='" + hadoopWorkingPath + '\'' +
+           ", defaultRowFlushBoundary=" + defaultRowFlushBoundary +
+           ", defaultHadoopCoordinates=" + defaultHadoopCoordinates +
+           ", restoreTasksOnRestart=" + restoreTasksOnRestart +
+           ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
+           ", directoryLockTimeout=" + directoryLockTimeout +
+           '}';
+  }
 }
