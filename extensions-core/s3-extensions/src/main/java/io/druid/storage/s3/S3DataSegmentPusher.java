@@ -120,7 +120,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
                                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               File descriptorFile = File.createTempFile("druid", "descriptor.json");
-              Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(inSegment)), descriptorFile);
+              Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(outSegment)), descriptorFile);
               S3Object descriptorObject = new S3Object(descriptorFile);
               descriptorObject.setBucketName(outputBucket);
               descriptorObject.setKey(s3DescriptorPath);
