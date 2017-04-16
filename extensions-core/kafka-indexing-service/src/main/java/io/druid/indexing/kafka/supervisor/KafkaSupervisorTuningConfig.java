@@ -25,8 +25,6 @@ import io.druid.segment.IndexSpec;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-import java.io.File;
-
 public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
 {
   private final Integer workerThreads;
@@ -39,7 +37,6 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
@@ -57,7 +54,6 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         maxRowsInMemory,
         maxRowsPerSegment,
         intermediatePersistPeriod,
-        basePersistDirectory,
         maxPendingPersists,
         indexSpec,
         buildV9Directly,

@@ -1355,7 +1355,6 @@ public class KafkaIndexTaskTest
         new Period("P1Y"),
         null,
         null,
-        null,
         buildV9Directly,
         reportParseExceptions,
         handoffConditionTimeout,

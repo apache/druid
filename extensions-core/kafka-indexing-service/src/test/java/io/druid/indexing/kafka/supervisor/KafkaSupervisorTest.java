@@ -85,7 +85,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -169,7 +168,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         1000,
         50000,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         true,
