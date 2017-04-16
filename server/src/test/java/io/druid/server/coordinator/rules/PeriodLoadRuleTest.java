@@ -65,16 +65,21 @@ public class PeriodLoadRuleTest
 
     Assert.assertTrue(rule.appliesTo(builder.interval(new Interval(now.minusWeeks(1), now)).build(), now));
     Assert.assertTrue(
+        rule.appliesTo(builder.interval(new Interval(now.minusDays(1), now.plusDays(1))).build(),
+            now)
+    );
+    Assert.assertTrue(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusDays(1), now.plusDays(1)))
-                   .build(),
-            now
-        )
+            builder.interval(new Interval(now.minusWeeks(7), now.minusWeeks(1))).build(),
+            now)
     );
     Assert.assertFalse(
         rule.appliesTo(
-            builder.interval(new Interval(now.plusDays(1), now.plusDays(2)))
-                       .build(),
+            builder.interval(new Interval(now.minusWeeks(7), now.minusWeeks(6))).build(),
+            now)
+    );
+    Assert.assertFalse(
+        rule.appliesTo(builder.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
             now
         )
     );
