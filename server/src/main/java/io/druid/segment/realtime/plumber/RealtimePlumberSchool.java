@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -38,12 +39,14 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 
 /**
  */
 public class RealtimePlumberSchool implements PlumberSchool
 {
+  private final File defaultBasePerDir = Files.createTempDir();
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentPusher dataSegmentPusher;
@@ -100,9 +103,14 @@ public class RealtimePlumberSchool implements PlumberSchool
   {
     verifyState();
 
+    RealtimeTuningConfig updatedConfig = config;
+    if (config.getBasePersistDirectory() == null) {
+      updatedConfig = config.withBasePersistDirectory(defaultBasePerDir);
+    }
+
     return new RealtimePlumber(
         schema,
-        config,
+        updatedConfig,
         metrics,
         emitter,
         conglomerate,
