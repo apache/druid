@@ -18,7 +18,6 @@
  */
 package io.druid.segment.realtime.appenderator;
 
-import com.google.common.io.Files;
 import io.druid.data.input.InputRow;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -31,19 +30,30 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 public class AppenderatorPlumberTest
 {
-  private final AppenderatorPlumber plumber;
-  private final AppenderatorTester appenderatorTester;
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  public AppenderatorPlumberTest() throws Exception {
-    this.appenderatorTester = new AppenderatorTester(10);
+  private AppenderatorPlumber plumber;
+  private AppenderatorTester appenderatorTester;
+  private RealtimeTuningConfig tuningConfig;
+
+  @Before
+  public void setUp() throws IOException
+  {
+    this.appenderatorTester = new AppenderatorTester(10, temporaryFolder.newFolder());
+
     DataSegmentAnnouncer segmentAnnouncer = EasyMock
         .createMock(DataSegmentAnnouncer.class);
     segmentAnnouncer.announceSegment(EasyMock.<DataSegment> anyObject());
@@ -58,7 +68,7 @@ public class AppenderatorPlumberTest
     EasyMock
         .expect(
             handoffNotifierFactory.createSegmentHandoffNotifier(EasyMock
-                .anyString())).andReturn(handoffNotifier).anyTimes();
+                                                                    .anyString())).andReturn(handoffNotifier).anyTimes();
     EasyMock
         .expect(
             handoffNotifier.registerSegmentHandoffCallback(
@@ -66,18 +76,17 @@ public class AppenderatorPlumberTest
                 EasyMock.<Executor> anyObject(),
                 EasyMock.<Runnable> anyObject())).andReturn(true).anyTimes();
 
-    RealtimeTuningConfig tuningConfig  = new RealtimeTuningConfig.Builder()
+    this.tuningConfig  = new RealtimeTuningConfig.Builder()
         .withMaxRowsInMemory(1)
         .withVersioningPolicy(new IntervalStartVersioningPolicy())
         .withRejectionPolicyFactory(new NoopRejectionPolicyFactory())
-        .withBasePersistDirectory(Files.createTempDir())
+        .withBasePersistDirectory(temporaryFolder.newFolder())
         .build();
 
     this.plumber = new AppenderatorPlumber(appenderatorTester.getSchema(),
-        tuningConfig, appenderatorTester.getMetrics(),
-        segmentAnnouncer, segmentPublisher, handoffNotifier,
-        appenderatorTester.getAppenderator());
-
+                                           tuningConfig, appenderatorTester.getMetrics(),
+                                           segmentAnnouncer, segmentPublisher, handoffNotifier,
+                                           appenderatorTester.getAppenderator());
   }
 
   @Test

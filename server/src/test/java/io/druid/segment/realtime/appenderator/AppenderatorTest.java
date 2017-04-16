@@ -45,7 +45,9 @@ import io.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -58,6 +60,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AppenderatorTest
 {
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private static final List<SegmentIdentifier> IDENTIFIERS = ImmutableList.of(
       SI("2000/2001", "A", 0),
       SI("2000/2001", "A", 1),
@@ -67,7 +72,7 @@ public class AppenderatorTest
   @Test
   public void testSimpleIngestion() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(2, temporaryFolder.newFolder())) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -138,7 +143,7 @@ public class AppenderatorTest
   @Test
   public void testMaxRowsInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(3, temporaryFolder.newFolder())) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = new Supplier<Committer>()
@@ -189,7 +194,7 @@ public class AppenderatorTest
   public void testRestoreFromDisk() throws Exception
   {
     final RealtimeTuningConfig tuningConfig;
-    try (final AppenderatorTester tester = new AppenderatorTester(2)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(2, temporaryFolder.newFolder())) {
       final Appenderator appenderator = tester.getAppenderator();
       tuningConfig = tester.getTuningConfig();
 
@@ -243,7 +248,7 @@ public class AppenderatorTest
   @Test
   public void testQueryByIntervals() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(2, temporaryFolder.newFolder())) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
@@ -379,7 +384,7 @@ public class AppenderatorTest
   @Test
   public void testQueryBySegments() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(2, temporaryFolder.newFolder())) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();

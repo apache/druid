@@ -49,7 +49,9 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -62,6 +64,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class FiniteAppenderatorDriverTest
 {
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
@@ -92,9 +97,9 @@ public class FiniteAppenderatorDriverTest
   FiniteAppenderatorDriver driver;
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
-    appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
+    appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY, temporaryFolder.newFolder());
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     driver = new FiniteAppenderatorDriver(
         appenderatorTester.getAppenderator(),
