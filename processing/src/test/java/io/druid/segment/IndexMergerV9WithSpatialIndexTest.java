@@ -28,7 +28,7 @@ import io.druid.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
@@ -46,6 +46,7 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -103,7 +104,7 @@ public class IndexMergerV9WithSpatialIndexTest
   {
     IncrementalIndex theIndex = new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                            .withQueryGranularity(QueryGranularities.DAY)
+                                            .withQueryGranularity(Granularities.DAY)
                                             .withMetrics(METRIC_AGGS)
                                             .withDimensionsSpec(
                                                 new DimensionsSpec(
@@ -256,10 +257,14 @@ public class IndexMergerV9WithSpatialIndexTest
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
     tmpFile.mkdirs();
-    tmpFile.deleteOnExit();
 
-    INDEX_MERGER_V9.persist(theIndex, tmpFile, indexSpec);
-    return INDEX_IO.loadIndex(tmpFile);
+    try {
+      INDEX_MERGER_V9.persist(theIndex, tmpFile, indexSpec);
+      return INDEX_IO.loadIndex(tmpFile);
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpFile);
+    }
   }
 
   private static QueryableIndex makeMergedQueryableIndex(IndexSpec indexSpec)
@@ -267,7 +272,7 @@ public class IndexMergerV9WithSpatialIndexTest
     try {
       IncrementalIndex first = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -291,7 +296,7 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       IncrementalIndex second = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -315,7 +320,7 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       IncrementalIndex third = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -470,33 +475,38 @@ public class IndexMergerV9WithSpatialIndexTest
       File mergedFile = new File(tmpFile, "merged");
 
       firstFile.mkdirs();
-      firstFile.deleteOnExit();
       secondFile.mkdirs();
-      secondFile.deleteOnExit();
       thirdFile.mkdirs();
-      thirdFile.deleteOnExit();
       mergedFile.mkdirs();
-      mergedFile.deleteOnExit();
 
       INDEX_MERGER_V9.persist(first, DATA_INTERVAL, firstFile, indexSpec);
       INDEX_MERGER_V9.persist(second, DATA_INTERVAL, secondFile, indexSpec);
       INDEX_MERGER_V9.persist(third, DATA_INTERVAL, thirdFile, indexSpec);
 
-      QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
-          INDEX_MERGER_V9.mergeQueryableIndex(
-              Arrays.asList(
-                  INDEX_IO.loadIndex(firstFile),
-                  INDEX_IO.loadIndex(secondFile),
-                  INDEX_IO.loadIndex(thirdFile)
-              ),
-              true,
-              METRIC_AGGS,
-              mergedFile,
-              indexSpec
-          )
-      );
+      try {
+        QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
+            INDEX_MERGER_V9.mergeQueryableIndex(
+                Arrays.asList(
+                    INDEX_IO.loadIndex(firstFile),
+                    INDEX_IO.loadIndex(secondFile),
+                    INDEX_IO.loadIndex(thirdFile)
+                ),
+                true,
+                METRIC_AGGS,
+                mergedFile,
+                indexSpec
+            )
+        );
+        return mergedRealtime;
 
-      return mergedRealtime;
+      }
+      finally {
+        FileUtils.deleteDirectory(firstFile);
+        FileUtils.deleteDirectory(secondFile);
+        FileUtils.deleteDirectory(thirdFile);
+        FileUtils.deleteDirectory(mergedFile);
+      }
+
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -515,7 +525,7 @@ public class IndexMergerV9WithSpatialIndexTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularities.ALL)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
@@ -569,7 +579,7 @@ public class IndexMergerV9WithSpatialIndexTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularities.ALL)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
@@ -622,7 +632,7 @@ public class IndexMergerV9WithSpatialIndexTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.DAY)
+                                  .granularity(Granularities.DAY)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(

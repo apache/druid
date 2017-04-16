@@ -23,6 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -40,8 +44,6 @@ public class MinPostAggregator extends ApproximateHistogramPostAggregator
     }
   };
 
-  private String fieldName;
-
   @JsonCreator
   public MinPostAggregator(
       @JsonProperty("name") String name,
@@ -49,7 +51,6 @@ public class MinPostAggregator extends ApproximateHistogramPostAggregator
   )
   {
     super(name, fieldName);
-    this.fieldName = fieldName;
   }
 
   @Override
@@ -67,8 +68,14 @@ public class MinPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    final ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
     return ah.getMin();
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @Override
@@ -77,5 +84,13 @@ public class MinPostAggregator extends ApproximateHistogramPostAggregator
     return "QuantilePostAggregator{" +
            "fieldName='" + fieldName + '\'' +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_MIN)
+        .appendString(fieldName)
+        .build();
   }
 }

@@ -20,10 +20,9 @@
 package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.Pair;
-import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.TestFloatColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -142,7 +141,7 @@ public class VarianceAggregatorCollectorTest
     }
   }
 
-  private static class FloatHandOver implements FloatColumnSelector
+  private static class FloatHandOver extends TestFloatColumnSelector
   {
     float v;
 

@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
 public final class ZeroFloatColumnSelector implements FloatColumnSelector
 {
   private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
@@ -37,5 +39,10 @@ public final class ZeroFloatColumnSelector implements FloatColumnSelector
   public float get()
   {
     return 0.0f;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
   }
 }

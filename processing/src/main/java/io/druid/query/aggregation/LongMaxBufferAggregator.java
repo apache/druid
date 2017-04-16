@@ -25,13 +25,12 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class LongMaxBufferAggregator implements BufferAggregator
+public class LongMaxBufferAggregator extends LongBufferAggregator
 {
-  private final LongColumnSelector selector;
 
-  public LongMaxBufferAggregator(LongColumnSelector selector)
+  LongMaxBufferAggregator(LongColumnSelector selector)
   {
-    this.selector = selector;
+    super(selector);
   }
 
   @Override
@@ -44,29 +43,5 @@ public class LongMaxBufferAggregator implements BufferAggregator
   public void aggregate(ByteBuffer buf, int position)
   {
     buf.putLong(position, Math.max(buf.getLong(position), selector.get()));
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position);
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return (float) buf.getLong(position);
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position);
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
   }
 }

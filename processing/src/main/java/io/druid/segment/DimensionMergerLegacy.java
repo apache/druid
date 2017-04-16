@@ -34,7 +34,7 @@ import java.io.IOException;
  *
  * NOTE: Remove this class when the legacy IndexMerger is deprecated and removed.
  */
-public interface DimensionMergerLegacy<EncodedTypeArray> extends DimensionMergerV9<EncodedTypeArray>
+public interface DimensionMergerLegacy<EncodedKeyComponentType> extends DimensionMergerV9<EncodedKeyComponentType>
 {
   /**
    * Write this dimension's value metadata to a file.

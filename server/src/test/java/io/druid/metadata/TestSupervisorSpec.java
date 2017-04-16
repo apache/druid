@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 
+import java.util.List;
+
 public class TestSupervisorSpec implements SupervisorSpec
 {
   private String id;
@@ -45,6 +47,12 @@ public class TestSupervisorSpec implements SupervisorSpec
 
   @Override
   public Supervisor createSupervisor()
+  {
+    return null;
+  }
+
+  @Override
+  public List<String> getDataSources()
   {
     return null;
   }

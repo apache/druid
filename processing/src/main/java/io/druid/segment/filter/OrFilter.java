@@ -27,6 +27,7 @@ import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.ArrayList;
@@ -153,6 +154,30 @@ public class OrFilter implements BooleanFilter
       }
     }
     return true;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    for (Filter filter : filters) {
+      if(!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  {
+    // Estimate selectivity with attribute value independence assumption
+    double selectivity = 0;
+    for (final Filter filter : filters) {
+      selectivity += filter.estimateSelectivity(indexSelector);
+    }
+    return Math.min(selectivity, 1.);
   }
 
   public String toString()

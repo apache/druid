@@ -33,7 +33,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
-import com.google.common.io.Closer;
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
@@ -45,6 +44,7 @@ import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -174,12 +174,7 @@ public class IndexMerger
       );
     }
 
-    if (!outDir.exists()) {
-      outDir.mkdirs();
-    }
-    if (!outDir.isDirectory()) {
-      throw new ISE("Can only persist to directories, [%s] wasn't a directory", outDir);
-    }
+    FileUtils.forceMkdir(outDir);
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
@@ -335,9 +330,7 @@ public class IndexMerger
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
-    if (!outDir.mkdirs()) {
-      throw new ISE("Couldn't make outdir[%s].", outDir);
-    }
+    FileUtils.forceMkdir(outDir);
 
     final List<String> mergedDimensions = getMergedDimensions(indexes);
 
@@ -496,9 +489,7 @@ public class IndexMerger
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
-    if (!outDir.mkdirs()) {
-      throw new ISE("Couldn't make outdir[%s].", outDir);
-    }
+    FileUtils.forceMkdir(outDir);
 
     final List<String> mergedDimensions = getMergedDimensions(indexes);
 
@@ -625,27 +616,16 @@ public class IndexMerger
     }
 
     Closer closer = Closer.create();
-    final Interval dataInterval;
-    final File v8OutDir = new File(outDir, "v8-tmp");
-    v8OutDir.mkdirs();
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        FileUtils.deleteDirectory(v8OutDir);
-      }
-    });
-    final IOPeon ioPeon = new TmpFileIOPeon();
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        ioPeon.cleanup();
-      }
-    });
     try {
+      final Interval dataInterval;
+      final File v8OutDir = new File(outDir, "v8-tmp");
+      FileUtils.forceMkdir(v8OutDir);
+      registerDeleteDirectory(closer, v8OutDir);
+      File tmpPeonFilesDir = new File(v8OutDir, "tmpPeonFiles");
+      FileUtils.forceMkdir(tmpPeonFilesDir);
+      registerDeleteDirectory(closer, tmpPeonFilesDir);
+      final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, true);
+      closer.register(ioPeon);
       /*************  Main index.drd file **************/
       progress.progress();
       long startTime = System.currentTimeMillis();
@@ -871,7 +851,7 @@ public class IndexMerger
       }
 
       File smooshDir = new File(v8OutDir, "smoosher");
-      smooshDir.mkdir();
+      FileUtils.forceMkdir(smooshDir);
 
       for (Map.Entry<String, File> entry : Smoosh.smoosh(v8OutDir, smooshDir, files).entrySet()) {
         entry.getValue().delete();
@@ -904,6 +884,18 @@ public class IndexMerger
     finally {
       closer.close();
     }
+  }
+
+  static void registerDeleteDirectory(Closer closer, final File dir)
+  {
+    closer.register(new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        FileUtils.deleteDirectory(dir);
+      }
+    });
   }
 
   protected DimensionHandler[] makeDimensionHandlers(final List<String> mergedDimensions, final List<ColumnCapabilitiesImpl> dimCapabilities)

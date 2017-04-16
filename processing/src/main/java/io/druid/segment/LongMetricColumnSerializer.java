@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 
 /**
+ * Unsafe for concurrent use from multiple threads.
  */
 public class LongMetricColumnSerializer implements MetricColumnSerializer
 {
@@ -77,6 +78,11 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   public void close() throws IOException
   {
     final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
+    closeFile(outFile);
+  }
+
+  public void closeFile(final File outFile) throws IOException
+  {
     outFile.delete();
     MetricHolder.writeLongMetric(
         Files.asByteSink(outFile, FileWriteMode.APPEND), metricName, writer

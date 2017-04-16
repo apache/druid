@@ -26,11 +26,12 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.io.Closer;
+import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
@@ -46,8 +47,8 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.TmpFileIOPeon;
+import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
-import io.druid.segment.serde.ComplexColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
@@ -56,9 +57,8 @@ import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -127,34 +127,31 @@ public class IndexMergerV9 extends IndexMerger
     }
 
     Closer closer = Closer.create();
-    final IOPeon ioPeon = new TmpFileIOPeon(false);
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        ioPeon.cleanup();
-      }
-    });
-    final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
-    final File v9TmpDir = new File(outDir, "v9-tmp");
-    v9TmpDir.mkdirs();
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        FileUtils.deleteDirectory(v9TmpDir);
-      }
-    });
-    log.info("Start making v9 index files, outDir:%s", outDir);
     try {
+      final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
+      final File v9TmpDir = new File(outDir, "v9-tmp");
+      FileUtils.forceMkdir(v9TmpDir);
+      registerDeleteDirectory(closer, v9TmpDir);
+      log.info("Start making v9 index files, outDir:%s", outDir);
+
+      File tmpPeonFilesDir = new File(v9TmpDir, "tmpPeonFiles");
+      FileUtils.forceMkdir(tmpPeonFilesDir);
+      registerDeleteDirectory(closer, tmpPeonFilesDir);
+      final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, false);
+      closer.register(ioPeon);
       long startTime = System.currentTimeMillis();
       ByteStreams.write(
           Ints.toByteArray(IndexIO.V9_VERSION),
           Files.newOutputStreamSupplier(new File(outDir, "version.bin"))
       );
       log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
+
+      progress.progress();
+      startTime = System.currentTimeMillis();
+      try (FileOutputStream fos = new FileOutputStream(new File(outDir, "factory.json"))) {
+        mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
+      }
+      log.info("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 
       progress.progress();
       final Map<String, ValueType> metricsValueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
@@ -206,7 +203,7 @@ public class IndexMergerV9 extends IndexMerger
       makeTimeColumn(v9Smoosher, progress, timeWriter);
       makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
 
-      for(int i = 0; i < mergedDimensions.size(); i++) {
+      for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
         merger.writeIndexes(rowNumConversions, closer);
         if (merger.canSkip()) {
@@ -358,7 +355,7 @@ public class IndexMergerV9 extends IndexMerger
           builder.setValueType(ValueType.COMPLEX);
           builder.addSerde(
               ComplexColumnPartSerde.serializerBuilder().withTypeName(typeName)
-                                    .withDelegate((ComplexColumnSerializer) writer)
+                                    .withDelegate(writer)
                                     .build()
           );
           break;
@@ -405,19 +402,13 @@ public class IndexMergerV9 extends IndexMerger
       final ColumnDescriptor serdeficator
   ) throws IOException
   {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
-    byte[] specBytes = baos.toByteArray();
-
-    final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-        columnName, serdeficator.numBytes() + specBytes.length
-    );
-    try {
-      channel.write(ByteBuffer.wrap(specBytes));
-      serdeficator.write(channel);
-    }
-    finally {
-      channel.close();
+    ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
+    serializerUtils.writeString(specBytes, mapper.writeValueAsString(serdeficator));
+    try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+        columnName, serdeficator.numBytes() + specBytes.size()
+    )) {
+      specBytes.writeTo(channel);
+      serdeficator.write(channel, v9Smoosher);
     }
   }
 
@@ -521,7 +512,7 @@ public class IndexMergerV9 extends IndexMerger
           if (serde == null) {
             throw new ISE("Unknown type[%s]", typeName);
           }
-          writer = ComplexColumnSerializer.create(ioPeon, metric, serde);
+          writer = serde.getSerializer(ioPeon, metric);
           break;
         default:
           throw new ISE("Unknown type[%s]", type);

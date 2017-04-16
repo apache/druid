@@ -21,6 +21,8 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.GenericIndexed;
@@ -33,6 +35,16 @@ import java.nio.channels.WritableByteChannel;
  */
 public class ComplexColumnPartSerde implements ColumnPartSerde
 {
+  private final String typeName;
+  private final ComplexMetricSerde serde;
+  private final Serializer serializer;
+  private ComplexColumnPartSerde(String typeName, Serializer serializer)
+  {
+    this.typeName = typeName;
+    this.serde = ComplexMetrics.getSerdeForType(typeName);
+    this.serializer = serializer;
+  }
+
   @JsonCreator
   public static ComplexColumnPartSerde createDeserializer(
       @JsonProperty("typeName") String complexType
@@ -41,15 +53,14 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
     return new ComplexColumnPartSerde(complexType, null);
   }
 
-  private final String typeName;
-  private final ComplexMetricSerde serde;
-  private final Serializer serializer;
-
-  private ComplexColumnPartSerde(String typeName, Serializer serializer)
+  public static SerializerBuilder serializerBuilder()
   {
-    this.typeName = typeName;
-    this.serde = ComplexMetrics.getSerdeForType(typeName);
-    this.serializer = serializer;
+    return new SerializerBuilder();
+  }
+
+  public static LegacySerializerBuilder legacySerializerBuilder()
+  {
+    return new LegacySerializerBuilder();
   }
 
   @JsonProperty
@@ -58,15 +69,31 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
     return typeName;
   }
 
-  public static SerializerBuilder serializerBuilder()
+  @Override
+  public Serializer getSerializer()
   {
-    return new SerializerBuilder();
+    return serializer;
+  }
+
+  @Override
+  public Deserializer getDeserializer()
+  {
+    return new Deserializer()
+    {
+      @Override
+      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      {
+        if (serde != null) {
+          serde.deserializeColumn(buffer, builder);
+        }
+      }
+    };
   }
 
   public static class SerializerBuilder
   {
     private String typeName = null;
-    private ComplexColumnSerializer delegate = null;
+    private GenericColumnSerializer delegate = null;
 
     public SerializerBuilder withTypeName(final String typeName)
     {
@@ -74,7 +101,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
-    public SerializerBuilder withDelegate(final ComplexColumnSerializer delegate)
+    public SerializerBuilder withDelegate(final GenericColumnSerializer delegate)
     {
       this.delegate = delegate;
       return this;
@@ -92,18 +119,13 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
         }
 
         @Override
-        public void write(WritableByteChannel channel) throws IOException
+        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
         {
-          delegate.writeToChannel(channel);
+          delegate.writeToChannel(channel, smoosher);
         }
       }
       );
     }
-  }
-
-  public static LegacySerializerBuilder legacySerializerBuilder()
-  {
-    return new LegacySerializerBuilder();
   }
 
   public static class LegacySerializerBuilder
@@ -135,33 +157,12 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
         }
 
         @Override
-        public void write(WritableByteChannel channel) throws IOException
+        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
         {
           delegate.writeToChannel(channel);
         }
       }
       );
     }
-  }
-
-  @Override
-  public Serializer getSerializer()
-  {
-    return serializer;
-  }
-
-  @Override
-  public Deserializer getDeserializer()
-  {
-    return new Deserializer()
-    {
-      @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
-      {
-        if (serde != null) {
-          serde.deserializeColumn(buffer, builder);
-        }
-      }
-    };
   }
 }

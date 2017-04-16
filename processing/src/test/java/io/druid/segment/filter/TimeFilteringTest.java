@@ -132,8 +132,8 @@ public class TimeFilteringTest extends BaseFilterTest
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
-    List<String> infilterValues = new ArrayList<>(InDimFilter.LONG_HASHING_THRESHOLD * 2);
-    for (int i = 0; i < InDimFilter.LONG_HASHING_THRESHOLD * 2; i++) {
+    List<String> infilterValues = new ArrayList<>(InDimFilter.NUMERIC_HASHING_THRESHOLD * 2);
+    for (int i = 0; i < InDimFilter.NUMERIC_HASHING_THRESHOLD * 2; i++) {
       infilterValues.add(String.valueOf(i*2));
     }
     assertFilterMatches(
@@ -143,7 +143,7 @@ public class TimeFilteringTest extends BaseFilterTest
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
     assertFilterMatches(
-        new JavaScriptDimFilter(Column.TIME_COLUMN_NAME, jsFn, null, JavaScriptConfig.getDefault()),
+        new JavaScriptDimFilter(Column.TIME_COLUMN_NAME, jsFn, null, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "5")
     );
 
@@ -207,7 +207,7 @@ public class TimeFilteringTest extends BaseFilterTest
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
     assertFilterMatches(
-        new JavaScriptDimFilter(Column.TIME_COLUMN_NAME, jsFn, exfn, JavaScriptConfig.getDefault()),
+        new JavaScriptDimFilter(Column.TIME_COLUMN_NAME, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("2", "3")
     );
 
@@ -271,7 +271,7 @@ public class TimeFilteringTest extends BaseFilterTest
 
     // increment timestamp by 2 hours
     String timeBoosterJsFn = "function(x) { return(x + 7200000) }";
-    ExtractionFn exFn = new JavaScriptExtractionFn(timeBoosterJsFn, true, JavaScriptConfig.getDefault());
+    ExtractionFn exFn = new JavaScriptExtractionFn(timeBoosterJsFn, true, JavaScriptConfig.getEnabledInstance());
     assertFilterMatches(
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
@@ -330,7 +330,7 @@ public class TimeFilteringTest extends BaseFilterTest
 
     // increment timestamp by 2 hours
     String timeBoosterJsFn = "function(x) { return(Number(x) + 7200000) }";
-    ExtractionFn exFn = new JavaScriptExtractionFn(timeBoosterJsFn, true, JavaScriptConfig.getDefault());
+    ExtractionFn exFn = new JavaScriptExtractionFn(timeBoosterJsFn, true, JavaScriptConfig.getEnabledInstance());
     assertFilterMatches(
         new IntervalDimFilter(
             "dim0",

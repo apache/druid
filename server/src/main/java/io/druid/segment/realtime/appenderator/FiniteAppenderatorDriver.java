@@ -41,6 +41,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
@@ -77,6 +78,7 @@ public class FiniteAppenderatorDriver implements Closeable
   private final ObjectMapper objectMapper;
   private final int maxRowsPerSegment;
   private final long handoffConditionTimeout;
+  private final FireDepartmentMetrics metrics;
 
   // All access to "activeSegments" and "lastSegmentId" must be synchronized on "activeSegments".
 
@@ -100,6 +102,7 @@ public class FiniteAppenderatorDriver implements Closeable
    * @param maxRowsPerSegment       maximum number of rows allowed in an entire segment (not a single persist)
    * @param handoffConditionTimeout maximum number of millis allowed for handoff (not counting push/publish), zero
    *                                means wait forever.
+   * @param metrics                 Firedepartment metrics
    */
   public FiniteAppenderatorDriver(
       Appenderator appenderator,
@@ -108,7 +111,8 @@ public class FiniteAppenderatorDriver implements Closeable
       UsedSegmentChecker usedSegmentChecker,
       ObjectMapper objectMapper,
       int maxRowsPerSegment,
-      long handoffConditionTimeout
+      long handoffConditionTimeout,
+      FireDepartmentMetrics metrics
   )
   {
     this.appenderator = Preconditions.checkNotNull(appenderator, "appenderator");
@@ -119,6 +123,7 @@ public class FiniteAppenderatorDriver implements Closeable
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.handoffConditionTimeout = handoffConditionTimeout;
+    this.metrics = Preconditions.checkNotNull(metrics, "metrics");
   }
 
   /**
@@ -469,6 +474,7 @@ public class FiniteAppenderatorDriver implements Closeable
                 {
                   final SegmentIdentifier identifier = SegmentIdentifier.fromDataSegment(dataSegment);
                   log.info("Segment[%s] successfully handed off, dropping.", identifier);
+                  metrics.incrementHandOffCount();
                   final ListenableFuture<?> dropFuture = appenderator.drop(identifier);
                   Futures.addCallback(
                       dropFuture,

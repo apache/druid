@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby.epinephelinae;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -42,7 +43,7 @@ public class BufferGrouperTest
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final Grouper<Integer> grouper = new BufferGrouper<>(
-        ByteBuffer.allocate(1000),
+        Suppliers.ofInstance(ByteBuffer.allocate(1000)),
         GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,
         new AggregatorFactory[]{
@@ -53,6 +54,7 @@ public class BufferGrouperTest
         0,
         0
     );
+    grouper.init();
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     grouper.aggregate(12);
@@ -95,16 +97,16 @@ public class BufferGrouperTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize));
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     // Aggregate slightly different row
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
     for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize));
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     final List<Grouper.Entry<Integer>> expected = Lists.newArrayList();
     for (int i = 0; i < expectedMaxSize; i++) {
@@ -123,16 +125,16 @@ public class BufferGrouperTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize));
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     // Aggregate slightly different row
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
     for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize));
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     final List<Grouper.Entry<Integer>> expected = Lists.newArrayList();
     for (int i = 0; i < expectedMaxSize; i++) {
@@ -148,8 +150,8 @@ public class BufferGrouperTest
       int initialBuckets
   )
   {
-    return new BufferGrouper<>(
-        ByteBuffer.allocate(bufferSize),
+    final BufferGrouper<Integer> grouper = new BufferGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(bufferSize)),
         GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,
         new AggregatorFactory[]{
@@ -160,5 +162,7 @@ public class BufferGrouperTest
         0.75f,
         initialBuckets
     );
+    grouper.init();
+    return grouper;
   }
 }

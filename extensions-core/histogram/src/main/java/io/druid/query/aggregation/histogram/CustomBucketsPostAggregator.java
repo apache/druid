@@ -23,6 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -55,8 +59,14 @@ public class CustomBucketsPostAggregator extends ApproximateHistogramPostAggrega
   @Override
   public Object compute(Map<String, Object> values)
   {
-    ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
     return ah.toHistogram(breaks);
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty
@@ -73,5 +83,14 @@ public class CustomBucketsPostAggregator extends ApproximateHistogramPostAggrega
            ", fieldName='" + this.getFieldName() + '\'' +
            ", breaks=" + Arrays.toString(this.getBreaks()) +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_CUSTOM_BUCKETS)
+        .appendString(fieldName)
+        .appendFloatArray(breaks)
+        .build();
   }
 }

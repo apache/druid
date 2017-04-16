@@ -48,7 +48,7 @@ import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -101,7 +101,7 @@ public class GroupByQueryEngine
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
         filter,
         intervals.get(0),
-        VirtualColumns.EMPTY,
+        query.getVirtualColumns(),
         query.getGranularity(),
         false
     );
@@ -326,8 +326,18 @@ public class GroupByQueryEngine
 
       for (int i = 0; i < dimensionSpecs.size(); ++i) {
         final DimensionSpec dimSpec = dimensionSpecs.get(i);
+        if (dimSpec.getOutputType() != ValueType.STRING) {
+          throw new UnsupportedOperationException(
+              "GroupBy v1 only supports dimensions with an outputType of STRING."
+          );
+        }
+
         final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec);
         if (selector != null) {
+          if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+            throw new UnsupportedOperationException(
+                "GroupBy v1 does not support dimension selectors with unknown cardinality.");
+          }
           dimensions.add(selector);
           dimNames.add(dimSpec.getOutputName());
         }

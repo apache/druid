@@ -22,9 +22,12 @@ package io.druid.segment.incremental;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.LongMaxAggregator;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,7 +45,7 @@ public class OnheapIncrementalIndexTest
   {
     final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
         0,
-        QueryGranularities.MINUTE,
+        Granularities.MINUTE,
         new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")},
         MAX_ROWS
     );
@@ -96,5 +99,35 @@ public class OnheapIncrementalIndexTest
     checkThread.interrupt();
 
     Assert.assertEquals(0, checkFailedCount.get());
+  }
+
+  @Test
+  public void testOnHeapIncrementalIndexClose() throws Exception
+  {
+    // Prepare the mocks & set close() call count expectation to 1
+    Aggregator mockedAggregator = EasyMock.createMock(LongMaxAggregator.class);
+    mockedAggregator.close();
+    EasyMock.expectLastCall().times(1);
+
+    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
+            0,
+            Granularities.MINUTE,
+            new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")},
+            MAX_ROWS
+    );
+
+    index.add(new MapBasedInputRow(
+            0,
+            Lists.newArrayList("billy"),
+            ImmutableMap.<String, Object>of("billy", 1, "max", 1)
+    ));
+
+    // override the aggregators with the mocks
+    index.concurrentGet(0)[0] = mockedAggregator;
+
+    // close the indexer and validate the expectations
+    EasyMock.replay(mockedAggregator);
+    index.close();
+    EasyMock.verify(mockedAggregator);
   }
 }

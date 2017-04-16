@@ -37,6 +37,7 @@ import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.schema.SchemaPlus;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,14 +49,17 @@ import org.junit.rules.TemporaryFolder;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
@@ -88,6 +92,7 @@ public class DruidAvaticaHandlerTest
   private SpecificSegmentsQuerySegmentWalker walker;
   private Server server;
   private Connection client;
+  private Connection clientLosAngeles;
 
   @Before
   public void setUp() throws Exception
@@ -103,7 +108,7 @@ public class DruidAvaticaHandlerTest
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        new DruidMeta(new PlannerFactory(rootSchema, operatorTable, plannerConfig), AVATICA_CONFIG),
+        new DruidMeta(new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig), AVATICA_CONFIG),
         new DruidNode("dummy", "dummy", 1),
         new AvaticaMonitor()
     );
@@ -117,16 +122,22 @@ public class DruidAvaticaHandlerTest
         DruidAvaticaHandler.AVATICA_PATH
     );
     client = DriverManager.getConnection(url);
+
+    final Properties propertiesLosAngeles = new Properties();
+    propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
+    clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
   }
 
   @After
   public void tearDown() throws Exception
   {
     client.close();
+    clientLosAngeles.close();
     server.stop();
     walker.close();
     walker = null;
     client = null;
+    clientLosAngeles = null;
     server = null;
   }
 
@@ -160,14 +171,40 @@ public class DruidAvaticaHandlerTest
   public void testTimestampsInResponse() throws Exception
   {
     final ResultSet resultSet = client.createStatement().executeQuery(
-        "SELECT __time FROM druid.foo LIMIT 1"
+        "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1"
     );
 
     Assert.assertEquals(
         ImmutableList.of(
-            ImmutableMap.of("__time", new DateTime("2000-01-01T00:00:00.000Z").toDate())
+            ImmutableMap.of(
+                "__time", new Timestamp(new DateTime("2000-01-01T00:00:00.000Z").getMillis()),
+                "t2", new Date(new DateTime("2000-01-01").getMillis())
+            )
         ),
         getRows(resultSet)
+    );
+  }
+
+  @Test
+  public void testTimestampsInResponseLosAngelesTimeZone() throws Exception
+  {
+    final ResultSet resultSet = clientLosAngeles.createStatement().executeQuery(
+        "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1"
+    );
+
+    final DateTimeZone timeZone = DateTimeZone.forID("America/Los_Angeles");
+    final DateTime localDateTime = new DateTime("2000-01-01T00Z", timeZone);
+
+    final List<Map<String, Object>> resultRows = getRows(resultSet);
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of(
+                "__time", new Timestamp(Calcites.jodaToCalciteTimestamp(localDateTime, timeZone)),
+                "t2", new Date(Calcites.jodaToCalciteTimestamp(localDateTime.dayOfMonth().roundFloorCopy(), timeZone))
+            )
+        ),
+        resultRows
     );
   }
 
@@ -235,13 +272,13 @@ public class DruidAvaticaHandlerTest
     Assert.assertEquals(
         ImmutableList.of(
             ROW(
-                Pair.of("TABLE_CAT", null),
+                Pair.of("TABLE_CAT", ""),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
             ROW(
-                Pair.of("TABLE_CAT", null),
+                Pair.of("TABLE_CAT", ""),
                 Pair.of("TABLE_NAME", "foo2"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")

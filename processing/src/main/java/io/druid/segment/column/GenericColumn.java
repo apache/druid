@@ -19,6 +19,8 @@
 
 package io.druid.segment.column;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedLongs;
@@ -27,17 +29,23 @@ import java.io.Closeable;
 
 /**
  */
-public interface GenericColumn extends Closeable
+public interface GenericColumn extends HotLoopCallee, Closeable
 {
   public int length();
   public ValueType getType();
   public boolean hasMultipleValues();
 
+  @CalledFromHotLoop
   public String getStringSingleValueRow(int rowNum);
+  @CalledFromHotLoop
   public Indexed<String> getStringMultiValueRow(int rowNum);
+  @CalledFromHotLoop
   public float getFloatSingleValueRow(int rowNum);
+  @CalledFromHotLoop
   public IndexedFloats getFloatMultiValueRow(int rowNum);
+  @CalledFromHotLoop
   public long getLongSingleValueRow(int rowNum);
+  @CalledFromHotLoop
   public IndexedLongs getLongMultiValueRow(int rowNum);
 
   @Override

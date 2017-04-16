@@ -145,6 +145,13 @@ public class SelectorFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testExpressionVirtualColumn()
+  {
+    assertFilterMatches(new SelectorDimFilter("expr", "1.1", null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(new SelectorDimFilter("expr", "1.2", null), ImmutableList.<String>of());
+  }
+
+  @Test
   public void testSelectorWithLookupExtractionFn()
   {
     final Map<String, String> stringMap = ImmutableMap.of(

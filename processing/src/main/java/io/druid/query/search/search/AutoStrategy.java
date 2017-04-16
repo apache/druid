@@ -20,12 +20,12 @@
 package io.druid.query.search.search;
 
 import com.metamx.emitter.EmittingLogger;
-import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 
@@ -55,21 +55,16 @@ public class AutoStrategy extends SearchStrategy
     if (index != null) {
       final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
           index.getBitmapFactoryForDimensions(),
+          VirtualColumns.EMPTY,
           index
       );
 
-      // Index-only plan is used only when any filter is not specified or every filter supports bitmap indexes.
+      // Index-only plan is used only when any filter is not specified or the filter supports bitmap indexes.
       //
       // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
       // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
-      // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
-      if (filter == null || filter.supportsBitmapIndex(selector)) {
-        final ImmutableBitmap timeFilteredBitmap = UseIndexesStrategy.makeTimeFilteredBitmap(
-            index,
-            segment,
-            filter,
-            interval
-        );
+      // from the non-bitmap-support filters, and then use it to compute the filtered result by intersecting bitmaps.
+      if (filter == null || filter.supportsSelectivityEstimation(index, selector)) {
         final List<DimensionSpec> dimsToSearch = getDimsToSearch(
             index.getAvailableDimensions(),
             query.getDimensions()
@@ -84,15 +79,19 @@ public class AutoStrategy extends SearchStrategy
         //            * (search predicate processing cost)
         final SearchQueryDecisionHelper helper = getDecisionHelper(index);
         final double useIndexStrategyCost = helper.getBitmapIntersectCost() * computeTotalCard(index, dimsToSearch);
-        final double cursorOnlyStrategyCost =
-            (timeFilteredBitmap == null ? index.getNumRows() : timeFilteredBitmap.size()) * dimsToSearch.size();
-        log.debug("Use-index strategy cost: %f, cursor-only strategy cost: %f",
-                  useIndexStrategyCost, cursorOnlyStrategyCost
+        final double cursorOnlyStrategyCost = (filter == null ? 1. : filter.estimateSelectivity(selector))
+                                              * selector.getNumRows()
+                                              * dimsToSearch.size();
+
+        log.debug(
+            "Use-index strategy cost: %f, cursor-only strategy cost: %f",
+            useIndexStrategyCost,
+            cursorOnlyStrategyCost
         );
 
         if (useIndexStrategyCost < cursorOnlyStrategyCost) {
           log.debug("Use-index execution strategy is selected, query id [%s]", query.getId());
-          return UseIndexesStrategy.withTimeFilteredBitmap(query, timeFilteredBitmap).getExecutionPlan(query, segment);
+          return UseIndexesStrategy.of(query).getExecutionPlan(query, segment);
         } else {
           log.debug("Cursor-only execution strategy is selected, query id [%s]", query.getId());
           return CursorOnlyStrategy.of(query).getExecutionPlan(query, segment);

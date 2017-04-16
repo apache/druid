@@ -19,11 +19,9 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
-
 /**
  */
-public class TestFloatColumnSelector implements FloatColumnSelector
+public class TestFloatColumnSelector extends io.druid.segment.TestFloatColumnSelector
 {
   private final float[] floats;
 

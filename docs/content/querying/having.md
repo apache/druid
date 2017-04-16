@@ -35,9 +35,8 @@ For example, to use a selector filter:
 }
 ```
 
-Note that behavior of the "filter" HavingSpec on an output field named "\_\_time" differs from most other HavingSpecs.
-Unlike most other HavingSpecs, it will act on each row's timestamp rather than an output field named "\_\_time". We
-recommend avoiding naming output fields "\_\_time". Future versions of Druid may enforce this.
+You can use "filter" HavingSpecs to filter on the timestamp of result rows by applying a filter to the "\_\_time"
+column.
 
 ### Numeric filters
 

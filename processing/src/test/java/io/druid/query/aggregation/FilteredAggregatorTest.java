@@ -36,6 +36,7 @@ import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
@@ -166,6 +167,11 @@ public class FilteredAggregatorTest
                       }
                     }
                   };
+                }
+
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
                 }
               }
           );
@@ -307,7 +313,7 @@ public class FilteredAggregatorTest
     String jsFn = "function(x) { return(x === 'a') }";
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new JavaScriptDimFilter("dim", jsFn, null, JavaScriptConfig.getDefault())
+        new JavaScriptDimFilter("dim", jsFn, null, JavaScriptConfig.getEnabledInstance())
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
@@ -321,7 +327,7 @@ public class FilteredAggregatorTest
     FilteredAggregatorFactory factory;
 
     String extractionJsFn = "function(str) { return str + 'AARDVARK'; }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
@@ -363,7 +369,7 @@ public class FilteredAggregatorTest
     String jsFn = "function(x) { return(x === 'aAARDVARK') }";
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new JavaScriptDimFilter("dim", jsFn, extractionFn, JavaScriptConfig.getDefault())
+        new JavaScriptDimFilter("dim", jsFn, extractionFn, JavaScriptConfig.getEnabledInstance())
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);

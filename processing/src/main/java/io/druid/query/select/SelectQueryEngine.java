@@ -21,9 +21,11 @@ package io.druid.query.select;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
@@ -39,6 +41,7 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
@@ -67,13 +70,17 @@ public class SelectQueryEngine
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities
+        ColumnCapabilities capabilities, ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();
       switch(type) {
         case STRING:
           return new StringSelectColumnSelectorStrategy();
+        case LONG:
+          return new LongSelectColumnSelectorStrategy();
+        case FLOAT:
+          return new FloatSelectColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -120,6 +127,47 @@ public class SelectQueryEngine
         }
       }
     }
+  }
+
+  public static class LongSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<LongColumnSelector>
+  {
+
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName, LongColumnSelector dimSelector, Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.get());
+      }
+    }
+  }
+
+  public static class FloatSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<FloatColumnSelector>
+  {
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName, FloatColumnSelector dimSelector, Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.get());
+      }
+    }
+  }
+
+  private final Supplier<SelectQueryConfig> configSupplier;
+
+  @Inject
+  public SelectQueryEngine(
+      Supplier<SelectQueryConfig> configSupplier
+  )
+  {
+    this.configSupplier = configSupplier;
   }
 
   public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final Segment segment)

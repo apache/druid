@@ -19,11 +19,10 @@
 
 package io.druid.storage.azure;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
@@ -56,9 +55,8 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
   )
       throws SegmentLoadingException
   {
-    prepareOutDir(outDir);
-
     try {
+      prepareOutDir(outDir);
 
       final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
       final io.druid.java.util.common.FileUtils.FileCopyResult result = CompressionUtils.unzip(
@@ -99,15 +97,9 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     getSegmentFiles(containerName, blobPath, outDir);
   }
 
-  public void prepareOutDir(final File outDir) throws ISE
+  @VisibleForTesting
+  void prepareOutDir(final File outDir) throws IOException
   {
-    if (!outDir.exists()) {
-      outDir.mkdirs();
-    }
-
-    if (!outDir.isDirectory()) {
-      throw new ISE("[%s] must be a directory.", outDir);
-    }
-
+    FileUtils.forceMkdir(outDir);
   }
 }

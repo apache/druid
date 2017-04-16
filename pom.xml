@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.9.3-SNAPSHOT</version>
+    <version>0.10.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,16 +54,16 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.9.3-SNAPSHOT</tag>
+        <tag>0.10.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
-        <apache.curator.version>2.11.1</apache.curator.version>
+        <apache.curator.version>2.11.0</apache.curator.version>
         <avatica.version>1.9.0</avatica.version>
         <calcite.version>1.11.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
-        <jetty.version>9.2.5.v20141112</jetty.version>
+        <jetty.version>9.3.16.v20170120</jetty.version>
         <jersey.version>1.19</jersey.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
@@ -95,6 +95,7 @@
         <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
+        <module>extensions-core/caffeine-cache</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
@@ -127,6 +128,7 @@
         <module>extensions-contrib/ambari-metrics-emitter</module>
         <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
+        <module>extensions-contrib/kafka-emitter</module>
     </modules>
 
     <dependencyManagement>
@@ -135,7 +137,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.4.0</version>
+                <version>0.4.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -633,6 +635,21 @@
                 <version>1.6.4</version>
             </dependency>
             <dependency>
+                <groupId>org.roaringbitmap</groupId>
+                <artifactId>RoaringBitmap</artifactId>
+                <version>0.5.18</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>5.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm-commons</artifactId>
+                <version>5.2</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
@@ -641,7 +658,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>3.3</version>
+                <version>3.4</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -805,14 +822,15 @@
                             <signature>
                                 <groupId>org.codehaus.mojo.signature
                                 </groupId>
-                                <artifactId>java17</artifactId>
+                                <artifactId>java18</artifactId>
                                 <version>1.0</version>
                             </signature>
                             <ignores>
-                                <!-- Some of our code uses DirectBuffer & Cleaner directly, which are not part of
+                                <!-- Some of our code uses sun.* classes directly, which are not part of
                                      the JDK signature (although they are there anyway). -->
                                 <ignore>sun.nio.ch.DirectBuffer</ignore>
                                 <ignore>sun.misc.Cleaner</ignore>
+                                <ignore>sun.misc.Unsafe</ignore>
                             </ignores>
                         </configuration>
                     </execution>
@@ -830,6 +848,9 @@
                         </goals>
                         <configuration>
                             <rules>
+                                <requireJavaVersion>
+                                    <version>1.8.0</version>
+                                </requireJavaVersion>
                                 <bannedDependencies>
                                     <excludes>
                                         <!--LGPL licenced library-->
@@ -945,6 +966,9 @@
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
                         <additionalparam>-Xdoclint:none</additionalparam>
+
+                        <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
+                        <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -963,6 +987,14 @@
                         <format>xml</format>
                         <!-- aggregated reports for multi-module projects -->
                         <aggregate>true</aggregate>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                          <source>1.8</source>
+                          <target>1.8</target>
                     </configuration>
                 </plugin>
             </plugins>
@@ -998,17 +1030,6 @@
             <id>java8</id>
             <activation>
                 <jdk>1.8</jdk>
-            </activation>
-            <modules>
-                <module>extensions-core/caffeine-cache</module>
-                <!-- distribution packaging -->
-                <module>distribution</module>
-            </modules>
-        </profile>
-        <profile>
-            <id>java7</id>
-            <activation>
-                <jdk>1.7</jdk>
             </activation>
             <modules>
                 <!-- distribution packaging -->

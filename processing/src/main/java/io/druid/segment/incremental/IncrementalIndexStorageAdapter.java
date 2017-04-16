@@ -23,22 +23,24 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.QueryInterruptedException;
-import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.BaseQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.FloatWrappingDimensionSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.LongWrappingDimensionSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -49,6 +51,7 @@ import io.druid.segment.ZeroFloatColumnSelector;
 import io.druid.segment.ZeroLongColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -190,7 +193,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       final Filter filter,
       final Interval interval,
       final VirtualColumns virtualColumns,
-      final QueryGranularity gran,
+      final Granularity gran,
       final boolean descending
   )
   {
@@ -202,7 +205,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval dataInterval = new Interval(
         getMinTime().getMillis(),
-        gran.next(gran.truncate(getMaxTime().getMillis()))
+        gran.bucketEnd(getMaxTime()).getMillis()
     );
 
     if (!actualIntervalTmp.overlaps(dataInterval)) {
@@ -218,21 +221,21 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval actualInterval = actualIntervalTmp;
 
-    Iterable<Long> iterable = gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis());
+    Iterable<Interval> iterable = gran.getIterable(actualInterval);
     if (descending) {
-      // might be better to be included in granularity#iterable
       iterable = Lists.reverse(ImmutableList.copyOf(iterable));
     }
+
     return Sequences.map(
         Sequences.simple(iterable),
-        new Function<Long, Cursor>()
+        new Function<Interval, Cursor>()
         {
           EntryHolder currEntry = new EntryHolder();
 
           @Override
-          public Cursor apply(final Long input)
+          public Cursor apply(@Nullable final Interval interval)
           {
-            final long timeStart = Math.max(input, actualInterval.getStartMillis());
+            final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
 
             return new Cursor()
             {
@@ -248,10 +251,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 cursorIterable = index.getFacts().timeRangeIterable(
                     descending,
                     timeStart,
-                    Math.min(actualInterval.getEndMillis(), gran.next(input))
+                    Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStart()).getMillis())
                 );
                 emptyRange = !cursorIterable.iterator().hasNext();
-                time = gran.toDateTime(input);
+                time = gran.toDateTime(interval.getStartMillis());
 
                 reset();
               }
@@ -271,8 +274,31 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 while (baseIter.hasNext()) {
-                  if (Thread.interrupted()) {
-                    throw new QueryInterruptedException(new InterruptedException());
+                  BaseQuery.checkInterrupted();
+
+                  currEntry.set(baseIter.next());
+
+                  if (filterMatcher.matches()) {
+                    return;
+                  }
+                }
+
+                if (!filterMatcher.matches()) {
+                  done = true;
+                }
+              }
+
+              @Override
+              public void advanceUninterruptibly()
+              {
+                if (!baseIter.hasNext()) {
+                  done = true;
+                  return;
+                }
+
+                while (baseIter.hasNext()) {
+                  if (Thread.currentThread().isInterrupted()) {
+                    return;
                   }
 
                   currEntry.set(baseIter.next());
@@ -304,6 +330,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               }
 
               @Override
+              public boolean isDoneOrInterrupted()
+              {
+                return isDone() || Thread.currentThread().isInterrupted();
+              }
+
+              @Override
               public void reset()
               {
                 baseIter = cursorIterable.iterator();
@@ -314,9 +346,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   Iterators.advance(baseIter, numAdvanced);
                 }
 
-                if (Thread.interrupted()) {
-                  throw new QueryInterruptedException(new InterruptedException());
-                }
+                BaseQuery.checkInterrupted();
 
                 boolean foundMatched = false;
                 while (baseIter.hasNext()) {
@@ -341,6 +371,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   return virtualColumns.makeDimensionSelector(dimensionSpec, this);
                 }
 
+                return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
+              }
+
+              private DimensionSelector makeDimensionSelectorUndecorated(
+                  DimensionSpec dimensionSpec
+              )
+              {
                 final String dimension = dimensionSpec.getDimension();
                 final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
@@ -350,16 +387,29 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       extractionFn,
                       descending
                   );
-                  return dimensionSpec.decorate(selector);
+                  return selector;
                 }
 
                 final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
                 if (dimensionDesc == null) {
-                  return dimensionSpec.decorate(NullDimensionSelector.instance());
-                }
+                  // not a dimension, column may be a metric
+                  ColumnCapabilities capabilities = getColumnCapabilities(dimension);
+                  if (capabilities == null) {
+                    return NullDimensionSelector.instance();
+                  }
+                  if (capabilities.getType() == ValueType.LONG) {
+                    return new LongWrappingDimensionSelector(makeLongColumnSelector(dimension), extractionFn);
+                  }
+                  if (capabilities.getType() == ValueType.FLOAT) {
+                    return new FloatWrappingDimensionSelector(makeFloatColumnSelector(dimension), extractionFn);
+                  }
 
-                final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                return dimensionSpec.decorate((DimensionSelector) indexer.makeColumnValueSelector(dimensionSpec, currEntry, dimensionDesc));
+                  // if we can't wrap the base column, just return a column of all nulls
+                  return NullDimensionSelector.instance();
+                } else {
+                  final DimensionIndexer indexer = dimensionDesc.getIndexer();
+                  return indexer.makeDimensionSelector(dimensionSpec, currEntry, dimensionDesc);
+                }
               }
 
               @Override
@@ -373,8 +423,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 if (dimIndex != null) {
                   final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  return (FloatColumnSelector) indexer.makeColumnValueSelector(
-                      new DefaultDimensionSpec(columnName, null),
+                  return indexer.makeFloatColumnSelector(
                       currEntry,
                       dimensionDesc
                   );
@@ -393,6 +442,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   {
                     return index.getMetricFloatValue(currEntry.getValue(), metricIndex);
                   }
+
+                  @Override
+                  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                  {
+                    inspector.visit("index", index);
+                  }
                 };
               }
 
@@ -404,22 +459,27 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 if (columnName.equals(Column.TIME_COLUMN_NAME)) {
-                  return new LongColumnSelector()
+                  class TimeLongColumnSelector implements LongColumnSelector
                   {
                     @Override
                     public long get()
                     {
                       return currEntry.getKey().getTimestamp();
                     }
-                  };
+
+                    @Override
+                    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                    {
+                    }
+                  }
+                  return new TimeLongColumnSelector();
                 }
 
                 final Integer dimIndex = index.getDimensionIndex(columnName);
                 if (dimIndex != null) {
                   final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  return (LongColumnSelector) indexer.makeColumnValueSelector(
-                      new DefaultDimensionSpec(columnName, null),
+                  return indexer.makeLongColumnSelector(
                       currEntry,
                       dimensionDesc
                   );
@@ -441,6 +501,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         currEntry.getValue(),
                         metricIndex
                     );
+                  }
+
+                  @Override
+                  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                  {
+                    inspector.visit("index", index);
                   }
                 };
               }
@@ -522,7 +588,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         return null;
                       }
 
-                      return indexer.convertUnsortedEncodedArrayToActualArrayOrList(
+                      return indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(
                           dims[dimensionIndex], DimensionIndexer.ARRAY
                       );
                     }

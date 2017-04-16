@@ -72,7 +72,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       )
       {
         final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
-        final long timeoutAt = queryTimeout == null
+        final long timeoutAt = (queryTimeout == null || queryTimeout.longValue() == 0L)
                                ? JodaUtils.MAX_INSTANT : System.currentTimeMillis() + queryTimeout.longValue();
         responseContext.put(CTX_TIMEOUT_AT, timeoutAt);
         return Sequences.concat(
@@ -119,7 +119,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       }
 
       // it happens in unit tests
-      if (responseContext.get(CTX_TIMEOUT_AT) == null) {
+      final Number timeoutAt = (Number) responseContext.get(CTX_TIMEOUT_AT);
+      if (timeoutAt == null || timeoutAt.longValue() == 0L) {
         responseContext.put(CTX_TIMEOUT_AT, JodaUtils.MAX_INSTANT);
       };
       return engine.process((ScanQuery) query, segment, responseContext);

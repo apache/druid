@@ -19,11 +19,14 @@
 
 package io.druid.query.select;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
@@ -31,6 +34,8 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
+import io.druid.query.UnionDataSource;
+import io.druid.query.UnionQueryRunner;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.IncrementalIndexSegment;
@@ -65,54 +70,58 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MultiSegmentSelectQueryTest
 {
+  private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),
-      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+      configSupplier
   );
 
   private static final QueryRunnerFactory factory = new SelectQueryRunnerFactory(
       toolChest,
-      new SelectQueryEngine(),
+      new SelectQueryEngine(configSupplier),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
 
-  // time modified version of druid.sample.tsv
+  // time modified version of druid.sample.numeric.tsv
   public static final String[] V_0112 = {
-      "2011-01-12T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
-      "2011-01-12T01:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
-      "2011-01-12T02:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
-      "2011-01-12T03:00:00.000Z	spot	health	preferred	hpreferred	100.000000",
-      "2011-01-12T04:00:00.000Z	spot	mezzanine	preferred	mpreferred	100.000000",
-      "2011-01-12T05:00:00.000Z	spot	news	preferred	npreferred	100.000000",
-      "2011-01-12T06:00:00.000Z	spot	premium	preferred	ppreferred	100.000000",
-      "2011-01-12T07:00:00.000Z	spot	technology	preferred	tpreferred	100.000000",
-      "2011-01-12T08:00:00.000Z	spot	travel	preferred	tpreferred	100.000000",
-      "2011-01-12T09:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1000.000000",
-      "2011-01-12T10:00:00.000Z	total_market	premium	preferred	ppreferred	1000.000000",
-      "2011-01-12T11:00:00.000Z	upfront	mezzanine	preferred	mpreferred	800.000000	value",
-      "2011-01-12T12:00:00.000Z	upfront	premium	preferred	ppreferred	800.000000	value"
+      "2011-01-12T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t100.000000",
+      "2011-01-12T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t100.000000",
+      "2011-01-12T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t100.000000",
+      "2011-01-12T03:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t100.000000",
+      "2011-01-12T04:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t100.000000",
+      "2011-01-12T05:00:00.000Z\tspot\tnews\t1500\t15000.0\t150000\tpreferred\tnpreferred\t100.000000",
+      "2011-01-12T06:00:00.000Z\tspot\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t100.000000",
+      "2011-01-12T07:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t170000\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T08:00:00.000Z\tspot\ttravel\t1800\t18000.0\t180000\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T09:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t1000.000000",
+      "2011-01-12T10:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1000.000000",
+      "2011-01-12T11:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t800.000000\tvalue",
+      "2011-01-12T12:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t800.000000\tvalue"
   };
+
   public static final String[] V_0113 = {
-      "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-      "2011-01-13T01:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-      "2011-01-13T02:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
-      "2011-01-13T03:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
-      "2011-01-13T04:00:00.000Z	spot	mezzanine	preferred	mpreferred	104.465767",
-      "2011-01-13T05:00:00.000Z	spot	news	preferred	npreferred	102.851683",
-      "2011-01-13T06:00:00.000Z	spot	premium	preferred	ppreferred	108.863011",
-      "2011-01-13T07:00:00.000Z	spot	technology	preferred	tpreferred	111.356672",
-      "2011-01-13T08:00:00.000Z	spot	travel	preferred	tpreferred	106.236928",
-      "2011-01-13T09:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1040.945505",
-      "2011-01-13T10:00:00.000Z	total_market	premium	preferred	ppreferred	1689.012875",
-      "2011-01-13T11:00:00.000Z	upfront	mezzanine	preferred	mpreferred	826.060182	value",
-      "2011-01-13T12:00:00.000Z	upfront	premium	preferred	ppreferred	1564.617729	value"
+      "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t94.874713",
+      "2011-01-13T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t103.629399",
+      "2011-01-13T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
+      "2011-01-13T03:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t114.947403",
+      "2011-01-13T04:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t104.465767",
+      "2011-01-13T05:00:00.000Z\tspot\tnews\t1500\t15000.0\t150000\tpreferred\tnpreferred\t102.851683",
+      "2011-01-13T06:00:00.000Z\tspot\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t108.863011",
+      "2011-01-13T07:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t170000\tpreferred\ttpreferred\t111.356672",
+      "2011-01-13T08:00:00.000Z\tspot\ttravel\t1800\t18000.0\t180000\tpreferred\ttpreferred\t106.236928",
+      "2011-01-13T09:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t1040.945505",
+      "2011-01-13T10:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1689.012875",
+      "2011-01-13T11:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t826.060182\tvalue",
+      "2011-01-13T12:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1564.617729\tvalue"
   };
 
   public static final String[] V_OVERRIDE = {
-      "2011-01-12T04:00:00.000Z	spot	automotive	preferred	apreferred	999.000000",
-      "2011-01-12T05:00:00.000Z	spot	business	preferred	bpreferred	999.000000",
-      "2011-01-12T06:00:00.000Z	spot	entertainment	preferred	epreferred	999.000000",
-      "2011-01-12T07:00:00.000Z	spot	health	preferred	hpreferred	999.000000"
+      "2011-01-12T04:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t999.000000",
+      "2011-01-12T05:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t999.000000",
+      "2011-01-12T06:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t999.000000",
+      "2011-01-12T07:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t999.000000"
   };
 
   private static Segment segment0;
@@ -176,7 +185,7 @@ public class MultiSegmentSelectQueryTest
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime(minTimeStamp).getMillis())
-        .withQueryGranularity(QueryGranularities.HOUR)
+        .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
     return new OnheapIncrementalIndex(schema, true, maxRowCount);
@@ -305,6 +314,38 @@ public class MultiSegmentSelectQueryTest
 
       query = query.withPagingSpec(toNextCursor(merged, query, 3));
     }
+  }
+
+  @Test
+  public void testPagingIdentifiersForUnionDatasource()
+  {
+    Druids.SelectQueryBuilder selectQueryBuilder = Druids
+        .newSelectQueryBuilder()
+        .dataSource(
+            new UnionDataSource(
+                ImmutableList.of(
+                    new TableDataSource(QueryRunnerTestHelper.dataSource),
+                    new TableDataSource("testing-2")
+                )
+            )
+        )
+        .intervals(SelectQueryRunnerTest.I_0112_0114)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.dimensions))
+        .pagingSpec(PagingSpec.newSpec(3));
+
+    SelectQuery query = selectQueryBuilder.build();
+    QueryRunner unionQueryRunner = new UnionQueryRunner(runner);
+
+    List<Result<SelectResultValue>> results = Sequences.toList(
+        unionQueryRunner.run(query, ImmutableMap.of()),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    Map<String, Integer> pagingIdentifiers = results.get(0).getValue().getPagingIdentifiers();
+    query = query.withPagingSpec(toNextCursor(PagingSpec.merge(Arrays.asList(pagingIdentifiers)), query, 3));
+
+    Sequences.toList(unionQueryRunner.run(query, ImmutableMap.of()), Lists.<Result<SelectResultValue>>newArrayList());
   }
 
   private PagingSpec toNextCursor(Map<String, Integer> merged, SelectQuery query, int threshold)

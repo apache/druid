@@ -31,17 +31,18 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.common.guava.CombiningSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
@@ -78,13 +79,19 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   };
 
   private final SegmentMetadataQueryConfig config;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
+
+  @VisibleForTesting
+  public SegmentMetadataQueryQueryToolChest(SegmentMetadataQueryConfig config)
+  {
+    this(config, DefaultGenericQueryMetricsFactory.instance());
+  }
 
   @Inject
-  public SegmentMetadataQueryQueryToolChest(
-      SegmentMetadataQueryConfig config
-  )
+  public SegmentMetadataQueryQueryToolChest(SegmentMetadataQueryConfig config, GenericQueryMetricsFactory queryMetricsFactory)
   {
     this.config = config;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -147,9 +154,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(SegmentMetadataQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(SegmentMetadataQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query);
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override
@@ -171,6 +178,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
     {
+      @Override
+      public boolean isCacheable(SegmentMetadataQuery query, boolean willMergeRunners)
+      {
+        return true;
+      }
+
       @Override
       public byte[] computeCacheKey(SegmentMetadataQuery query)
       {
@@ -340,7 +353,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         )
     );
 
-    final QueryGranularity queryGranularity = QueryGranularity.mergeQueryGranularities(
+    final Granularity queryGranularity = Granularity.mergeGranularities(
         Lists.newArrayList(
             arg1.getQueryGranularity(),
             arg2.getQueryGranularity()

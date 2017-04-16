@@ -224,6 +224,30 @@ public class LikeDimFilter implements DimFilter
             };
           }
         }
+
+        @Override
+        public DruidFloatPredicate makeFloatPredicate()
+        {
+          if (extractionFn != null) {
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return matches(extractionFn.apply(input));
+              }
+            };
+          } else {
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return matches(String.valueOf(input));
+              }
+            };
+          }
+        }
       };
     }
 

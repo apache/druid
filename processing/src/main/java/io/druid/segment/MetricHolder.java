@@ -26,6 +26,7 @@ import com.google.common.io.OutputSupplier;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.FloatSupplierSerializer;
@@ -75,7 +76,6 @@ public class MetricHolder
       out.write(version);
       serializerUtils.writeString(out, name);
       serializerUtils.writeString(out, typeName);
-
       final InputSupplier<InputStream> supplier = column.combineStreams();
       try (InputStream in = supplier.getInput()) {
         ByteStreams.copy(in, out);
@@ -123,12 +123,13 @@ public class MetricHolder
     }
   }
 
-  public static MetricHolder fromByteBuffer(ByteBuffer buf) throws IOException
+  public static MetricHolder fromByteBuffer(ByteBuffer buf, SmooshedFileMapper mapper) throws IOException
   {
-    return fromByteBuffer(buf, null);
+    return fromByteBuffer(buf, null, mapper);
   }
 
-  public static MetricHolder fromByteBuffer(ByteBuffer buf, ObjectStrategy strategy) throws IOException
+  public static MetricHolder fromByteBuffer(ByteBuffer buf, ObjectStrategy strategy, SmooshedFileMapper mapper)
+      throws IOException
   {
     final byte ver = buf.get();
     if (version[0] != ver) {
@@ -141,14 +142,14 @@ public class MetricHolder
 
     switch (holder.type) {
       case LONG:
-        holder.longType = CompressedLongsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
+        holder.longType = CompressedLongsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder(), mapper);
         break;
       case FLOAT:
-        holder.floatType = CompressedFloatsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
+        holder.floatType = CompressedFloatsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder(), mapper);
         break;
       case COMPLEX:
         if (strategy != null) {
-          holder.complexType = GenericIndexed.read(buf, strategy);
+          holder.complexType = GenericIndexed.read(buf, strategy, mapper);
         } else {
           final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(holder.getTypeName());
 
@@ -165,7 +166,8 @@ public class MetricHolder
   }
 
   // This is only for guava14 compat. Eventually it should be able to be removed.
-  private static OutputSupplier<? extends OutputStream> toOutputSupplier(final ByteSink sink) {
+  private static OutputSupplier<? extends OutputStream> toOutputSupplier(final ByteSink sink)
+  {
     return new OutputSupplier<OutputStream>()
     {
       @Override

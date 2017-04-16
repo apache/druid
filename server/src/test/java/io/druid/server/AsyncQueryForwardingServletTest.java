@@ -41,6 +41,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.initialization.Initialization;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;
@@ -215,10 +216,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         }
       };
 
+      ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
       ServletHolder holder = new ServletHolder(
           new AsyncQueryForwardingServlet(
               new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of()),
-              injector.getInstance(ObjectMapper.class),
+              jsonMapper,
               injector.getInstance(Key.get(ObjectMapper.class, Smile.class)),
               hostFinder,
               injector.getProvider(org.eclipse.jetty.client.HttpClient.class),
@@ -231,7 +233,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 {
                   // noop
                 }
-              }
+              },
+              new DefaultGenericQueryMetricsFactory(jsonMapper)
           )
           {
             @Override
@@ -249,13 +252,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       root.addServlet(holder, "/proxy/*");
       root.addServlet(holder, "/druid/v2/*");
       JettyServerInitUtils.addExtensionFilters(root, injector);
-      root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/slow/*", null);
       root.addFilter(GuiceFilter.class, "/default/*", null);
       root.addFilter(GuiceFilter.class, "/exception/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{root});
+      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root)});
       server.setHandler(handlerList);
     }
   }

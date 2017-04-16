@@ -86,6 +86,19 @@ public class ByteCountingLRUMapTest
     assertMapValues(0, 0, 3);
   }
 
+  @Test
+  public void testSameKeyUpdate() throws Exception
+  {
+    final ByteBuffer k = ByteBuffer.allocate(1);
+
+    assertMapValues(0, 0, 0);
+    map.put(k, new byte[1]);
+    map.put(k, new byte[2]);
+    map.put(k, new byte[5]);
+    map.put(k, new byte[3]);
+    assertMapValues(1, 4, 0);
+  }
+
   private void assertMapValues(final int size, final int numBytes, final int evictionCount)
   {
     Assert.assertEquals(size, map.size());

@@ -73,12 +73,6 @@ public class StupidPoolTest
   @Test(timeout = 60_000)
   public void testResourceHandlerClearedByJVM() throws InterruptedException
   {
-    if (System.getProperty("java.version").startsWith("1.7")) {
-      // This test is unreliable on Java 7, probably GC is not triggered by System.gc(). It is not a problem because
-      // this test should ever pass on any version of Java to prove that StupidPool doesn't introduce leaks itself and
-      // actually cleans the leaked objects.
-      return;
-    }
     String leakedString = createDanglingObjectHandler();
     // Wait until dangling object string is returned to the pool
     for (int i = 0; i < 6000 && poolOfString.leakedObjectsCount() == 0; i++) {

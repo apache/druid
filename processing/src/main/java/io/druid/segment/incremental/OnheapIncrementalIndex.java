@@ -20,10 +20,12 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.io.Closer;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
@@ -37,6 +39,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -73,7 +76,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   public OnheapIncrementalIndex(
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       final AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -96,7 +99,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   public OnheapIncrementalIndex(
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       boolean rollup,
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
@@ -119,7 +122,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   public OnheapIncrementalIndex(
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       final AggregatorFactory[] metrics,
       int maxRowCount
   )
@@ -257,6 +260,23 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     rowContainer.set(null);
   }
 
+  private void closeAggregators()
+  {
+    Closer closer = Closer.create();
+    for (Aggregator[] aggs : aggregators.values()) {
+      for (Aggregator agg : aggs) {
+        closer.register(agg);
+      }
+    }
+
+    try {
+      closer.close();
+    }
+    catch (IOException e) {
+      Throwables.propagate(e);
+    }
+  }
+
   protected Aggregator[] concurrentGet(int offset)
   {
     // All get operations should be fine
@@ -327,6 +347,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   public void close()
   {
     super.close();
+    closeAggregators();
     aggregators.clear();
     facts.clear();
     if (selectors != null) {

@@ -23,9 +23,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
@@ -34,6 +35,7 @@ import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
+import io.druid.common.utils.JodaUtils;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
@@ -48,10 +50,12 @@ import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.segment.column.ValueType;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.sql.calcite.planner.PlannerConfig;
-import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
+import io.druid.sql.calcite.view.DruidViewMacro;
+import io.druid.sql.calcite.view.ViewManager;
 import io.druid.timeline.DataSegment;
+import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.joda.time.DateTime;
@@ -74,8 +78,8 @@ public class DruidSchema extends AbstractSchema
   private final QuerySegmentWalker walker;
   private final TimelineServerView serverView;
   private final PlannerConfig config;
+  private final ViewManager viewManager;
   private final ExecutorService cacheExec;
-  private final QueryMaker queryMaker;
   private final ConcurrentMap<String, Table> tables;
 
   // For awaitInitialization.
@@ -94,14 +98,15 @@ public class DruidSchema extends AbstractSchema
   public DruidSchema(
       final QuerySegmentWalker walker,
       final TimelineServerView serverView,
-      final PlannerConfig config
+      final PlannerConfig config,
+      final ViewManager viewManager
   )
   {
     this.walker = Preconditions.checkNotNull(walker, "walker");
     this.serverView = Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
+    this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
-    this.queryMaker = new QueryMaker(walker, config);
     this.tables = Maps.newConcurrentMap();
   }
 
@@ -277,15 +282,25 @@ public class DruidSchema extends AbstractSchema
     return ImmutableMap.copyOf(tables);
   }
 
+  @Override
+  protected Multimap<String, Function> getFunctionMultimap()
+  {
+    final ImmutableMultimap.Builder<String, Function> builder = ImmutableMultimap.builder();
+    for (Map.Entry<String, DruidViewMacro> entry : viewManager.getViews().entrySet()) {
+      builder.put(entry);
+    }
+    return builder.build();
+  }
+
   private DruidTable computeTable(final String dataSource)
   {
     final SegmentMetadataQuery segmentMetadataQuery = new SegmentMetadataQuery(
         new TableDataSource(dataSource),
         null,
         null,
-        true,
-        null,
-        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        false,
+        ImmutableMap.<String, Object>of("useCache", false, "populateCache", false),
+        EnumSet.of(SegmentMetadataQuery.AnalysisType.INTERVAL),
         null,
         true
     );
@@ -296,30 +311,50 @@ public class DruidSchema extends AbstractSchema
       return null;
     }
 
-    final Map<String, ColumnAnalysis> columnMetadata = Iterables.getOnlyElement(results).getColumns();
+    final Map<String, ValueType> columnTypes = Maps.newLinkedHashMap();
+
+    // Resolve conflicts by taking the latest metadata. This aids in gradual schema evolution.
+    long maxTimestamp = JodaUtils.MIN_INSTANT;
+
+    for (SegmentAnalysis analysis : results) {
+      final long timestamp;
+
+      if (analysis.getIntervals() != null && analysis.getIntervals().size() > 0) {
+        timestamp = analysis.getIntervals().get(analysis.getIntervals().size() - 1).getEndMillis();
+      } else {
+        timestamp = JodaUtils.MIN_INSTANT;
+      }
+
+      for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
+        if (entry.getValue().isError()) {
+          // Skip columns with analysis errors.
+          continue;
+        }
+
+        if (!columnTypes.containsKey(entry.getKey()) || timestamp >= maxTimestamp) {
+          ValueType valueType;
+          try {
+            valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
+          }
+          catch (IllegalArgumentException e) {
+            // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
+            // what kind of complex column it is, which we may want to preserve some day.
+            valueType = ValueType.COMPLEX;
+          }
+
+          columnTypes.put(entry.getKey(), valueType);
+
+          maxTimestamp = timestamp;
+        }
+      }
+    }
+
     final RowSignature.Builder rowSignature = RowSignature.builder();
-
-    for (Map.Entry<String, ColumnAnalysis> entry : columnMetadata.entrySet()) {
-      if (entry.getValue().isError()) {
-        // Ignore columns with metadata consistency errors.
-        continue;
-      }
-
-      ValueType valueType;
-      try {
-        valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
-      }
-      catch (IllegalArgumentException e) {
-        // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
-        // what kind of complex column it is, which we may want to preserve some day.
-        valueType = ValueType.COMPLEX;
-      }
-
-      rowSignature.add(entry.getKey(), valueType);
+    for (Map.Entry<String, ValueType> entry : columnTypes.entrySet()) {
+      rowSignature.add(entry.getKey(), entry.getValue());
     }
 
     return new DruidTable(
-        queryMaker,
         new TableDataSource(dataSource),
         rowSignature.build()
     );

@@ -33,10 +33,9 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -323,8 +322,7 @@ public class BatchDeltaIngestionTest
         ImmutableList.of(new WindowedStorageAdapter(adapter, windowedDataSegment.getInterval())),
         ImmutableList.of("host"),
         ImmutableList.of("visited_sum", "unique_hosts"),
-        null,
-        QueryGranularities.NONE
+        null
     );
 
     List<InputRow> rows = Lists.newArrayList();
@@ -359,7 +357,7 @@ public class BatchDeltaIngestionTest
                     new HyperUniquesAggregatorFactory("unique_hosts", "host2")
                 },
                 new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularities.NONE, ImmutableList.of(INTERVAL_FULL)
+                    Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)
                 ),
                 MAPPER
             ),

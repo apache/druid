@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.DataSource;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -43,10 +43,12 @@ import io.druid.query.topn.InvertedTopNMetricSpec;
 import io.druid.query.topn.NumericTopNMetricSpec;
 import io.druid.query.topn.TopNMetricSpec;
 import io.druid.query.topn.TopNQuery;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.ExtractionFns;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelCollations;
@@ -97,15 +99,8 @@ public class DruidQueryBuilder
       final SqlTypeName sqlTypeName = field.getType().getSqlTypeName();
       final ValueType valueType;
 
-      if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.FLOAT;
-      } else if (SqlTypeName.DATETIME_TYPES.contains(sqlTypeName) || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.LONG;
-      } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.STRING;
-      } else if (SqlTypeName.OTHER == sqlTypeName) {
-        valueType = ValueType.COMPLEX;
-      } else {
+      valueType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      if (valueType == null) {
         throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
       }
 
@@ -287,26 +282,28 @@ public class DruidQueryBuilder
    *
    * @param dataSource         data source to query
    * @param sourceRowSignature row signature of the dataSource
+   * @param context            query context
    *
    * @return query or null
    */
   public TimeseriesQuery toTimeseriesQuery(
       final DataSource dataSource,
-      final RowSignature sourceRowSignature
+      final RowSignature sourceRowSignature,
+      final Map<String, Object> context
   )
   {
     if (grouping == null || having != null) {
       return null;
     }
 
-    final QueryGranularity queryGranularity;
+    final Granularity queryGranularity;
     final List<DimensionSpec> dimensions = grouping.getDimensions();
 
     if (dimensions.isEmpty()) {
-      queryGranularity = QueryGranularities.ALL;
+      queryGranularity = Granularities.ALL;
     } else if (dimensions.size() == 1) {
       final DimensionSpec dimensionSpec = Iterables.getOnlyElement(dimensions);
-      final QueryGranularity gran = ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
+      final Granularity gran = ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
 
       if (gran == null || !dimensionSpec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
         // Timeseries only applies if the single dimension is granular __time.
@@ -337,18 +334,20 @@ public class DruidQueryBuilder
       descending = false;
     }
 
-    final Map<String, Object> context = Maps.newHashMap();
-    context.put("skipEmptyBuckets", true);
+    final Map<String, Object> theContext = Maps.newHashMap();
+    theContext.put("skipEmptyBuckets", true);
+    theContext.putAll(context);
 
     return new TimeseriesQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
         descending,
+        VirtualColumns.EMPTY,
         filtration.getDimFilter(),
         queryGranularity,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        context
+        theContext
     );
   }
 
@@ -357,6 +356,7 @@ public class DruidQueryBuilder
    *
    * @param dataSource         data source to query
    * @param sourceRowSignature row signature of the dataSource
+   * @param context            query context
    * @param maxTopNLimit       maxTopNLimit from a PlannerConfig
    * @param useApproximateTopN from a PlannerConfig
    *
@@ -365,6 +365,7 @@ public class DruidQueryBuilder
   public TopNQuery toTopNQuery(
       final DataSource dataSource,
       final RowSignature sourceRowSignature,
+      final Map<String, Object> context,
       final int maxTopNLimit,
       final boolean useApproximateTopN
   )
@@ -415,15 +416,16 @@ public class DruidQueryBuilder
 
     return new TopNQuery(
         dataSource,
+        VirtualColumns.EMPTY,
         Iterables.getOnlyElement(grouping.getDimensions()),
         topNMetricSpec,
         limitSpec.getLimit(),
         filtration.getQuerySegmentSpec(),
         filtration.getDimFilter(),
-        QueryGranularities.ALL,
+        Granularities.ALL,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        null
+        context
     );
   }
 
@@ -432,12 +434,14 @@ public class DruidQueryBuilder
    *
    * @param dataSource         data source to query
    * @param sourceRowSignature row signature of the dataSource
+   * @param context            query context
    *
    * @return query or null
    */
   public GroupByQuery toGroupByQuery(
       final DataSource dataSource,
-      final RowSignature sourceRowSignature
+      final RowSignature sourceRowSignature,
+      final Map<String, Object> context
   )
   {
     if (grouping == null) {
@@ -449,14 +453,15 @@ public class DruidQueryBuilder
     return new GroupByQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
+        VirtualColumns.EMPTY,
         filtration.getDimFilter(),
-        QueryGranularities.ALL,
+        Granularities.ALL,
         grouping.getDimensions(),
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
         having != null ? new DimFilterHavingSpec(having) : null,
         limitSpec,
-        null
+        context
     );
   }
 
@@ -465,12 +470,14 @@ public class DruidQueryBuilder
    *
    * @param dataSource         data source to query
    * @param sourceRowSignature row signature of the dataSource
+   * @param context            query context
    *
    * @return query or null
    */
   public SelectQuery toSelectQuery(
       final DataSource dataSource,
-      final RowSignature sourceRowSignature
+      final RowSignature sourceRowSignature,
+      final Map<String, Object> context
   )
   {
     if (grouping != null) {
@@ -500,12 +507,12 @@ public class DruidQueryBuilder
         filtration.getQuerySegmentSpec(),
         descending,
         filtration.getDimFilter(),
-        QueryGranularities.ALL,
+        Granularities.ALL,
         selectProjection != null ? selectProjection.getDimensions() : ImmutableList.<DimensionSpec>of(),
         selectProjection != null ? selectProjection.getMetrics() : ImmutableList.<String>of(),
         null,
         new PagingSpec(null, 0) /* dummy -- will be replaced */,
-        null
+        context
     );
   }
 

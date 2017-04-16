@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -79,6 +81,12 @@ public class ConstantPostAggregator implements PostAggregator
     return name;
   }
 
+  @Override
+  public ConstantPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
+  }
+
   @JsonProperty("value")
   public Number getConstantValue()
   {
@@ -106,11 +114,7 @@ public class ConstantPostAggregator implements PostAggregator
 
     ConstantPostAggregator that = (ConstantPostAggregator) o;
 
-    if (constantValue != null && that.constantValue != null) {
-      if (constantValue.doubleValue() != that.constantValue.doubleValue()) {
-        return false;
-      }
-    } else if (constantValue != that.constantValue) {
+    if (constantValue.doubleValue() != that.constantValue.doubleValue()) {
       return false;
     }
 
@@ -125,8 +129,15 @@ public class ConstantPostAggregator implements PostAggregator
   public int hashCode()
   {
     int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + (constantValue != null ? constantValue.hashCode() : 0);
+    result = 31 * result + constantValue.hashCode();
     return result;
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.CONSTANT)
+        .appendDouble(constantValue.doubleValue())
+        .build();
+  }
 }

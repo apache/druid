@@ -20,22 +20,22 @@
 package io.druid.query.aggregation.hyperloglog;
 
 import com.google.common.collect.Ordering;
-import com.google.common.hash.HashFunction;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogCollector;
-import io.druid.java.util.common.StringUtils;
+import io.druid.hll.HyperLogLogHash;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
+import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
-/**
- */
 public class HyperUniquesSerde extends ComplexMetricSerde
 {
   private static Ordering<HyperLogLogCollector> comparator = new Ordering<HyperLogLogCollector>()
@@ -49,13 +49,11 @@ public class HyperUniquesSerde extends ComplexMetricSerde
     }
   }.nullsFirst();
 
-  private final HashFunction hashFn;
+  private final HyperLogLogHash hyperLogLogHash;
 
-  public HyperUniquesSerde(
-      HashFunction hashFn
-  )
+  public HyperUniquesSerde(HyperLogLogHash hyperLogLogHash)
   {
-    this.hashFn = hashFn;
+    this.hyperLogLogHash = hyperLogLogHash;
   }
 
   @Override
@@ -91,9 +89,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
           }
 
           for (String dimensionValue : dimValues) {
-            collector.add(
-                hashFn.hashBytes(StringUtils.toUtf8(dimensionValue)).asBytes()
-            );
+            collector.add(hyperLogLogHash.hash(dimensionValue));
           }
           return collector;
         }
@@ -124,6 +120,8 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       @Override
       public HyperLogLogCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
+        // make a copy of buffer, because the given buffer is not duplicated in HyperLogLogCollector.makeCollector() and
+        // stored in a field.
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
         readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
         return HyperLogLogCollector.makeCollector(readOnlyBuffer);
@@ -148,4 +146,11 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       }
     };
   }
+
+  @Override
+  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  {
+    return LargeColumnSupportedComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
+  }
+
 }

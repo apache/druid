@@ -21,13 +21,15 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
 import io.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 
 /**
  */
-public interface DimensionSelector extends ColumnValueSelector
+public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
 {
   public static int CARDINALITY_UNKNOWN = -1;
 
@@ -38,6 +40,7 @@ public interface DimensionSelector extends ColumnValueSelector
    *
    * @return all values for the row as an IntBuffer
    */
+  @CalledFromHotLoop
   public IndexedInts getRow();
 
   /**
@@ -90,6 +93,7 @@ public interface DimensionSelector extends ColumnValueSelector
    * @param id id to lookup the field name for
    * @return the field name for the given id
    */
+  @CalledFromHotLoop
   public String lookupName(int id);
 
   /**

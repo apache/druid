@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
 
@@ -37,11 +38,13 @@ public class ExtractionDimensionSpec implements DimensionSpec
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final String outputName;
+  private final ValueType outputType;
 
   @JsonCreator
   public ExtractionDimensionSpec(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
+      @JsonProperty("outputType") ValueType outputType,
       @JsonProperty("extractionFn") ExtractionFn extractionFn,
       // for backwards compatibility
       @Deprecated @JsonProperty("dimExtractionFn") ExtractionFn dimExtractionFn
@@ -52,6 +55,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
 
     this.dimension = dimension;
     this.extractionFn = extractionFn != null ? extractionFn : dimExtractionFn;
+    this.outputType = outputType == null ? ValueType.STRING : outputType;
 
     // Do null check for backwards compatibility
     this.outputName = outputName == null ? dimension : outputName;
@@ -59,7 +63,12 @@ public class ExtractionDimensionSpec implements DimensionSpec
 
   public ExtractionDimensionSpec(String dimension, String outputName, ExtractionFn extractionFn)
   {
-    this(dimension, outputName, extractionFn, null);
+    this(dimension, outputName, null, extractionFn, null);
+  }
+
+  public ExtractionDimensionSpec(String dimension, String outputName, ValueType outputType, ExtractionFn extractionFn)
+  {
+    this(dimension, outputName, outputType, extractionFn, null);
   }
 
   @Override
@@ -78,6 +87,13 @@ public class ExtractionDimensionSpec implements DimensionSpec
 
   @Override
   @JsonProperty
+  public ValueType getOutputType()
+  {
+    return outputType;
+  }
+
+  @Override
+  @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
@@ -87,6 +103,12 @@ public class ExtractionDimensionSpec implements DimensionSpec
   public DimensionSelector decorate(DimensionSelector selector)
   {
     return selector;
+  }
+
+  @Override
+  public boolean mustDecorate()
+  {
+    return false;
   }
 
   @Override
@@ -115,6 +137,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
            "dimension='" + dimension + '\'' +
            ", extractionFn=" + extractionFn +
            ", outputName='" + outputName + '\'' +
+           ", outputType='" + outputType + '\'' +
            '}';
   }
 
@@ -139,6 +162,9 @@ public class ExtractionDimensionSpec implements DimensionSpec
     if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) {
       return false;
     }
+    if (outputType != null ? !outputType.equals(that.outputType) : that.outputType != null) {
+      return false;
+    }
 
     return true;
   }
@@ -149,6 +175,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
     int result = dimension != null ? dimension.hashCode() : 0;
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     result = 31 * result + (outputName != null ? outputName.hashCode() : 0);
+    result = 31 * result + (outputType != null ? outputType.hashCode() : 0);
     return result;
   }
 }

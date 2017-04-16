@@ -24,7 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closer;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.logger.Logger;
@@ -255,7 +255,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
             final Object[] dims = new Object[columns.length];
             int dimIndex = 0;
             for (final Closeable column : columns) {
-              dims[dimIndex] = handlers[dimIndex].getRowValueArrayFromColumn(column, currRow);
+              dims[dimIndex] = handlers[dimIndex].getEncodedKeyComponentFromColumn(column, currRow);
               dimIndex++;
             }
 

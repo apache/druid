@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +31,7 @@ import java.io.OutputStream;
 import java.util.Map;
 
 /**
-*/
+ */
 class IOPeonForTesting implements IOPeon
 {
   Map<String, ByteArrayOutputStream> outStreams = Maps.newHashMap();
@@ -61,8 +62,14 @@ class IOPeonForTesting implements IOPeon
   }
 
   @Override
-  public void cleanup() throws IOException
+  public void close() throws IOException
   {
     outStreams.clear();
+  }
+
+  @Override
+  public File getFile(String filename)
+  {
+    return null;
   }
 }

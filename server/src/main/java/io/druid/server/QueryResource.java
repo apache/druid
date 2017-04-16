@@ -38,9 +38,11 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -74,6 +76,7 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -87,6 +90,8 @@ public class QueryResource implements QueryCountStatsProvider
 
   protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
+  public static final String HDR_IF_NONE_MATCH = "If-None-Match";
+  public static final String HDR_ETAG = "ETag";
 
   protected final QueryToolChestWarehouse warehouse;
   protected final ServerConfig config;
@@ -97,6 +102,7 @@ public class QueryResource implements QueryCountStatsProvider
   protected final RequestLogger requestLogger;
   protected final QueryManager queryManager;
   protected final AuthConfig authConfig;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -111,7 +117,8 @@ public class QueryResource implements QueryCountStatsProvider
       ServiceEmitter emitter,
       RequestLogger requestLogger,
       QueryManager queryManager,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.warehouse = warehouse;
@@ -123,6 +130,7 @@ public class QueryResource implements QueryCountStatsProvider
     this.requestLogger = requestLogger;
     this.queryManager = queryManager;
     this.authConfig = authConfig;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @DELETE
@@ -168,7 +176,7 @@ public class QueryResource implements QueryCountStatsProvider
       @Context final HttpServletRequest req // used to get request content-type, remote address and AuthorizationInfo
   ) throws IOException
   {
-    final long start = System.currentTimeMillis();
+    final long startNs = System.nanoTime();
     Query query = null;
     QueryToolChest toolChest = null;
     String queryId = null;
@@ -217,8 +225,20 @@ public class QueryResource implements QueryCountStatsProvider
         }
       }
 
+      String prevEtag = req.getHeader(HDR_IF_NONE_MATCH);
+      if (prevEtag != null) {
+        query = query.withOverriddenContext(
+            ImmutableMap.of (HDR_IF_NONE_MATCH, prevEtag)
+        );
+      }
+
       final Map<String, Object> responseContext = new MapMaker().makeMap();
       final Sequence res = query.run(texasRanger, responseContext);
+
+      if (prevEtag != null && prevEtag.equals(responseContext.get(HDR_ETAG))) {
+        return Response.notModified().build();
+      }
+
       final Sequence results;
       if (res == null) {
         results = Sequences.empty();
@@ -239,48 +259,80 @@ public class QueryResource implements QueryCountStatsProvider
                   @Override
                   public void write(OutputStream outputStream) throws IOException, WebApplicationException
                   {
+                    boolean success = false;
+                    String exceptionStr = "";
+
+                    CountingOutputStream os = new CountingOutputStream(outputStream);
                     try {
                       // json serializer will always close the yielder
-                      CountingOutputStream os = new CountingOutputStream(outputStream);
                       jsonWriter.writeValue(os, yielder);
 
                       os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
                       os.close();
-                      successfulQueryCount.incrementAndGet();
-                      final long queryTime = System.currentTimeMillis() - start;
-                      emitter.emit(
-                          DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                      .setDimension("success", "true")
-                                      .build("query/time", queryTime)
-                      );
-                      emitter.emit(
-                          DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                      .build("query/bytes", os.getCount())
-                      );
 
-                      requestLogger.log(
-                          new RequestLogLine(
-                              new DateTime(start),
-                              req.getRemoteAddr(),
-                              theQuery,
-                              new QueryStats(
-                                  ImmutableMap.<String, Object>of(
-                                      "query/time", queryTime,
-                                      "query/bytes", os.getCount(),
-                                      "success", true
-                                  )
-                              )
-                          )
-                      );
-                    }
-                    finally {
-                      Thread.currentThread().setName(currThreadName);
+                      success = true;
+                    } catch (Exception ex) {
+                      exceptionStr = ex.toString();
+                      throw Throwables.propagate(ex);
+                    } finally {
+                      try {
+                        if (success) {
+                          successfulQueryCount.incrementAndGet();
+                        } else {
+                          failedQueryCount.incrementAndGet();
+                        }
+
+                        final long queryTimeNs = System.nanoTime() - startNs;
+                        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+                            queryMetricsFactory,
+                            theToolChest,
+                            theQuery,
+                            req.getRemoteAddr()
+                        );
+                        queryMetrics.success(success);
+                        queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
+
+                        DruidMetrics.makeRequestMetrics(
+                            queryMetricsFactory,
+                            theToolChest,
+                            theQuery,
+                            req.getRemoteAddr()
+                        ).reportQueryBytes(os.getCount()).emit(emitter);
+
+                        ImmutableMap.Builder<String, Object> statsMapBuilder = ImmutableMap.builder();
+                        statsMapBuilder.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
+                        statsMapBuilder.put("query/bytes", os.getCount());
+                        statsMapBuilder.put("success", success);
+                        if (!success) {
+                          statsMapBuilder.put("exception", exceptionStr);
+                        }
+
+                        requestLogger.log(
+                            new RequestLogLine(
+                                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
+                                req.getRemoteAddr(),
+                                theQuery,
+                                new QueryStats(
+                                    statsMapBuilder.build()
+                                )
+                            )
+                        );
+                      } catch (Exception ex) {
+                        log.error(ex, "Unable to log query [%s]!", theQuery);
+                      } finally {
+                        Thread.currentThread().setName(currThreadName);
+                      }
                     }
                   }
                 },
                 context.getContentType()
             )
             .header("X-Druid-Query-Id", queryId);
+
+        if (responseContext.get(HDR_ETAG) != null) {
+          builder.header(HDR_ETAG, responseContext.get(HDR_ETAG));
+          responseContext.remove(HDR_ETAG);
+        }
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
@@ -309,21 +361,24 @@ public class QueryResource implements QueryCountStatsProvider
       try {
         log.warn(e, "Exception while processing queryId [%s]", queryId);
         interruptedQueryCount.incrementAndGet();
-        final long queryTime = System.currentTimeMillis() - start;
-        emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
-                        .setDimension("success", "false")
-                        .build("query/time", queryTime)
+        final long queryTimeNs = System.nanoTime() - startNs;
+        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+            queryMetricsFactory,
+            toolChest,
+            query,
+            req.getRemoteAddr()
         );
+        queryMetrics.success(false);
+        queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(start),
+                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
                     ImmutableMap.<String, Object>of(
                         "query/time",
-                        queryTime,
+                        TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
                         "success",
                         false,
                         "interrupted",
@@ -351,20 +406,23 @@ public class QueryResource implements QueryCountStatsProvider
       failedQueryCount.incrementAndGet();
 
       try {
-        final long queryTime = System.currentTimeMillis() - start;
-        emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
-                        .setDimension("success", "false")
-                        .build("query/time", queryTime)
+        final long queryTimeNs = System.nanoTime() - startNs;
+        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+            queryMetricsFactory,
+            toolChest,
+            query,
+            req.getRemoteAddr()
         );
+        queryMetrics.success(false);
+        queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(start),
+                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(ImmutableMap.<String, Object>of(
                     "query/time",
-                    queryTime,
+                    TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
                     "success",
                     false,
                     "exception",

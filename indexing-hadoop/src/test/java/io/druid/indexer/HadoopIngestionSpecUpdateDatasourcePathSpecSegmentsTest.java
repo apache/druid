@@ -32,7 +32,7 @@ import io.druid.indexer.path.PathSpec;
 import io.druid.indexer.path.StaticPathSpec;
 import io.druid.indexer.path.UsedSegmentLister;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -92,7 +92,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     PathSpec pathSpec = new DatasourcePathSpec(
         jsonMapper,
         null,
-        new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null, null, false),
+        new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null, false),
         null
     );
     HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
@@ -116,7 +116,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             testDatasourceInterval,
             null,
             ImmutableList.<DataSegment>of(SEGMENT),
-            null,
             null,
             null,
             null,
@@ -148,7 +147,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             null,
             null,
             null,
-            null,
             false
         ),
         null
@@ -169,7 +167,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
         new DatasourceIngestionSpec(
             testDatasource,
             testDatasourceIntervalPartial,
-            null,
             null,
             null,
             null,
@@ -206,7 +203,6 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
                     null,
                     null,
                     null,
-                    null,
                     false
                 ),
                 null
@@ -235,7 +231,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                Granularity.DAY,
+                Granularities.DAY,
                 null,
                 ImmutableList.of(
                     new Interval("2010-01-01/P1D")

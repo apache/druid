@@ -37,6 +37,7 @@ import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -44,7 +45,6 @@ import io.druid.segment.column.GenericColumn;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
@@ -52,31 +52,16 @@ public class UseIndexesStrategy extends SearchStrategy
 {
   public static final String NAME = "useIndexes";
 
-  private final ImmutableBitmap timeFilteredBitmap;
-  private final boolean needToMakeFilteredBitmap;
-
   public static UseIndexesStrategy of(SearchQuery query)
   {
-    return new UseIndexesStrategy(query, true, null);
-  }
-
-  public static UseIndexesStrategy withTimeFilteredBitmap(
-      SearchQuery query,
-      @Nullable ImmutableBitmap timeFilteredBitmap
-  )
-  {
-    return new UseIndexesStrategy(query, false, timeFilteredBitmap);
+    return new UseIndexesStrategy(query);
   }
 
   private UseIndexesStrategy(
-      SearchQuery query,
-      boolean needToMakeFilteredBitmap,
-      @Nullable ImmutableBitmap timeFilteredBitmap
+      SearchQuery query
   )
   {
     super(query);
-    this.needToMakeFilteredBitmap = needToMakeFilteredBitmap;
-    this.timeFilteredBitmap = timeFilteredBitmap;
   }
 
   @Override
@@ -96,6 +81,7 @@ public class UseIndexesStrategy extends SearchStrategy
       if (bitmapSuppDims.size() > 0) {
         final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
             index.getBitmapFactoryForDimensions(),
+            VirtualColumns.EMPTY,
             index
         );
 
@@ -105,9 +91,7 @@ public class UseIndexesStrategy extends SearchStrategy
         // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
         // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
         if (filter == null || filter.supportsBitmapIndex(selector)) {
-          final ImmutableBitmap timeFilteredBitmap = this.needToMakeFilteredBitmap ?
-                                                     makeTimeFilteredBitmap(index, segment, filter, interval) :
-                                                     this.timeFilteredBitmap;
+          final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(index, segment, filter, interval);
           builder.add(new IndexOnlyExecutor(query, segment, timeFilteredBitmap, bitmapSuppDims));
         } else {
           // Fall back to cursor-based execution strategy
@@ -171,6 +155,7 @@ public class UseIndexesStrategy extends SearchStrategy
     } else {
       final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
           index.getBitmapFactoryForDimensions(),
+          VirtualColumns.EMPTY,
           index
       );
       Preconditions.checkArgument(filter.supportsBitmapIndex(selector), "filter[%s] should support bitmap", filter);

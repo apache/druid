@@ -20,20 +20,19 @@
 package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DruidMetrics;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -42,11 +41,10 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.filter.DimFilter;
+import io.druid.query.cache.CacheKeyBuilder;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -66,11 +64,22 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       };
 
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
-  @Inject
+  @VisibleForTesting
   public TimeseriesQueryQueryToolChest(IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
   {
+    this(intervalChunkingQueryRunnerDecorator, DefaultTimeseriesQueryMetricsFactory.instance());
+  }
+
+  @Inject
+  public TimeseriesQueryQueryToolChest(
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      TimeseriesQueryMetricsFactory queryMetricsFactory
+  )
+  {
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -80,6 +89,21 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
     return new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(queryRunner)
     {
+      @Override
+      public Sequence<Result<TimeseriesResultValue>> doRun(
+          QueryRunner<Result<TimeseriesResultValue>> baseRunner,
+          Query<Result<TimeseriesResultValue>> query,
+          Map<String, Object> context
+      )
+      {
+        return super.doRun(
+            baseRunner,
+            // Don't do post aggs until makePostComputeManipulatorFn() is called
+            ((TimeseriesQuery) query).withPostAggregatorSpecs(ImmutableList.<PostAggregator>of()),
+            context
+        );
+      }
+
       @Override
       protected Ordering<Result<TimeseriesResultValue>> makeOrdering(Query<Result<TimeseriesResultValue>> query)
       {
@@ -103,17 +127,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(TimeseriesQuery query)
+  public TimeseriesQueryMetrics makeMetrics(TimeseriesQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query)
-                       .setDimension(
-                           "numMetrics",
-                           String.valueOf(query.getAggregatorSpecs().size())
-                       )
-                       .setDimension(
-                           "numComplexMetrics",
-                           String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
-                       );
+    TimeseriesQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
+    queryMetrics.query(query);
+    return queryMetrics;
   }
 
   @Override
@@ -130,24 +148,22 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
 
       @Override
+      public boolean isCacheable(TimeseriesQuery query, boolean willMergeRunners)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(TimeseriesQuery query)
       {
-        final DimFilter dimFilter = query.getDimensionsFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
-        final byte[] granularityBytes = query.getGranularity().cacheKey();
-        final byte descending = query.isDescending() ? (byte) 1 : 0;
-        final byte skipEmptyBuckets = query.isSkipEmptyBuckets() ? (byte) 1 : 0;
-
-        return ByteBuffer
-            .allocate(3 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
-            .put(TIMESERIES_QUERY)
-            .put(descending)
-            .put(skipEmptyBuckets)
-            .put(granularityBytes)
-            .put(filterBytes)
-            .put(aggregatorBytes)
-            .array();
+        return new CacheKeyBuilder(TIMESERIES_QUERY)
+            .appendBoolean(query.isDescending())
+            .appendBoolean(query.isSkipEmptyBuckets())
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimensionsFilter())
+            .appendCacheables(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns())
+            .build();
       }
 
       @Override
@@ -182,7 +198,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
         return new Function<Object, Result<TimeseriesResultValue>>()
         {
-          private final QueryGranularity granularity = query.getGranularity();
+          private final Granularity granularity = query.getGranularity();
 
           @Override
           public Result<TimeseriesResultValue> apply(@Nullable Object input)
@@ -257,7 +273,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
         final TimeseriesResultValue holder = result.getValue();
         final Map<String, Object> values = Maps.newHashMap(holder.getBaseObject());
-        if (calculatePostAggs) {
+        if (calculatePostAggs && !query.getPostAggregatorSpecs().isEmpty()) {
           // put non finalized aggregators for calculating dependent post Aggregators
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
             values.put(agg.getName(), holder.getMetric(agg.getName()));

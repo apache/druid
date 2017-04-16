@@ -23,6 +23,7 @@ import io.druid.segment.data.IOPeon;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobContext;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -55,7 +56,13 @@ class HadoopIOPeon implements IOPeon
   }
 
   @Override
-  public void cleanup() throws IOException
+  public void close() throws IOException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public File getFile(String filename)
   {
     throw new UnsupportedOperationException();
   }

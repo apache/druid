@@ -22,9 +22,9 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.common.guava.GuavaUtils;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -39,7 +39,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   private final String format;
   private final DateTimeZone tz;
   private final Locale locale;
-  private final QueryGranularity granularity;
+  private final Granularity granularity;
   private final boolean asMillis;
   private final DateTimeFormatter formatter;
 
@@ -47,14 +47,14 @@ public class TimeFormatExtractionFn implements ExtractionFn
       @JsonProperty("format") String format,
       @JsonProperty("timeZone") DateTimeZone tz,
       @JsonProperty("locale") String localeString,
-      @JsonProperty("granularity") QueryGranularity granularity,
+      @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("asMillis") boolean asMillis
   )
   {
     this.format = format;
     this.tz = tz;
     this.locale = localeString == null ? null : Locale.forLanguageTag(localeString);
-    this.granularity = granularity == null ? QueryGranularities.NONE : granularity;
+    this.granularity = granularity == null ? Granularities.NONE : granularity;
 
     if (asMillis && format == null) {
       Preconditions.checkArgument(tz == null, "timeZone requires a format");
@@ -92,7 +92,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   }
 
   @JsonProperty
-  public QueryGranularity getGranularity()
+  public Granularity getGranularity()
   {
     return granularity;
   }
@@ -106,8 +106,10 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] exprBytes = StringUtils.toUtf8(format + "\u0001" + tz.getID() + "\u0001" + locale.toLanguageTag());
-    final byte[] granularityCacheKey = granularity.cacheKey();
+    final String tzId = (tz == null ? DateTimeZone.UTC : tz).getID();
+    final String localeTag = (locale == null ? Locale.getDefault() : locale).toLanguageTag();
+    final byte[] exprBytes = StringUtils.toUtf8(format + "\u0001" + tzId + "\u0001" + localeTag);
+    final byte[] granularityCacheKey = granularity.getCacheKey();
     return ByteBuffer.allocate(4 + exprBytes.length + granularityCacheKey.length)
                      .put(ExtractionCacheHelper.CACHE_TYPE_ID_TIME_FORMAT)
                      .put(exprBytes)
@@ -121,7 +123,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public String apply(long value)
   {
-    final long truncated = granularity.truncate(value);
+    final long truncated = granularity.bucketStart(new DateTime(value)).getMillis();
     return formatter == null ? String.valueOf(truncated) : formatter.print(truncated);
   }
 

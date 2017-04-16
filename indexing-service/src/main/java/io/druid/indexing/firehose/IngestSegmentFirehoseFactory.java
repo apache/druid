@@ -34,7 +34,6 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
@@ -68,6 +67,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   private final List<String> metrics;
   private final Injector injector;
   private final IndexIO indexIO;
+  private TaskToolbox taskToolbox;
 
   @JsonCreator
   public IngestSegmentFirehoseFactory(
@@ -121,21 +121,28 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     return metrics;
   }
 
+  public void setTaskToolbox(TaskToolbox taskToolbox)
+  {
+    this.taskToolbox = taskToolbox;
+  }
+
   @Override
   public Firehose connect(InputRowParser inputRowParser) throws IOException, ParseException
   {
     log.info("Connecting firehose: dataSource[%s], interval[%s]", dataSource, interval);
-    // better way to achieve this is to pass toolbox to Firehose, The instance is initialized Lazily on connect method.
-    // Noop Task is just used to create the toolbox and list segments.
-    final TaskToolbox toolbox = injector.getInstance(TaskToolboxFactory.class).build(
-        new NoopTask("reingest", 0, 0, null, null, null)
-    );
+
+    if (taskToolbox == null) {
+      // Noop Task is just used to create the toolbox and list segments.
+      taskToolbox = injector.getInstance(TaskToolboxFactory.class).build(
+          new NoopTask("reingest", 0, 0, null, null, null)
+      );
+    }
 
     try {
-      final List<DataSegment> usedSegments = toolbox
+      final List<DataSegment> usedSegments = taskToolbox
           .getTaskActionClient()
           .submit(new SegmentListUsedAction(dataSource, interval, null));
-      final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
+      final Map<DataSegment, File> segmentFileMap = taskToolbox.fetchSegments(usedSegments);
       VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
           Ordering.<String>natural().nullsFirst()
       );
@@ -274,12 +281,9 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           )
       );
 
-      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, QueryGranularities.NONE);
+      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter);
     }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-    catch (SegmentLoadingException e) {
+    catch (IOException | SegmentLoadingException e) {
       throw Throwables.propagate(e);
     }
 

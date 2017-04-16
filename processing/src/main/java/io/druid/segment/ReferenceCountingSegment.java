@@ -180,4 +180,9 @@ public class ReferenceCountingSegment extends AbstractSegment
       baseSegment.close();
     }
   }
+
+  public <T> T as(Class<T> clazz)
+  {
+    return getBaseSegment().as(clazz);
+  }
 }

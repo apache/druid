@@ -32,8 +32,8 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
 {
   private Yielder<ScanResultValue> yielder;
   private String resultFormat;
-  private int limit = 0;
-  private int count = 0;
+  private long limit = 0;
+  private long count = 0;
 
   public ScanQueryLimitRowIterator(
       QueryRunner<ScanResultValue> baseRunner, ScanQuery query,
@@ -76,7 +76,8 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
         return batch;
       } else {
         // last batch
-        int left = limit - count;
+        // single batch length is <= Integer.MAX_VALUE, so this should not overflow
+        int left = (int) (limit - count);
         count = limit;
         return new ScanResultValue(batch.getSegmentId(), batch.getColumns(), events.subList(0, left));
       }

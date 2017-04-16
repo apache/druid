@@ -20,9 +20,9 @@
 package io.druid.segment.loading;
 
 import com.google.common.io.Files;
-
 import io.druid.java.util.common.CompressionUtils;
-
+import org.apache.commons.io.FileUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -49,8 +49,13 @@ public class LocalDataSegmentPullerTest
   public void setup() throws IOException
   {
     tmpDir = temporaryFolder.newFolder();
-    tmpDir.deleteOnExit();
     puller = new LocalDataSegmentPuller();
+  }
+
+  @After
+  public void after() throws IOException
+  {
+    FileUtils.deleteDirectory(tmpDir);
   }
 
   @Test

@@ -111,6 +111,10 @@ public class SmooshedFileMapper implements Closeable
     return internalFiles.keySet();
   }
 
+  /**
+   * Returns a mapped buffer of the smooshed file with the given name. Buffer's contents from 0 to capacity() are the
+   * whole mapped file contents, limit() is equal to capacity().
+   */
   public ByteBuffer mapFile(String name) throws IOException
   {
     final Metadata metadata = internalFiles.get(name);

@@ -32,6 +32,8 @@ import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -220,7 +222,13 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public int[] processRowValsToUnsortedEncodedArray(Object dimValues)
+  public ValueType getValueType()
+  {
+    return ValueType.STRING;
+  }
+
+  @Override
+  public int[] processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
   {
     final int[] encodedDimensionValues;
     final int oldDictSize = dimLookup.size();
@@ -340,7 +348,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public int compareUnsortedEncodedArrays(int[] lhs, int[] rhs)
+  public int compareUnsortedEncodedKeyComponents(int[] lhs, int[] rhs)
   {
     int lhsLen = lhs.length;
     int rhsLen = rhs.length;
@@ -365,19 +373,19 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public boolean checkUnsortedEncodedArraysEqual(int[] lhs, int[] rhs)
+  public boolean checkUnsortedEncodedKeyComponentsEqual(int[] lhs, int[] rhs)
   {
     return Arrays.equals(lhs, rhs);
   }
 
   @Override
-  public int getUnsortedEncodedArrayHashCode(int[] key)
+  public int getUnsortedEncodedKeyComponentHashCode(int[] key)
   {
     return Arrays.hashCode(key);
   }
 
   @Override
-  public DimensionSelector makeColumnValueSelector(
+  public DimensionSelector makeDimensionSelector(
       final DimensionSpec spec,
       final IncrementalIndexStorageAdapter.EntryHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
@@ -534,12 +542,81 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         }
         return getEncodedValue(name, false);
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("currEntry", currEntry);
+      }
     }
     return new IndexerDimensionSelector();
   }
 
   @Override
-  public Object convertUnsortedEncodedArrayToActualArrayOrList(int[] key, boolean asList)
+  public LongColumnSelector makeLongColumnSelector(
+      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+  )
+  {
+     return ZeroLongColumnSelector.instance();
+  }
+
+  @Override
+  public FloatColumnSelector makeFloatColumnSelector(
+      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+  )
+  {
+    return ZeroFloatColumnSelector.instance();
+  }
+
+  @Override
+  public ObjectColumnSelector makeObjectColumnSelector(
+      final DimensionSpec spec,
+      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      final IncrementalIndex.DimensionDesc desc
+  )
+  {
+    final ExtractionFn extractionFn = spec.getExtractionFn();
+    final int dimIndex = desc.getIndex();
+
+    class StringIndexerObjectColumnSelector implements ObjectColumnSelector<String>
+    {
+      @Override
+      public Class<String> classOfObject()
+      {
+        return String.class;
+      }
+
+      @Override
+      public String get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        int[] indices;
+        if (dimIndex < dims.length) {
+          indices = (int[]) dims[dimIndex];
+          if (indices.length > 1) {
+            throw new UnsupportedOperationException(
+                "makeObjectColumnSelector does not support multi-value columns."
+            );
+          }
+        } else {
+          indices = null;
+        }
+
+        if (indices == null || indices.length == 0) {
+          return extractionFn.apply(null);
+        }
+
+        final String strValue = getActualValue(indices[0], false);
+        return extractionFn == null ? strValue : extractionFn.apply(strValue);
+      }
+    }
+
+    return new StringIndexerObjectColumnSelector();
+  }
+
+  @Override
+  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(int[] key, boolean asList)
   {
     if (key == null || key.length == 0) {
       return null;
@@ -568,7 +645,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public int[] convertUnsortedEncodedArrayToSortedEncodedArray(int[] key)
+  public int[] convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(int[] key)
   {
     int[] sortedDimVals = new int[key.length];
     for (int i = 0; i < key.length; ++i) {
@@ -579,7 +656,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public void fillBitmapsFromUnsortedEncodedArray(
+  public void fillBitmapsFromUnsortedEncodedKeyComponent(
       int[] key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {

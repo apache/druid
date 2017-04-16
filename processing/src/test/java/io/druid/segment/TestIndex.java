@@ -21,15 +21,19 @@ package io.druid.segment;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.hash.Hashing;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
 import io.druid.data.input.impl.DelimitedParseSpec;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -49,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -59,6 +64,9 @@ public class TestIndex
       "ts",
       "market",
       "quality",
+      "qualityLong",
+      "qualityFloat",
+      "qualityNumericString",
       "placement",
       "placementish",
       "index",
@@ -71,11 +79,33 @@ public class TestIndex
   public static final String[] DIMENSIONS = new String[]{
       "market",
       "quality",
+      "qualityLong",
+      "qualityFloat",
+      "qualityNumericString",
       "placement",
       "placementish",
       "partial_null_column",
-      "null_column",
-      };
+      "null_column"
+  };
+
+  public static final List<DimensionSchema> DIMENSION_SCHEMAS = Arrays.asList(
+      new StringDimensionSchema("market"),
+      new StringDimensionSchema("quality"),
+      new LongDimensionSchema("qualityLong"),
+      new FloatDimensionSchema("qualityFloat"),
+      new StringDimensionSchema("qualityNumericString"),
+      new StringDimensionSchema("placement"),
+      new StringDimensionSchema("placementish"),
+      new StringDimensionSchema("partial_null_column"),
+      new StringDimensionSchema("null_column")
+  );
+
+  public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
+      DIMENSION_SCHEMAS,
+      null,
+      null
+  );
+
   public static final String[] METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
@@ -97,7 +127,7 @@ public class TestIndex
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
   }
 
@@ -115,7 +145,7 @@ public class TestIndex
       }
     }
 
-    return realtimeIndex = makeRealtimeIndex("druid.sample.tsv");
+    return realtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv");
   }
 
   public static IncrementalIndex getNoRollupIncrementalTestIndex()
@@ -126,7 +156,7 @@ public class TestIndex
       }
     }
 
-    return noRollupRealtimeIndex = makeRealtimeIndex("druid.sample.tsv", false);
+    return noRollupRealtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv", false);
   }
 
   public static QueryableIndex getMMappedTestIndex()
@@ -165,8 +195,8 @@ public class TestIndex
       }
 
       try {
-        IncrementalIndex top = makeRealtimeIndex("druid.sample.tsv.top");
-        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.tsv.bottom");
+        IncrementalIndex top = makeRealtimeIndex("druid.sample.numeric.tsv.top");
+        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
 
         File tmpFile = File.createTempFile("yay", "who");
         tmpFile.delete();
@@ -229,7 +259,8 @@ public class TestIndex
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
         .withTimestampSpec(new TimestampSpec("ds", "auto", null))
-        .withQueryGranularity(QueryGranularities.NONE)
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(DIMENSIONS_SPEC)
         .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)
@@ -257,7 +288,7 @@ public class TestIndex
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(
             new TimestampSpec("ts", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)), null, null),
+            new DimensionsSpec(DIMENSION_SCHEMAS, null, null),
             "\t",
             "\u0001",
             Arrays.asList(COLUMNS)

@@ -23,7 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import io.druid.collections.StupidPool;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -35,8 +35,9 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -66,7 +67,7 @@ public class TopNQueryEngine
 
     final List<Interval> queryIntervals = query.getQuerySegmentSpec().getIntervals();
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
-    final QueryGranularity granularity = query.getGranularity();
+    final Granularity granularity = query.getGranularity();
     final Function<Cursor, Result<TopNResultValue>> mapFn = getMapFn(query, adapter);
 
     Preconditions.checkArgument(
@@ -75,7 +76,13 @@ public class TopNQueryEngine
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), VirtualColumns.EMPTY, granularity, query.isDescending()),
+            adapter.makeCursors(
+                filter,
+                queryIntervals.get(0),
+                query.getVirtualColumns(),
+                granularity,
+                query.isDescending()
+            ),
             new Function<Cursor, Result<TopNResultValue>>()
             {
               @Override
@@ -104,6 +111,9 @@ public class TopNQueryEngine
     final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(cardinality, numBytesPerRecord);
     query.initTopNAlgorithmSelector(selector);
 
+    final ColumnCapabilities columnCapabilities = query.getVirtualColumns()
+                                                       .getColumnCapabilitiesWithFallback(adapter, dimension);
+
     final TopNAlgorithm topNAlgorithm;
     if (
         selector.isHasExtractionFn() &&
@@ -116,6 +126,9 @@ public class TopNQueryEngine
       // currently relies on the dimension cardinality to support lexicographic sorting
       topNAlgorithm = new TimeExtractionTopNAlgorithm(capabilities, query);
     } else if (selector.isHasExtractionFn()) {
+      topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
+    } else if (columnCapabilities != null && columnCapabilities.getType() != ValueType.STRING) {
+      // force non-Strings to use DimExtraction for now, do a typed PooledTopN later
       topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
     } else if (selector.isAggregateAllMetrics()) {
       topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);

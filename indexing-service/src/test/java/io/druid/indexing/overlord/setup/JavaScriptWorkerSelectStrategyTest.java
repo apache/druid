@@ -69,7 +69,7 @@ public class JavaScriptWorkerSelectStrategyTest
       + "}\n"
       + "return null;\n"
       + "}",
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
 
   @Test
@@ -79,7 +79,7 @@ public class JavaScriptWorkerSelectStrategyTest
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             JavaScriptConfig.class,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         )
     );
 
@@ -99,7 +99,7 @@ public class JavaScriptWorkerSelectStrategyTest
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             JavaScriptConfig.class,
-            new JavaScriptConfig(true)
+            new JavaScriptConfig(false)
         )
     );
 

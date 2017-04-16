@@ -36,6 +36,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.GroupByMergedQueryRunner;
+import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -46,6 +47,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
+import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -78,6 +80,34 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
+  public GroupByQueryResource prepareResource(GroupByQuery query, boolean willMergeRunners)
+  {
+    return new GroupByQueryResource();
+  }
+
+  @Override
+  public boolean isCacheable(boolean willMergeRunners)
+  {
+    return true;
+  }
+
+  @Override
+  public QueryRunner<Row> createIntervalChunkingRunner(
+      final IntervalChunkingQueryRunnerDecorator decorator,
+      final QueryRunner<Row> runner,
+      final GroupByQueryQueryToolChest toolChest
+  )
+  {
+    return decorator.decorate(runner, toolChest);
+  }
+
+  @Override
+  public boolean doMergeResults(final GroupByQuery query)
+  {
+    return query.getContextBoolean(GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, true);
+  }
+
+  @Override
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,
@@ -92,6 +122,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
             new GroupByQuery(
                 query.getDataSource(),
                 query.getQuerySegmentSpec(),
+                query.getVirtualColumns(),
                 query.getDimFilter(),
                 query.getGranularity(),
                 query.getDimensions(),
@@ -106,10 +137,10 @@ public class GroupByStrategyV1 implements GroupByStrategy
                 ImmutableMap.<String, Object>of(
                     "finalize", false,
                     //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                    //in the end when returning results to user.
+                    //in the end when returning results to user. (note this is only respected by groupBy v1)
                     GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
                     //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would return
-                    //merged results
+                    //merged results. (note this is only respected by groupBy v1)
                     GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false,
                     GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
                 )
@@ -124,7 +155,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
   @Override
   public Sequence<Row> processSubqueryResult(
-      GroupByQuery subquery, GroupByQuery query, Sequence<Row> subqueryResult
+      GroupByQuery subquery, GroupByQuery query, GroupByQueryResource resource, Sequence<Row> subqueryResult
   )
   {
     final Set<AggregatorFactory> aggs = Sets.newHashSet();
