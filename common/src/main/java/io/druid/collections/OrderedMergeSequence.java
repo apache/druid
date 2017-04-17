@@ -22,8 +22,7 @@ package io.druid.collections;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
-
-import com.google.common.io.Closer;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
