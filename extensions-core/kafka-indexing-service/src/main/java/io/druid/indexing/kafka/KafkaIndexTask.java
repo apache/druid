@@ -89,6 +89,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -822,7 +823,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                              ioConfig.getStartPartitions().getPartitionOffsetMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withMaxRowsInMemory(maxRowsInMemoryPerPartition),
+        tuningConfig.withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+                    .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),

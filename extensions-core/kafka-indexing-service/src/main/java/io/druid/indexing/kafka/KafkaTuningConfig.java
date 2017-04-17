@@ -43,6 +43,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
+  private File basePersistDirectory;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -115,7 +116,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   @JsonProperty
   public File getBasePersistDirectory()
   {
-    return null;
+    return basePersistDirectory;
   }
 
   @JsonProperty
@@ -154,6 +155,23 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return resetOffsetAutomatically;
   }
 
+  public KafkaTuningConfig withBasePersistDirectory(File dir)
+  {
+    KafkaTuningConfig newKafkaTuningConfig = new KafkaTuningConfig(
+        maxRowsInMemory,
+        maxRowsPerSegment,
+        intermediatePersistPeriod,
+        maxPendingPersists,
+        indexSpec,
+        buildV9Directly,
+        reportParseExceptions,
+        handoffConditionTimeout,
+        resetOffsetAutomatically
+    );
+    newKafkaTuningConfig.basePersistDirectory = dir;
+    return newKafkaTuningConfig;
+  }
+
   public KafkaTuningConfig withMaxRowsInMemory(int rows)
   {
     KafkaTuningConfig newKafkaTuningConfig = new KafkaTuningConfig(
@@ -167,6 +185,10 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         handoffConditionTimeout,
         resetOffsetAutomatically
     );
+
+    if (basePersistDirectory != null) {
+      return newKafkaTuningConfig.withBasePersistDirectory(basePersistDirectory);
+    }
 
     return newKafkaTuningConfig;
   }
@@ -210,6 +232,12 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       return false;
     }
 
+    if (basePersistDirectory != null
+        ? !basePersistDirectory.equals(that.basePersistDirectory)
+        : that.basePersistDirectory != null) {
+      return false;
+    }
+
     return indexSpec != null ? indexSpec.equals(that.indexSpec) : that.indexSpec == null;
 
   }
@@ -220,6 +248,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     int result = maxRowsInMemory;
     result = 31 * result + maxRowsPerSegment;
     result = 31 * result + (intermediatePersistPeriod != null ? intermediatePersistPeriod.hashCode() : 0);
+    result = 31 * result + (basePersistDirectory != null ? basePersistDirectory.hashCode() : 0);
     result = 31 * result + maxPendingPersists;
     result = 31 * result + (indexSpec != null ? indexSpec.hashCode() : 0);
     result = 31 * result + (buildV9Directly ? 1 : 0);
@@ -236,6 +265,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            "maxRowsInMemory=" + maxRowsInMemory +
            ", maxRowsPerSegment=" + maxRowsPerSegment +
            ", intermediatePersistPeriod=" + intermediatePersistPeriod +
+           ", basePersistDirectory=" + basePersistDirectory +
            ", maxPendingPersists=" + maxPendingPersists +
            ", indexSpec=" + indexSpec +
            ", buildV9Directly=" + buildV9Directly +
