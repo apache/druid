@@ -64,6 +64,7 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.AbstractMap;
@@ -671,6 +672,7 @@ public class LookupCoordinatorManager
     return backgroundManagerExitedLatch.await(timeout, TimeUnit.MILLISECONDS);
   }
 
+  @VisibleForTesting
   public static class LookupsCommunicator
   {
     private final HttpClient httpClient;
@@ -761,7 +763,7 @@ public class LookupCoordinatorManager
           makeResponseHandler(returnCode, reasonString),
           lookupCoordinatorManagerConfig.getHostTimeout()
       ).get()) {
-        if (returnCode.get() == 200) {
+        if (returnCode.get() == HttpURLConnection.HTTP_OK) {
           try {
             final LookupsState<LookupExtractorFactoryMapContainer> response = smileMapper.readValue(
                 result,
