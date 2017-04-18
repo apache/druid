@@ -28,6 +28,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.DataSource;
 import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.MultiSourceBaseQuery;
+import io.druid.query.Queries;
 import io.druid.query.Query;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -118,7 +119,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
   {
     for (DataSourceWithSegmentSpec sourceWithSegmentSpec : getDataSources()) {
       if (sourceWithSegmentSpec.getDataSource().equals(dataSource)) {
-        return Query.getTotalDuration(sourceWithSegmentSpec.getQuerySegmentSpec());
+        return Queries.getTotalDuration(sourceWithSegmentSpec.getQuerySegmentSpec());
       }
     }
     return null;

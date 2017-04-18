@@ -37,7 +37,6 @@ import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
-import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
@@ -88,7 +87,7 @@ public interface Query<T>
   {
     Duration totalDuration = new Duration(0);
     for (DataSourceWithSegmentSpec spec : getDataSources()) {
-      totalDuration = totalDuration.plus(Query.getTotalDuration(spec.getQuerySegmentSpec()));
+      totalDuration = totalDuration.plus(Queries.getTotalDuration(spec.getQuerySegmentSpec()));
     }
     return totalDuration;
   }
@@ -152,15 +151,4 @@ public interface Query<T>
   Query<T> withQuerySegmentSpec(String firstDataSourceName, QuerySegmentSpec spec);
 
   Query<T> replaceDataSourceWith(DataSource src, DataSource dst);
-
-  static Duration getTotalDuration(QuerySegmentSpec spec)
-  {
-    Duration totalDuration = new Duration(0);
-    for (Interval interval : spec.getIntervals()) {
-      if (interval != null) {
-        totalDuration = totalDuration.plus(interval.toDuration());
-      }
-    }
-    return totalDuration;
-  }
 }

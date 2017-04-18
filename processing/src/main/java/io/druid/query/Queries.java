@@ -26,6 +26,8 @@ import com.google.common.collect.Sets;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -103,5 +105,16 @@ public class Queries
     });
 
     return new Pair<>(datasourceNames.toString(), intervals.toString());
+  }
+
+  public static Duration getTotalDuration(QuerySegmentSpec spec)
+  {
+    Duration totalDuration = new Duration(0);
+    for (Interval interval : spec.getIntervals()) {
+      if (interval != null) {
+        totalDuration = totalDuration.plus(interval.toDuration());
+      }
+    }
+    return totalDuration;
   }
 }
