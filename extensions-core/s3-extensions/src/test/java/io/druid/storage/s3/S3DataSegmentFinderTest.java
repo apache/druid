@@ -295,6 +295,45 @@ public class S3DataSegmentFinderTest
     Assert.assertEquals(5, segments.size());
   }
 
+  @Test
+  public void testFindSegmentsUpdateLoadSpec() throws Exception {
+    config.setBucket("amazing");
+    final DataSegment segmentMissingLoadSpec = DataSegment.builder(SEGMENT_1)
+        .loadSpec(ImmutableMap.of())
+        .build();
+    final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
+    final String segmentPath = baseKey + "/interval_missing_load_spec/v1/1/";
+    final String descriptorPath = S3Utils.descriptorPathForSegmentPath(segmentPath);
+    final String indexPath = S3Utils.indexZipForSegmentPath(segmentPath);
+
+    mockS3Client.putObject(
+        config.getBucket(),
+        new S3Object(
+            descriptorPath,
+            mapper.writeValueAsString(segmentMissingLoadSpec)
+        )
+    );
+
+    mockS3Client.putObject(
+        config.getBucket(),
+        new S3Object(
+            indexPath,
+            "dummy"
+        )
+    );
+
+    Set<DataSegment> segments = s3DataSegmentFinder.findSegments(segmentPath, false);
+    Assert.assertEquals(1, segments.size());
+
+    // Guaranteed there's only 1 element due to prior assert
+    DataSegment testSegment = segments.iterator().next();
+    Map<String, Object> testLoadSpec = testSegment.getLoadSpec();
+
+    Assert.assertEquals("amazing", testLoadSpec.get("bucket"));
+    Assert.assertEquals("s3_zip", testLoadSpec.get("type"));
+    Assert.assertEquals(indexPath, testLoadSpec.get("key"));
+  }
+
   private String getDescriptorPath(DataSegment segment)
   {
     return S3Utils.descriptorPathForSegmentPath(String.valueOf(segment.getLoadSpec().get("key")));
