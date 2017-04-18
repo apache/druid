@@ -9,7 +9,7 @@ The query context is used for various query configuration parameters. The follow
 
 |property         |default                                 | description          |
 |-----------------|----------------------------------------|----------------------|
-|timeout          | `druid.server.http.defaultQueryTimeout`| Query timeout, beyond which unfinished queries will be cancelled. 0 timeout means `no timeout`. To set the default timeout, see [broker configuration](broker.html) |
+|timeout          | `druid.server.http.defaultQueryTimeout`| Query timeout in millis, beyond which unfinished queries will be cancelled. 0 timeout means `no timeout`. To set the default timeout, see [broker configuration](broker.html) |
 |priority         | `0`                                    | Query Priority. Queries with higher priority get precedence for computational resources.|
 |queryId          | auto-generated                         | Unique identifier given to this query. If a query ID is set or known, this can be used to cancel the query |
 |useCache         | `true`                                 | Flag indicating whether to leverage the query cache for this query. This may be overridden in the broker or historical node configuration |

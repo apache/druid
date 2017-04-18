@@ -25,7 +25,6 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -93,7 +92,7 @@ public class QueryContextsTest
         false,
         new HashMap()
     );
-    Assert.assertEquals(new Period("PT5M"), QueryContexts.getDefaultTimeout(query));
+    Assert.assertEquals(300_000, QueryContexts.getDefaultTimeout(query));
   }
 
   @Test
@@ -107,7 +106,7 @@ public class QueryContextsTest
     );
     Assert.assertEquals(300_000, QueryContexts.getTimeout(query));
 
-    query = query.withDefaultTimeout(new Period("PT1M"));
+    query = query.withDefaultTimeout(60_000);
     Assert.assertEquals(60_000, QueryContexts.getTimeout(query));
   }
 
@@ -118,11 +117,11 @@ public class QueryContextsTest
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(new Interval("0/100"))),
         false,
-        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, new Period("PT1S"))
+        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
     );
     Assert.assertEquals(1000, QueryContexts.getTimeout(query));
 
-    query = query.withDefaultTimeout(new Period("PT1H"));
+    query = query.withDefaultTimeout(1_000_000);
     Assert.assertEquals(1000, QueryContexts.getTimeout(query));
   }
 }

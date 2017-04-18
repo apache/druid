@@ -19,8 +19,8 @@
 
 package io.druid.query;
 
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.ISE;
-import org.joda.time.Period;
 
 public class QueryContexts
 {
@@ -34,7 +34,7 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
-  public static final Period DEFAULT_TIMEOUT = new Period("PT5M");
+  public static final long DEFAULT_TIMEOUT_MILLIS = 300_000; // 5 minutes
   public static final long NO_TIMEOUT = 0;
 
   public static <T> boolean isBySegment(Query<T> query)
@@ -107,15 +107,18 @@ public class QueryContexts
     return getTimeout(query, getDefaultTimeout(query));
   }
 
-  public static <T> long getTimeout(Query<T> query, Period defaultTimeout)
+  public static <T> long getTimeout(Query<T> query, long defaultTimeout)
   {
-    final Period timeout = query.getContextValue(TIMEOUT_KEY, defaultTimeout);
-    return timeout.toStandardDuration().getMillis();
+    final long timeout = parseLong(query, TIMEOUT_KEY, defaultTimeout);
+    Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%d]", timeout);
+    return timeout;
   }
 
-  static <T> Period getDefaultTimeout(Query<T> query)
+  static <T> long getDefaultTimeout(Query<T> query)
   {
-    return query.getContextValue(DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT);
+    final long defaultTimeout = parseLong(query, DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
+    Preconditions.checkState(defaultTimeout >= 0, "Timeout must be a non negative value, but was [%d]", defaultTimeout);
+    return defaultTimeout;
   }
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)

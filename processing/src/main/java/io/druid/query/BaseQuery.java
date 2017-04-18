@@ -28,7 +28,6 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
 import java.util.List;
 import java.util.Map;
@@ -178,7 +177,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @Override
-  public Query<T> withDefaultTimeout(Period defaultTimeout)
+  public Query<T> withDefaultTimeout(long defaultTimeout)
   {
     return withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
   }

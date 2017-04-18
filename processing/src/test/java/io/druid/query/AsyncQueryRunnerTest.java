@@ -28,7 +28,6 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import org.easymock.EasyMock;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -101,7 +100,7 @@ public class AsyncQueryRunnerTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER);
 
     Sequence lazy = asyncRunner.run(
-        query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, new Period(1))),
+        query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1)),
         Collections.EMPTY_MAP);
 
     try {

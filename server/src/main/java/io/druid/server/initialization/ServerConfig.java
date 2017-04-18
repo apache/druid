@@ -38,8 +38,8 @@ public class ServerConfig
   private Period maxIdleTime = new Period("PT5m");
 
   @JsonProperty
-  @NotNull
-  private Period defaultQueryTimeout = new Period("PT5M");
+  @Min(0)
+  private long defaultQueryTimeout = 300_000; // 5 minutes
 
   public int getNumThreads()
   {
@@ -51,7 +51,7 @@ public class ServerConfig
     return maxIdleTime;
   }
 
-  public Period getDefaultQueryTimeout()
+  public long getDefaultQueryTimeout()
   {
     return defaultQueryTimeout;
   }
