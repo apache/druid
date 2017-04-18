@@ -190,6 +190,7 @@ public class QueryResource implements QueryCountStatsProvider
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
+      query = query.withDefaultTimeout(config.getDefaultQueryTimeout());
 
       toolChest = warehouse.getToolChest(query);
 

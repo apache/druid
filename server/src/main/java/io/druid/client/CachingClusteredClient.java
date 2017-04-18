@@ -156,7 +156,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
     final int priority = QueryContexts.getPriority(query);
-    contextBuilder.put(QueryContexts.PRIORITY, priority);
+    contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
 
     if (populateCache) {
       // prevent down-stream nodes from caching results as well if we are populating the cache

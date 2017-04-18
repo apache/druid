@@ -201,7 +201,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, Integers.valueOf(500)))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -239,7 +239,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, Integers.valueOf(500)))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -265,7 +265,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, Integers.valueOf(500)))
         .build();
 
     try {

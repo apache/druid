@@ -1214,7 +1214,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.<String, Object>of(QueryContexts.TIMEOUT, Integer.valueOf(60000)))
+        .setContext(ImmutableMap.<String, Object>of(QueryContexts.TIMEOUT_KEY, Integer.valueOf(60000)))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -5422,7 +5422,7 @@ public class GroupByQueryRunnerTest
         .setDimensions(Lists.<DimensionSpec>newArrayList())
         .setAggregatorSpecs(ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("count")))
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setContext(ImmutableMap.<String, Object>of(QueryContexts.TIMEOUT, 10000))
+        .setContext(ImmutableMap.<String, Object>of(QueryContexts.TIMEOUT_KEY, 10000))
         .build();
 
     List<Row> expectedResults = Arrays.asList(

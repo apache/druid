@@ -19,21 +19,22 @@
 
 package io.druid.query;
 
-import com.google.common.base.Preconditions;
 import io.druid.java.util.common.ISE;
+import org.joda.time.Period;
 
 public class QueryContexts
 {
-  public static final String PRIORITY = "priority";
-  public static final String TIMEOUT = "timeout";
-  public static final String CHUNK_PERIOD = "chunkPeriod";
+  public static final String PRIORITY_KEY = "priority";
+  public static final String TIMEOUT_KEY = "timeout";
+  public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
+  public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
-  public static final long DEFAULT_TIMEOUT = 0;
+  public static final Period DEFAULT_TIMEOUT = new Period("PT5M");
   public static final long NO_TIMEOUT = 0;
 
   public static <T> boolean isBySegment(Query<T> query)
@@ -88,12 +89,12 @@ public class QueryContexts
 
   public static <T> int getPriority(Query<T> query, int defaultValue)
   {
-    return parseInt(query, PRIORITY, defaultValue);
+    return parseInt(query, PRIORITY_KEY, defaultValue);
   }
 
   public static <T> String getChunkPeriod(Query<T> query)
   {
-    return query.getContextValue(CHUNK_PERIOD, "P0D");
+    return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");
   }
 
   public static <T> boolean hasTimeout(Query<T> query)
@@ -103,14 +104,18 @@ public class QueryContexts
 
   public static <T> long getTimeout(Query<T> query)
   {
-    return getTimeout(query, DEFAULT_TIMEOUT);
+    return getTimeout(query, getDefaultTimeout(query));
   }
 
-  public static <T> long getTimeout(Query<T> query, long defaultValue)
+  public static <T> long getTimeout(Query<T> query, Period defaultTimeout)
   {
-    final long timeout = parseLong(query, TIMEOUT, defaultValue);
-    Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%d]", timeout);
-    return timeout;
+    final Period timeout = query.getContextValue(TIMEOUT_KEY, defaultTimeout);
+    return timeout.toStandardDuration().getMillis();
+  }
+
+  static <T> Period getDefaultTimeout(Query<T> query)
+  {
+    return query.getContextValue(DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT);
   }
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)

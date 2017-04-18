@@ -35,6 +35,7 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 
 import java.util.List;
 import java.util.Map;
@@ -99,4 +100,6 @@ public interface Query<T>
   String getId();
 
   Query<T> withDataSource(DataSource dataSource);
+
+  Query<T> withDefaultTimeout(Period defaultTimeout);
 }

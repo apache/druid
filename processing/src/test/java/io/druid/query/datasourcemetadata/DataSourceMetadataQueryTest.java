@@ -102,7 +102,7 @@ public class DataSourceMetadataQueryTest
         ), Query.class
     );
 
-    Assert.assertEquals(1, serdeQuery.getContextValue(QueryContexts.PRIORITY));
+    Assert.assertEquals(1, serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
     Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
     Assert.assertEquals("true", serdeQuery.getContextValue("populateCache"));
     Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));
