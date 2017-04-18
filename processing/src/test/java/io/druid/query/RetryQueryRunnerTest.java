@@ -376,7 +376,7 @@ public class RetryQueryRunnerTest
               // this is first retry
               Assert.assertTrue(
                   "Should retry with 2 missing segments",
-                  ((MultipleSpecificSegmentSpec)((SingleSourceBaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 2
+                  ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 2
               );
               // assume only left 1 missing at first retry
               ((Map) context.get(Result.MISSING_SEGMENTS_KEY)).put(
@@ -405,7 +405,7 @@ public class RetryQueryRunnerTest
               // this is second retry
               Assert.assertTrue(
                   "Should retry with 1 missing segments",
-                  ((MultipleSpecificSegmentSpec)((SingleSourceBaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 1
+                  ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 1
               );
               // assume no more missing at second retry
               context.put("count", 3);

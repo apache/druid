@@ -41,7 +41,7 @@ import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QuerySegmentWalker;
@@ -192,10 +192,10 @@ public class QueryResource implements QueryCountStatsProvider
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      if (query.getContextValue(QueryContextKeys.TIMEOUT) == null) {
+      if (query.getContextValue(QueryContexts.TIMEOUT) == null) {
         query = query.withOverriddenContext(
             ImmutableMap.of(
-                QueryContextKeys.TIMEOUT,
+                QueryContexts.TIMEOUT,
                 config.getMaxIdleTime().toStandardDuration().getMillis()
             )
         );

@@ -75,7 +75,7 @@ public class IntervalChunkingQueryRunnerTest
   @Test
   public void testChunking() {
     Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-01-11T00:00:00.000").context(ImmutableMap.<String, Object>of("chunkPeriod", "P1D")).build();
-    query = query.distributeBy(((TimeseriesQuery) query).getDataSourceWithSegmentSpec());
+    query = ((TimeseriesQuery)query).updateDistributionTarget();
 
     executors.execute(EasyMock.anyObject(Runnable.class));
     EasyMock.expectLastCall().times(10);
@@ -92,7 +92,7 @@ public class IntervalChunkingQueryRunnerTest
   @Test
   public void testChunkingOnMonths() {
     Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-02-11T00:00:00.000").context(ImmutableMap.<String, Object>of("chunkPeriod", "P1M")).build();
-    query = query.distributeBy(((TimeseriesQuery) query).getDataSourceWithSegmentSpec());
+    query = ((TimeseriesQuery)query).updateDistributionTarget();
 
     executors.execute(EasyMock.anyObject(Runnable.class));
     EasyMock.expectLastCall().times(2);

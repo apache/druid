@@ -152,7 +152,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQuery(query, futures);
 
             try {
-              final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
+              final Number timeout = query.getContextValue(QueryContexts.TIMEOUT, (Number) null);
               return new MergeIterable<>(
                   ordering.nullsFirst(),
                   timeout == null ?

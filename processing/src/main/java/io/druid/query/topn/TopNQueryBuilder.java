@@ -22,10 +22,10 @@ package io.druid.query.topn;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.DataSourceWithSegmentSpec;
-import io.druid.query.QueryContextKeys;
-import io.druid.query.SingleSourceBaseQuery;
+import io.druid.query.QueryContexts;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -217,9 +217,9 @@ public class TopNQueryBuilder
       context = new HashMap<>();
     }
     context.put(
-        QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
+        QueryContexts.DISTRIBUTION_TARGET_SOURCE,
         new DataSourceWithSegmentSpec(
-            SingleSourceBaseQuery.getLeafDataSource(dataSource),
+            BaseQuery.getLeafDataSource(dataSource),
             querySegmentSpec
         )
     );

@@ -25,12 +25,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.DataSourceWithSegmentSpec;
+import io.druid.query.MultiSourceBaseQuery;
 import io.druid.query.Query;
-import io.druid.query.QuerySegmentWalker;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -43,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class JoinQuery extends BaseQuery<Row>
+public class JoinQuery extends MultiSourceBaseQuery<Row>
 {
   private final JoinSpec joinSpec;
   private final Granularity granularity;
@@ -116,19 +114,11 @@ public class JoinQuery extends BaseQuery<Row>
   }
 
   @Override
-  public Sequence<Row> run(
-      QuerySegmentWalker walker, Map<String, Object> context
-  )
-  {
-    return run(getDistributionTarget().getQuerySegmentSpec().lookup(this, walker), context);
-  }
-
-  @Override
   public Duration getDuration(DataSource dataSource)
   {
     for (DataSourceWithSegmentSpec sourceWithSegmentSpec : getDataSources()) {
       if (sourceWithSegmentSpec.getDataSource().equals(dataSource)) {
-        return getTotalDuration(sourceWithSegmentSpec.getQuerySegmentSpec());
+        return Query.getTotalDuration(sourceWithSegmentSpec.getQuerySegmentSpec());
       }
     }
     return null;

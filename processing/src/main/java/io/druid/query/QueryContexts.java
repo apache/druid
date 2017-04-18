@@ -19,10 +19,43 @@
 
 package io.druid.query;
 
-public class QueryContextKeys
+import io.druid.java.util.common.ISE;
+
+public class QueryContexts
 {
+  public static final String QUERYID = "queryId";
   public static final String PRIORITY = "priority";
   public static final String TIMEOUT = "timeout";
   public static final String CHUNK_PERIOD = "chunkPeriod";
   public static final String DISTRIBUTION_TARGET_SOURCE = "distributionTargetSource";
+
+  static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
+  {
+    Object val = query.getContextValue(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Boolean.parseBoolean((String) val);
+    } else if (val instanceof Boolean) {
+      return (boolean) val;
+    } else {
+      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
+    }
+  }
+
+  static <T> int parseInt(Query<T> query, String key, int defaultValue)
+  {
+    Object val = query.getContextValue(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Integer.parseInt((String) val);
+    } else if (val instanceof Integer) {
+      return (int) val;
+    } else {
+      throw new ISE("Unknown type [%s]", val.getClass());
+    }
+  }
 }

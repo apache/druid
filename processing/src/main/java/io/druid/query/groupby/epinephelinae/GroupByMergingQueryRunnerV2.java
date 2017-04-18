@@ -48,7 +48,7 @@ import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
@@ -145,7 +145,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
-    final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
+    final Number queryTimeout = query.getContextValue(QueryContexts.TIMEOUT, null);
     final long timeoutAt = queryTimeout == null
                            ? JodaUtils.MAX_INSTANT
                            : System.currentTimeMillis() + queryTimeout.longValue();

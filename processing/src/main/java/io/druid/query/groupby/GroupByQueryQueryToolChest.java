@@ -375,7 +375,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return (query, responseContext) -> {
       final GroupByQuery groupByQuery = (GroupByQuery) query;
       return runner.run(
-          groupByQuery.distributeBy(groupByQuery.getDataSourceWithSegmentSpec()),
+          groupByQuery.updateDistributionTarget(),
           responseContext
       );
     };

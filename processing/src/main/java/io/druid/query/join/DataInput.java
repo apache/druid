@@ -22,8 +22,8 @@ package io.druid.query.join;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Iterables;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Query;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 
@@ -76,7 +76,7 @@ public class DataInput implements JoinInputSpec
   public Duration getDuration()
   {
     if (duration == null) {
-      this.duration = BaseQuery.getTotalDuration(querySegmentSpec);
+      this.duration = Query.getTotalDuration(querySegmentSpec);
     }
     return duration;
   }

@@ -252,7 +252,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return (query, responseContext) -> {
       final TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
       return runner.run(
-          timeseriesQuery.distributeBy(timeseriesQuery.getDataSourceWithSegmentSpec()),
+          timeseriesQuery.updateDistributionTarget(),
           responseContext
       );
     };

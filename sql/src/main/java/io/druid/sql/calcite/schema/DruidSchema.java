@@ -306,7 +306,7 @@ public class DruidSchema extends AbstractSchema
     );
 
     final Sequence<SegmentAnalysis> sequence = segmentMetadataQuery
-        .distributeBy(segmentMetadataQuery.getDataSourceWithSegmentSpec())
+        .updateDistributionTarget()
         .run(walker, Maps.<String, Object>newHashMap());
     final List<SegmentAnalysis> results = Sequences.toList(sequence, Lists.<SegmentAnalysis>newArrayList());
     if (results.isEmpty()) {

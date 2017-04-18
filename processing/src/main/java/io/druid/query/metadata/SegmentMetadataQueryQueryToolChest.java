@@ -267,7 +267,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     return (query, responseContext) -> {
       final SegmentMetadataQuery segmentMetadataQuery = (SegmentMetadataQuery) query;
       return runner.run(
-          segmentMetadataQuery.distributeBy(segmentMetadataQuery.getDataSourceWithSegmentSpec()),
+          segmentMetadataQuery.updateDistributionTarget(),
           responseContext
       );
     };

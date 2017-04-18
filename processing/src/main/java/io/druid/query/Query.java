@@ -22,6 +22,7 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
@@ -36,6 +37,7 @@ import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
+import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
@@ -75,7 +77,10 @@ public interface Query<T>
 
   Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
 
-  Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context);
+  default Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context)
+  {
+    return runner.run(this, context);
+  }
 
   Duration getDuration(DataSource dataSource);
 
@@ -83,35 +88,61 @@ public interface Query<T>
   {
     Duration totalDuration = new Duration(0);
     for (DataSourceWithSegmentSpec spec : getDataSources()) {
-      totalDuration = totalDuration.plus(BaseQuery.getTotalDuration(spec.getQuerySegmentSpec()));
+      totalDuration = totalDuration.plus(Query.getTotalDuration(spec.getQuerySegmentSpec()));
     }
     return totalDuration;
   }
 
   Map<String, Object> getContext();
 
-  <ContextType> ContextType getContextValue(String key);
+  default Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
+  {
+    Map<String, Object> overridden = Maps.newTreeMap();
+    final Map<String, Object> context = getContext();
+    overridden.putAll(context);
+    overridden.putAll(overrides);
 
-  <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
+    return overridden;
+  }
 
-  boolean getContextBoolean(String key, boolean defaultValue);
+  default <ContextType> ContextType getContextValue(String key)
+  {
+    return (ContextType) getContext().get(key);
+  }
+
+  default <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
+  {
+    ContextType retVal = getContextValue(key);
+    return retVal == null ? defaultValue : retVal;
+  }
+
+  default boolean getContextBoolean(String key, boolean defaultValue)
+  {
+    return QueryContexts.parseBoolean(this, key, defaultValue);
+  }
 
   boolean isDescending();
 
   Ordering<T> getResultOrdering();
 
-  String getId();
+  default String getId()
+  {
+    return (String) getContextValue(QueryContexts.QUERYID);
+  }
 
-  Query<T> withId(String id);
+  default Query<T> withId(String id)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.QUERYID, id));
+  }
 
   default DataSourceWithSegmentSpec getDistributionTarget()
   {
-    return getContextValue(QueryContextKeys.DISTRIBUTION_TARGET_SOURCE);
+    return getContextValue(QueryContexts.DISTRIBUTION_TARGET_SOURCE);
   }
 
   default Query<T> distributeBy(DataSourceWithSegmentSpec spec)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContextKeys.DISTRIBUTION_TARGET_SOURCE, spec));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.DISTRIBUTION_TARGET_SOURCE, spec));
   }
 
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
@@ -121,4 +152,15 @@ public interface Query<T>
   Query<T> withQuerySegmentSpec(String dataSource, QuerySegmentSpec spec);
 
   Query<T> replaceDataSourceWith(DataSource src, DataSource dst);
+
+  static Duration getTotalDuration(QuerySegmentSpec spec)
+  {
+    Duration totalDuration = new Duration(0);
+    for (Interval interval : spec.getIntervals()) {
+      if (interval != null) {
+        totalDuration = totalDuration.plus(interval.toDuration());
+      }
+    }
+    return totalDuration;
+  }
 }

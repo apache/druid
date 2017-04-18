@@ -91,7 +91,7 @@ public class DataSourceQueryQueryToolChest
     return (query, responseContext) -> {
       final DataSourceMetadataQuery dataSourceMetadataQuery = (DataSourceMetadataQuery) query;
       return runner.run(
-          dataSourceMetadataQuery.distributeBy(dataSourceMetadataQuery.getDataSourceWithSegmentSpec()),
+          dataSourceMetadataQuery.updateDistributionTarget(),
           responseContext
       );
     };

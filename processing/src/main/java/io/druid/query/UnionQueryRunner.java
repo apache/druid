@@ -41,8 +41,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    if (query instanceof SingleSourceBaseQuery) {
-      final SingleSourceBaseQuery singleSourceBaseQuery = (SingleSourceBaseQuery) query;
+    if (query instanceof BaseQuery) {
+      final BaseQuery singleSourceBaseQuery = (BaseQuery) query;
 
       final DataSource dataSource = singleSourceBaseQuery.getDataSource();
       if (dataSource instanceof UnionDataSource) {

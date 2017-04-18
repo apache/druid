@@ -97,7 +97,7 @@ public class TimewarpOperatorTest
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
                     ),
                     new Result<>(
-                        ((SingleSourceBaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getEnd(),
+                        ((BaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getEnd(),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
                     )
                 )
@@ -203,11 +203,11 @@ public class TimewarpOperatorTest
             return Sequences.simple(
                 ImmutableList.of(
                     new Result<>(
-                        ((SingleSourceBaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getStart(),
+                        ((BaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getStart(),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
                     ),
                     new Result<>(
-                        ((SingleSourceBaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getEnd(),
+                        ((BaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getEnd(),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
                     )
                 )
@@ -242,12 +242,13 @@ public class TimewarpOperatorTest
 
   private static <T> Query<T> setDistributionTarget(Query<T> query)
   {
+    final DataSourceWithSegmentSpec sourceWithSegmentSpec = Iterables.getOnlyElement(query.getDataSources());
     return query.withOverriddenContext(
         ImmutableMap.of(
-            QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
+            QueryContexts.DISTRIBUTION_TARGET_SOURCE,
             new DataSourceWithSegmentSpec(
-                Iterables.getOnlyElement(query.getDataSources()).getDataSource(),
-                Iterables.getOnlyElement(query.getDataSources()).getQuerySegmentSpec()
+                sourceWithSegmentSpec.getDataSource(),
+                sourceWithSegmentSpec.getQuerySegmentSpec()
             )
         )
     );

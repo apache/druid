@@ -426,7 +426,7 @@ public class ServerManagerTest
                                     .query("wow")
                                     .build();
     final QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(
-        query.distributeBy(query.getDataSourceWithSegmentSpec()),
+        query.updateDistributionTarget(),
         intervals
     );
     return serverManagerExec.submit(

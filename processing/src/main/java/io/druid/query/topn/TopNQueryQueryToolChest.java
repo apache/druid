@@ -511,7 +511,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return (query, responseContext) -> {
       final TopNQuery topNQuery = (TopNQuery) query;
       return runner.run(
-          topNQuery.distributeBy(topNQuery.getDataSourceWithSegmentSpec()),
+          topNQuery.updateDistributionTarget(),
           responseContext
       );
     };

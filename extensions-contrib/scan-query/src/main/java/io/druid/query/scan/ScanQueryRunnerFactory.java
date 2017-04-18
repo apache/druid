@@ -25,7 +25,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -71,7 +71,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           final Query<ScanResultValue> query, final Map<String, Object> responseContext
       )
       {
-        final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
+        final Number queryTimeout = query.getContextValue(QueryContexts.TIMEOUT, null);
         final long timeoutAt = (queryTimeout == null || queryTimeout.longValue() == 0L)
                                ? JodaUtils.MAX_INSTANT : System.currentTimeMillis() + queryTimeout.longValue();
         responseContext.put(CTX_TIMEOUT_AT, timeoutAt);

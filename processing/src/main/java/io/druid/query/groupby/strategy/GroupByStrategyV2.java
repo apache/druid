@@ -48,7 +48,7 @@ import io.druid.query.DruidProcessingConfig;
 import io.druid.query.InsufficientResourcesException;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
@@ -142,7 +142,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();
       } else {
-        final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
+        final Number timeout = query.getContextValue(QueryContexts.TIMEOUT, JodaUtils.MAX_INSTANT);
         final ResourceHolder<List<ByteBuffer>> mergeBufferHolders = mergeBufferPool.takeBatch(
             requiredMergeBufferNum, timeout.longValue()
         );

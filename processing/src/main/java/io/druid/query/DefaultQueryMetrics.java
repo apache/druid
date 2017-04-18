@@ -46,7 +46,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void query(QueryType query)
   {
-    dataSources(query);
+    dataSourcesAndIntervals(query);
     queryType(query);
     hasFilters(query);
     duration(query);
@@ -54,7 +54,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void dataSources(QueryType query)
+  public void dataSourcesAndIntervals(QueryType query)
   {
     final List<String> specs = query.getDataSources().stream()
                                     .map(DataSourceWithSegmentSpec::toString)

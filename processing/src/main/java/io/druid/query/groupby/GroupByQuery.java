@@ -38,13 +38,13 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Queries;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
-import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -73,7 +73,7 @@ import java.util.Set;
 
 /**
  */
-public class GroupByQuery extends SingleSourceBaseQuery<Row>
+public class GroupByQuery extends BaseQuery<Row>
 {
   public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
 
@@ -663,7 +663,7 @@ public class GroupByQuery extends SingleSourceBaseQuery<Row>
         context = new HashMap<>();
       }
       context.put(
-          QueryContextKeys.DISTRIBUTION_TARGET_SOURCE,
+          QueryContexts.DISTRIBUTION_TARGET_SOURCE,
           new DataSourceWithSegmentSpec(getLeafDataSource(dataSource), querySegmentSpec)
       );
       return this;

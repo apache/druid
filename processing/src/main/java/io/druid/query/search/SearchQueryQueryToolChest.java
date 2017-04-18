@@ -368,7 +368,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     return (query, responseContext) -> {
       final SearchQuery searchQuery = (SearchQuery) query;
       return runner.run(
-          searchQuery.distributeBy(searchQuery.getDataSourceWithSegmentSpec()),
+          searchQuery.updateDistributionTarget(),
           responseContext
       );
     };

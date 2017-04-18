@@ -42,8 +42,8 @@ public class UnionQueryRunnerTest
       public Sequence run(Query query, Map responseContext)
       {
         // verify that table datasource is passed to baseQueryRunner
-        Assert.assertTrue(((SingleSourceBaseQuery)query).getDataSource() instanceof TableDataSource);
-        String dsName = Iterables.getOnlyElement(((SingleSourceBaseQuery)query).getDataSource().getNames());
+        Assert.assertTrue(((BaseQuery)query).getDataSource() instanceof TableDataSource);
+        String dsName = Iterables.getOnlyElement(((BaseQuery)query).getDataSource().getNames());
         if (dsName.equals("ds1")) {
           responseContext.put("ds1", "ds1");
           return Sequences.simple(Arrays.asList(1, 2, 3));

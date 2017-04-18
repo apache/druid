@@ -148,7 +148,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Sets {@link Query#getDataSources()} of the given query as dimension.
    */
-  void dataSources(QueryType query);
+  void dataSourcesAndIntervals(QueryType query);
 
   /**
    * Sets {@link Query#getType()} of the given query as dimension.

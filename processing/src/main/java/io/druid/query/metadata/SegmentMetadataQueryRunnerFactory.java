@@ -35,7 +35,7 @@ import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -217,7 +217,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     );
                     try {
                       queryWatcher.registerQuery(query, future);
-                      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
+                      final Number timeout = query.getContextValue(QueryContexts.TIMEOUT, (Number) null);
                       return timeout == null ? future.get() : future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
                     }
                     catch (InterruptedException e) {

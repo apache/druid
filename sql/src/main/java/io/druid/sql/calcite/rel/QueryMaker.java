@@ -30,11 +30,12 @@ import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.Result;
-import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.select.EventHolder;
@@ -152,7 +153,7 @@ public class QueryMaker
   )
   {
     final SelectQuery running = (SelectQuery) baseQuery.distributeBy(
-        SingleSourceBaseQuery.getLeafDataSourceWithSegmentSpec(baseQuery)
+        new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(baseQuery), baseQuery.getQuerySegmentSpec())
     );
     Preconditions.checkState(queryBuilder.getGrouping() == null, "grouping must be null");
 
@@ -262,7 +263,7 @@ public class QueryMaker
   )
   {
     final TimeseriesQuery running = (TimeseriesQuery) query.distributeBy(
-        SingleSourceBaseQuery.getLeafDataSourceWithSegmentSpec(query)
+        new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(query), query.getQuerySegmentSpec())
     );
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
     final List<DimensionSpec> dimensions = queryBuilder.getGrouping().getDimensions();
@@ -301,7 +302,7 @@ public class QueryMaker
   )
   {
     final TopNQuery running = (TopNQuery) query.distributeBy(
-        SingleSourceBaseQuery.getLeafDataSourceWithSegmentSpec(query)
+        new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(query), query.getQuerySegmentSpec())
     );
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
 
@@ -342,7 +343,7 @@ public class QueryMaker
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
     final GroupByQuery running = (GroupByQuery) query.distributeBy(
-        SingleSourceBaseQuery.getLeafDataSourceWithSegmentSpec(query)
+        new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(query), query.getQuerySegmentSpec())
     );
 
     Hook.QUERY_PLAN.run(running);

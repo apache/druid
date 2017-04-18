@@ -442,7 +442,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     return (query, responseContext) -> {
       final SelectQuery selectQuery = (SelectQuery) query;
       return runner.run(
-          selectQuery.distributeBy(selectQuery.getDataSourceWithSegmentSpec()),
+          selectQuery.updateDistributionTarget(),
           responseContext
       );
     };
