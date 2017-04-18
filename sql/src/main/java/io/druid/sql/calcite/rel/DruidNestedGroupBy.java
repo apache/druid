@@ -23,6 +23,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryDataSource;
 import io.druid.query.filter.DimFilter;
+import io.druid.sql.calcite.expression.VirtualColumnRegistry;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -62,6 +63,7 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
 
   public static DruidNestedGroupBy from(
       final DruidRel sourceRel,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final DimFilter filter,
       final Grouping grouping,
       final RelDataType rowType,
@@ -74,7 +76,8 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
         sourceRel,
         DruidQueryBuilder.fullScan(
             sourceRel.getOutputRowSignature(),
-            sourceRel.getCluster().getTypeFactory()
+            sourceRel.getCluster().getTypeFactory(),
+            virtualColumnRegistry
         ).withFilter(filter).withGrouping(grouping, rowType, rowOrder)
     );
   }

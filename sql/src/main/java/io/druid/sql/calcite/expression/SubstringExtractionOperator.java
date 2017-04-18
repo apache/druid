@@ -22,13 +22,12 @@ package io.druid.sql.calcite.expression;
 import io.druid.query.extraction.SubstringDimExtractionFn;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-
-import java.util.List;
 
 public class SubstringExtractionOperator implements SqlExtractionOperator
 {
@@ -39,21 +38,23 @@ public class SubstringExtractionOperator implements SqlExtractionOperator
   }
 
   @Override
-  public RowExtraction convert(
+  public String convert(
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
-      final List<String> rowOrder,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
   )
   {
     final RexCall call = (RexCall) expression;
-    final RowExtraction arg = Expressions.toRowExtraction(
+    final String input = Expressions.toDruidColumn(
         operatorTable,
         plannerContext,
-        rowOrder,
+        rowSignature,
+        virtualColumnRegistry,
         call.getOperands().get(0)
     );
-    if (arg == null) {
+    if (input == null) {
       return null;
     }
     final int index = RexLiteral.intValue(call.getOperands().get(1)) - 1;
@@ -64,12 +65,9 @@ public class SubstringExtractionOperator implements SqlExtractionOperator
       length = null;
     }
 
-    return RowExtraction.of(
-        arg.getColumn(),
-        ExtractionFns.compose(
-            new SubstringDimExtractionFn(index, length),
-            arg.getExtractionFn()
-        )
-    );
+    return virtualColumnRegistry.register(
+        expression,
+        SimpleExtraction.of(input, new SubstringDimExtractionFn(index, length))
+    ).getOutputName();
   }
 }

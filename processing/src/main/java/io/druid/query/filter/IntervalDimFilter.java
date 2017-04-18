@@ -22,6 +22,7 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.RangeSet;
 import com.google.common.primitives.Longs;
 import io.druid.common.utils.JodaUtils;
@@ -120,6 +121,12 @@ public class IntervalDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return convertedFilter.getDimensionRangeSet(dimension);
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of(dimension);
   }
 
   @Override

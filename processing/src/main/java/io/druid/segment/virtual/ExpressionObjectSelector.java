@@ -66,11 +66,11 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
         supplier = supplierFromFloatSelector(columnSelectorFactory.makeFloatColumnSelector(columnName));
       } else if (nativeType == ValueType.LONG) {
         supplier = supplierFromLongSelector(columnSelectorFactory.makeLongColumnSelector(columnName));
-      } else if (nativeType == null) {
-        // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
+      } else if (nativeType == null || nativeType == ValueType.STRING) {
+        // Try making an Object selector and see if that gives us anything useful.
         supplier = supplierFromObjectSelector(columnSelectorFactory.makeObjectColumnSelector(columnName));
       } else {
-        // Unhandleable ValueType (possibly STRING or COMPLEX).
+        // Unhandleable ValueType (COMPLEX).
         supplier = null;
       }
 

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.BoundType;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -39,6 +40,7 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Objects;
 
 public class BoundDimFilter implements DimFilter
@@ -235,6 +237,12 @@ public class BoundDimFilter implements DimFilter
     }
     retSet.add(range);
     return retSet;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of(dimension);
   }
 
   @Override

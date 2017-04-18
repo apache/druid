@@ -31,7 +31,8 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.Expressions;
-import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.expression.SimpleExtraction;
+import io.druid.sql.calcite.expression.VirtualColumnRegistry;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -64,6 +65,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
   public Aggregation toDruidAggregation(
       final String name,
       final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<Aggregation> existingAggregations,
@@ -77,10 +79,11 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         project,
         Iterables.getOnlyElement(aggregateCall.getArgList())
     );
-    final RowExtraction rex = Expressions.toRowExtraction(
+    final SimpleExtraction rex = Expressions.toSimpleExtraction(
         operatorTable,
         plannerContext,
-        rowSignature.getRowOrder(),
+        rowSignature,
+        virtualColumnRegistry,
         rexNode
     );
     if (rex == null) {
@@ -98,11 +101,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, name);
       }
 
-      final DimensionSpec dimensionSpec = rex.toDimensionSpec(rowSignature, null, ValueType.STRING);
-      if (dimensionSpec == null) {
-        return null;
-      }
-
+      final DimensionSpec dimensionSpec = rex.toDimensionSpec(null, ValueType.STRING);
       aggregatorFactory = new CardinalityAggregatorFactory(name, ImmutableList.of(dimensionSpec), false);
     }
 

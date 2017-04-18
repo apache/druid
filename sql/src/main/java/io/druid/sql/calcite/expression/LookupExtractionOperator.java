@@ -24,6 +24,7 @@ import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -34,8 +35,6 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-
-import java.util.List;
 
 public class LookupExtractionOperator implements SqlExtractionOperator
 {
@@ -57,21 +56,23 @@ public class LookupExtractionOperator implements SqlExtractionOperator
   }
 
   @Override
-  public RowExtraction convert(
+  public String convert(
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
-      final List<String> rowOrder,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
   )
   {
     final RexCall call = (RexCall) expression;
-    final RowExtraction rex = Expressions.toRowExtraction(
+    final String input = Expressions.toDruidColumn(
         operatorTable,
         plannerContext,
-        rowOrder,
+        rowSignature,
+        virtualColumnRegistry,
         call.getOperands().get(0)
     );
-    if (rex == null) {
+    if (input == null) {
       return null;
     }
 
@@ -85,10 +86,10 @@ public class LookupExtractionOperator implements SqlExtractionOperator
         true
     );
 
-    return RowExtraction.of(
-        rex.getColumn(),
-        ExtractionFns.compose(extractionFn, rex.getExtractionFn())
-    );
+    return virtualColumnRegistry.register(
+        expression,
+        SimpleExtraction.of(input, extractionFn)
+    ).getOutputName();
   }
 
   private static class LookupSqlFunction extends SqlFunction

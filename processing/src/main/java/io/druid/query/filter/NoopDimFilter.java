@@ -19,9 +19,11 @@
 
 package io.druid.query.filter;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.RangeSet;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  */
@@ -49,5 +51,11 @@ public class NoopDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of();
   }
 }

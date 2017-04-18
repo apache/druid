@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.aggregation;
 
 import io.druid.query.filter.DimFilter;
+import io.druid.sql.calcite.expression.VirtualColumnRegistry;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
@@ -45,15 +46,16 @@ public interface SqlAggregator
   /**
    * Returns Druid Aggregation corresponding to a SQL {@link AggregateCall}.
    *
-   * @param name                 desired output name of the aggregation
-   * @param rowSignature         signature of the rows being aggregated
-   * @param operatorTable        Operator table that can be used to convert sub-expressions
-   * @param plannerContext       SQL planner context
-   * @param existingAggregations existing aggregations for this query; useful for re-using aggregations. May be safely
-   *                             ignored if you do not want to re-use existing aggregations.
-   * @param project              SQL projection to apply before the aggregate call, may be null
-   * @param aggregateCall        SQL aggregate call
-   * @param filter               filter that should be applied to the aggregation, may be null
+   * @param name                  desired output name of the aggregation
+   * @param virtualColumnRegistry virtual columns registry for this conversion
+   * @param rowSignature          signature of the rows being aggregated
+   * @param operatorTable         Operator table that can be used to convert sub-expressions
+   * @param plannerContext        SQL planner context
+   * @param existingAggregations  existing aggregations for this query; useful for re-using aggregations. May be safely
+   *                              ignored if you do not want to re-use existing aggregations.
+   * @param project               SQL projection to apply before the aggregate call, may be null
+   * @param aggregateCall         SQL aggregate call
+   * @param filter                filter that should be applied to the aggregation, may be null
    *
    * @return aggregation, or null if the call cannot be translated
    */
@@ -61,6 +63,7 @@ public interface SqlAggregator
   Aggregation toDruidAggregation(
       final String name,
       final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<Aggregation> existingAggregations,

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
 import io.druid.java.util.common.Cacheable;
 
+import java.util.List;
+
 /**
  */
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property="type")
@@ -73,4 +75,11 @@ public interface DimFilter extends Cacheable
    * determine for this DimFilter.
    */
   RangeSet<String> getDimensionRangeSet(String dimension);
+
+  /**
+   * Returns a list of columns that this filter will access.
+   *
+   * @return column names
+   */
+  List<String> requiredColumns();
 }

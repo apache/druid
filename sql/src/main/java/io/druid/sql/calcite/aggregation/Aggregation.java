@@ -31,7 +31,9 @@ import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class Aggregation
@@ -39,16 +41,19 @@ public class Aggregation
   private final List<AggregatorFactory> aggregatorFactories;
   private final PostAggregator postAggregator;
   private final PostAggregatorFactory finalizingPostAggregatorFactory;
+  private final List<String> requiredColumns;
 
   private Aggregation(
       final List<AggregatorFactory> aggregatorFactories,
       final PostAggregator postAggregator,
-      final PostAggregatorFactory finalizingPostAggregatorFactory
+      final PostAggregatorFactory finalizingPostAggregatorFactory,
+      final List<String> requiredColumns
   )
   {
     this.aggregatorFactories = Preconditions.checkNotNull(aggregatorFactories, "aggregatorFactories");
     this.postAggregator = postAggregator;
     this.finalizingPostAggregatorFactory = finalizingPostAggregatorFactory;
+    this.requiredColumns = requiredColumns == null ? ImmutableList.of() : ImmutableList.copyOf(requiredColumns);
 
     if (postAggregator == null) {
       Preconditions.checkArgument(aggregatorFactories.size() == 1, "aggregatorFactories.size == 1");
@@ -66,12 +71,12 @@ public class Aggregation
 
   public static Aggregation create(final AggregatorFactory aggregatorFactory)
   {
-    return new Aggregation(ImmutableList.of(aggregatorFactory), null, null);
+    return new Aggregation(ImmutableList.of(aggregatorFactory), null, null, aggregatorFactory.requiredFields());
   }
 
   public static Aggregation create(final PostAggregator postAggregator)
   {
-    return new Aggregation(ImmutableList.<AggregatorFactory>of(), postAggregator, null);
+    return new Aggregation(ImmutableList.<AggregatorFactory>of(), postAggregator, null, null);
   }
 
   public static Aggregation create(
@@ -79,7 +84,11 @@ public class Aggregation
       final PostAggregator postAggregator
   )
   {
-    return new Aggregation(aggregatorFactories, postAggregator, null);
+    final Set<String> requiredColumns = new HashSet<>();
+    for (AggregatorFactory factory : aggregatorFactories) {
+      requiredColumns.addAll(factory.requiredFields());
+    }
+    return new Aggregation(aggregatorFactories, postAggregator, null, ImmutableList.copyOf(requiredColumns));
   }
 
   public static Aggregation createFinalizable(
@@ -88,10 +97,15 @@ public class Aggregation
       final PostAggregatorFactory finalizingPostAggregatorFactory
   )
   {
+    final Set<String> requiredColumns = new HashSet<>();
+    for (AggregatorFactory factory : aggregatorFactories) {
+      requiredColumns.addAll(factory.requiredFields());
+    }
     return new Aggregation(
         aggregatorFactories,
         postAggregator,
-        Preconditions.checkNotNull(finalizingPostAggregatorFactory, "finalizingPostAggregatorFactory")
+        Preconditions.checkNotNull(finalizingPostAggregatorFactory, "finalizingPostAggregatorFactory"),
+        ImmutableList.copyOf(requiredColumns)
     );
   }
 
@@ -117,6 +131,11 @@ public class Aggregation
            : Iterables.getOnlyElement(aggregatorFactories).getName();
   }
 
+  public List<String> getRequiredColumns()
+  {
+    return requiredColumns;
+  }
+
   public Aggregation filter(final DimFilter filter)
   {
     if (filter == null) {
@@ -138,6 +157,10 @@ public class Aggregation
     }
 
     final List<AggregatorFactory> newAggregators = Lists.newArrayList();
+    final Set<String> newRequiredColumns = new HashSet<>(requiredColumns);
+
+    // Add required columns from the filter (FilteredAggregatorFactory doesn't include them in getRequiredColumns).
+    newRequiredColumns.addAll(filter.requiredColumns());
 
     for (AggregatorFactory agg : aggregatorFactories) {
       newAggregators.add(new FilteredAggregatorFactory(agg, filter));
@@ -146,12 +169,13 @@ public class Aggregation
     return new Aggregation(
         newAggregators,
         postAggregator,
-        finalizingPostAggregatorFactory
+        finalizingPostAggregatorFactory,
+        ImmutableList.copyOf(newRequiredColumns)
     );
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -159,29 +183,16 @@ public class Aggregation
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    Aggregation that = (Aggregation) o;
-
-    if (aggregatorFactories != null
-        ? !aggregatorFactories.equals(that.aggregatorFactories)
-        : that.aggregatorFactories != null) {
-      return false;
-    }
-    if (postAggregator != null ? !postAggregator.equals(that.postAggregator) : that.postAggregator != null) {
-      return false;
-    }
-    return finalizingPostAggregatorFactory != null
-           ? finalizingPostAggregatorFactory.equals(that.finalizingPostAggregatorFactory)
-           : that.finalizingPostAggregatorFactory == null;
+    final Aggregation that = (Aggregation) o;
+    return Objects.equals(aggregatorFactories, that.aggregatorFactories) &&
+           Objects.equals(postAggregator, that.postAggregator) &&
+           Objects.equals(finalizingPostAggregatorFactory, that.finalizingPostAggregatorFactory);
   }
 
   @Override
   public int hashCode()
   {
-    int result = aggregatorFactories != null ? aggregatorFactories.hashCode() : 0;
-    result = 31 * result + (postAggregator != null ? postAggregator.hashCode() : 0);
-    result = 31 * result + (finalizingPostAggregatorFactory != null ? finalizingPostAggregatorFactory.hashCode() : 0);
-    return result;
+    return Objects.hash(aggregatorFactories, postAggregator, finalizingPostAggregatorFactory);
   }
 
   @Override

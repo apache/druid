@@ -21,6 +21,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.RangeSet;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
@@ -28,6 +29,7 @@ import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.segment.filter.SearchQueryFilter;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  */
@@ -102,6 +104,12 @@ public class SearchQueryDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of(dimension);
   }
 
   @Override

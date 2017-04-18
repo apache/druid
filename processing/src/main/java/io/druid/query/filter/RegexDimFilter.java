@@ -22,12 +22,14 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.RangeSet;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.RegexFilter;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -106,6 +108,12 @@ public class RegexDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of(dimension);
   }
 
   @Override

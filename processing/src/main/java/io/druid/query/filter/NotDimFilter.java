@@ -107,6 +107,12 @@ public class NotDimFilter implements DimFilter
   }
 
   @Override
+  public List<String> requiredColumns()
+  {
+    return field.requiredColumns();
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

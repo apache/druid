@@ -21,12 +21,14 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.RangeSet;
 import io.druid.collections.spatial.search.Bound;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.filter.SpatialFilter;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  */
@@ -90,6 +92,12 @@ public class SpatialDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of(dimension);
   }
 
   @Override

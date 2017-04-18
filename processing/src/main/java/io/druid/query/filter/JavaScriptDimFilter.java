@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.RangeSet;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -35,6 +36,7 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class JavaScriptDimFilter implements DimFilter
 {
@@ -122,6 +124,12 @@ public class JavaScriptDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of(dimension);
   }
 
   @Override

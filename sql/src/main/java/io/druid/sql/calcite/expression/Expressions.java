@@ -45,6 +45,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.Column;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import io.druid.sql.calcite.aggregation.PostAggregatorFactory;
 import io.druid.sql.calcite.filtration.BoundRefKey;
 import io.druid.sql.calcite.filtration.Bounds;
@@ -135,57 +136,121 @@ public class Expressions
   }
 
   /**
-   * Translate a Calcite row-expression to a Druid row extraction. Note that this signature will probably need to
-   * change once we support extractions from multiple columns.
-   *
-   * @param plannerContext SQL planner context
-   * @param rowOrder       order of fields in the Druid rows to be extracted from
-   * @param expression     expression meant to be applied on top of the rows
-   *
-   * @return RowExtraction or null if not possible
+   * Like {@link #toDruidColumn(DruidOperatorTable, PlannerContext, RowSignature, VirtualColumnRegistry, RexNode)}
+   * but returns a simple extraction instead of a column name. This is useful if you can deal with column + extractionFn
+   * pairs, and want to get one of those instead of a virtual column when possible.
    */
-  public static RowExtraction toRowExtraction(
+  public static SimpleExtraction toSimpleExtraction(
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
-      final List<String> rowOrder,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
+      final RexNode expression
+  )
+  {
+    final String column = toDruidColumn(operatorTable, plannerContext, rowSignature, virtualColumnRegistry, expression);
+    if (column == null) {
+      return null;
+    } else {
+      return virtualColumnRegistry.toSimpleExtraction(column);
+    }
+  }
+
+  /**
+   * Translate a Calcite {@code RexNode} to a Druid column. The returned column may be a real column (from
+   * rowSignature) or may be a virtual column (registered in virtualColumnRegistry).
+   *
+   * @param operatorTable         Operator table that can be used to convert sub-expressions
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          signature of the rows to be extracted from
+   * @param virtualColumnRegistry virtual columns registry for this conversion
+   * @param expression            expression meant to be applied on top of the rows
+   *
+   * @return column name, or null if not possible
+   */
+  public static String toDruidColumn(
+      final DruidOperatorTable operatorTable,
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
   )
   {
     if (expression.getKind() == SqlKind.INPUT_REF) {
       final RexInputRef ref = (RexInputRef) expression;
-      final String columnName = rowOrder.get(ref.getIndex());
+      final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
       if (columnName == null) {
         throw new ISE("WTF?! Expression referred to nonexistent index[%d]", ref.getIndex());
       }
 
-      return RowExtraction.of(columnName, null);
+      return columnName;
     } else if (expression.getKind() == SqlKind.CAST) {
       final RexNode operand = ((RexCall) expression).getOperands().get(0);
       if (expression.getType().getSqlTypeName() == SqlTypeName.DATE
           && operand.getType().getSqlTypeName() == SqlTypeName.TIMESTAMP) {
         // Handling casting TIMESTAMP to DATE by flooring to DAY.
-        return FloorExtractionOperator.applyTimestampFloor(
-            toRowExtraction(operatorTable, plannerContext, rowOrder, operand),
-            TimeUnits.toQueryGranularity(TimeUnitRange.DAY, plannerContext.getTimeZone())
-        );
+        final String input = toDruidColumn(operatorTable, plannerContext, rowSignature, virtualColumnRegistry, operand);
+        if (input == null) {
+          return null;
+        }
+        return virtualColumnRegistry.register(
+            expression,
+            SimpleExtraction.of(
+                input,
+                ExtractionFns.fromQueryGranularity(
+                    TimeUnits.toQueryGranularity(TimeUnitRange.DAY, plannerContext.getTimeZone())
+                )
+            )
+        ).getOutputName();
       } else {
         // Ignore other casts.
         // TODO(gianm): Probably not a good idea to ignore other CASTs like this.
-        return toRowExtraction(operatorTable, plannerContext, rowOrder, ((RexCall) expression).getOperands().get(0));
+        return toDruidColumn(
+            operatorTable,
+            plannerContext,
+            rowSignature,
+            virtualColumnRegistry,
+            ((RexCall) expression).getOperands().get(0)
+        );
       }
     } else {
       // Try conversion using a SqlExtractionOperator.
-      final RowExtraction retVal;
+      // TODO: Should have toMathExpression in here
+      final String retVal;
 
-      if (expression instanceof RexCall) {
+      final String mathExpression = toMathExpression(
+          operatorTable,
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          expression,
+          true
+      );
+
+      if (mathExpression != null) {
+        // This was a math expression, use an ExpressionVirtualColumn.
+        retVal = virtualColumnRegistry.register(
+            expression,
+            columnName -> new ExpressionVirtualColumn(columnName, mathExpression)
+        ).getOutputName();
+      } else if (expression instanceof RexCall) {
+        // This is a function, try to find a translator for it.
         final SqlExtractionOperator extractionOperator = operatorTable.lookupExtractionOperator(
             expression.getKind(),
             ((RexCall) expression).getOperator().getName()
         );
 
-        retVal = extractionOperator != null
-                 ? extractionOperator.convert(operatorTable, plannerContext, rowOrder, expression)
-                 : null;
+        if (extractionOperator != null) {
+          retVal = extractionOperator.convert(
+              operatorTable,
+              plannerContext,
+              rowSignature,
+              virtualColumnRegistry,
+              expression
+          );
+        } else {
+          retVal = null;
+        }
       } else {
         retVal = null;
       }
@@ -195,11 +260,10 @@ public class Expressions
   }
 
   /**
-   * Translate a Calcite row-expression to a Druid PostAggregator. One day, when possible, this could be folded
-   * into {@link #toRowExtraction(DruidOperatorTable, PlannerContext, List, RexNode)} .
+   * Translate a Calcite row-expression to a Druid PostAggregator.
    *
    * @param name                              name of the PostAggregator
-   * @param rowOrder                          order of fields in the Druid rows to be extracted from
+   * @param rowSignature                      signature of the rows to be extracted from
    * @param finalizingPostAggregatorFactories post-aggregators that should be used for specific entries in rowOrder.
    *                                          May be empty, and individual values may be null. Missing or null values
    *                                          will lead to creation of {@link FieldAccessPostAggregator}.
@@ -209,12 +273,13 @@ public class Expressions
    */
   public static PostAggregator toPostAggregator(
       final String name,
-      final List<String> rowOrder,
+      final RowSignature rowSignature,
       final List<PostAggregatorFactory> finalizingPostAggregatorFactories,
       final RexNode expression
   )
   {
     final PostAggregator retVal;
+    final List<String> rowOrder = rowSignature.getRowOrder();
 
     if (expression.getKind() == SqlKind.INPUT_REF) {
       final RexInputRef ref = (RexInputRef) expression;
@@ -224,10 +289,10 @@ public class Expressions
                : new FieldAccessPostAggregator(name, rowOrder.get(ref.getIndex()));
     } else if (expression.getKind() == SqlKind.CAST) {
       // Ignore CAST when translating to PostAggregators and hope for the best. They are really loosey-goosey with
-      // types internally and there isn't much we can do to respect
+      // types internally and there isn't much we can do to respect the user's wishes.
       // TODO(gianm): Probably not a good idea to ignore CAST like this.
       final RexNode operand = ((RexCall) expression).getOperands().get(0);
-      retVal = toPostAggregator(name, rowOrder, finalizingPostAggregatorFactories, operand);
+      retVal = toPostAggregator(name, rowSignature, finalizingPostAggregatorFactories, operand);
     } else if (expression.getKind() == SqlKind.LITERAL
                && SqlTypeName.NUMERIC_TYPES.contains(expression.getType().getSqlTypeName())) {
       retVal = new ConstantPostAggregator(name, (Number) RexLiteral.value(expression));
@@ -245,7 +310,7 @@ public class Expressions
       for (RexNode operand : ((RexCall) expression).getOperands()) {
         final PostAggregator translatedOperand = toPostAggregator(
             null,
-            rowOrder,
+            rowSignature,
             finalizingPostAggregatorFactories,
             operand
         );
@@ -257,7 +322,7 @@ public class Expressions
       retVal = new ArithmeticPostAggregator(name, fnName, operands);
     } else {
       // Try converting to a math expression.
-      final String mathExpression = Expressions.toMathExpression(rowOrder, expression);
+      final String mathExpression = Expressions.toMathExpression(null, null, rowSignature, null, expression, true);
       if (mathExpression == null) {
         retVal = null;
       } else {
@@ -273,17 +338,27 @@ public class Expressions
   }
 
   /**
-   * Translate a row-expression to a Druid math expression. One day, when possible, this could be folded into
-   * {@link #toRowExtraction(DruidOperatorTable, PlannerContext, List, RexNode)}.
+   * Translate a Calcite {@code RexNode} to a Druid math expression, possibly referring to virtual columns
+   * registered with the virtual column registry.
    *
-   * @param rowOrder   order of fields in the Druid rows to be extracted from
-   * @param expression expression meant to be applied on top of the rows
+   * @param operatorTable         Operator table that can be used to convert sub-expressions
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          signature of the rows to be extracted from
+   * @param virtualColumnRegistry virtual columns registry for this conversion, may be null if virtual columns
+   *                              are forbidden
+   * @param expression            expression meant to be applied on top of the rows
+   * @param outermost             true if this is an outermost call to toMathExpression. This prevents calling
+   *                              toDruidColumn and causing an infinite loop.
    *
    * @return expression referring to fields in rowOrder, or null if not possible
    */
-  public static String toMathExpression(
-      final List<String> rowOrder,
-      final RexNode expression
+  private static String toMathExpression(
+      final DruidOperatorTable operatorTable,
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
+      final RexNode expression,
+      final boolean outermost
   )
   {
     final SqlKind kind = expression.getKind();
@@ -292,7 +367,7 @@ public class Expressions
     if (kind == SqlKind.INPUT_REF) {
       // Translate field references.
       final RexInputRef ref = (RexInputRef) expression;
-      final String columnName = rowOrder.get(ref.getIndex());
+      final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
       if (columnName == null) {
         throw new ISE("WTF?! Expression referred to nonexistent index[%d]", ref.getIndex());
       }
@@ -301,7 +376,14 @@ public class Expressions
     } else if (kind == SqlKind.CAST || kind == SqlKind.REINTERPRET) {
       // Translate casts.
       final RexNode operand = ((RexCall) expression).getOperands().get(0);
-      final String operandExpression = toMathExpression(rowOrder, operand);
+      final String operandExpression = toMathExpression(
+          operatorTable,
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          operand,
+          false
+      );
       if (operandExpression == null) {
         return null;
       }
@@ -316,8 +398,22 @@ public class Expressions
     } else if (kind == SqlKind.TIMES || kind == SqlKind.DIVIDE || kind == SqlKind.PLUS || kind == SqlKind.MINUS) {
       // Translate simple arithmetic.
       final List<RexNode> operands = ((RexCall) expression).getOperands();
-      final String lhsExpression = toMathExpression(rowOrder, operands.get(0));
-      final String rhsExpression = toMathExpression(rowOrder, operands.get(1));
+      final String lhsExpression = toMathExpression(
+          operatorTable,
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          operands.get(0),
+          false
+      );
+      final String rhsExpression = toMathExpression(
+          operatorTable,
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          operands.get(1),
+          false
+      );
       if (lhsExpression == null || rhsExpression == null) {
         return null;
       }
@@ -330,13 +426,20 @@ public class Expressions
       ).get(kind);
 
       return String.format("(%s %s %s)", lhsExpression, op, rhsExpression);
-    } else if (kind == SqlKind.OTHER_FUNCTION) {
+    } else if (isMathFunctionCall(expression)) {
       final String calciteFunction = ((RexCall) expression).getOperator().getName();
       final String druidFunction = MATH_FUNCTIONS.get(calciteFunction);
       final List<String> functionArgs = Lists.newArrayList();
 
       for (final RexNode operand : ((RexCall) expression).getOperands()) {
-        final String operandExpression = toMathExpression(rowOrder, operand);
+        final String operandExpression = toMathExpression(
+            operatorTable,
+            plannerContext,
+            rowSignature,
+            virtualColumnRegistry,
+            operand,
+            false
+        );
         if (operandExpression == null) {
           return null;
         }
@@ -347,13 +450,10 @@ public class Expressions
         // Special handling for MOD, which is a function in Calcite but a binary operator in Druid.
         Preconditions.checkState(functionArgs.size() == 2, "WTF?! Expected 2 args for MOD.");
         return String.format("(%s %s %s)", functionArgs.get(0), "%", functionArgs.get(1));
+      } else {
+        Preconditions.checkNotNull(druidFunction, "WTF?! druidFunction should be non-null here!!");
+        return String.format("%s(%s)", druidFunction, Joiner.on(", ").join(functionArgs));
       }
-
-      if (druidFunction == null) {
-        return null;
-      }
-
-      return String.format("%s(%s)", druidFunction, Joiner.on(", ").join(functionArgs));
     } else if (kind == SqlKind.LITERAL) {
       // Translate literal.
       if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
@@ -366,9 +466,37 @@ public class Expressions
         // Can't translate other literals.
         return null;
       }
+    } else if (!outermost && virtualColumnRegistry != null) {
+      // Fallback, maybe toDruidColumn can handle this.
+      final String druidColumn = toDruidColumn(
+          operatorTable,
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          expression
+      );
+      if (druidColumn == null) {
+        return null;
+      } else {
+        return String.format("\"%s\"", escape(druidColumn));
+      }
     } else {
-      // Can't translate other kinds of expressions.
+      // Can't translate.
       return null;
+    }
+  }
+
+  private static boolean isMathFunctionCall(final RexNode rexNode)
+  {
+    final SqlKind kind = rexNode.getKind();
+
+    if (kind == SqlKind.FLOOR || kind == SqlKind.CEIL) {
+      return ((RexCall) rexNode).getOperands().size() == 1;
+    } else if (kind == SqlKind.OTHER_FUNCTION) {
+      return MATH_FUNCTIONS.containsKey(((RexCall) rexNode).getOperator().getName())
+             || "MOD".equals(((RexCall) rexNode).getOperator().getName());
+    } else {
+      return false;
     }
   }
 
@@ -381,7 +509,7 @@ public class Expressions
    *
    * @return milliseconds time
    */
-  public static long toMillisLiteral(final RexNode literal, final DateTimeZone timeZone)
+  private static long toMillisLiteral(final RexNode literal, final DateTimeZone timeZone)
   {
     final SqlTypeName typeName = literal.getType().getSqlTypeName();
     if (literal.getKind() != SqlKind.LITERAL || (typeName != SqlTypeName.TIMESTAMP && typeName != SqlTypeName.DATE)) {
@@ -395,14 +523,16 @@ public class Expressions
   /**
    * Translates "condition" to a Druid filter, or returns null if we cannot translate the condition.
    *
-   * @param plannerContext planner context
-   * @param rowSignature   row signature of the dataSource to be filtered
-   * @param expression     Calcite row expression
+   * @param plannerContext        planner context
+   * @param rowSignature          row signature of the dataSource to be filtered
+   * @param virtualColumnRegistry virtual columns registry for this conversion
+   * @param expression            Calcite row expression
    */
   public static DimFilter toFilter(
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
   )
   {
@@ -411,7 +541,13 @@ public class Expressions
         || expression.getKind() == SqlKind.NOT) {
       final List<DimFilter> filters = Lists.newArrayList();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
-        final DimFilter nextFilter = toFilter(operatorTable, plannerContext, rowSignature, rexNode);
+        final DimFilter nextFilter = toFilter(
+            operatorTable,
+            plannerContext,
+            rowSignature,
+            virtualColumnRegistry,
+            rexNode
+        );
         if (nextFilter == null) {
           return null;
         }
@@ -428,7 +564,7 @@ public class Expressions
       }
     } else {
       // Handle filter conditions on everything else.
-      return toLeafFilter(operatorTable, plannerContext, rowSignature, expression);
+      return toLeafFilter(operatorTable, plannerContext, rowSignature, virtualColumnRegistry, expression);
     }
   }
 
@@ -436,14 +572,16 @@ public class Expressions
    * Translates "condition" to a Druid filter, assuming it does not contain any boolean expressions. Returns null
    * if we cannot translate the condition.
    *
-   * @param plannerContext planner context
-   * @param rowSignature   row signature of the dataSource to be filtered
-   * @param expression     Calcite row expression
+   * @param plannerContext        planner context
+   * @param rowSignature          row signature of the dataSource to be filtered
+   * @param virtualColumnRegistry virtual columns registry for this conversion
+   * @param expression            Calcite row expression
    */
   private static DimFilter toLeafFilter(
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
   )
   {
@@ -457,20 +595,21 @@ public class Expressions
 
     if (kind == SqlKind.LIKE) {
       final List<RexNode> operands = ((RexCall) expression).getOperands();
-      final RowExtraction rex = toRowExtraction(
+      final SimpleExtraction simpleExtraction = toSimpleExtraction(
           operatorTable,
           plannerContext,
-          rowSignature.getRowOrder(),
+          rowSignature,
+          virtualColumnRegistry,
           operands.get(0)
       );
-      if (rex == null || !rex.isFilterable(rowSignature)) {
+      if (simpleExtraction == null) {
         return null;
       }
       return new LikeDimFilter(
-          rex.getColumn(),
+          simpleExtraction.getColumn(),
           RexLiteral.stringValue(operands.get(1)),
           operands.size() > 2 ? RexLiteral.stringValue(operands.get(2)) : null,
-          rex.getExtractionFn()
+          simpleExtraction.getExtractionFn()
       );
     } else if (kind == SqlKind.EQUALS
                || kind == SqlKind.NOT_EQUALS
@@ -497,14 +636,20 @@ public class Expressions
         return null;
       }
 
-      // lhs must be translatable to a RowExtraction to be filterable
-      final RowExtraction rex = toRowExtraction(operatorTable, plannerContext, rowSignature.getRowOrder(), lhs);
-      if (rex == null || !rex.isFilterable(rowSignature)) {
+      // lhs must be translatable to a SimpleExtraction to be filterable
+      final SimpleExtraction simpleExtraction = toSimpleExtraction(
+          operatorTable,
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          lhs
+      );
+      if (simpleExtraction == null) {
         return null;
       }
 
-      final String column = rex.getColumn();
-      final ExtractionFn extractionFn = rex.getExtractionFn();
+      final String column = simpleExtraction.getColumn();
+      final ExtractionFn extractionFn = simpleExtraction.getExtractionFn();
 
       if (column.equals(Column.TIME_COLUMN_NAME) && extractionFn instanceof TimeFormatExtractionFn) {
         // Check if we can strip the extractionFn and convert the filter to a direct filter on __time.
@@ -598,7 +743,7 @@ public class Expressions
     final StringBuilder escaped = new StringBuilder();
     for (int i = 0; i < s.length(); i++) {
       final char c = s.charAt(i);
-      if (Character.isLetterOrDigit(c) || Character.isWhitespace(c)) {
+      if (Character.isLetterOrDigit(c) || c == ' ') {
         escaped.append(c);
       } else {
         escaped.append("\\u").append(BaseEncoding.base16().encode(Chars.toByteArray(c)));

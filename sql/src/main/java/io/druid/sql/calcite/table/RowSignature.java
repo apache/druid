@@ -31,7 +31,7 @@ import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
-import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.planner.Calcites;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -95,15 +95,15 @@ public class RowSignature
    * Return the "natural" {@link StringComparator} for an extraction from this row signature. This will be a
    * lexicographic comparator for String types and a numeric comparator for Number types.
    *
-   * @param rowExtraction extraction from this kind of row
+   * @param simpleExtraction extraction from this kind of row
    *
    * @return natural comparator
    */
-  public StringComparator naturalStringComparator(final RowExtraction rowExtraction)
+  public StringComparator naturalStringComparator(final SimpleExtraction simpleExtraction)
   {
-    Preconditions.checkNotNull(rowExtraction, "rowExtraction");
-    if (rowExtraction.getExtractionFn() != null
-        || getColumnType(rowExtraction.getColumn()) == ValueType.STRING) {
+    Preconditions.checkNotNull(simpleExtraction, "simpleExtraction");
+    if (simpleExtraction.getExtractionFn() != null
+        || getColumnType(simpleExtraction.getColumn()) == ValueType.STRING) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
       return StringComparators.NUMERIC;
@@ -208,6 +208,9 @@ public class RowSignature
 
     public Builder add(String columnName, ValueType columnType)
     {
+      Preconditions.checkNotNull(columnName, "columnName");
+      Preconditions.checkNotNull(columnType, "columnType");
+
       columnTypeList.add(Pair.of(columnName, columnType));
       return this;
     }

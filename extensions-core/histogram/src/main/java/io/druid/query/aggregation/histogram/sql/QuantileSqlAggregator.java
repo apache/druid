@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation.histogram.sql;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.histogram.ApproximateHistogram;
@@ -32,7 +31,7 @@ import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.Aggregations;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.Expressions;
-import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.expression.VirtualColumnRegistry;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
@@ -65,6 +64,7 @@ public class QuantileSqlAggregator implements SqlAggregator
   public Aggregation toDruidAggregation(
       final String name,
       final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<Aggregation> existingAggregations,
@@ -73,17 +73,18 @@ public class QuantileSqlAggregator implements SqlAggregator
       final DimFilter filter
   )
   {
-    final RowExtraction rex = Expressions.toRowExtraction(
+    final String input = Expressions.toDruidColumn(
         operatorTable,
         plannerContext,
-        rowSignature.getRowOrder(),
+        rowSignature,
+        virtualColumnRegistry,
         Expressions.fromFieldAccess(
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
         )
     );
-    if (rex == null) {
+    if (input == null) {
       return null;
     }
 
@@ -119,18 +120,11 @@ public class QuantileSqlAggregator implements SqlAggregator
             factory,
             filter,
             ApproximateHistogramAggregatorFactory.class,
-            new Predicate<ApproximateHistogramAggregatorFactory>()
-            {
-              @Override
-              public boolean apply(final ApproximateHistogramAggregatorFactory theFactory)
-              {
-                return theFactory.getFieldName().equals(rex.getColumn())
-                       && theFactory.getResolution() == resolution
-                       && theFactory.getNumBuckets() == numBuckets
-                       && theFactory.getLowerLimit() == lowerLimit
-                       && theFactory.getUpperLimit() == upperLimit;
-              }
-            }
+            theFactory -> theFactory.getFieldName().equals(input)
+                          && theFactory.getResolution() == resolution
+                          && theFactory.getNumBuckets() == numBuckets
+                          && theFactory.getLowerLimit() == lowerLimit
+                          && theFactory.getUpperLimit() == upperLimit
         );
 
         if (matches) {
@@ -143,10 +137,10 @@ public class QuantileSqlAggregator implements SqlAggregator
       }
     }
 
-    if (rowSignature.getColumnType(rex.getColumn()) == ValueType.COMPLEX) {
+    if (rowSignature.getColumnType(input) == ValueType.COMPLEX) {
       aggregatorFactory = new ApproximateHistogramFoldingAggregatorFactory(
           histogramName,
-          rex.getColumn(),
+          input,
           resolution,
           numBuckets,
           lowerLimit,
@@ -155,7 +149,7 @@ public class QuantileSqlAggregator implements SqlAggregator
     } else {
       aggregatorFactory = new ApproximateHistogramAggregatorFactory(
           histogramName,
-          rex.getColumn(),
+          input,
           resolution,
           numBuckets,
           lowerLimit,

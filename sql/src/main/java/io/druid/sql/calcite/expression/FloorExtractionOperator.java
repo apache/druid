@@ -23,6 +23,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -30,26 +31,18 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
-import java.util.List;
-
 public class FloorExtractionOperator implements SqlExtractionOperator
 {
-  public static RowExtraction applyTimestampFloor(
-      final RowExtraction rex,
+  public static SimpleExtraction applyTimestampFloor(
+      final String column,
       final Granularity queryGranularity
   )
   {
-    if (rex == null || queryGranularity == null) {
+    if (column == null || queryGranularity == null) {
       return null;
     }
 
-    return RowExtraction.of(
-        rex.getColumn(),
-        ExtractionFns.compose(
-            ExtractionFns.fromQueryGranularity(queryGranularity),
-            rex.getExtractionFn()
-        )
-    );
+    return SimpleExtraction.of(column, ExtractionFns.fromQueryGranularity(queryGranularity));
   }
 
   @Override
@@ -59,30 +52,44 @@ public class FloorExtractionOperator implements SqlExtractionOperator
   }
 
   @Override
-  public RowExtraction convert(
+  public String convert(
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
-      final List<String> rowOrder,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
   )
   {
     final RexCall call = (RexCall) expression;
     final RexNode arg = call.getOperands().get(0);
-
-    final RowExtraction rex = Expressions.toRowExtraction(operatorTable, plannerContext, rowOrder, arg);
-    if (rex == null) {
+    final String column = Expressions.toDruidColumn(
+        operatorTable,
+        plannerContext,
+        rowSignature,
+        virtualColumnRegistry,
+        arg
+    );
+    if (column == null) {
       return null;
     } else if (call.getOperands().size() == 1) {
       // FLOOR(expr)
-      return RowExtraction.of(
-          rex.getColumn(),
-          ExtractionFns.compose(new BucketExtractionFn(1.0, 0.0), rex.getExtractionFn())
-      );
+      return virtualColumnRegistry.register(
+          expression,
+          SimpleExtraction.of(column, new BucketExtractionFn(1.0, 0.0))
+      ).getOutputName();
     } else if (call.getOperands().size() == 2) {
       // FLOOR(expr TO timeUnit)
       final RexLiteral flag = (RexLiteral) call.getOperands().get(1);
       final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
-      return applyTimestampFloor(rex, TimeUnits.toQueryGranularity(timeUnit, plannerContext.getTimeZone()));
+      final Granularity granularity = TimeUnits.toQueryGranularity(timeUnit, plannerContext.getTimeZone());
+      if (granularity == null) {
+        return null;
+      }
+
+      return virtualColumnRegistry.register(
+          expression,
+          SimpleExtraction.of(column, ExtractionFns.fromQueryGranularity(granularity))
+      ).getOutputName();
     } else {
       // WTF? FLOOR with 3 arguments?
       return null;

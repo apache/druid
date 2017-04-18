@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.planner;
 
+import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import io.druid.segment.column.ValueType;
@@ -44,6 +45,14 @@ import java.util.Calendar;
 public class Calcites
 {
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
+  private static final boolean[] SANITARY_CHARS = new boolean[256];
+  private static final int MAX_SANITIZED_NAME_LENGTH = 200;
+
+  static {
+    for (char c : "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ".toCharArray()) {
+      SANITARY_CHARS[c] = true;
+    }
+  }
 
   private Calcites()
   {
@@ -96,6 +105,21 @@ public class Calcites
       builder.append("'");
       return isPlainAscii ? builder.toString() : "U&" + builder.toString();
     }
+  }
+
+  public static String sanitizeColumnName(final String name)
+  {
+    Preconditions.checkNotNull(name, "name");
+    final StringBuilder builder = new StringBuilder(MAX_SANITIZED_NAME_LENGTH);
+    for (int i = 0; i < Math.min(name.length(), MAX_SANITIZED_NAME_LENGTH); i++) {
+      final char c = name.charAt(i);
+      if (Character.isLetterOrDigit(c) || (c < SANITARY_CHARS.length && SANITARY_CHARS[c])) {
+        builder.append(c);
+      } else {
+        builder.append("_");
+      }
+    }
+    return builder.toString();
   }
 
   public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)

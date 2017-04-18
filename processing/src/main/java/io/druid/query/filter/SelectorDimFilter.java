@@ -37,6 +37,7 @@ import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -181,6 +182,12 @@ public class SelectorDimFilter implements DimFilter
     RangeSet<String> retSet = TreeRangeSet.create();
     retSet.add(Range.singleton(Strings.nullToEmpty(value)));
     return retSet;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of(dimension);
   }
 
   @Override
