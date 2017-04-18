@@ -46,8 +46,8 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
-import org.bouncycastle.util.Integers;
 import org.hamcrest.CoreMatchers;
+import org.joda.time.Period;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -201,7 +201,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, new Period(500)))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -239,7 +239,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, new Period(500)))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -265,7 +265,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, new Period(500)))
         .build();
 
     try {

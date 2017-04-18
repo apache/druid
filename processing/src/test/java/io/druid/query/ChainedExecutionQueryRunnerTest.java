@@ -31,6 +31,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -251,7 +252,7 @@ public class ChainedExecutionQueryRunnerTest
               .dataSource("test")
               .intervals("2014/2015")
               .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
-              .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
+              .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, new Period(100), "queryId", "test"))
               .build(),
         context
     );
