@@ -179,8 +179,8 @@ public class RealtimeManager implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
-    final String dataSourceName = Iterables.getOnlyElement(spec.getDataSource().getNames());
+    final DataSourceWithSegmentSpec sourceWithSegmentSpec = query.getDistributionTarget();
+    final String dataSourceName = Iterables.getOnlyElement(sourceWithSegmentSpec.getDataSource().getNames());
     final Map<Integer, FireChief> partitionChiefs = chiefs.get(dataSourceName);
 
     return partitionChiefs == null

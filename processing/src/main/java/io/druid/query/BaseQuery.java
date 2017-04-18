@@ -22,7 +22,6 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.guava.Sequence;
@@ -212,26 +211,26 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 
   public Query<T> updateDistributionTarget()
   {
-    return withOverriddenContext(
-        ImmutableMap.of(
-            QueryContexts.DISTRIBUTION_TARGET_SOURCE,
-            new DataSourceWithSegmentSpec(dataSource, querySegmentSpec)
-        )
-    );
+    return distributeBy(new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(dataSource), querySegmentSpec));
   }
 
   @Override
   public Query<T> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec)
   {
     Preconditions.checkArgument(this.dataSource.equals(dataSource));
-    return withQuerySegmentSpec(spec);
+    final BaseQuery<T> result = (BaseQuery<T>) withQuerySegmentSpec(spec);
+    if (getDistributionTarget() != null && getDistributionTarget().getDataSource().equals(dataSource)) {
+      return result.updateDistributionTarget();
+    } else {
+      return result;
+    }
   }
 
   @Override
-  public Query<T> withQuerySegmentSpec(String dataSource, QuerySegmentSpec spec)
+  public Query<T> withQuerySegmentSpec(String firstDataSourceName, QuerySegmentSpec spec)
   {
-    Preconditions.checkArgument(this.dataSource.getFirstName().equals(dataSource));
-    return withQuerySegmentSpec(spec);
+    Preconditions.checkArgument(this.dataSource.getFirstName().equals(firstDataSourceName));
+    return withQuerySegmentSpec(this.dataSource, spec);
   }
 
   @Override
@@ -248,13 +247,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
       BaseQuery<T> query
   )
   {
-    final DataSource dataSource = query.getDataSource();
-    if (dataSource instanceof QueryDataSource) {
-      final QueryDataSource queryDataSource = (QueryDataSource) dataSource;
-      return getLeafDataSource((BaseQuery<?>) queryDataSource.getQuery());
-    } else {
-      return dataSource;
-    }
+    return getLeafDataSource(query.getDataSource());
   }
 
   public static DataSource getLeafDataSource(DataSource dataSource)

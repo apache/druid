@@ -175,7 +175,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
   }
 
   @Override
-  public Query<Row> withQuerySegmentSpec(String dataSource, QuerySegmentSpec spec)
+  public Query<Row> withQuerySegmentSpec(String firstDataSourceName, QuerySegmentSpec spec)
   {
     final JoinSpecVisitor visitor = new JoinSpecVisitor()
     {
@@ -190,7 +190,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
       @Override
       public DataInput visit(DataInput dataInput)
       {
-        if (dataInput.getDataSource().getFirstName().equals(dataSource)) {
+        if (dataInput.getDataSource().getFirstName().equals(firstDataSourceName)) {
           return new DataInput(dataInput.getDataSource(), spec);
         } else {
           return dataInput;
