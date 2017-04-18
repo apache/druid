@@ -29,16 +29,16 @@ import java.util.Set;
 
 /**
  */
-public class LookupsState
+public class LookupsState<T>
 {
-  private final Map<String, LookupExtractorFactoryContainer> current;
-  private final Map<String, LookupExtractorFactoryContainer> toLoad;
+  private final Map<String, T> current;
+  private final Map<String, T> toLoad;
   private final Set<String> toDrop;
 
   @JsonCreator
   public LookupsState(
-      @JsonProperty("current") Map<String, LookupExtractorFactoryContainer> current,
-      @JsonProperty("toLoad") Map<String, LookupExtractorFactoryContainer> toLoad,
+      @JsonProperty("current") Map<String, T> current,
+      @JsonProperty("toLoad") Map<String, T> toLoad,
       @JsonProperty("toDrop") Set<String> toDrop
   )
   {
@@ -48,13 +48,13 @@ public class LookupsState
   }
 
   @JsonProperty
-  public Map<String, LookupExtractorFactoryContainer> getCurrent()
+  public Map<String, T> getCurrent()
   {
     return current;
   }
 
   @JsonProperty
-  public Map<String, LookupExtractorFactoryContainer> getToLoad()
+  public Map<String, T> getToLoad()
   {
     return toLoad;
   }
@@ -84,7 +84,7 @@ public class LookupsState
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    LookupsState that = (LookupsState) o;
+    LookupsState<?> that = (LookupsState<?>) o;
     return Objects.equals(current, that.current) &&
            Objects.equals(toLoad, that.toLoad) &&
            Objects.equals(toDrop, that.toDrop);

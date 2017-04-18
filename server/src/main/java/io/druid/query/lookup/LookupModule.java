@@ -105,6 +105,11 @@ class LookupListeningResource extends ListenerResource
 {
   private static final Logger LOG = new Logger(LookupListeningResource.class);
 
+  private static final TypeReference<LookupsState<LookupExtractorFactoryContainer>> LOOKUPS_STATE_TYPE_REFERENCE =
+      new TypeReference<LookupsState<LookupExtractorFactoryContainer>>()
+      {
+      };
+
   @Inject
   public LookupListeningResource(
       final @Json ObjectMapper jsonMapper,
@@ -124,9 +129,9 @@ class LookupListeningResource extends ListenerResource
               InputStream inputStream, ObjectMapper mapper
           )
           {
-            final LookupsState state;
+            final LookupsState<LookupExtractorFactoryContainer> state;
             try {
-              state = mapper.readValue(inputStream, LookupsState.class);
+              state = mapper.readValue(inputStream, LOOKUPS_STATE_TYPE_REFERENCE);
             }
             catch (final IOException ex) {
               LOG.debug(ex, "Bad request");
@@ -169,7 +174,7 @@ class LookupListeningResource extends ListenerResource
           }
 
           @Override
-          public LookupsState getAll()
+          public LookupsState<LookupExtractorFactoryContainer> getAll()
           {
             return manager.getAllLookupsState();
           }

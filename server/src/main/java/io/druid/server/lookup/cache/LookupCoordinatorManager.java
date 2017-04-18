@@ -53,6 +53,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StreamUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupModule;
+import io.druid.query.lookup.LookupsState;
 import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.listener.resource.ListenerResource;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -98,6 +99,11 @@ public class LookupCoordinatorManager
                                                          + LOOKUP_LISTEN_ANNOUNCE_KEY;
   private static final String LOOKUP_UPDATE_REQUEST_PATH = LOOKUP_BASE_REQUEST_PATH + "/" + "updates";
 
+  private static final TypeReference<LookupsState<LookupExtractorFactoryMapContainer>> LOOKUPS_STATE_TYPE_REFERENCE =
+      new TypeReference<LookupsState<LookupExtractorFactoryMapContainer>>()
+      {
+      };
+
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
 
   private final ListenerDiscoverer listenerDiscoverer;
@@ -109,7 +115,8 @@ public class LookupCoordinatorManager
   // state is rediscovered and updated in the ref here. If some lookup nodes have disappeared since last lookup
   // management loop, then they get discarded automatically.
   @VisibleForTesting
-  final AtomicReference<Map<HostAndPort, LookupsStateWithMap>> knownOldState = new AtomicReference<>();
+  final AtomicReference<Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> knownOldState =
+      new AtomicReference<>();
 
   // Updated by config watching service
   private AtomicReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>> lookupMapConfigRef;
@@ -472,7 +479,7 @@ public class LookupCoordinatorManager
 
     LOG.debug("Starting lookup sync for on all nodes.");
 
-    final Map<HostAndPort, LookupsStateWithMap> currState = new ConcurrentHashMap<>();
+    final Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> currState = new ConcurrentHashMap<>();
 
     try {
       List<ListenableFuture<Map.Entry>> futures = new ArrayList<>();
@@ -513,7 +520,7 @@ public class LookupCoordinatorManager
 
       final ListenableFuture<List<Map.Entry>> allFuture = Futures.allAsList(futures);
       try {
-        ImmutableMap.Builder<HostAndPort, LookupsStateWithMap> stateBuilder = ImmutableMap.builder();
+        ImmutableMap.Builder<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> stateBuilder = ImmutableMap.builder();
         allFuture.get(lookupCoordinatorManagerConfig.getAllHostTimeout().getMillis(), TimeUnit.MILLISECONDS)
                  .stream()
                  .filter(Objects::nonNull)
@@ -537,14 +544,16 @@ public class LookupCoordinatorManager
     LOG.debug("Finished lookup sync for on all nodes.");
   }
 
-  private LookupsStateWithMap doLookupManagementOnNode(
+  private LookupsState<LookupExtractorFactoryMapContainer> doLookupManagementOnNode(
       HostAndPort node,
       Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
   ) throws IOException, InterruptedException, ExecutionException
   {
     LOG.debug("Starting lookup sync for node [%s].", node);
 
-    LookupsStateWithMap currLookupsStateOnNode = lookupsCommunicator.getLookupStateForNode(node);
+    LookupsState<LookupExtractorFactoryMapContainer> currLookupsStateOnNode = lookupsCommunicator.getLookupStateForNode(
+        node
+    );
     LOG.debug("Received lookups state from node [%s].", node);
 
 
@@ -559,7 +568,7 @@ public class LookupCoordinatorManager
     if (!toLoad.isEmpty() || !toDrop.isEmpty()) {
       // Send POST request to the node asking to load and drop the lookups necessary.
       // no need to send "current" in the LookupsStateWithMap , that is not required
-      currLookupsStateOnNode = lookupsCommunicator.updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop));
+      currLookupsStateOnNode = lookupsCommunicator.updateNode(node, new LookupsState<>(null, toLoad, toDrop));
 
       LOG.debug(
           "Sent lookup toAdd[%s] and toDrop[%s] updates to node [%s].",
@@ -578,7 +587,7 @@ public class LookupCoordinatorManager
   // It is assumed that currLookupsStateOnNode "toLoad" and "toDrop" are disjoint.
   @VisibleForTesting
   Map<String, LookupExtractorFactoryMapContainer> getToBeLoadedOnNode(
-      LookupsStateWithMap currLookupsStateOnNode,
+      LookupsState<LookupExtractorFactoryMapContainer> currLookupsStateOnNode,
       Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
   )
   {
@@ -610,7 +619,7 @@ public class LookupCoordinatorManager
   // It is assumed that currLookupsStateOnNode "toLoad" and "toDrop" are disjoint.
   @VisibleForTesting
   Set<String> getToBeDroppedFromNode(
-      LookupsStateWithMap currLookupsStateOnNode,
+      LookupsState<LookupExtractorFactoryMapContainer> currLookupsStateOnNode,
       Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
   )
   {
@@ -679,9 +688,9 @@ public class LookupCoordinatorManager
       this.smileMapper = smileMapper;
     }
 
-    public LookupsStateWithMap updateNode(
+    public LookupsState<LookupExtractorFactoryMapContainer> updateNode(
         HostAndPort node,
-        LookupsStateWithMap lookupsUpdate
+        LookupsState<LookupExtractorFactoryMapContainer> lookupsUpdate
     )
         throws IOException, InterruptedException, ExecutionException
     {
@@ -702,7 +711,10 @@ public class LookupCoordinatorManager
       ).get()) {
         if (httpStatusIsSuccess(returnCode.get())) {
           try {
-            final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
+            final LookupsState<LookupExtractorFactoryMapContainer> response = smileMapper.readValue(
+                result,
+                LOOKUPS_STATE_TYPE_REFERENCE
+            );
             LOG.debug(
                 "Update on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
                 response
@@ -733,7 +745,7 @@ public class LookupCoordinatorManager
       }
     }
 
-    public LookupsStateWithMap getLookupStateForNode(
+    public LookupsState<LookupExtractorFactoryMapContainer> getLookupStateForNode(
         HostAndPort node
     ) throws IOException, InterruptedException, ExecutionException
     {
@@ -751,7 +763,10 @@ public class LookupCoordinatorManager
       ).get()) {
         if (returnCode.get() == 200) {
           try {
-            final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
+            final LookupsState<LookupExtractorFactoryMapContainer> response = smileMapper.readValue(
+                result,
+                LOOKUPS_STATE_TYPE_REFERENCE
+            );
             LOG.debug(
                 "Get on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
                 response

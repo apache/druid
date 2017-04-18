@@ -19,6 +19,7 @@
 
 package io.druid.query.lookup;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -53,18 +54,23 @@ public class LookupsStateTest
                      + "  \"toDrop\": [\"l3\"]\n"
                      + "}";
 
+    TypeReference<LookupsState<LookupExtractorFactoryContainer>> typeRef =
+        new TypeReference<LookupsState<LookupExtractorFactoryContainer>>()
+        {
+        };
+
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(LookupExtractorFactoryContainerTest.TestLookupExtractorFactory.class);
 
-    LookupsState actual = mapper.readValue(
+    LookupsState<LookupExtractorFactoryContainer> actual = mapper.readValue(
         mapper.writeValueAsString(
-            mapper.readValue(jsonStr, LookupsState.class)
+            mapper.readValue(jsonStr, typeRef)
         ),
-        LookupsState.class
+        typeRef
     );
 
     Assert.assertEquals(
-        new LookupsState(
+        new LookupsState<>(
             ImmutableMap.of(
                 "l1",
                 new LookupExtractorFactoryContainer(

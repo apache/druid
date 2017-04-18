@@ -262,7 +262,7 @@ public class LookupReferencesManager
   }
 
   // Note that this should ensure that "toLoad" and "toDrop" are disjoint.
-  public LookupsState getAllLookupsState()
+  public LookupsState<LookupExtractorFactoryContainer> getAllLookupsState()
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
@@ -274,7 +274,7 @@ public class LookupReferencesManager
     updateToLoadAndDrop(lookupUpdateState.noticesBeingHandled, lookupsToLoad, lookupsToDrop);
     updateToLoadAndDrop(lookupUpdateState.pendingNotices, lookupsToLoad, lookupsToDrop);
 
-    return new LookupsState(lookupUpdateState.lookupMap, lookupsToLoad, lookupsToDrop);
+    return new LookupsState<>(lookupUpdateState.lookupMap, lookupsToLoad, lookupsToDrop);
   }
 
   private void updateToLoadAndDrop(List<Notice> notices, Map<String, LookupExtractorFactoryContainer> lookupsToLoad, Set<String> lookupsToDrop)

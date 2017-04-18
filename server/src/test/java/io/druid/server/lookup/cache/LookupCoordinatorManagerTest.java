@@ -40,6 +40,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.LookupModule;
+import io.druid.query.lookup.LookupsState;
 import io.druid.server.listener.announcer.ListenerDiscoverer;
 import org.easymock.EasyMock;
 import org.hamcrest.BaseMatcher;
@@ -104,7 +105,7 @@ public class LookupCoordinatorManagerTest
       SINGLE_LOOKUP_MAP_V1
   );
   private static final Map<String, Map<String, LookupExtractorFactoryMapContainer>> EMPTY_TIERED_LOOKUP = ImmutableMap.of();
-  private static final LookupsStateWithMap LOOKUPS_STATE = new LookupsStateWithMap(
+  private static final LookupsState<LookupExtractorFactoryMapContainer> LOOKUPS_STATE = new LookupsState<>(
       SINGLE_LOOKUP_MAP_V0,
       SINGLE_LOOKUP_MAP_V1,
       Collections.EMPTY_SET
@@ -203,7 +204,7 @@ public class LookupCoordinatorManagerTest
           }
         };
 
-    LookupsStateWithMap resp = lookupsCommunicator.updateNode(
+    LookupsState<LookupExtractorFactoryMapContainer> resp = lookupsCommunicator.updateNode(
         HostAndPort.fromString("localhost"),
         LOOKUPS_STATE
     );
@@ -384,7 +385,7 @@ public class LookupCoordinatorManagerTest
           }
         };
 
-    LookupsStateWithMap resp = lookupsCommunicator.getLookupStateForNode(
+    LookupsState<LookupExtractorFactoryMapContainer> resp = lookupsCommunicator.getLookupStateForNode(
         HostAndPort.fromString("localhost")
     );
 
@@ -483,11 +484,12 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    EasyMock.expect(client.go(
-                        EasyMock.<Request>anyObject(),
-                        EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
-                        EasyMock.<Duration>anyObject()
-                    )).andReturn(future).once();
+    EasyMock.expect(
+        client.go(
+            EasyMock.<Request>anyObject(),
+            EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
+            EasyMock.<Duration>anyObject()
+        )).andReturn(future).once();
 
     EasyMock.replay(client, responseHandler);
 
@@ -661,12 +663,14 @@ public class LookupCoordinatorManagerTest
         )
     ).andReturn(true).once();
     EasyMock.replay(configManager);
-    Assert.assertTrue(manager.updateLookups(ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
-                                                LOOKUP_TIER + "1", ImmutableMap.of(
-                                                    "foo2",
-                                                    newSpec
-                                                )
-                                            ), auditInfo));
+    Assert.assertTrue(
+        manager.updateLookups(
+            ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
+                LOOKUP_TIER + "1", ImmutableMap.of(
+                    "foo2",
+                    newSpec
+                )
+            ), auditInfo));
     EasyMock.verify(configManager);
   }
 
@@ -719,12 +723,14 @@ public class LookupCoordinatorManagerTest
         )
     ).andReturn(true).once();
     EasyMock.replay(configManager);
-    Assert.assertTrue(manager.updateLookups(ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
-                                                LOOKUP_TIER + "1", ImmutableMap.of(
-                                                    "foo",
-                                                    newSpec
-                                                )
-                                            ), auditInfo));
+    Assert.assertTrue(
+        manager.updateLookups(
+            ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
+                LOOKUP_TIER + "1", ImmutableMap.of(
+                    "foo",
+                    newSpec
+                )
+            ), auditInfo));
     EasyMock.verify(configManager);
   }
 
@@ -1055,19 +1061,19 @@ public class LookupCoordinatorManagerTest
             host1
         )
     ).andReturn(
-        new LookupsStateWithMap(
+        new LookupsState<>(
             ImmutableMap.of("lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0"))), null, null
         )
     ).once();
 
-    LookupsStateWithMap host1UpdatedState = new LookupsStateWithMap(
+    LookupsState<LookupExtractorFactoryMapContainer> host1UpdatedState = new LookupsState<>(
         lookup1, null, null
     );
 
     EasyMock.expect(
         lookupsCommunicator.updateNode(
             host1,
-            new LookupsStateWithMap(
+            new LookupsState<>(
                 null,
                 lookup1,
                 ImmutableSet.of("lookup0")
@@ -1083,21 +1089,21 @@ public class LookupCoordinatorManagerTest
             host2
         )
     ).andReturn(
-        new LookupsStateWithMap(
+        new LookupsState<>(
             ImmutableMap.of("lookup3", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
                             "lookup1", new LookupExtractorFactoryMapContainer("v0", ImmutableMap.of("k0", "v0"))),
             null, null
         )
     ).once();
 
-    LookupsStateWithMap host2UpdatedState = new LookupsStateWithMap(
+    LookupsState<LookupExtractorFactoryMapContainer> host2UpdatedState = new LookupsState<>(
         null, lookup1, null
     );
 
     EasyMock.expect(
         lookupsCommunicator.updateNode(
             host2,
-            new LookupsStateWithMap(
+            new LookupsState<>(
                 null,
                 lookup1,
                 ImmutableSet.of("lookup3")
@@ -1133,7 +1139,7 @@ public class LookupCoordinatorManagerTest
 
     manager.start();
 
-    Map<HostAndPort, LookupsStateWithMap> expectedKnownState = ImmutableMap.of(
+    Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> expectedKnownState = ImmutableMap.of(
         host1,
         host1UpdatedState,
         host2,
@@ -1158,7 +1164,7 @@ public class LookupCoordinatorManagerTest
         lookupCoordinatorManagerConfig
     );
 
-    LookupsStateWithMap currNodeState = new LookupsStateWithMap(
+    LookupsState<LookupExtractorFactoryMapContainer> currNodeState = new LookupsState<>(
         ImmutableMap.of("lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
                         "lookup1", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k1", "v1"))
         ),
@@ -1194,7 +1200,7 @@ public class LookupCoordinatorManagerTest
         lookupCoordinatorManagerConfig
     );
 
-    LookupsStateWithMap currNodeState = new LookupsStateWithMap(
+    LookupsState<LookupExtractorFactoryMapContainer> currNodeState = new LookupsState<>(
         ImmutableMap.of("lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
                         "lookup1", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k1", "v1"))
         ),
