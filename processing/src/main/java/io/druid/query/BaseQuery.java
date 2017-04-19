@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
@@ -37,66 +36,6 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
-  public static <T> int getContextPriority(Query<T> query, int defaultValue)
-  {
-    return parseInt(query, "priority", defaultValue);
-  }
-
-  public static <T> boolean getContextBySegment(Query<T> query, boolean defaultValue)
-  {
-    return parseBoolean(query, "bySegment", defaultValue);
-  }
-
-  public static <T> boolean getContextPopulateCache(Query<T> query, boolean defaultValue)
-  {
-    return parseBoolean(query, "populateCache", defaultValue);
-  }
-
-  public static <T> boolean getContextUseCache(Query<T> query, boolean defaultValue)
-  {
-    return parseBoolean(query, "useCache", defaultValue);
-  }
-
-  public static <T> boolean getContextFinalize(Query<T> query, boolean defaultValue)
-  {
-    return parseBoolean(query, "finalize", defaultValue);
-  }
-
-  public static <T> int getContextUncoveredIntervalsLimit(Query<T> query, int defaultValue)
-  {
-    return parseInt(query, "uncoveredIntervalsLimit", defaultValue);
-  }
-
-  private static <T> int parseInt(Query<T> query, String key, int defaultValue)
-  {
-    Object val = query.getContextValue(key);
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Integer.parseInt((String) val);
-    } else if (val instanceof Integer) {
-      return (int) val;
-    } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
-    }
-  }
-
-  private static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
-  {
-    Object val = query.getContextValue(key);
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Boolean.parseBoolean((String) val);
-    } else if (val instanceof Boolean) {
-      return (boolean) val;
-    } else {
-      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
-    }
-  }
-
   public static void checkInterrupted()
   {
     if (Thread.interrupted()) {
@@ -203,7 +142,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public boolean getContextBoolean(String key, boolean defaultValue)
   {
-    return parseBoolean(this, key, defaultValue);
+    return QueryContexts.parseBoolean(this, key, defaultValue);
   }
 
   protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
@@ -235,6 +174,12 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   public Query withId(String id)
   {
     return withOverriddenContext(ImmutableMap.<String, Object>of(QUERYID, id));
+  }
+
+  @Override
+  public Query<T> withDefaultTimeout(long defaultTimeout)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
   }
 
   @Override

@@ -99,4 +99,6 @@ public interface Query<T>
   String getId();
 
   Query<T> withDataSource(DataSource dataSource);
+
+  Query<T> withDefaultTimeout(long defaultTimeout);
 }
