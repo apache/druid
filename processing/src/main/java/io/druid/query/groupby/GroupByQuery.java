@@ -42,7 +42,6 @@ import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Query;
 import io.druid.query.QueryDataSource;
-import io.druid.query.QueryMetrics;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -113,39 +112,7 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this(
-        dataSource,
-        querySegmentSpec,
-        virtualColumns,
-        dimFilter,
-        granularity,
-        dimensions,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        havingSpec,
-        limitSpec,
-        context,
-        null
-    );
-  }
-
-  private GroupByQuery(
-      final DataSource dataSource,
-      final QuerySegmentSpec querySegmentSpec,
-      final VirtualColumns virtualColumns,
-      final DimFilter dimFilter,
-      final Granularity granularity,
-      final List<DimensionSpec> dimensions,
-      final List<AggregatorFactory> aggregatorSpecs,
-      final List<PostAggregator> postAggregatorSpecs,
-      final HavingSpec havingSpec,
-      final LimitSpec limitSpec,
-      final Map<String, Object> context,
-      final QueryMetrics<?> queryMetrics
-  )
-  {
-    super(dataSource, querySegmentSpec, false, context, queryMetrics);
-    GroupByQueryMetrics.class.cast(queryMetrics); // ClassCastException if not
+    super(dataSource, querySegmentSpec, false, context);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
@@ -211,12 +178,10 @@ public class GroupByQuery extends BaseQuery<Row>
       final HavingSpec havingSpec,
       final LimitSpec orderBySpec,
       final Function<Sequence<Row>, Sequence<Row>> limitFn,
-      final Map<String, Object> context,
-      final QueryMetrics<?> queryMetrics
+      final Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context, queryMetrics);
-    GroupByQueryMetrics.class.cast(queryMetrics); // ClassCastException if not
+    super(dataSource, querySegmentSpec, false, context);
 
     this.virtualColumns = virtualColumns;
     this.dimFilter = dimFilter;
@@ -438,13 +403,6 @@ public class GroupByQuery extends BaseQuery<Row>
     return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
   }
 
-  @Override
-  public Query<Row> withQueryMetrics(QueryMetrics<?> queryMetrics)
-  {
-    Preconditions.checkNotNull(queryMetrics);
-    return new Builder(this).setQueryMetrics(queryMetrics).build();
-  }
-
   private static void verifyOutputNames(
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggregators,
@@ -496,7 +454,6 @@ public class GroupByQuery extends BaseQuery<Row>
     private Function<Sequence<Row>, Sequence<Row>> limitFn;
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
     private int limit = Integer.MAX_VALUE;
-    private QueryMetrics<?> queryMetrics;
 
     public Builder()
     {
@@ -516,7 +473,6 @@ public class GroupByQuery extends BaseQuery<Row>
       limitSpec = query.getLimitSpec();
       limitFn = query.limitFn;
       context = query.getContext();
-      queryMetrics = query.getQueryMetrics();
     }
 
     public Builder(Builder builder)
@@ -535,7 +491,6 @@ public class GroupByQuery extends BaseQuery<Row>
       limit = builder.limit;
       orderByColumnSpecs = new ArrayList<>(builder.orderByColumnSpecs);
       context = builder.context;
-      queryMetrics = builder.queryMetrics;
     }
 
     public Builder setDataSource(DataSource dataSource)
@@ -741,12 +696,6 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
-    public Builder setQueryMetrics(QueryMetrics<?> queryMetrics)
-    {
-      this.queryMetrics = queryMetrics;
-      return this;
-    }
-
     public Builder copy()
     {
       return new Builder(this);
@@ -778,8 +727,7 @@ public class GroupByQuery extends BaseQuery<Row>
             havingSpec,
             theLimitSpec,
             limitFn,
-            context,
-            queryMetrics
+            context
         );
       } else {
         return new GroupByQuery(
@@ -793,8 +741,7 @@ public class GroupByQuery extends BaseQuery<Row>
             postAggregatorSpecs,
             havingSpec,
             theLimitSpec,
-            context,
-            queryMetrics
+            context
         );
       }
     }

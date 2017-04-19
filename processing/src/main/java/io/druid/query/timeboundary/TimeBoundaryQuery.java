@@ -21,7 +21,6 @@ package io.druid.query.timeboundary;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.common.utils.JodaUtils;
@@ -30,7 +29,6 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
-import io.druid.query.QueryMetrics;
 import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -68,29 +66,12 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this(dataSource, querySegmentSpec, bound, dimFilter, context, null);
-  }
-
-  /**
-   * This constructor is public only because {@link Druids.TimeBoundaryQueryBuilder} needs to access this constructor,
-   * and it is defined in Druids rather than in as an inner class of TimeBoundaryQuery.
-   */
-  public TimeBoundaryQuery(
-      final DataSource dataSource,
-      final QuerySegmentSpec querySegmentSpec,
-      final String bound,
-      final DimFilter dimFilter,
-      final Map<String, Object> context,
-      final QueryMetrics<?> queryMetrics
-  )
-  {
     super(
         dataSource,
         (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(MY_Y2K_INTERVAL))
                                    : querySegmentSpec,
         false,
-        context,
-        queryMetrics
+        context
     );
 
     this.dimFilter = dimFilter;
@@ -138,13 +119,6 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   public Query<Result<TimeBoundaryResultValue>> withDataSource(DataSource dataSource)
   {
     return Druids.TimeBoundaryQueryBuilder.copy(this).dataSource(dataSource).build();
-  }
-
-  @Override
-  public Query<Result<TimeBoundaryResultValue>> withQueryMetrics(QueryMetrics<?> queryMetrics)
-  {
-    Preconditions.checkNotNull(queryMetrics);
-    return Druids.TimeBoundaryQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   public byte[] getCacheKey()

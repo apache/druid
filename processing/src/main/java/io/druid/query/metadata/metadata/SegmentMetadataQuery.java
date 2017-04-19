@@ -29,7 +29,6 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
-import io.druid.query.QueryMetrics;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.filter.DimFilter;
@@ -110,42 +109,12 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("lenientAggregatorMerge") Boolean lenientAggregatorMerge
   )
   {
-    this(
-        dataSource,
-        querySegmentSpec,
-        toInclude,
-        merge,
-        context,
-        analysisTypes,
-        useDefaultInterval,
-        lenientAggregatorMerge,
-        null
-    );
-  }
-
-  /**
-   * This constructor is public only because {@link Druids.SegmentMetadataQueryBuilder} needs to access this
-   * constructor, and it is defined in Druids rather than in as an inner class of SegmentMetadataQuery.
-   */
-  public SegmentMetadataQuery(
-      final DataSource dataSource,
-      final QuerySegmentSpec querySegmentSpec,
-      final ColumnIncluderator toInclude,
-      final Boolean merge,
-      final Map<String, Object> context,
-      final EnumSet<AnalysisType> analysisTypes,
-      final Boolean useDefaultInterval,
-      final Boolean lenientAggregatorMerge,
-      final QueryMetrics<?> queryMetrics
-  )
-  {
     super(
         dataSource,
         (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(DEFAULT_INTERVAL))
                                    : querySegmentSpec,
         false,
-        context,
-        queryMetrics
+        context
     );
 
     if (querySegmentSpec == null) {
@@ -283,13 +252,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public Query<SegmentAnalysis> withColumns(ColumnIncluderator includerator)
   {
     return Druids.SegmentMetadataQueryBuilder.copy(this).toInclude(includerator).build();
-  }
-
-  @Override
-  public Query<SegmentAnalysis> withQueryMetrics(QueryMetrics<?> queryMetrics)
-  {
-    Preconditions.checkNotNull(queryMetrics);
-    return Druids.SegmentMetadataQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   @Override

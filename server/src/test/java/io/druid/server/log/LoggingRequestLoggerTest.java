@@ -29,7 +29,6 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.LegacyDataSource;
 import io.druid.query.Query;
-import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.filter.DimFilter;
@@ -184,7 +183,7 @@ class FakeQuery extends BaseQuery
 {
   public FakeQuery(DataSource dataSource, QuerySegmentSpec querySegmentSpec, boolean descending, Map context)
   {
-    super(dataSource, querySegmentSpec, descending, context, null);
+    super(dataSource, querySegmentSpec, descending, context);
   }
 
   @Override
@@ -219,12 +218,6 @@ class FakeQuery extends BaseQuery
 
   @Override
   public Query withOverriddenContext(Map contextOverride)
-  {
-    throw new UnsupportedOperationException("shouldn't be here");
-  }
-
-  @Override
-  public Query withQueryMetrics(QueryMetrics queryMetrics)
   {
     throw new UnsupportedOperationException("shouldn't be here");
   }

@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
-import io.druid.query.QueryMetrics;
 import io.druid.query.TableDataSource;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
@@ -65,22 +64,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this(dataSource, querySegmentSpec, resultFormat, batchSize, limit, dimFilter, columns, context, null);
-  }
-
-  private ScanQuery(
-      final DataSource dataSource,
-      final QuerySegmentSpec querySegmentSpec,
-      final String resultFormat,
-      final int batchSize,
-      final long limit,
-      final DimFilter dimFilter,
-      final List<String> columns,
-      final Map<String, Object> context,
-      final QueryMetrics<?> queryMetrics
-  )
-  {
-    super(dataSource, querySegmentSpec, false, context, queryMetrics);
+    super(dataSource, querySegmentSpec, false, context);
     this.resultFormat = resultFormat == null ? RESULT_FORMAT_LIST : resultFormat;
     this.batchSize = (batchSize == 0) ? 4096 * 5 : batchSize;
     this.limit = (limit == 0) ? Long.MAX_VALUE : limit;
@@ -159,13 +143,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public ScanQuery withDimFilter(DimFilter dimFilter)
   {
     return ScanQueryBuilder.copy(this).filters(dimFilter).build();
-  }
-
-  @Override
-  public Query<ScanResultValue> withQueryMetrics(QueryMetrics<?> queryMetrics)
-  {
-    Preconditions.checkNotNull(queryMetrics);
-    return ScanQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   @Override
@@ -250,7 +227,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     private long limit;
     private DimFilter dimFilter;
     private List<String> columns;
-    private QueryMetrics<?> queryMetrics;
 
     public ScanQueryBuilder()
     {
@@ -262,7 +238,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       limit = 0;
       dimFilter = null;
       columns = Lists.newArrayList();
-      queryMetrics = null;
     }
 
     public ScanQuery build()
@@ -275,8 +250,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
           limit,
           dimFilter,
           columns,
-          context,
-          queryMetrics
+          context
       );
     }
 
@@ -290,8 +264,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
           .limit(query.getLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
-          .context(query.getContext())
-          .queryMetrics(query.getQueryMetrics());
+          .context(query.getContext());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -375,12 +348,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     public ScanQueryBuilder columns(String... c)
     {
       columns = Arrays.asList(c);
-      return this;
-    }
-
-    public ScanQueryBuilder queryMetrics(QueryMetrics<?> m)
-    {
-      queryMetrics = m;
       return this;
     }
   }

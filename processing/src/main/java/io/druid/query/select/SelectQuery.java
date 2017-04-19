@@ -28,7 +28,6 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
-import io.druid.query.QueryMetrics;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -65,40 +64,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this(
-        dataSource,
-        querySegmentSpec,
-        descending,
-        dimFilter,
-        granularity,
-        dimensions,
-        metrics,
-        virtualColumns,
-        pagingSpec,
-        context,
-        null
-    );
-  }
-
-  /**
-   * This constructor is public only because {@link Druids.SelectQueryBuilder} needs to access this constructor, and it
-   * is defined in Druids rather than in as an inner class of SelectQuery.
-   */
-  public SelectQuery(
-      final DataSource dataSource,
-      final QuerySegmentSpec querySegmentSpec,
-      final boolean descending,
-      final DimFilter dimFilter,
-      final Granularity granularity,
-      final List<DimensionSpec> dimensions,
-      final List<String> metrics,
-      final VirtualColumns virtualColumns,
-      final PagingSpec pagingSpec,
-      final Map<String, Object> context,
-      final QueryMetrics<?> queryMetrics
-  )
-  {
-    super(dataSource, querySegmentSpec, descending, context, queryMetrics);
+    super(dataSource, querySegmentSpec, descending, context);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions;
@@ -204,13 +170,6 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   public SelectQuery withDimFilter(DimFilter dimFilter)
   {
     return Druids.SelectQueryBuilder.copy(this).filters(dimFilter).build();
-  }
-
-  @Override
-  public Query<Result<SelectResultValue>> withQueryMetrics(QueryMetrics<?> queryMetrics)
-  {
-    Preconditions.checkNotNull(queryMetrics);
-    return Druids.SelectQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   @Override

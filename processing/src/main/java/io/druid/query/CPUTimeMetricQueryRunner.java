@@ -60,16 +60,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    final QueryMetrics<? super Query<T>> queryMetrics;
-    final Query<T> queryWithMetrics;
-    if (query.getQueryMetrics() == null) {
-      queryMetrics = queryToolChest.makeMetrics(query);
-      queryWithMetrics = query.withQueryMetrics(queryMetrics);
-    } else {
-      queryMetrics = (QueryMetrics<? super Query<T>>) query.getQueryMetrics();
-      queryWithMetrics = query;
-    }
-    final Sequence<T> baseSequence = delegate.run(queryWithMetrics, responseContext);
+    final Sequence<T> baseSequence = delegate.run(query, responseContext);
     return Sequences.wrap(
         baseSequence,
         new SequenceWrapper()
@@ -91,14 +82,13 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             if (report) {
               final long cpuTimeNs = cpuTimeAccumulator.get();
               if (cpuTimeNs > 0) {
-                queryMetrics.reportCpuTime(cpuTimeNs).emit(emitter);
+                queryToolChest.makeMetrics(query).reportCpuTime(cpuTimeNs).emit(emitter);
               }
             }
           }
         }
     );
   }
-
   public static <T> QueryRunner<T> safeBuild(
       QueryRunner<T> delegate,
       QueryToolChest<?, ? super Query<T>> queryToolChest,

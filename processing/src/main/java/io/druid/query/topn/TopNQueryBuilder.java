@@ -91,7 +91,6 @@ public class TopNQueryBuilder
     aggregatorSpecs = Lists.newArrayList();
     postAggregatorSpecs = Lists.newArrayList();
     context = null;
-    queryMetrics = null;
   }
 
   public TopNQueryBuilder(final TopNQuery query)
@@ -107,7 +106,6 @@ public class TopNQueryBuilder
       this.aggregatorSpecs = query.getAggregatorSpecs();
       this.postAggregatorSpecs = query.getPostAggregatorSpecs();
       this.context = query.getContext();
-      this.queryMetrics = query.getQueryMetrics();
   }
 
   public DataSource getDataSource()
@@ -178,8 +176,7 @@ public class TopNQueryBuilder
         granularity,
         aggregatorSpecs,
         postAggregatorSpecs,
-        context,
-        queryMetrics
+        context
     );
   }
 

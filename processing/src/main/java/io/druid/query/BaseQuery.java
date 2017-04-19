@@ -29,7 +29,6 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -45,20 +44,12 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   public static final String QUERYID = "queryId";
-
   private final DataSource dataSource;
   private final boolean descending;
   private final Map<String, Object> context;
   private final QuerySegmentSpec querySegmentSpec;
-  @Nullable
-  private final QueryMetrics<?> queryMetrics;
   private volatile Duration duration;
 
-  /**
-   * @deprecated compatibility constructor for extensions, {@link
-   * BaseQuery#BaseQuery(DataSource, QuerySegmentSpec, boolean, Map, QueryMetrics)} should be used instead.
-   */
-  @Deprecated
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
@@ -66,25 +57,13 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
       Map<String, Object> context
   )
   {
-    this(dataSource, querySegmentSpec, descending, context, null);
-  }
-
-  public BaseQuery(
-      DataSource dataSource,
-      QuerySegmentSpec querySegmentSpec,
-      boolean descending,
-      Map<String, Object> context,
-      QueryMetrics<?> queryMetrics
-  )
-  {
     Preconditions.checkNotNull(dataSource, "dataSource can't be null");
     Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec can't be null");
 
     this.dataSource = dataSource;
-    this.descending = descending;
     this.context = context;
     this.querySegmentSpec = querySegmentSpec;
-    this.queryMetrics = queryMetrics;
+    this.descending = descending;
   }
 
   @JsonProperty
@@ -185,13 +164,6 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   {
     Ordering<T> retVal = Ordering.natural();
     return descending ? retVal.reverse() : retVal;
-  }
-
-  @Override
-  @Nullable
-  public QueryMetrics<?> getQueryMetrics()
-  {
-    return queryMetrics;
   }
 
   @Override

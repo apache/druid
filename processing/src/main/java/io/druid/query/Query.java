@@ -36,7 +36,6 @@ import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -100,14 +99,6 @@ public interface Query<T>
   String getId();
 
   Query<T> withDataSource(DataSource dataSource);
-
-  /**
-   * @throws NullPointerException if the given queryMetrics is null
-   */
-  Query<T> withQueryMetrics(QueryMetrics<?> queryMetrics);
-
-  @Nullable
-  QueryMetrics<?> getQueryMetrics();
 
   Query<T> withDefaultTimeout(long defaultTimeout);
 }

@@ -338,7 +338,6 @@ public class Druids
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
     private Map<String, Object> context;
-    private QueryMetrics<?> queryMetrics;
 
     private TimeseriesQueryBuilder()
     {
@@ -351,7 +350,6 @@ public class Druids
       aggregatorSpecs = Lists.newArrayList();
       postAggregatorSpecs = Lists.newArrayList();
       context = null;
-      queryMetrics = null;
     }
 
     public TimeseriesQuery build()
@@ -365,8 +363,7 @@ public class Druids
           granularity,
           aggregatorSpecs,
           postAggregatorSpecs,
-          context,
-          queryMetrics
+          context
       );
     }
 
@@ -381,8 +378,7 @@ public class Druids
           .granularity(query.getGranularity())
           .aggregators(query.getAggregatorSpecs())
           .postAggregators(query.getPostAggregatorSpecs())
-          .context(query.getContext())
-          .queryMetrics(query.getQueryMetrics());
+          .context(query.getContext());
     }
 
     public DataSource getDataSource()
@@ -524,12 +520,6 @@ public class Druids
       context = c;
       return this;
     }
-
-    public TimeseriesQueryBuilder queryMetrics(QueryMetrics<?> m)
-    {
-      queryMetrics = m;
-      return this;
-    }
   }
 
   public static TimeseriesQueryBuilder newTimeseriesQueryBuilder()
@@ -567,7 +557,6 @@ public class Druids
     private SearchQuerySpec querySpec;
     private SearchSortSpec sortSpec;
     private Map<String, Object> context;
-    private QueryMetrics<?> queryMetrics;
 
     public SearchQueryBuilder()
     {
@@ -580,7 +569,6 @@ public class Druids
       querySpec = null;
       sortSpec = null;
       context = null;
-      queryMetrics = null;
     }
 
     public SearchQuery build()
@@ -594,8 +582,7 @@ public class Druids
           dimensions,
           querySpec,
           sortSpec,
-          context,
-          queryMetrics
+          context
       );
     }
 
@@ -610,8 +597,7 @@ public class Druids
           .dimensions(query.getDimensions())
           .query(query.getQuery())
           .sortSpec(query.getSort())
-          .context(query.getContext())
-          .queryMetrics(query.getQueryMetrics());
+          .context(query.getContext());
     }
 
     public SearchQueryBuilder dataSource(String d)
@@ -761,12 +747,6 @@ public class Druids
       context = c;
       return this;
     }
-
-    public SearchQueryBuilder queryMetrics(QueryMetrics<?> m)
-    {
-      queryMetrics = m;
-      return this;
-    }
   }
 
   public static SearchQueryBuilder newSearchQueryBuilder()
@@ -795,7 +775,6 @@ public class Druids
     private String bound;
     private DimFilter dimFilter;
     private Map<String, Object> context;
-    private QueryMetrics<?> queryMetrics;
 
     public TimeBoundaryQueryBuilder()
     {
@@ -804,7 +783,6 @@ public class Druids
       bound = null;
       dimFilter = null;
       context = null;
-      queryMetrics = null;
     }
 
     public TimeBoundaryQuery build()
@@ -814,8 +792,7 @@ public class Druids
           querySegmentSpec,
           bound,
           dimFilter,
-          context,
-          queryMetrics
+          context
       );
     }
 
@@ -826,8 +803,7 @@ public class Druids
           .intervals(query.getQuerySegmentSpec())
           .bound(query.getBound())
           .filters(query.getFilter())
-          .context(query.getContext())
-          .queryMetrics(query.getQueryMetrics());
+          .context(query.getContext());
     }
 
     public TimeBoundaryQueryBuilder dataSource(String ds)
@@ -887,12 +863,6 @@ public class Druids
     public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
       context = c;
-      return this;
-    }
-
-    public TimeBoundaryQueryBuilder queryMetrics(QueryMetrics<?> m)
-    {
-      queryMetrics = m;
       return this;
     }
   }
@@ -992,7 +962,6 @@ public class Druids
     private Boolean merge;
     private Boolean lenientAggregatorMerge;
     private Map<String, Object> context;
-    private QueryMetrics<?> queryMetrics;
 
     public SegmentMetadataQueryBuilder()
     {
@@ -1003,7 +972,6 @@ public class Druids
       merge = null;
       lenientAggregatorMerge = null;
       context = null;
-      queryMetrics = null;
     }
 
     public SegmentMetadataQuery build()
@@ -1016,8 +984,7 @@ public class Druids
           context,
           analysisTypes,
           false,
-          lenientAggregatorMerge,
-          queryMetrics
+          lenientAggregatorMerge
       );
     }
 
@@ -1030,8 +997,7 @@ public class Druids
           .analysisTypes(query.getAnalysisTypes())
           .merge(query.isMerge())
           .lenientAggregatorMerge(query.isLenientAggregatorMerge())
-          .context(query.getContext())
-          .queryMetrics(query.getQueryMetrics());
+          .context(query.getContext());
     }
 
     public SegmentMetadataQueryBuilder dataSource(String ds)
@@ -1105,12 +1071,6 @@ public class Druids
       context = c;
       return this;
     }
-
-    public SegmentMetadataQueryBuilder queryMetrics(QueryMetrics<?> m)
-    {
-      queryMetrics = m;
-      return this;
-    }
   }
 
   public static SegmentMetadataQueryBuilder newSegmentMetadataQueryBuilder()
@@ -1145,7 +1105,6 @@ public class Druids
     private List<String> metrics;
     private VirtualColumns virtualColumns;
     private PagingSpec pagingSpec;
-    private QueryMetrics<?> queryMetrics;
 
     public SelectQueryBuilder()
     {
@@ -1159,7 +1118,6 @@ public class Druids
       metrics = Lists.newArrayList();
       virtualColumns = null;
       pagingSpec = null;
-      queryMetrics = null;
     }
 
     public SelectQuery build()
@@ -1174,8 +1132,7 @@ public class Druids
           metrics,
           virtualColumns,
           pagingSpec,
-          context,
-          queryMetrics
+          context
       );
     }
 
@@ -1191,8 +1148,7 @@ public class Druids
           .metrics(query.getMetrics())
           .virtualColumns(query.getVirtualColumns())
           .pagingSpec(query.getPagingSpec())
-          .context(query.getContext())
-          .queryMetrics(query.getQueryMetrics());
+          .context(query.getContext());
     }
 
     public SelectQueryBuilder dataSource(String ds)
@@ -1306,12 +1262,6 @@ public class Druids
       pagingSpec = p;
       return this;
     }
-
-    public SelectQueryBuilder queryMetrics(QueryMetrics<?> m)
-    {
-      queryMetrics = m;
-      return this;
-    }
   }
 
   public static SelectQueryBuilder newSelectQueryBuilder()
@@ -1338,14 +1288,12 @@ public class Druids
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private Map<String, Object> context;
-    private QueryMetrics<?> queryMetrics;
 
     public DataSourceMetadataQueryBuilder()
     {
       dataSource = null;
       querySegmentSpec = null;
       context = null;
-      queryMetrics = null;
     }
 
     public DataSourceMetadataQuery build()
@@ -1353,8 +1301,7 @@ public class Druids
       return new DataSourceMetadataQuery(
           dataSource,
           querySegmentSpec,
-          context,
-          queryMetrics
+          context
       );
     }
 
@@ -1363,8 +1310,7 @@ public class Druids
       return new DataSourceMetadataQueryBuilder()
           .dataSource(query.getDataSource())
           .intervals(query.getQuerySegmentSpec())
-          .context(query.getContext())
-          .queryMetrics(query.getQueryMetrics());
+          .context(query.getContext());
     }
 
     public DataSourceMetadataQueryBuilder dataSource(String ds)
@@ -1400,12 +1346,6 @@ public class Druids
     public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
       context = c;
-      return this;
-    }
-
-    public DataSourceMetadataQueryBuilder queryMetrics(QueryMetrics<?> m)
-    {
-      queryMetrics = m;
       return this;
     }
   }

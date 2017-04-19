@@ -28,7 +28,6 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
-import io.druid.query.QueryMetrics;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -65,27 +64,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this(dataSource, dimFilter, granularity, limit, querySegmentSpec, dimensions, querySpec, sortSpec, context, null);
-  }
-
-  /**
-   * This constructor is public only because {@link Druids.SearchQueryBuilder} needs to access this constructor, and it
-   * is defined in Druids rather than in as an inner class of SearchQuery.
-   */
-  public SearchQuery(
-      final DataSource dataSource,
-      final DimFilter dimFilter,
-      final Granularity granularity,
-      final int limit,
-      final QuerySegmentSpec querySegmentSpec,
-      final List<DimensionSpec> dimensions,
-      final SearchQuerySpec querySpec,
-      final SearchSortSpec sortSpec,
-      final Map<String, Object> context,
-      final QueryMetrics<?> queryMetrics
-  )
-  {
-    super(dataSource, querySegmentSpec, false, context, queryMetrics);
+    super(dataSource, querySegmentSpec, false, context);
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
 
     this.dimFilter = dimFilter;
@@ -136,13 +115,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   public SearchQuery withDimFilter(DimFilter dimFilter)
   {
     return Druids.SearchQueryBuilder.copy(this).filters(dimFilter).build();
-  }
-
-  @Override
-  public Query<Result<SearchResultValue>> withQueryMetrics(QueryMetrics<?> queryMetrics)
-  {
-    Preconditions.checkNotNull(queryMetrics);
-    return Druids.SearchQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   @JsonProperty("filter")
