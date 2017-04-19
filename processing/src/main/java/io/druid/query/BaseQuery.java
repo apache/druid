@@ -177,12 +177,6 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @Override
-  public Query<T> withDefaultTimeout(long defaultTimeout)
-  {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

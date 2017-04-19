@@ -106,7 +106,7 @@ public class QueryContextsTest
     );
     Assert.assertEquals(300_000, QueryContexts.getTimeout(query));
 
-    query = query.withDefaultTimeout(60_000);
+    query = QueryContexts.withDefaultTimeout(query, 60_000);
     Assert.assertEquals(60_000, QueryContexts.getTimeout(query));
   }
 
@@ -121,7 +121,7 @@ public class QueryContextsTest
     );
     Assert.assertEquals(1000, QueryContexts.getTimeout(query));
 
-    query = query.withDefaultTimeout(1_000_000);
+    query = QueryContexts.withDefaultTimeout(query, 1_000_000);
     Assert.assertEquals(1000, QueryContexts.getTimeout(query));
   }
 }
