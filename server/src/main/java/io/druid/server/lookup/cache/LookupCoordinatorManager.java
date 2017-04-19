@@ -76,7 +76,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -306,7 +305,7 @@ public class LookupCoordinatorManager
     return tierLookups.get(lookupName);
   }
 
-  // start() and stop() are synchronized so that they never run in parallel in case of ZK acting funny or drui bug and
+  // start() and stop() are synchronized so that they never run in parallel in case of ZK acting funny or druid bug and
   // coordinator becomes leader and drops leadership in quick succession.
   public void start()
   {
@@ -318,6 +317,8 @@ public class LookupCoordinatorManager
       try {
         LOG.debug("Starting.");
 
+        //first ensure that previous executorService from last cycle of start/stop has finished completely.
+        //so that we don't have multiple live executorService instances lying around doing lookup management.
         if (executorService != null &&
             !executorService.awaitTermination(
                 lookupCoordinatorManagerConfig.getHostTimeout().getMillis() * 10,
@@ -392,6 +393,9 @@ public class LookupCoordinatorManager
           LOG.warn("Background lookup manager thread could not be cancelled");
         }
 
+        // signal the executorService to shut down ASAP, if this coordinator becomes leader again
+        // then start() would ensure that this executorService is finished before starting a
+        // new one.
         if (executorService != null) {
           executorService.shutdownNow();
         }
@@ -480,8 +484,6 @@ public class LookupCoordinatorManager
 
     LOG.debug("Starting lookup sync for on all nodes.");
 
-    final Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> currState = new ConcurrentHashMap<>();
-
     try {
       List<ListenableFuture<Map.Entry>> futures = new ArrayList<>();
       for (Map.Entry<String, Map<String, LookupExtractorFactoryMapContainer>> tierEntry : allLookupTiers.entrySet()) {
@@ -503,6 +505,10 @@ public class LookupCoordinatorManager
                   () -> {
                     try {
                       return new AbstractMap.SimpleImmutableEntry<>(node, doLookupManagementOnNode(node, tierLookups));
+                    }
+                    catch (InterruptedException ex) {
+                      LOG.warn(ex, "lookup management on node [%s:%s] interrupted.", node.getHostText(), node.getPort());
+                      return null;
                     }
                     catch (Exception ex) {
                       LOG.makeAlert(
