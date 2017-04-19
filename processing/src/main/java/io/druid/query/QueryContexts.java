@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.ISE;
 
 public class QueryContexts
@@ -112,6 +113,11 @@ public class QueryContexts
     final long timeout = parseLong(query, TIMEOUT_KEY, defaultTimeout);
     Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%d]", timeout);
     return timeout;
+  }
+
+  public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)
+  {
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
   }
 
   static <T> long getDefaultTimeout(Query<T> query)
