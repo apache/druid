@@ -108,4 +108,6 @@ public interface Query<T>
 
   @Nullable
   QueryMetrics<?> getQueryMetrics();
+
+  Query<T> withDefaultTimeout(long defaultTimeout);
 }

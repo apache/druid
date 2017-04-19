@@ -51,7 +51,7 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
   @SuppressWarnings("unchecked")
   public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
-    if (BaseQuery.getContextBySegment(query, false)) {
+    if (QueryContexts.isBySegment(query)) {
       final Sequence<T> baseSequence = base.run(query, responseContext);
       final List<T> results = Sequences.toList(baseSequence, Lists.<T>newArrayList());
       return Sequences.simple(

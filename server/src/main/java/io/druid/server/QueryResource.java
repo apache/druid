@@ -40,7 +40,6 @@ import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QuerySegmentWalker;
@@ -177,7 +176,7 @@ public class QueryResource implements QueryCountStatsProvider
   ) throws IOException
   {
     final long startNs = System.nanoTime();
-    Query query = null;
+    Query<?> query = null;
     QueryToolChest toolChest = null;
     String queryId = null;
 
@@ -191,14 +190,8 @@ public class QueryResource implements QueryCountStatsProvider
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      if (query.getContextValue(QueryContextKeys.TIMEOUT) == null) {
-        query = query.withOverriddenContext(
-            ImmutableMap.of(
-                QueryContextKeys.TIMEOUT,
-                config.getMaxIdleTime().toStandardDuration().getMillis()
-            )
-        );
-      }
+      query = query.withDefaultTimeout(config.getDefaultQueryTimeout());
+
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
@@ -259,48 +252,69 @@ public class QueryResource implements QueryCountStatsProvider
                   @Override
                   public void write(OutputStream outputStream) throws IOException, WebApplicationException
                   {
+                    boolean success = false;
+                    String exceptionStr = "";
+
+                    CountingOutputStream os = new CountingOutputStream(outputStream);
                     try {
                       // json serializer will always close the yielder
-                      CountingOutputStream os = new CountingOutputStream(outputStream);
                       jsonWriter.writeValue(os, yielder);
 
                       os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
                       os.close();
-                      successfulQueryCount.incrementAndGet();
-                      final long queryTimeNs = System.nanoTime() - startNs;
-                      QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
-                          queryMetricsFactory,
-                          theToolChest,
-                          theQuery,
-                          req.getRemoteAddr()
-                      );
-                      queryMetrics.success(true);
-                      queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
 
-                      DruidMetrics.makeRequestMetrics(
-                          queryMetricsFactory,
-                          theToolChest,
-                          theQuery,
-                          req.getRemoteAddr()
-                      ).reportQueryBytes(os.getCount()).emit(emitter);
+                      success = true;
+                    } catch (Exception ex) {
+                      exceptionStr = ex.toString();
+                      throw Throwables.propagate(ex);
+                    } finally {
+                      try {
+                        if (success) {
+                          successfulQueryCount.incrementAndGet();
+                        } else {
+                          failedQueryCount.incrementAndGet();
+                        }
 
-                      requestLogger.log(
-                          new RequestLogLine(
-                              new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
-                              req.getRemoteAddr(),
-                              theQuery,
-                              new QueryStats(
-                                  ImmutableMap.<String, Object>of(
-                                      "query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
-                                      "query/bytes", os.getCount(),
-                                      "success", true
-                                  )
-                              )
-                          )
-                      );
-                    }
-                    finally {
-                      Thread.currentThread().setName(currThreadName);
+                        final long queryTimeNs = System.nanoTime() - startNs;
+                        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+                            queryMetricsFactory,
+                            theToolChest,
+                            theQuery,
+                            req.getRemoteAddr()
+                        );
+                        queryMetrics.success(success);
+                        queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
+
+                        DruidMetrics.makeRequestMetrics(
+                            queryMetricsFactory,
+                            theToolChest,
+                            theQuery,
+                            req.getRemoteAddr()
+                        ).reportQueryBytes(os.getCount()).emit(emitter);
+
+                        ImmutableMap.Builder<String, Object> statsMapBuilder = ImmutableMap.builder();
+                        statsMapBuilder.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
+                        statsMapBuilder.put("query/bytes", os.getCount());
+                        statsMapBuilder.put("success", success);
+                        if (!success) {
+                          statsMapBuilder.put("exception", exceptionStr);
+                        }
+
+                        requestLogger.log(
+                            new RequestLogLine(
+                                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
+                                req.getRemoteAddr(),
+                                theQuery,
+                                new QueryStats(
+                                    statsMapBuilder.build()
+                                )
+                            )
+                        );
+                      } catch (Exception ex) {
+                        log.error(ex, "Unable to log query [%s]!", theQuery);
+                      } finally {
+                        Thread.currentThread().setName(currThreadName);
+                      }
                     }
                   }
                 },
