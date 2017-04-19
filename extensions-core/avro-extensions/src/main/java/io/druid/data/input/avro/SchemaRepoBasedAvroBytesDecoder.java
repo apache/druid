@@ -77,6 +77,9 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
   {
     Pair<SUBJECT, ID> subjectAndId = subjectAndIdConverter.getSubjectAndId(bytes);
     Schema schema = typedRepository.getSchema(subjectAndId.lhs, subjectAndId.rhs);
+    if (schema == null) {
+      throw new ParseException(String.format("schema lookup failed! subject=%s, id=%s", subjectAndId.lhs, subjectAndId.rhs));
+    }
     DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(schema);
     ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes));
     try {

@@ -4,7 +4,7 @@ layout: doc_page
 
 # Avro
 
-This extension enables Druid to ingest and understand the Apache Avro data format. Make sure to [include](../../operations/including-extensions.html) `druid-avro-extensions` as an extension.
+This extension enables Druid to ingest and understand the Apache Avro data format. Make sure to [include](../../operations/including-extensions.html) `druid-avro-extensions` as an extension.  Inline schema and [Schema Repo](http://schemarepo.org) are supported.
 
 ### Avro Stream Parser
 
@@ -17,6 +17,10 @@ This is for streaming/realtime ingestion.
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
 
 For example, using Avro stream parser with schema repo Avro bytes decoder:
+
+- `YOUR_TOPIC` must be same as Schema Repo subject.  It's suggested to be same as your Kafka topic when you [setup the subject](https://github.com/schema-repo/schema-repo/wiki/Service-Endpoints#put-a-new-subject).
+- `YOUR_SCHEMA_REPO_END_POINT` is Schema Repo url to the subjects e.g. http://localhost:2876/schema-repo
+
 
 ```json
 "parser" : {
@@ -108,7 +112,7 @@ Note that it is essentially a map of integer schema ID to avro schema object. Th
 
 ##### SchemaRepo Based Avro Bytes Decoder
 
-This Avro bytes decoder first extract `subject` and `id` from input message bytes, then use them to lookup the Avro schema with which to decode Avro record from bytes. Details can be found in [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. Towards schema registration on the message producer side, you can refer to `io.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
+This Avro bytes decoder requires non standard schema `id` header which is 4 bytes big endian int32 prepended to the standard Avro message bytes. For example when schema ID in Schema Repo is "1" the header must have 00 00 00 01. Then the decoder uses `topic` as subject and the schema `id` to lookup the Avro schema with which to decode Avro record from bytes. Details can be found in [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. Towards schema registration on the message producer side, you can refer to `io.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
