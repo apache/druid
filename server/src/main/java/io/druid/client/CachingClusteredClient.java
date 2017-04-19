@@ -55,10 +55,10 @@ import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -151,12 +151,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final boolean useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
     final boolean populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
-    final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
+    final boolean isBySegment = QueryContexts.isBySegment(query);
 
     final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    final int priority = BaseQuery.getContextPriority(query, 0);
-    contextBuilder.put("priority", priority);
+    final int priority = QueryContexts.getPriority(query);
+    contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
 
     if (populateCache) {
       // prevent down-stream nodes from caching results as well if we are populating the cache
@@ -177,7 +177,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Note that enabling this leads to putting uncovered intervals information in the response headers
     // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
-    int uncoveredIntervalsLimit = BaseQuery.getContextUncoveredIntervalsLimit(query, 0);
+    int uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query);
 
     if (uncoveredIntervalsLimit > 0) {
       List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);

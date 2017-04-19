@@ -35,12 +35,12 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
-import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -391,7 +391,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         return runner.run(query, responseContext);
       }
 
-      final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
+      final boolean isBySegment = QueryContexts.isBySegment(query);
 
       return Sequences.map(
           runner.run(query.withLimit(config.getMaxSearchLimit()), responseContext),

@@ -25,7 +25,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -36,6 +36,8 @@ import java.util.concurrent.ExecutorService;
 
 public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValue, ScanQuery>
 {
+  // This variable indicates when a running query should be expired,
+  // and is effective only when 'timeout' of queryContext has a positive value.
   public static final String CTX_TIMEOUT_AT = "timeoutAt";
   public static final String CTX_COUNT = "count";
   private final ScanQueryQueryToolChest toolChest;
@@ -71,9 +73,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           final Query<ScanResultValue> query, final Map<String, Object> responseContext
       )
       {
-        final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
-        final long timeoutAt = (queryTimeout == null || queryTimeout.longValue() == 0L)
-                               ? JodaUtils.MAX_INSTANT : System.currentTimeMillis() + queryTimeout.longValue();
+        // Note: this variable is effective only when queryContext has a timeout.
+        // See the comment of CTX_TIMEOUT_AT.
+        final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(query);
         responseContext.put(CTX_TIMEOUT_AT, timeoutAt);
         return Sequences.concat(
             Sequences.map(
@@ -122,7 +124,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       final Number timeoutAt = (Number) responseContext.get(CTX_TIMEOUT_AT);
       if (timeoutAt == null || timeoutAt.longValue() == 0L) {
         responseContext.put(CTX_TIMEOUT_AT, JodaUtils.MAX_INSTANT);
-      };
+      }
       return engine.process((ScanQuery) query, segment, responseContext);
     }
   }

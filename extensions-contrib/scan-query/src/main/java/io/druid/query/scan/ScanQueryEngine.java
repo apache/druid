@@ -28,6 +28,7 @@ import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -65,6 +66,7 @@ public class ScanQueryEngine
         return Sequences.empty();
       }
     }
+    final boolean hasTimeout = QueryContexts.hasTimeout(query);
     final Long timeoutAt = (long) responseContext.get(ScanQueryRunnerFactory.CTX_TIMEOUT_AT);
     final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
@@ -156,7 +158,7 @@ public class ScanQueryEngine
                           @Override
                           public ScanResultValue next()
                           {
-                            if (System.currentTimeMillis() >= timeoutAt) {
+                            if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
                               throw new QueryInterruptedException(new TimeoutException());
                             }
                             long lastOffset = offset;
@@ -173,10 +175,12 @@ public class ScanQueryEngine
                                 ScanQueryRunnerFactory.CTX_COUNT,
                                 (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) + (offset - lastOffset)
                             );
-                            responseContext.put(
-                                ScanQueryRunnerFactory.CTX_TIMEOUT_AT,
-                                timeoutAt - (System.currentTimeMillis() - start)
-                            );
+                            if (hasTimeout) {
+                              responseContext.put(
+                                  ScanQueryRunnerFactory.CTX_TIMEOUT_AT,
+                                  timeoutAt - (System.currentTimeMillis() - start)
+                              );
+                            }
                             return new ScanResultValue(segmentId, allColumns, events);
                           }
 
