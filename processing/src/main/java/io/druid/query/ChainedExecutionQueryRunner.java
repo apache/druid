@@ -89,8 +89,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
+    Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
     final Ordering ordering = query.getResultOrdering();
 
@@ -121,7 +122,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   public Iterable<T> call() throws Exception
                                   {
                                     try {
-                                      Sequence<T> result = input.run(query, responseContext);
+                                      Sequence<T> result = input.run(queryPlus, responseContext);
                                       if (result == null) {
                                         throw new ISE("Got a null result! Segments are missing!");
                                       }

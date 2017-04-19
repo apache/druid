@@ -37,6 +37,7 @@ import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -416,26 +417,27 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         {
           @Override
           public Sequence<Result<TopNResultValue>> run(
-              Query<Result<TopNResultValue>> query, Map<String, Object> responseContext
+              QueryPlus<Result<TopNResultValue>> queryPlus, Map<String, Object> responseContext
           )
           {
-            TopNQuery topNQuery = (TopNQuery) query;
+            TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
             if (topNQuery.getDimensionsFilter() != null) {
               topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
             }
             final TopNQuery delegateTopNQuery = topNQuery;
             if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {
               final DimensionSpec dimensionSpec = delegateTopNQuery.getDimensionSpec();
-              return runner.run(
+              QueryPlus<Result<TopNResultValue>> delegateQueryPlus = queryPlus.withQuery(
                   delegateTopNQuery.withDimensionSpec(
                       new DefaultDimensionSpec(
                           dimensionSpec.getDimension(),
                           dimensionSpec.getOutputName()
                       )
-                  ), responseContext
+                  )
               );
+              return runner.run(delegateQueryPlus, responseContext);
             } else {
-              return runner.run(delegateTopNQuery, responseContext);
+              return runner.run(queryPlus.withQuery(delegateTopNQuery), responseContext);
             }
           }
         }
@@ -455,12 +457,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       @Override
       public Sequence<Result<TopNResultValue>> run(
-          final Query<Result<TopNResultValue>> query, final Map<String, Object> responseContext
+          final QueryPlus<Result<TopNResultValue>> queryPlus, final Map<String, Object> responseContext
       )
       {
         // thresholdRunner.run throws ISE if query is not TopNQuery
-        final Sequence<Result<TopNResultValue>> resultSequence = thresholdRunner.run(query, responseContext);
-        final TopNQuery topNQuery = (TopNQuery) query;
+        final Sequence<Result<TopNResultValue>> resultSequence = thresholdRunner.run(queryPlus, responseContext);
+        final TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
         if (!TopNQueryEngine.canApplyExtractionInPost(topNQuery)) {
           return resultSequence;
         } else {
@@ -521,10 +523,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
     @Override
     public Sequence<Result<TopNResultValue>> run(
-        Query<Result<TopNResultValue>> input,
+        QueryPlus<Result<TopNResultValue>> queryPlus,
         Map<String, Object> responseContext
     )
     {
+      Query<Result<TopNResultValue>> input = queryPlus.getQuery();
       if (!(input instanceof TopNQuery)) {
         throw new ISE("Can only handle [%s], got [%s]", TopNQuery.class, input.getClass());
       }
@@ -532,13 +535,13 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       final TopNQuery query = (TopNQuery) input;
       final int minTopNThreshold = query.getContextValue("minTopNThreshold", config.getMinTopNThreshold());
       if (query.getThreshold() > minTopNThreshold) {
-        return runner.run(query, responseContext);
+        return runner.run(queryPlus, responseContext);
       }
 
       final boolean isBySegment = QueryContexts.isBySegment(query);
 
       return Sequences.map(
-          runner.run(query.withThreshold(minTopNThreshold), responseContext),
+          runner.run(queryPlus.withQuery(query.withThreshold(minTopNThreshold)), responseContext),
           new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
           {
             @Override

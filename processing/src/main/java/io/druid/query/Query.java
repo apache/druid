@@ -70,8 +70,18 @@ public interface Query<T>
 
   String getType();
 
+  /**
+   * @deprecated use {@link QueryPlus#run(QuerySegmentWalker, Map)} instead. This method could be removed in the next
+   * minor or major version of Druid.
+   */
+  @Deprecated
   Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
 
+  /**
+   * @deprecated use {@link QueryRunner#run(QueryPlus, Map)} instead. This method could be removed in the next minor or
+   * major version of Druid.
+   */
+  @Deprecated
   Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context);
 
   List<Interval> getIntervals();

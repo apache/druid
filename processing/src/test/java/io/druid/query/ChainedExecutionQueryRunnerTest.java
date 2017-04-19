@@ -330,7 +330,7 @@ public class ChainedExecutionQueryRunnerTest
     }
 
     @Override
-    public Sequence<Integer> run(Query<Integer> query, Map<String, Object> responseContext)
+    public Sequence<Integer> run(QueryPlus<Integer> queryPlus, Map<String, Object> responseContext)
     {
       // do a lot of work
       synchronized (this) {

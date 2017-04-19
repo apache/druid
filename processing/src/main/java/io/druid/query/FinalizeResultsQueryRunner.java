@@ -47,8 +47,9 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
+    final Query<T> query = queryPlus.getQuery();
     final boolean isBySegment = QueryContexts.isBySegment(query);
     final boolean shouldFinalize = QueryContexts.isFinalize(query, true);
 
@@ -100,7 +101,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
 
 
     return Sequences.map(
-        baseRunner.run(queryToRun, responseContext),
+        baseRunner.run(queryPlus.withQuery(queryToRun), responseContext),
         finalizerFn
     );
 

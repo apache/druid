@@ -82,9 +82,10 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
-    final QueryMetrics<? super Query<T>> queryMetrics = queryToolChest.makeMetrics(query);
+    QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics((QueryToolChest<T, ? extends Query<T>>) queryToolChest);
+    final QueryMetrics<? super Query<T>> queryMetrics = (QueryMetrics<? super Query<T>>) queryWithMetrics.getQueryMetrics();
 
     applyCustomDimensions.accept(queryMetrics);
 
@@ -97,7 +98,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           @Override
           public Sequence<T> get()
           {
-            return queryRunner.run(query, responseContext);
+            return queryRunner.run(queryWithMetrics, responseContext);
           }
         }),
         new SequenceWrapper()

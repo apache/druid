@@ -48,6 +48,7 @@ import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
@@ -232,27 +233,29 @@ public class GroupByStrategyV2 implements GroupByStrategy
     return query.applyLimit(
         Sequences.map(
             mergingQueryRunner.run(
-                new GroupByQuery(
-                    query.getDataSource(),
-                    query.getQuerySegmentSpec(),
-                    query.getVirtualColumns(),
-                    query.getDimFilter(),
-                    query.getGranularity(),
-                    query.getDimensions(),
-                    query.getAggregatorSpecs(),
-                    // Don't do post aggs until the end of this method.
-                    ImmutableList.<PostAggregator>of(),
-                    // Don't do "having" clause until the end of this method.
-                    null,
-                    null,
-                    query.getContext()
-                ).withOverriddenContext(
-                    ImmutableMap.<String, Object>of(
-                        "finalize", false,
-                        GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
-                        CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
-                        CTX_KEY_OUTERMOST, false
-                    )
+                QueryPlus.wrap(
+                  new GroupByQuery(
+                      query.getDataSource(),
+                      query.getQuerySegmentSpec(),
+                      query.getVirtualColumns(),
+                      query.getDimFilter(),
+                      query.getGranularity(),
+                      query.getDimensions(),
+                      query.getAggregatorSpecs(),
+                      // Don't do post aggs until the end of this method.
+                      ImmutableList.<PostAggregator>of(),
+                      // Don't do "having" clause until the end of this method.
+                      null,
+                      null,
+                      query.getContext()
+                  ).withOverriddenContext(
+                      ImmutableMap.<String, Object>of(
+                          "finalize", false,
+                          GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
+                          CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
+                          CTX_KEY_OUTERMOST, false
+                      )
+                  )
                 ),
                 responseContext
             ),
@@ -310,7 +313,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     return mergeResults(new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
       {
         return results;
       }
