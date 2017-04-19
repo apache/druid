@@ -49,6 +49,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
@@ -71,6 +72,8 @@ public class RemoteTaskRunnerTest
   private Task task;
   private Worker worker;
 
+  private File baseDir = new File("lol");
+
   @Before
   public void setUp() throws Exception
   {
@@ -79,6 +82,9 @@ public class RemoteTaskRunnerTest
     cf = rtrTestUtils.getCuratorFramework();
 
     task = TestTasks.unending("task");
+
+    final File baseDir = new File("lol");
+    baseDir.mkdir();
   }
 
   @After
@@ -88,6 +94,7 @@ public class RemoteTaskRunnerTest
       remoteTaskRunner.stop();
     }
     rtrTestUtils.tearDown();
+    baseDir.delete();
   }
 
   @Test

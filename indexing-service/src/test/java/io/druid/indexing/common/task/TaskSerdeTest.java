@@ -77,6 +77,10 @@ public class TaskSerdeTest
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+
+    final File baseDir = new File("lol");
+    baseDir.mkdir();
+    baseDir.deleteOnExit();
   }
 
   @Test
@@ -88,7 +92,6 @@ public class TaskSerdeTest
     );
 
     Assert.assertEquals(false, ioConfig.isAppendToExisting());
-    Assert.assertEquals(false, ioConfig.isSkipFirehoseCaching());
   }
 
   @Test
@@ -186,7 +189,7 @@ public class TaskSerdeTest
                 ),
                 jsonMapper
             ),
-            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true, true),
+            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTask.IndexTuningConfig(10000, 10, 9999, null, indexSpec, 3, true, true, true)
         ),
         null,
@@ -210,7 +213,6 @@ public class TaskSerdeTest
     Assert.assertTrue(taskIoConfig.getFirehoseFactory() instanceof LocalFirehoseFactory);
     Assert.assertTrue(task2IoConfig.getFirehoseFactory() instanceof LocalFirehoseFactory);
     Assert.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
-    Assert.assertEquals(taskIoConfig.isSkipFirehoseCaching(), task2IoConfig.isSkipFirehoseCaching());
 
     IndexTask.IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
     IndexTask.IndexTuningConfig task2TuningConfig = task2.getIngestionSchema().getTuningConfig();
@@ -251,7 +253,7 @@ public class TaskSerdeTest
                 ),
                 jsonMapper
             ),
-            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true, null),
+            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
         ),
         null,

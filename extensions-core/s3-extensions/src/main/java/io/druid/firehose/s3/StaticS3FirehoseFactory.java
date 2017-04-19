@@ -22,52 +22,41 @@ package io.druid.firehose.s3;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
-import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.impl.FileIteratingFirehose;
-import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.java.util.common.CompressionUtils;
+import io.druid.data.input.impl.PrefetcheableTextFilesFirehoseFactory;
 import io.druid.java.util.common.logger.Logger;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.LineIterator;
+import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
  */
-public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowParser>
+public class StaticS3FirehoseFactory extends PrefetcheableTextFilesFirehoseFactory<URI>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
   private final RestS3Service s3Client;
-  private final List<URI> uris;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
       @JacksonInject("s3Client") RestS3Service s3Client,
-      @JsonProperty("uris") List<URI> uris
+      @JsonProperty("uris") List<URI> uris,
+      @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
+      @JsonProperty("maxCacheCapacityBytes") Long maxFetchCapacityBytes,
+      @JsonProperty("maxCacheCapacityBytes") Long prefetchTriggerBytes,
+      @JsonProperty("maxCacheCapacityBytes") Integer fetchTimeout,
+      @JsonProperty("maxCacheCapacityBytes") Integer maxFetchRetry
   )
   {
-    this.s3Client = s3Client;
-    this.uris = ImmutableList.copyOf(uris);
+    super(uris, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
+    this.s3Client = Preconditions.checkNotNull(s3Client, "null s3Client");;
 
     for (final URI inputURI : uris) {
       Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
@@ -77,75 +66,33 @@ public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowPa
   @JsonProperty
   public List<URI> getUris()
   {
-    return uris;
+    return getObjects();
   }
 
   @Override
-  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
+  protected InputStream openStream(URI object) throws IOException
   {
-    Preconditions.checkNotNull(s3Client, "null s3Client");
-
-    final LinkedList<URI> objectQueue = Lists.newLinkedList(uris);
-
-    return new FileIteratingFirehose(
-        new Iterator<LineIterator>()
-        {
-          @Override
-          public boolean hasNext()
-          {
-            return !objectQueue.isEmpty();
-          }
-
-          @Override
-          public LineIterator next()
-          {
-            final URI nextURI = objectQueue.poll();
-
-            final String s3Bucket = nextURI.getAuthority();
-            final S3Object s3Object = new S3Object(
-                nextURI.getPath().startsWith("/")
-                ? nextURI.getPath().substring(1)
-                : nextURI.getPath()
-            );
-
-            log.info("Reading from bucket[%s] object[%s] (%s)", s3Bucket, s3Object.getKey(), nextURI);
-
-            try {
-              final InputStream innerInputStream = s3Client.getObject(
-                  new S3Bucket(s3Bucket), s3Object.getKey()
-              )
-                                                           .getDataInputStream();
-
-              final InputStream outerInputStream = s3Object.getKey().endsWith(".gz")
-                                                   ? CompressionUtils.gzipInputStream(innerInputStream)
-                                                   : innerInputStream;
-
-              return IOUtils.lineIterator(
-                  new BufferedReader(
-                      new InputStreamReader(outerInputStream, Charsets.UTF_8)
-                  )
-              );
-            }
-            catch (Exception e) {
-              log.error(
-                  e,
-                  "Exception reading from bucket[%s] object[%s]",
-                  s3Bucket,
-                  s3Object.getKey()
-              );
-
-              throw Throwables.propagate(e);
-            }
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-        },
-        firehoseParser
+    final String s3Bucket = object.getAuthority();
+    final S3Object s3Object = new S3Object(
+        object.getPath().startsWith("/")
+        ? object.getPath().substring(1)
+        : object.getPath()
     );
+
+    log.info("Reading from bucket[%s] object[%s] (%s)", s3Bucket, s3Object.getKey(), object);
+
+    try {
+      return s3Client.getObject(new S3Bucket(s3Bucket), s3Object.getKey()).getDataInputStream();
+    }
+    catch (ServiceException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  protected boolean isGzipped(URI object)
+  {
+    return object.getPath().endsWith(".gz");
   }
 
   @Override
@@ -160,13 +107,13 @@ public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowPa
 
     StaticS3FirehoseFactory factory = (StaticS3FirehoseFactory) o;
 
-    return !(uris != null ? !uris.equals(factory.uris) : factory.uris != null);
+    return getUris().equals(factory.getUris());
 
   }
 
   @Override
   public int hashCode()
   {
-    return uris != null ? uris.hashCode() : 0;
+    return getUris().hashCode();
   }
 }

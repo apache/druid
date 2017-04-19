@@ -80,7 +80,6 @@ import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
-import io.druid.segment.realtime.firehose.ReplayableFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
@@ -175,19 +174,7 @@ public class IndexTask extends AbstractTask
       ((IngestSegmentFirehoseFactory) delegateFirehoseFactory).setTaskToolbox(toolbox);
     }
 
-    final FirehoseFactory firehoseFactory;
-    if (ingestionSchema.getIOConfig().isSkipFirehoseCaching()
-        || delegateFirehoseFactory instanceof ReplayableFirehoseFactory) {
-      firehoseFactory = delegateFirehoseFactory;
-    } else {
-      firehoseFactory = new ReplayableFirehoseFactory(
-          delegateFirehoseFactory,
-          ingestionSchema.getTuningConfig().isReportParseExceptions(),
-          null,
-          null,
-          smileMapper
-      );
-    }
+    final FirehoseFactory firehoseFactory = delegateFirehoseFactory;
 
     final Map<Interval, List<ShardSpec>> shardSpecs = determineShardSpecs(toolbox, firehoseFactory);
 
@@ -584,22 +571,18 @@ public class IndexTask extends AbstractTask
   public static class IndexIOConfig implements IOConfig
   {
     private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
-    private static final boolean DEFAULT_SKIP_FIREHOSE_CACHING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final boolean appendToExisting;
-    private final boolean skipFirehoseCaching;
 
     @JsonCreator
     public IndexIOConfig(
         @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
-        @JsonProperty("skipFirehoseCaching") @Nullable Boolean skipFirehoseCaching
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
     )
     {
       this.firehoseFactory = firehoseFactory;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
-      this.skipFirehoseCaching = skipFirehoseCaching == null ? DEFAULT_SKIP_FIREHOSE_CACHING : skipFirehoseCaching;
     }
 
     @JsonProperty("firehose")
@@ -612,12 +595,6 @@ public class IndexTask extends AbstractTask
     public boolean isAppendToExisting()
     {
       return appendToExisting;
-    }
-
-    @JsonProperty("skipFirehoseCaching")
-    public boolean isSkipFirehoseCaching()
-    {
-      return skipFirehoseCaching;
     }
   }
 

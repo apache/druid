@@ -1,0 +1,369 @@
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package io.druid.data.input.impl;
+
+import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.Row;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.hamcrest.CoreMatchers;
+import org.joda.time.DateTime;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.TimeoutException;
+
+public class PrefetcheableTextFilesFirehoseFactoryTest
+{
+  private static File testDir;
+
+  private final StringInputRowParser parser = new StringInputRowParser(
+      new CSVParseSpec(
+          new TimestampSpec(
+              "timestamp",
+              "auto",
+              null
+          ),
+          new DimensionsSpec(
+              DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
+              Lists.newArrayList(),
+              Lists.newArrayList()
+          ),
+          ",",
+          Arrays.asList("timestamp", "a", "b")
+      ),
+      Charsets.UTF_8.name()
+  );
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @BeforeClass
+  public static void setup() throws IOException
+  {
+    testDir = File.createTempFile(PrefetcheableTextFilesFirehoseFactoryTest.class.getSimpleName(), "");
+    FileUtils.forceDelete(testDir);
+    FileUtils.forceMkdir(testDir);
+
+    for (int i = 0; i < 10; i++) {
+      // Each file is 1390 bytes
+      try (final Writer writer = new BufferedWriter(
+          new FileWriter(new File(testDir, "test_" + i))
+      )) {
+        for (int j = 0; j < 100; j++) {
+          final String a = (20171220 + i) + "," + i + "," + j + "\n";
+          writer.write(a);
+        }
+      }
+    }
+  }
+
+  @AfterClass
+  public static void teardown() throws IOException
+  {
+    FileUtils.forceDelete(testDir);
+  }
+
+  private static void assertResult(List<Row> rows)
+  {
+    Assert.assertEquals(1000, rows.size());
+    rows.sort((r1, r2) -> {
+      int c = r1.getTimestamp().compareTo(r2.getTimestamp());
+      if (c != 0) {
+        return c;
+      }
+      c = Integer.valueOf(r1.getDimension("a").get(0)).compareTo(Integer.valueOf(r2.getDimension("a").get(0)));
+      if (c != 0) {
+        return c;
+      }
+
+      return Integer.valueOf(r1.getDimension("b").get(0)).compareTo(Integer.valueOf(r2.getDimension("b").get(0)));
+    });
+
+    for (int i = 0; i < 10; i++) {
+      for (int j = 0; j < 100; j++) {
+        final Row row = rows.get(i * 100 + j);
+        Assert.assertEquals(new DateTime(20171220 + i), row.getTimestamp());
+        Assert.assertEquals(String.valueOf(i), row.getDimension("a").get(0));
+        Assert.assertEquals(String.valueOf(j), row.getDimension("b").get(0));
+      }
+    }
+  }
+
+  @Test
+  public void testWithoutCache() throws IOException
+  {
+    final TestPrefetcheableTextFilesFirehoseFactory factory =
+        TestPrefetcheableTextFilesFirehoseFactory.withoutCache(testDir);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser)) {
+      Assert.assertEquals(0, factory.getCacheFiles().size());
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+
+    assertResult(rows);
+  }
+
+  @Test
+  public void testWithZeroFetchCapacity() throws IOException
+  {
+    final TestPrefetcheableTextFilesFirehoseFactory factory =
+        TestPrefetcheableTextFilesFirehoseFactory.withZeroFetchCapacity(testDir);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser)) {
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+
+    assertResult(rows);
+  }
+
+  @Test
+  public void testWithCacheAndFetch() throws IOException
+  {
+    final TestPrefetcheableTextFilesFirehoseFactory factory =
+        TestPrefetcheableTextFilesFirehoseFactory.of(testDir);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser)) {
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+
+    assertResult(rows);
+  }
+
+  @Test
+  public void testRetry() throws IOException
+  {
+    final TestPrefetcheableTextFilesFirehoseFactory factory =
+        TestPrefetcheableTextFilesFirehoseFactory.withOpenExceptions(testDir, 1);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser)) {
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+
+    assertResult(rows);
+  }
+
+  @Test
+  public void testMaxRetry() throws IOException
+  {
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(IOException.class));
+    expectedException.expectMessage("Exception for retry test");
+
+    final TestPrefetcheableTextFilesFirehoseFactory factory =
+        TestPrefetcheableTextFilesFirehoseFactory.withOpenExceptions(testDir, 5);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser)) {
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+  }
+
+  @Test
+  public void testTimeout() throws IOException
+  {
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(TimeoutException.class));
+
+    final TestPrefetcheableTextFilesFirehoseFactory factory =
+        TestPrefetcheableTextFilesFirehoseFactory.withSleepMillis(testDir, 1000);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser)) {
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+  }
+
+  @Test
+  public void testReconnect() throws IOException
+  {
+    final TestPrefetcheableTextFilesFirehoseFactory factory =
+        TestPrefetcheableTextFilesFirehoseFactory.of(testDir);
+
+    for (int i = 0; i < 5; i++) {
+      final List<Row> rows = new ArrayList<>();
+      try (Firehose firehose = factory.connect(parser)) {
+        while (firehose.hasMore()) {
+          rows.add(firehose.nextRow());
+        }
+      }
+      assertResult(rows);
+    }
+  }
+
+  static class TestPrefetcheableTextFilesFirehoseFactory extends PrefetcheableTextFilesFirehoseFactory<File>
+  {
+    private long sleepMillis;
+    private int openExceptionCount;
+
+    static TestPrefetcheableTextFilesFirehoseFactory withoutCache(File baseDir)
+    {
+      return new TestPrefetcheableTextFilesFirehoseFactory(
+          baseDir,
+          1024,
+          0,
+          2048,
+          1000,
+          3,
+          0,
+          0
+      );
+    }
+
+    static TestPrefetcheableTextFilesFirehoseFactory withZeroFetchCapacity(File baseDir)
+    {
+      return new TestPrefetcheableTextFilesFirehoseFactory(
+          baseDir,
+          1024,
+          2048,
+          0,
+          1000,
+          3,
+          0,
+          0
+      );
+    }
+
+    static TestPrefetcheableTextFilesFirehoseFactory of(File baseDir)
+    {
+      return new TestPrefetcheableTextFilesFirehoseFactory(
+          baseDir,
+          1024,
+          2048,
+          2048,
+          1000,
+          3,
+          0,
+          0
+      );
+    }
+
+    static TestPrefetcheableTextFilesFirehoseFactory withOpenExceptions(File baseDir, int count)
+    {
+      return new TestPrefetcheableTextFilesFirehoseFactory(
+          baseDir,
+          1024,
+          2048,
+          2048,
+          1000,
+          3,
+          count,
+          0
+      );
+    }
+
+    static TestPrefetcheableTextFilesFirehoseFactory withSleepMillis(File baseDir, long ms)
+    {
+      return new TestPrefetcheableTextFilesFirehoseFactory(
+          baseDir,
+          1024,
+          2048,
+          2048,
+          100,
+          3,
+          0,
+          ms
+      );
+    }
+
+    public TestPrefetcheableTextFilesFirehoseFactory(
+        File baseDir,
+        long prefetchTriggerThreshold,
+        long maxCacheCapacityBytes,
+        long maxFetchCapacityBytes,
+        int timeout,
+        int maxRetry,
+        int openExceptionCount,
+        long sleepMillis
+    )
+    {
+      super(
+          FileUtils.listFiles(
+              Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
+              TrueFileFilter.INSTANCE,
+              TrueFileFilter.INSTANCE
+          ),
+          maxCacheCapacityBytes,
+          maxFetchCapacityBytes,
+          prefetchTriggerThreshold,
+          timeout,
+          maxRetry
+      );
+      this.openExceptionCount = openExceptionCount;
+      this.sleepMillis = sleepMillis;
+    }
+
+    @Override
+    protected InputStream openStream(File object) throws IOException
+    {
+      if (openExceptionCount > 0) {
+        openExceptionCount--;
+        throw new IOException("Exception for retry test");
+      }
+      if (sleepMillis > 0) {
+        try {
+          Thread.sleep(sleepMillis);
+        }
+        catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+      }
+      return FileUtils.openInputStream(object);
+    }
+
+    @Override
+    protected boolean isGzipped(File object)
+    {
+      return object.getPath().endsWith(".gz");
+    }
+  }
+}
