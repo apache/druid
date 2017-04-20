@@ -272,6 +272,10 @@ public class IndexTask extends AbstractTask
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
+        if (inputRow == null) {
+          continue;
+        }
+
         final Interval interval;
         if (determineIntervals) {
           interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());

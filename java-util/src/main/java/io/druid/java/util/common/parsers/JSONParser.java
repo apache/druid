@@ -150,4 +150,10 @@ public class JSONParser implements Parser<String, Object>
       throw new ParseException(e, "Unable to parse row [%s]", input);
     }
   }
+
+  @Override
+  public void reset()
+  {
+    // do nothing
+  }
 }

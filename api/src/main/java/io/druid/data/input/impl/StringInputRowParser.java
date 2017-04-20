@@ -22,7 +22,6 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
-
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.parsers.ParseException;
@@ -33,6 +32,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -124,18 +124,27 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     return theMap;
   }
 
+  public void reset()
+  {
+    parser.reset();
+  }
+
+  public InputRow parse(String input)
+    {
+      return parseMap(parseString(input));
+    }
+
   private Map<String, Object> parseString(String inputString)
   {
     return parser.parse(inputString);
   }
 
-  public InputRow parse(String input)
-  {
-    return parseMap(parseString(input));
-  }
-
   private InputRow parseMap(Map<String, Object> theMap)
   {
+    // if the file has a header, null is returned
+    if (theMap == null) {
+      return null;
+    }
     return mapParser.parse(theMap);
   }
 }

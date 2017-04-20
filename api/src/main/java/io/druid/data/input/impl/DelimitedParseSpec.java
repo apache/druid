@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-
 import io.druid.java.util.common.parsers.DelimitedParser;
 import io.druid.java.util.common.parsers.Parser;
 
@@ -36,6 +35,7 @@ public class DelimitedParseSpec extends ParseSpec
   private final String delimiter;
   private final String listDelimiter;
   private final List<String> columns;
+  private final boolean firstRowIsHeader;
 
   @JsonCreator
   public DelimitedParseSpec(
@@ -43,20 +43,28 @@ public class DelimitedParseSpec extends ParseSpec
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("delimiter") String delimiter,
       @JsonProperty("listDelimiter") String listDelimiter,
-      @JsonProperty("columns") List<String> columns
+      @JsonProperty("columns") List<String> columns,
+      @JsonProperty("firstRowIsHeader") boolean firstRowIsHeader
   )
   {
     super(timestampSpec, dimensionsSpec);
 
     this.delimiter = delimiter;
     this.listDelimiter = listDelimiter;
-    Preconditions.checkNotNull(columns, "columns");
     this.columns = columns;
-    for (String column : this.columns) {
-      Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
+    if (columns != null) {
+      for (String column : this.columns) {
+        Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
+      }
+      verify(dimensionsSpec.getDimensionNames());
+    } else {
+      Preconditions.checkArgument(
+          firstRowIsHeader,
+          "If columns field is not set, the first row of your data must have your header and firstRowIsHeader must be set to true."
+      );
     }
 
-    verify(dimensionsSpec.getDimensionNames());
+    this.firstRowIsHeader = firstRowIsHeader;
   }
 
   @JsonProperty("delimiter")
@@ -77,6 +85,12 @@ public class DelimitedParseSpec extends ParseSpec
     return columns;
   }
 
+  @JsonProperty
+  public boolean isFirstRowIsHeader()
+  {
+    return firstRowIsHeader;
+  }
+
   @Override
   public void verify(List<String> usedCols)
   {
@@ -88,38 +102,48 @@ public class DelimitedParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    Parser<String, Object> retVal = new DelimitedParser(
-        Optional.fromNullable(delimiter),
-        Optional.fromNullable(listDelimiter)
-    );
-    retVal.setFieldNames(columns);
-    return retVal;
+    if (firstRowIsHeader) {
+      return new DelimitedParser(
+          Optional.fromNullable(delimiter),
+          Optional.fromNullable(listDelimiter),
+          firstRowIsHeader
+      );
+    } else {
+      return new DelimitedParser(
+          Optional.fromNullable(delimiter),
+          Optional.fromNullable(listDelimiter)
+      );
+    }
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new DelimitedParseSpec(spec, getDimensionsSpec(), delimiter, listDelimiter, columns);
+    return new DelimitedParseSpec(spec, getDimensionsSpec(), delimiter, listDelimiter, columns, firstRowIsHeader);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new DelimitedParseSpec(getTimestampSpec(), spec, delimiter, listDelimiter, columns);
+    return new DelimitedParseSpec(getTimestampSpec(), spec, delimiter, listDelimiter, columns, firstRowIsHeader);
   }
 
   public ParseSpec withDelimiter(String delim)
   {
-    return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delim, listDelimiter, columns);
+    return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delim, listDelimiter, columns,
+                                  firstRowIsHeader
+    );
   }
 
   public ParseSpec withListDelimiter(String delim)
   {
-    return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delimiter, delim, columns);
+    return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delimiter, delim, columns, firstRowIsHeader);
   }
 
   public ParseSpec withColumns(List<String> cols)
   {
-    return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delimiter, listDelimiter, cols);
+    return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delimiter, listDelimiter, cols,
+                                  firstRowIsHeader
+    );
   }
 }

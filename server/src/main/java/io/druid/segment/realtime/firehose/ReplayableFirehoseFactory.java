@@ -162,6 +162,11 @@ public class ReplayableFirehoseFactory implements FirehoseFactory<InputRowParser
               while (delegateFirehose.hasMore() && cos.getCount() < getMaxTempFileSize()) {
                 try {
                   InputRow row = delegateFirehose.nextRow();
+
+                  if (row == null) {
+                    continue;
+                  }
+
                   generator.writeObject(row);
                   dimensionScratch.addAll(row.getDimensions());
                   counter++;

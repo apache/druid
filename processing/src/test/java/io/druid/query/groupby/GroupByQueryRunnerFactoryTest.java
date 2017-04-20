@@ -144,7 +144,8 @@ public class GroupByQueryRunnerFactoryTest
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags")), null, null),
             "\t",
-            ImmutableList.of("timestamp", "product", "tags")
+            ImmutableList.of("timestamp", "product", "tags"),
+            false
         ),
         "UTF-8"
     );

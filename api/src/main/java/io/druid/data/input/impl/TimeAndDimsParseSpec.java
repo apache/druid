@@ -64,6 +64,12 @@ public class TimeAndDimsParseSpec extends ParseSpec
       {
         throw new UnsupportedOperationException("not supported");
       }
+
+      @Override
+      public void reset()
+      {
+        // do nothing
+      }
     };
   }
 

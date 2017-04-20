@@ -40,6 +40,8 @@ public class CSVParser implements Parser<String, Object>
   private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
 
   private ArrayList<String> fieldNames = null;
+  private boolean firstRowIsHeader = false;
+  private boolean hasParsedHeader = true;
 
   public CSVParser(final Optional<String> listDelimiter)
   {
@@ -78,6 +80,18 @@ public class CSVParser implements Parser<String, Object>
     setFieldNames(header);
   }
 
+  public CSVParser(
+      final Optional<String> listDelimiter,
+      final Iterable<String> fieldNames,
+      final boolean firstRowIsHeader
+  )
+  {
+    this(listDelimiter, fieldNames);
+
+    this.firstRowIsHeader = firstRowIsHeader;
+    this.hasParsedHeader = !firstRowIsHeader;
+  }
+
   public String getListDelimiter()
   {
     return listDelimiter;
@@ -92,8 +106,10 @@ public class CSVParser implements Parser<String, Object>
   @Override
   public void setFieldNames(final Iterable<String> fieldNames)
   {
-    ParserUtils.validateFields(fieldNames);
-    this.fieldNames = Lists.newArrayList(fieldNames);
+    if (fieldNames != null) {
+      ParserUtils.validateFields(fieldNames);
+      this.fieldNames = Lists.newArrayList(fieldNames);
+    }
   }
 
   public void setFieldNames(final String header)
@@ -112,6 +128,14 @@ public class CSVParser implements Parser<String, Object>
     try {
       String[] values = parser.parseLine(input);
 
+      if (firstRowIsHeader && !hasParsedHeader) {
+        if (fieldNames == null) {
+          setFieldNames(Arrays.asList(values));
+        }
+        hasParsedHeader = true;
+        return null;
+      }
+
       if (fieldNames == null) {
         setFieldNames(ParserUtils.generateFieldNames(values.length));
       }
@@ -121,5 +145,11 @@ public class CSVParser implements Parser<String, Object>
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    hasParsedHeader = !firstRowIsHeader;
   }
 }

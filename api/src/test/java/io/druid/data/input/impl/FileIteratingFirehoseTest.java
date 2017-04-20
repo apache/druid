@@ -67,7 +67,8 @@ public class FileIteratingFirehoseTest
               new TimestampSpec("ts", "auto", null),
               new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
               ",",
-              ImmutableList.of("ts", "x")
+              ImmutableList.of("ts", "x"),
+              false
           ),
           null
       );

@@ -282,4 +282,9 @@ public class JSONPathParser implements Parser<String, Object>
     }
   }
 
+  @Override
+  public void reset()
+  {
+    // do nothing
+  }
 }

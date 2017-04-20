@@ -238,6 +238,12 @@ public class URIExtractionNamespace implements ExtractionNamespace
     {
       return delegate.getFieldNames();
     }
+
+    @Override
+    public void reset()
+    {
+      // do nothing
+    }
   }
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format")
@@ -596,6 +602,12 @@ public class URIExtractionNamespace implements ExtractionNamespace
         public List<String> getFieldNames()
         {
           throw new UOE("No field names available");
+        }
+
+        @Override
+        public void reset()
+        {
+          // do nothing
         }
       };
     }

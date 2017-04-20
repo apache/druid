@@ -44,6 +44,8 @@ public class DelimitedParser implements Parser<String, Object>
   private final Function<String, Object> valueFunction;
 
   private ArrayList<String> fieldNames = null;
+  private boolean firstRowIsHeader = false;
+  private boolean hasParsedHeader = true;
 
   public DelimitedParser(final Optional<String> delimiter, Optional<String> listDelimiter)
   {
@@ -89,11 +91,22 @@ public class DelimitedParser implements Parser<String, Object>
   }
 
   public DelimitedParser(final Optional<String> delimiter, final Optional<String> listDelimiter, final String header)
-
   {
     this(delimiter, listDelimiter);
 
     setFieldNames(header);
+  }
+
+  public DelimitedParser(
+      final Optional<String> delimiter,
+      final Optional<String> listDelimiter,
+      final boolean firstRowIsHeader
+  )
+  {
+    this(delimiter, listDelimiter);
+
+    this.firstRowIsHeader = firstRowIsHeader;
+    this.hasParsedHeader = !firstRowIsHeader;
   }
 
   public String getDelimiter()
@@ -135,6 +148,14 @@ public class DelimitedParser implements Parser<String, Object>
     try {
       Iterable<String> values = splitter.split(input);
 
+      if (firstRowIsHeader && !hasParsedHeader) {
+        if (fieldNames == null) {
+          setFieldNames(values);
+        }
+        hasParsedHeader = true;
+        return null;
+      }
+
       if (fieldNames == null) {
         setFieldNames(ParserUtils.generateFieldNames(Iterators.size(values.iterator())));
       }
@@ -144,5 +165,11 @@ public class DelimitedParser implements Parser<String, Object>
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    hasParsedHeader = !firstRowIsHeader;
   }
 }

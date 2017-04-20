@@ -81,13 +81,15 @@ Since the CSV data cannot contain the column names (no header is allowed), these
       "column" : "timestamp"
     },
     "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"],
+    "firstRowIsHeader" : "false",
     "dimensionsSpec" : {
       "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
     }
   }
 ```
 
-The `columns` field must match the columns of your input data in the same order.
+If your file does not have a header as the first line of the file, you must set the `columns` field and ensure that the order of the fields matches the columns of your input data in the same order.
+If your file does have a header, set `firstRowIsHeader` to true, and do not include the `columns` key.
 
 ### TSV
 
@@ -105,7 +107,8 @@ The `columns` field must match the columns of your input data in the same order.
   }
 ```
 
-The `columns` field must match the columns of your input data in the same order. 
+If your file does not have a header as the first line of the file, you must set the `columns` field and ensure that the order of the fields matches the columns of your input data in the same order.
+If your file does have a header, set `firstRowIsHeader` to true, and do not include the `columns` key.
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 
