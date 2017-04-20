@@ -51,7 +51,6 @@ public class FileIteratingFirehose implements Firehose
   {
     while ((lineIterator == null || !lineIterator.hasNext()) && lineIterators.hasNext()) {
       lineIterator = lineIterators.next();
-      parser.reset();
     }
 
     return lineIterator != null && lineIterator.hasNext();
@@ -68,6 +67,7 @@ public class FileIteratingFirehose implements Firehose
         }
 
         lineIterator = lineIterators.next();
+        parser.reset();
       }
 
       return parser.parse(lineIterator.next());

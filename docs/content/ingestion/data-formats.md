@@ -72,8 +72,6 @@ If you have nested JSON, [Druid can automatically flatten it for you](flatten-js
 
 ### CSV
 
-Since the CSV data cannot contain the column names (no header is allowed), these must be added before that data can be processed:
-
 ```json
   "parseSpec":{
     "format" : "csv",
