@@ -32,7 +32,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
