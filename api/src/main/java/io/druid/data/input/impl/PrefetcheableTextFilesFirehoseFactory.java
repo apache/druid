@@ -52,7 +52,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * PrefetcheableTextFilesFirehoseFactory is an abstract firehose factory for reading text files.  The firehose returned
- * by this class provides two key functionalities.
+ * by this class provides three key functionalities.
  *
  * <ul>
  * <li>Caching: for the first call of {@link #connect(StringInputRowParser)}, it caches objects in a local disk
