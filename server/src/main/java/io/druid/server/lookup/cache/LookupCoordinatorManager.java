@@ -516,7 +516,7 @@ public class LookupCoordinatorManager
                           "Failed to finish lookup management on node [%s:%s]",
                           node.getHostText(),
                           node.getPort()
-                      );
+                      ).emit();
                       return null;
                     }
                   }
