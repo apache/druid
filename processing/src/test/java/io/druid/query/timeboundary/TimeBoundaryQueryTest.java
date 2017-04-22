@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -78,7 +79,7 @@ public class TimeBoundaryQueryTest
     );
 
 
-    Assert.assertEquals(new Integer(1), serdeQuery.getContextValue("priority"));
+    Assert.assertEquals(new Integer(1), serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
     Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
     Assert.assertEquals(true, serdeQuery.getContextValue("populateCache"));
     Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));
@@ -116,7 +117,7 @@ public class TimeBoundaryQueryTest
     );
 
 
-    Assert.assertEquals("1", serdeQuery.getContextValue("priority"));
+    Assert.assertEquals("1", serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
     Assert.assertEquals("true", serdeQuery.getContextValue("useCache"));
     Assert.assertEquals("true", serdeQuery.getContextValue("populateCache"));
     Assert.assertEquals("true", serdeQuery.getContextValue("finalize"));

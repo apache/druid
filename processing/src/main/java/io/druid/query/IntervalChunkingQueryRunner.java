@@ -153,7 +153,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
 
   private Period getChunkPeriod(Query<T> query)
   {
-    String p = query.getContextValue(QueryContexts.CHUNK_PERIOD, "P0D");
+    final String p = QueryContexts.getChunkPeriod(query);
     return Period.parse(p);
   }
 }

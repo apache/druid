@@ -36,36 +36,6 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
-  public static <T> int getContextPriority(Query<T> query, int defaultValue)
-  {
-    return QueryContexts.parseInt(query, "priority", defaultValue);
-  }
-
-  public static <T> boolean getContextBySegment(Query<T> query, boolean defaultValue)
-  {
-    return QueryContexts.parseBoolean(query, "bySegment", defaultValue);
-  }
-
-  public static <T> boolean getContextPopulateCache(Query<T> query, boolean defaultValue)
-  {
-    return QueryContexts.parseBoolean(query, "populateCache", defaultValue);
-  }
-
-  public static <T> boolean getContextUseCache(Query<T> query, boolean defaultValue)
-  {
-    return QueryContexts.parseBoolean(query, "useCache", defaultValue);
-  }
-
-  public static <T> boolean getContextFinalize(Query<T> query, boolean defaultValue)
-  {
-    return QueryContexts.parseBoolean(query, "finalize", defaultValue);
-  }
-
-  public static <T> int getContextUncoveredIntervalsLimit(Query<T> query, int defaultValue)
-  {
-    return QueryContexts.parseInt(query, "uncoveredIntervalsLimit", defaultValue);
-  }
-
   public static void checkInterrupted()
   {
     if (Thread.interrupted()) {

@@ -192,14 +192,8 @@ public class QueryResource implements QueryCountStatsProvider
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      if (query.getContextValue(QueryContexts.TIMEOUT) == null) {
-        query = query.withOverriddenContext(
-            ImmutableMap.of(
-                QueryContexts.TIMEOUT,
-                config.getMaxIdleTime().toStandardDuration().getMillis()
-            )
-        );
-      }
+      query = QueryContexts.withDefaultTimeout(query, config.getDefaultQueryTimeout());
+
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()

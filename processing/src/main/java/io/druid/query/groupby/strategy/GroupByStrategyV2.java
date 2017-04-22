@@ -31,7 +31,6 @@ import com.google.inject.Inject;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
@@ -142,10 +141,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();
       } else {
-        final Number timeout = query.getContextValue(QueryContexts.TIMEOUT, JodaUtils.MAX_INSTANT);
-        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders = mergeBufferPool.takeBatch(
-            requiredMergeBufferNum, timeout.longValue()
-        );
+        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
+        if (QueryContexts.hasTimeout(query)) {
+          mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
+        } else {
+          mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
+        }
         if (mergeBufferHolders == null) {
           throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         } else {

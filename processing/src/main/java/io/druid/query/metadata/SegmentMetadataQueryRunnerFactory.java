@@ -32,7 +32,6 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
-import io.druid.query.BaseQuery;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
@@ -202,7 +201,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       final Map<String, Object> responseContext
                   )
                   {
-                    final int priority = BaseQuery.getContextPriority(query, 0);
+                    final int priority = QueryContexts.getPriority(query);
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
                         new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
                         {
@@ -210,15 +209,18 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
                             return Sequences.simple(
-                                Sequences.toList(input.run(query, responseContext), new ArrayList<SegmentAnalysis>())
+                                Sequences.toList(input.run(query, responseContext), new ArrayList<>())
                             );
                           }
                         }
                     );
                     try {
                       queryWatcher.registerQuery(query, future);
-                      final Number timeout = query.getContextValue(QueryContexts.TIMEOUT, (Number) null);
-                      return timeout == null ? future.get() : future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
+                      if (QueryContexts.hasTimeout(query)) {
+                        return future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
+                      } else {
+                        return future.get();
+                      }
                     }
                     catch (InterruptedException e) {
                       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());

@@ -39,7 +39,10 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.query.BaseQuery;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.dimension.ColumnSelectorStrategy;
+import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -51,6 +54,7 @@ import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
@@ -140,7 +144,6 @@ public class RowBasedGrouperHelper
         isInputRaw,
         includeTimestamp,
         columnSelectorFactory,
-        rawInputRowSignature,
         valueTypes
     );
 
@@ -230,7 +233,6 @@ public class RowBasedGrouperHelper
       final boolean isInputRaw,
       final boolean includeTimestamp,
       final ColumnSelectorFactory columnSelectorFactory,
-      final Map<String, ValueType> rawInputRowSignature,
       final List<ValueType> valueTypes
   )
   {
@@ -243,8 +245,7 @@ public class RowBasedGrouperHelper
     if (isInputRaw) {
       final Supplier<Comparable>[] inputRawSuppliers = getValueSuppliersForDimensions(
           columnSelectorFactory,
-          query.getDimensions(),
-          rawInputRowSignature
+          query.getDimensions()
       );
 
       if (includeTimestamp) {
@@ -417,65 +418,111 @@ public class RowBasedGrouperHelper
     }
   }
 
+  private static final InputRawSupplierColumnSelectorStrategyFactory STRATEGY_FACTORY =
+      new InputRawSupplierColumnSelectorStrategyFactory();
+
+  private interface InputRawSupplierColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
+  {
+    Supplier<Comparable> makeInputRawSupplier(ValueSelectorType selector);
+  }
+
+  private static class StringInputRawSupplierColumnSelectorStrategy
+      implements InputRawSupplierColumnSelectorStrategy<DimensionSelector>
+  {
+    @Override
+    public Supplier<Comparable> makeInputRawSupplier(DimensionSelector selector)
+    {
+      return new Supplier<Comparable>()
+      {
+        @Override
+        public Comparable get()
+        {
+          final String value;
+          IndexedInts index = selector.getRow();
+          value = index.size() == 0
+                  ? ""
+                  : selector.lookupName(index.get(0));
+          return Strings.nullToEmpty(value);
+        }
+      };
+    }
+  }
+
+  private static class LongInputRawSupplierColumnSelectorStrategy
+      implements InputRawSupplierColumnSelectorStrategy<LongColumnSelector>
+  {
+    @Override
+    public Supplier<Comparable> makeInputRawSupplier(LongColumnSelector selector)
+    {
+      return new Supplier<Comparable>()
+      {
+        @Override
+        public Comparable get()
+        {
+          return selector.get();
+        }
+      };
+    }
+  }
+
+  private static class FloatInputRawSupplierColumnSelectorStrategy
+      implements InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>
+  {
+    @Override
+    public Supplier<Comparable> makeInputRawSupplier(FloatColumnSelector selector)
+    {
+      return new Supplier<Comparable>()
+      {
+        @Override
+        public Comparable get()
+        {
+          return selector.get();
+        }
+      };
+    }
+  }
+
+  private static class InputRawSupplierColumnSelectorStrategyFactory
+    implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
+  {
+    @Override
+    public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
+        ColumnCapabilities capabilities, ColumnValueSelector selector
+    )
+    {
+      ValueType type = capabilities.getType();
+      switch(type) {
+        case STRING:
+          return new StringInputRawSupplierColumnSelectorStrategy();
+        case LONG:
+          return new LongInputRawSupplierColumnSelectorStrategy();
+        case FLOAT:
+          return new FloatInputRawSupplierColumnSelectorStrategy();
+        default:
+          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+      }
+    }
+  }
+
   @SuppressWarnings("unchecked")
   private static Supplier<Comparable>[] getValueSuppliersForDimensions(
       final ColumnSelectorFactory columnSelectorFactory,
-      final List<DimensionSpec> dimensions,
-      final Map<String, ValueType> rawInputRowSignature
+      final List<DimensionSpec> dimensions
   )
   {
     final Supplier[] inputRawSuppliers = new Supplier[dimensions.size()];
-    for (int i = 0; i < dimensions.size(); i++) {
-      final ColumnValueSelector selector = DimensionHandlerUtils.getColumnValueSelectorFromDimensionSpec(
-          dimensions.get(i),
-          columnSelectorFactory
-      );
-      ValueType type = rawInputRowSignature.get(dimensions.get(i).getDimension());
-      if (type == null) {
-        // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
-        // their types aren't known, so default to String handling.
-        type = ValueType.STRING;
-      }
-      switch (type) {
-        case STRING:
-          inputRawSuppliers[i] = new Supplier<Comparable>()
-          {
-            @Override
-            public Comparable get()
-            {
-              final String value;
-              IndexedInts index = ((DimensionSelector) selector).getRow();
-              value = index.size() == 0
-                      ? ""
-                      : ((DimensionSelector) selector).lookupName(index.get(0));
-              return Strings.nullToEmpty(value);
-            }
-          };
-          break;
-        case LONG:
-          inputRawSuppliers[i] = new Supplier<Comparable>()
-          {
-            @Override
-            public Comparable get()
-            {
-              return ((LongColumnSelector) selector).get();
-            }
-          };
-          break;
-        case FLOAT:
-          inputRawSuppliers[i] = new Supplier<Comparable>()
-          {
-            @Override
-            public Comparable get()
-            {
-              return ((FloatColumnSelector) selector).get();
-            }
-          };
-          break;
-        default:
-          throw new IAE("invalid type: [%s]", type);
-      }
+    final ColumnSelectorPlus[] selectorPluses = DimensionHandlerUtils.createColumnSelectorPluses(
+        STRATEGY_FACTORY,
+        dimensions,
+        columnSelectorFactory
+    );
+
+    for (int i = 0; i < selectorPluses.length; i++) {
+      final ColumnSelectorPlus<InputRawSupplierColumnSelectorStrategy> selectorPlus = selectorPluses[i];
+      final InputRawSupplierColumnSelectorStrategy strategy = selectorPlus.getColumnSelectorStrategy();
+      inputRawSuppliers[i] = strategy.makeInputRawSupplier(selectorPlus.getSelector());
     }
+
     return inputRawSuppliers;
   }
 
