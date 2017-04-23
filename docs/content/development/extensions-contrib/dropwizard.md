@@ -8,11 +8,11 @@ To use this extension, make sure to [include](../../operations/including-extensi
 
 ## Introduction
 
-The intent of this extension is to integrate [Dropwizard](http://metrics.dropwizard.io/3.1.0/getting-started/#); metrics library with druid so that dropwizard users can easily absorb druid into their monitoring ecosystem.
+The intent of this extension is to integrate [Dropwizard](http://metrics.dropwizard.io/3.1.0/getting-started/#) metrics library with druid so that dropwizard users can easily absorb druid into their monitoring ecosystem.
 It accumulates druid metrics in a dropwizard histogram and emits them to various sinks via dropwizard supported reporters.
 A histogram measures the statistical distribution of values in a stream of data. In addition to minimum, maximum, mean, etc., it also measures median, 75th, 90th, 95th, 98th, 99th, and 99.9th percentiles.
 Currently dropwizard metrics can be emitted to these sinks:
-Console,HTTP,JMX,Graphite,CSV,Slf4jLogger,Ganglia and various other community supported [sinks](http://metrics.dropwizard.io/3.1.0/manual/third-party/);.
+Console,HTTP,JMX,Graphite,CSV,Slf4jLogger,Ganglia and various other community supported [sinks](http://metrics.dropwizard.io/3.1.0/manual/third-party/).
 
 ## Configuration
 
@@ -85,3 +85,16 @@ druid.emitter.dropwizard.eventConverter={"type":"whiteList", "namespacePrefix": 
 Metric manager defines the dropwizard accumulator that would be used to accumulate druid metric events.
 For eg : Gauge,Counter,Histogram,Meter etc.
 
+### Dropwizard reporter
+
+```json
+
+druid.emitter.dropwizard.reporter={"type":"jmx"}
+
+```
+
+```json
+
+druid.emitter.dropwizard.reporter={"type":"console","emitIntervalInSecs":30}"}
+
+```

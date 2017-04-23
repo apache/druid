@@ -21,6 +21,7 @@ package io.druid.emitter.dropwizard;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.List;
 
 
@@ -39,7 +40,7 @@ public class DropwizardEmitterConfig {
         this.dropwizardReporter = dropwizardReporter;
         this.druidToDropwizardEventConverter = druidToDropwizardEventConverter;
         this.dropwizardMetricManager = dropwizardMetricManager==null? new HistogramMetricManager():dropwizardMetricManager;
-        this.alertEmitters = alertEmitters;
+        this.alertEmitters = alertEmitters == null ? Collections.<String>emptyList() : alertEmitters;
     }
 
 
