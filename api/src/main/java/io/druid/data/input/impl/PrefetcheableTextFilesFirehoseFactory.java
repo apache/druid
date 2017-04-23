@@ -43,8 +43,10 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -104,8 +106,8 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
   private final int maxFetchRetry;
 
   private volatile int nextFetchIndex;
-  private volatile boolean beingFetched;
-  private volatile Exception fetchException;
+
+  private Future<Void> fetchFuture;
 
   public PrefetcheableTextFilesFirehoseFactory(
       Collection<ObjectType> objects,
@@ -167,28 +169,16 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
    * This is for simplifying design, and should be improved when our client implementations for cloud storages like S3
    * support range scan.
    */
-  private void fetch()
+  private void fetch() throws Exception
   {
-    if (!beingFetched) {
-      beingFetched = true;
-      final List<ObjectType> objects = getObjects();
-      try {
-        for (int i = nextFetchIndex; i < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; i++) {
-          final ObjectType object = objects.get(i);
-          LOG.info("Fetching object[%s]", object);
-          final File outFile = File.createTempFile("fetch-", null, baseDir);
-          fetchedBytes.addAndGet(download(object, outFile, 0));
-          fetchFiles.put(new FetchedFile(outFile, isGzipped(object)));
-          nextFetchIndex++;
-        }
-      }
-      catch (Exception e) {
-        fetchException = e;
-        throw Throwables.propagate(e);
-      }
-      finally {
-        beingFetched = false;
-      }
+    final List<ObjectType> objects = getObjects();
+    for (int i = nextFetchIndex; i < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; i++) {
+      final ObjectType object = objects.get(i);
+      LOG.info("Fetching object[%s]", object);
+      final File outFile = File.createTempFile("fetch-", null, baseDir);
+      fetchedBytes.addAndGet(download(object, outFile, 0));
+      fetchFiles.put(new FetchedFile(outFile, isGzipped(object)));
+      nextFetchIndex++;
     }
   }
 
@@ -258,8 +248,14 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
 
           private void fetchIfNeeded(long remainingBytes)
           {
-            if (!beingFetched && remainingBytes <= prefetchTriggerBytes) {
-              fetchExecutor.submit(() -> fetch());
+            if ((fetchFuture == null || fetchFuture.isDone())
+                && remainingBytes <= prefetchTriggerBytes) {
+              fetchFuture = fetchExecutor.submit(
+                  () -> {
+                    fetch();
+                    return null;
+                  }
+              );
             }
           }
 
@@ -270,8 +266,16 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
               throw new NoSuchElementException();
             }
 
-            if (fetchException != null) {
-              throw Throwables.propagate(fetchException);
+            // If fetch() fails, hasNext() always returns true because nextFetchIndex must be smaller than the number
+            // of objects which means next() is always called. The below block checks that fetch() threw an exception
+            // and propagates it if exists.
+            if (fetchFuture != null && fetchFuture.isDone()) {
+              try {
+                fetchFuture.get();
+              }
+              catch (InterruptedException | ExecutionException e) {
+                Throwables.propagate(e);
+              }
             }
 
             final FetchedFile fetchedFile;
