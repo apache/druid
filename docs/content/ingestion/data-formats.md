@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+
 Data Formats for Ingestion
 ==========================
 

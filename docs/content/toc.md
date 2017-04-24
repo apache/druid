@@ -3,7 +3,7 @@ layout: toc
 ---
 
 ## Getting Started
-  * [Concepts](/docs/VERSION/design/)
+  * [Introduction](/docs/VERSION/design/)
   * [Quickstart](/docs/VERSION/tutorials/quickstart.html)
   * [Loading Data](/docs/VERSION/tutorials/ingestion.html)
     * [Loading from Files](/docs/VERSION/tutorials/tutorial-batch.html)
@@ -12,90 +12,84 @@ layout: toc
   * [Clustering](/docs/VERSION/tutorials/cluster.html)
 
 ## Data Ingestion
-  * [Data Formats](/docs/VERSION/ingestion/data-formats.html)
-  * [Data Schema](/docs/VERSION/ingestion/index.html)
-  * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
-  * [Schema Changes](/docs/VERSION/ingestion/schema-changes.html)
+  * [Data Formats](/docs/VERSION/ingestion/data-formats.html)  
+  * [Defining a Schema](/docs/VERSION/ingestion/index.html)
+  * [Designing Schemas](/docs/VERSION/ingestion/schema-design.html)
+  * [Changing Schemas](/docs/VERSION/ingestion/schema-changes.html)  
   * [Batch File Ingestion](/docs/VERSION/ingestion/batch-ingestion.html)
   * [Stream Ingestion](/docs/VERSION/ingestion/stream-ingestion.html)
     * [Stream Push](/docs/VERSION/ingestion/stream-push.html)
     * [Stream Pull](/docs/VERSION/ingestion/stream-pull.html)
-  * [Updating Existing Data](/docs/VERSION/ingestion/update-existing-data.html)
+  * [Updating Data](/docs/VERSION/ingestion/update-existing-data.html)
   * [Ingestion Tasks](/docs/VERSION/ingestion/tasks.html)
-  * [FAQ](/docs/VERSION/ingestion/faq.html)
 
 ## Querying
   * [Overview](/docs/VERSION/querying/querying.html)
-  * [Timeseries](/docs/VERSION/querying/timeseriesquery.html)
-  * [TopN](/docs/VERSION/querying/topnquery.html)
-  * [GroupBy](/docs/VERSION/querying/groupbyquery.html)
-  * [Time Boundary](/docs/VERSION/querying/timeboundaryquery.html)
-  * [Segment Metadata](/docs/VERSION/querying/segmentmetadataquery.html)
-  * [DataSource Metadata](/docs/VERSION/querying/datasourcemetadataquery.html)
-  * [Search](/docs/VERSION/querying/searchquery.html)
-  * [Select](/docs/VERSION/querying/select-query.html)
-  * Components
-    * [Datasources](/docs/VERSION/querying/datasource.html)
-    * [Filters](/docs/VERSION/querying/filters.html)
-    * [Aggregations](/docs/VERSION/querying/aggregations.html)
-    * [Post Aggregations](/docs/VERSION/querying/post-aggregations.html)
-    * [Granularities](/docs/VERSION/querying/granularities.html)
-    * [DimensionSpecs](/docs/VERSION/querying/dimensionspecs.html)
-    * [Context](/docs/VERSION/querying/query-context.html)
-  * [Multi-value dimensions](/docs/VERSION/querying/multi-value-dimensions.html)
+  * [JSON over HTTP](/docs/VERSION/querying/json-over-http.html)
   * [SQL](/docs/VERSION/querying/sql.html)
-  * [Lookups](/docs/VERSION/querying/lookups.html)
-  * [Joins](/docs/VERSION/querying/joins.html)
-  * [Multitenancy](/docs/VERSION/querying/multitenancy.html)
-  * [Caching](/docs/VERSION/querying/caching.html)
-  * [Sorting Orders](/docs/VERSION/querying/sorting-orders.html)
+  * [Caching](/docs/VERSION/querying/caching.html)      
 
-## Design
-  * [Overview](/docs/VERSION/design/design.html)
+## Concepts
+  * [Design](/docs/VERSION/design/design.html)  
   * Storage
+    * [Rollup](/docs/VERSION/design/rollup.html)
+    * [Partitioning](/docs/VERSION/design/partitioning.html)
     * [Segments](/docs/VERSION/design/segments.html)
-  * Node Types
+    * [Columns](/docs/VERSION/design/columns.html)
+  * Querying
+    * [Timeline](/docs/VERSION/design/timeline.html)
+  * Druid Processes
     * [Historical](/docs/VERSION/design/historical.html)
     * [Broker](/docs/VERSION/design/broker.html)
     * [Coordinator](/docs/VERSION/design/coordinator.html)
-    * [Indexing Service](/docs/VERSION/design/indexing-service.html)
-    * [Realtime](/docs/VERSION/design/realtime.html)
+    * [Indexer](/docs/VERSION/design/indexing-service.html)    
   * Dependencies
     * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)
     * [Metadata Storage](/docs/VERSION/dependencies/metadata-storage.html)
     * [ZooKeeper](/docs/VERSION/dependencies/zookeeper.html)
 
 ## Operations
-  * [Good Practices](/docs/VERSION/operations/recommendations.html)
-  * [Including Extensions](/docs/VERSION/operations/including-extensions.html)
+  * [Best Practices](/docs/VERSION/operations/recommendations.html)
+  * Ingestion
+    * [Tuning](/docs/VERSION/ingestion/faq.html)
+    * [Multitenancy](/docs/VERSION/ingestion/multitenancy.html)    
+  * Querying    
+    * [Tuning](/docs/VERSION/querying/tuning.html)
+    * [Multitenancy](/docs/VERSION/querying/multitenancy.html)
+    * [Multi-value dimensions](/docs/VERSION/querying/multi-value-dimensions.html)  
   * [Data Retention](/docs/VERSION/operations/rule-configuration.html)
   * [Metrics and Monitoring](/docs/VERSION/operations/metrics.html)
   * [Alerts](/docs/VERSION/operations/alerts.html)
-  * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
-  * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
+  * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)  
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
-  * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
-  * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
-  * [Pull Dependencies Tool](/docs/VERSION/operations/pull-deps.html)
-  * [Recommendations](/docs/VERSION/operations/recommendations.html)
+  * Tools
+    * [Introspect Segment](/docs/VERSION/operations/dump-segment.html)
+    * [Insert Segment](/docs/VERSION/operations/insert-segment-to-db.html)
+    * [Pull Dependencies](/docs/VERSION/operations/pull-deps.html)      
 
 ## Configuration
   * [Common Configuration](/docs/VERSION/configuration/index.html)
-  * [Indexing Service](/docs/VERSION/configuration/indexing-service.html)
-  * [Coordinator](/docs/VERSION/configuration/coordinator.html)
-  * [Historical](/docs/VERSION/configuration/historical.html)
-  * [Broker](/docs/VERSION/configuration/broker.html)
-  * [Realtime](/docs/VERSION/configuration/realtime.html)
-  * [Configuring Logging](/docs/VERSION/configuration/logging.html)
+  * [Indexing Process](/docs/VERSION/configuration/indexing-service.html)
+  * [Coordinator Process](/docs/VERSION/configuration/coordinator.html)
+  * [Historical Process](/docs/VERSION/configuration/historical.html)
+  * [Broker Process](/docs/VERSION/configuration/broker.html)  
+  * [Logging](/docs/VERSION/configuration/logging.html)
+  
+## Integration   
+   * [Extensions](/docs/VERSION/operations/including-extensions.html)
+   * [Hadoop](/docs/VERSION/operations/other-hadoop.html)
+   * [Kafka](/docs/VERSION/operations/other-hadoop.html) 
+   * [Spark](/docs/VERSION/operations/other-hadoop.html)
+   * [Stream Processors](/docs/VERSION/development/integrating-druid-with-other-technologies.html)
   
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
-  * [Libraries](/docs/VERSION/development/libraries.html)
-  * [Extensions](/docs/VERSION/development/extensions.html)
+  * [Creating Extensions](/docs/VERSION/development/extensions.html)
+  * [External Libraries](/docs/VERSION/development/libraries.html)  
   * [JavaScript](/docs/VERSION/development/javascript.html)
   * [Build From Source](/docs/VERSION/development/build.html)
   * [Versioning](/docs/VERSION/development/versioning.html)
-  * [Integration](/docs/VERSION/development/integrating-druid-with-other-technologies.html)
+  * [APIs](/docs/VERSION/development/apis.html)  
   * Experimental Features
     * [Overview](/docs/VERSION/development/experimental.html)
     * [Approximate Histograms and Quantiles](/docs/VERSION/development/extensions-core/approximate-histograms.html)
@@ -103,7 +97,6 @@ layout: toc
     * [Geographic Queries](/docs/VERSION/development/geo.html)
     * [Router](/docs/VERSION/development/router.html)
     * [Kafka Indexing Service](/docs/VERSION/development/extensions-core/kafka-ingestion.html)
-
 
 ## Misc
   * [Papers & Talks](/docs/VERSION/misc/papers-and-talks.html)
