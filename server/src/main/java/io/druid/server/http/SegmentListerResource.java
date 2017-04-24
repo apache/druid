@@ -51,7 +51,7 @@ import java.io.IOException;
 
 /**
  */
-@Path("/druid/internal/v1/segments/")
+@Path("/druid-internal/v1/segments/")
 @ResourceFilters(StateResourceFilter.class)
 public class SegmentListerResource
 {

@@ -83,7 +83,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class uses CuratorInventoryManager to listen for queryable server membership which serve segments(e.g. Historicals).
- * For each queryable server, it uses HTTP GET /druid/internal/v1/segments (see docs in SegmentListerResource.getSegments(..).
+ * For each queryable server, it uses HTTP GET /druid-internal/v1/segments (see docs in SegmentListerResource.getSegments(..).
  */
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
@@ -536,14 +536,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         final String req;
         if (counter != null) {
           req = String.format(
-              "/druid/internal/v1/segments?counter=%s&hash=%s&timeout=%s",
+              "/druid-internal/v1/segments?counter=%s&hash=%s&timeout=%s",
               counter.getCounter(),
               counter.getHash(),
               config.getServerTimeout()
           );
         } else {
           req = String.format(
-              "/druid/internal/v1/segments?counter=-1&timeout=%s",
+              "/druid-internal/v1/segments?counter=-1&timeout=%s",
               config.getServerTimeout()
           );
         }
