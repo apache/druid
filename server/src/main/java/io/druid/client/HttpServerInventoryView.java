@@ -71,6 +71,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -297,16 +298,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           @Override
           public void inventoryInitialized()
           {
-            runSegmentCallbacks(
-                new Function<SegmentCallback, CallbackAction>()
-                {
-                  @Override
-                  public CallbackAction apply(SegmentCallback input)
-                  {
-                    return input.segmentViewInitialized();
-                  }
-                }
-            );
+            log.info("Server inventory initialized.");
+            serverInventoryInitialized();
           }
         }
     );
@@ -407,6 +400,28 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
+  //best effort wait for first segment listing fetch from all servers and then call
+  //segmentViewInitialized on all registered segment callbacks.
+  private void serverInventoryInitialized()
+  {
+    for (DruidServerHolder server : servers.values()) {
+      server.awaitInitialization();
+    }
+
+    log.info("Calling SegmentCallback.segmentViewInitialized() for all callbacks.");
+
+    runSegmentCallbacks(
+        new Function<SegmentCallback, CallbackAction>()
+        {
+          @Override
+          public CallbackAction apply(SegmentCallback input)
+          {
+            return input.segmentViewInitialized();
+          }
+        }
+    );
+  }
+
   private DruidServer serverAddedOrUpdated(DruidServer server)
   {
     DruidServerHolder curr;
@@ -469,6 +484,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     private volatile SegmentChangeRequestHistory.Counter counter = null;
 
     private final DataSegmentChangeHandler changeHandler;
+    private final long serverHttpTimeout = config.getServerTimeout() + 1000;
+
+    private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
     DruidServerHolder(DruidServer druidServer)
     {
@@ -523,6 +541,19 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       };
     }
 
+    //wait for first fetch of segment listing from server.
+    void awaitInitialization()
+    {
+      try {
+        if (!initializationLatch.await(serverHttpTimeout, TimeUnit.MILLISECONDS)) {
+          log.warn("Await initialization timed out for server [%s].", druidServer.getName());
+        }
+      } catch (InterruptedException ex) {
+        log.warn("Await initialization interrupted while waiting on server [%s].", druidServer.getName());
+        Thread.currentThread().interrupt();
+      }
+    }
+
     DruidServerHolder updatedHolder(DruidServer server)
     {
       synchronized (lock) {
@@ -548,7 +579,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           );
         }
         URL url = new URL("http", serverHostAndPort.getHostText(), serverHostAndPort.getPort(), req);
-
 
         final AtomicInteger returnCode = new AtomicInteger();
         final AtomicReference<String> reasonString = new AtomicReference<>();
@@ -576,7 +606,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                 )
                 .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
             responseHandler,
-            new Duration(config.getServerTimeout() + 1000)
+            new Duration(serverHttpTimeout)
         );
 
         if (log.isDebugEnabled()) {
@@ -624,9 +654,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                     }
                     counter = delta.getCounter();
                   }
-                } catch (Exception ex) {
+
+                  initializationLatch.countDown();
+                }
+                catch (Exception ex) {
                   log.error(ex, "error processing segment list response from server [%s]", druidServer.getName());
-                } finally {
+                }
+                finally {
                   queue.add(druidServer.getName());
                 }
               }
@@ -657,7 +691,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                       counter = null;
                     }
                   }
-                } finally {
+                }
+                finally {
                   queue.add(druidServer.getName());
                 }
               }
