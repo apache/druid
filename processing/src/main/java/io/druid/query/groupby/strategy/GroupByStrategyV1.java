@@ -144,7 +144,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
         true
     );
 
-    return Sequences.withBaggage(query.applyLimit(GroupByQueryHelper.postAggregate(query, index)), index);
+    return Sequences.withBaggage(query.postProcess(GroupByQueryHelper.postAggregate(query, index)), index);
   }
 
   @Override
@@ -247,7 +247,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
     innerQueryResultIndex.close();
 
     return Sequences.withBaggage(
-        outerQuery.applyLimit(GroupByQueryHelper.postAggregate(query, outerQueryResultIndex)),
+        outerQuery.postProcess(GroupByQueryHelper.postAggregate(query, outerQueryResultIndex)),
         outerQueryResultIndex
     );
   }

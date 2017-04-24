@@ -230,7 +230,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // Fudge timestamp, maybe.
     final DateTime fudgeTimestamp = getUniversalTimestamp(query);
 
-    return query.applyLimit(
+    return query.postProcess(
         Sequences.map(
             mergingQueryRunner.run(
                 new GroupByQuery.Builder(query)
