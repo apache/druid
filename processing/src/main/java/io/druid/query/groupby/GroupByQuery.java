@@ -127,7 +127,7 @@ public class GroupByQuery extends BaseQuery<Row>
         postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs
     );
     this.havingSpec = havingSpec;
-    this.limitSpec = nullToNoopLimitSpec(limitSpec);
+    this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
 
@@ -155,11 +155,6 @@ public class GroupByQuery extends BaseQuery<Row>
       );
     }
     return postProcFn;
-  }
-
-  private static LimitSpec nullToNoopLimitSpec(LimitSpec limitSpec)
-  {
-    return (limitSpec == null) ? NoopLimitSpec.instance() : limitSpec;
   }
 
   /**
