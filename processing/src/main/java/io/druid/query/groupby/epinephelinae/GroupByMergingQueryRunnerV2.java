@@ -124,8 +124,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     );
 
     if (QueryContexts.isBySegment(query) || forceChainedExecution) {
-      // TODO why query, not queryForRunners?
-      return new ChainedExecutionQueryRunner(exec, queryWatcher, queryables).run(queryPlus, responseContext);
+      ChainedExecutionQueryRunner<Row> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
+      return runner.run(queryPlusForRunners, responseContext);
     }
 
     final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
