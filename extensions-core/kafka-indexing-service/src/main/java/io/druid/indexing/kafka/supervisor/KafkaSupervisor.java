@@ -77,6 +77,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -1480,13 +1481,13 @@ public class KafkaSupervisor implements Supervisor
   {
     TopicPartition topicPartition = new TopicPartition(ioConfig.getTopic(), partition);
     if (!consumer.assignment().contains(topicPartition)) {
-      consumer.assign(Lists.newArrayList(topicPartition));
+      consumer.assign(Collections.singletonList(topicPartition));
     }
 
     if (useEarliestOffset) {
-      consumer.seekToBeginning(topicPartition);
+      consumer.seekToBeginning(Collections.singletonList(topicPartition));
     } else {
-      consumer.seekToEnd(topicPartition);
+      consumer.seekToEnd(Collections.singletonList(topicPartition));
     }
 
     return consumer.position(topicPartition);

@@ -96,6 +96,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -1008,7 +1009,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         final TopicPartition topicPartition = outOfRangePartition.getKey();
         final long nextOffset = outOfRangePartition.getValue();
         // seek to the beginning to get the least available offset
-        consumer.seekToBeginning(topicPartition);
+        consumer.seekToBeginning(Collections.singletonList(topicPartition));
         final long leastAvailableOffset = consumer.position(topicPartition);
         // reset the seek
         consumer.seek(topicPartition, nextOffset);
