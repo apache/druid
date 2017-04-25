@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
@@ -232,60 +233,25 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public Query<SegmentAnalysis> withOverriddenContext(Map<String, Object> contextOverride)
   {
-    return new SegmentMetadataQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        toInclude,
-        merge,
-        computeOverridenContext(contextOverride),
-        analysisTypes,
-        usingDefaultInterval,
-        lenientAggregatorMerge
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverride);
+    return Druids.SegmentMetadataQueryBuilder.copy(this).context(newContext).build();
   }
 
   @Override
   public Query<SegmentAnalysis> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new SegmentMetadataQuery(
-        getDataSource(),
-        spec,
-        toInclude,
-        merge,
-        getContext(),
-        analysisTypes,
-        usingDefaultInterval,
-        lenientAggregatorMerge
-    );
+    return Druids.SegmentMetadataQueryBuilder.copy(this).intervals(spec).build();
   }
 
   @Override
   public Query<SegmentAnalysis> withDataSource(DataSource dataSource)
   {
-    return new SegmentMetadataQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        toInclude,
-        merge,
-        getContext(),
-        analysisTypes,
-        usingDefaultInterval,
-        lenientAggregatorMerge
-    );
+    return Druids.SegmentMetadataQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   public Query<SegmentAnalysis> withColumns(ColumnIncluderator includerator)
   {
-    return new SegmentMetadataQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        includerator,
-        merge,
-        getContext(),
-        analysisTypes,
-        usingDefaultInterval,
-        lenientAggregatorMerge
-    );
+    return Druids.SegmentMetadataQueryBuilder.copy(this).toInclude(includerator).build();
   }
 
   @Override

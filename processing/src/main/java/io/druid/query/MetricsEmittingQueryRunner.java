@@ -19,7 +19,6 @@
 
 package io.druid.query;
 
-import com.google.common.base.Supplier;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.Sequence;
@@ -91,15 +90,8 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     return Sequences.wrap(
         // Use LazySequence because want to account execution time of queryRunner.run() (it prepares the underlying
         // Sequence) as part of the reported query time, i. e. we want to execute queryRunner.run() after
-        // `startTime = System.currentTimeMillis();` (see below).
-        new LazySequence<>(new Supplier<Sequence<T>>()
-        {
-          @Override
-          public Sequence<T> get()
-          {
-            return queryRunner.run(query, responseContext);
-          }
-        }),
+        // `startTime = System.nanoTime();` (see below).
+        new LazySequence<>(() -> queryRunner.run(query, responseContext)),
         new SequenceWrapper()
         {
           private long startTimeNs;

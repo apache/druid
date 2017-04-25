@@ -145,10 +145,12 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return QueryContexts.parseBoolean(this, key, defaultValue);
   }
 
-  protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
+  protected static Map<String, Object> computeOverriddenContext(
+      final Map<String, Object> context,
+      final Map<String, Object> overrides
+  )
   {
     Map<String, Object> overridden = Maps.newTreeMap();
-    final Map<String, Object> context = getContext();
     if (context != null) {
       overridden.putAll(context);
     }
@@ -173,7 +175,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public Query withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.<String, Object>of(QUERYID, id));
+    return withOverriddenContext(ImmutableMap.of(QUERYID, id));
   }
 
   @Override
