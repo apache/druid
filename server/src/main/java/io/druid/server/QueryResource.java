@@ -40,6 +40,7 @@ import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QueryPlus;
@@ -191,7 +192,7 @@ public class QueryResource implements QueryCountStatsProvider
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      query = query.withDefaultTimeout(config.getDefaultQueryTimeout());
+      query = QueryContexts.withDefaultTimeout(query, config.getDefaultQueryTimeout());
 
       toolChest = warehouse.getToolChest(query);
 
