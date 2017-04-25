@@ -276,7 +276,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               url,
               byteCount.get(),
               nodeTimeMs,
-              byteCount.get() / (0.001 * nodeTimeMs)
+              byteCount.get() / (0.001 * nodeTimeMs) // Floating math; division by zero will yield Inf, not exception
           );
           queryMetrics.reportNodeTime(nodeTimeNs);
           queryMetrics.reportNodeBytes(byteCount.get());
