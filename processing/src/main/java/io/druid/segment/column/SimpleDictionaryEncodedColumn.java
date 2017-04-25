@@ -23,7 +23,7 @@ import com.google.common.base.Strings;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.IndexedMultiValue;
 
 import java.io.IOException;
 
@@ -33,12 +33,12 @@ public class SimpleDictionaryEncodedColumn
     implements DictionaryEncodedColumn<String>
 {
   private final IndexedInts column;
-  private final IndexedMultivalue<IndexedInts> multiValueColumn;
+  private final IndexedMultiValue<IndexedInts> multiValueColumn;
   private final CachingIndexed<String> cachedLookups;
 
   public SimpleDictionaryEncodedColumn(
       IndexedInts singleValueColumn,
-      IndexedMultivalue<IndexedInts> multiValueColumn,
+      IndexedMultiValue<IndexedInts> multiValueColumn,
       CachingIndexed<String> cachedLookups
   )
   {

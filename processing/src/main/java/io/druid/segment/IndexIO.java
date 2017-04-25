@@ -68,7 +68,7 @@ import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
-import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.IndexedMultiValue;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -869,7 +869,7 @@ public class IndexIO
                 new DictionaryEncodedColumnSupplier(
                     index.getDimValueLookup(dimension),
                     null,
-                    Suppliers.<IndexedMultivalue<IndexedInts>>ofInstance(
+                    Suppliers.<IndexedMultiValue<IndexedInts>>ofInstance(
                         index.getDimColumn(dimension)
                     ),
                     columnConfig.columnCacheSizeBytes()

@@ -36,7 +36,7 @@ import org.schemarepo.ValidatorFactory;
 import org.schemarepo.json.GsonJsonUtil;
 import org.schemarepo.json.JsonUtil;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class AvroExtensionsModule implements DruidModule
@@ -46,7 +46,7 @@ public class AvroExtensionsModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.asList(
+    return Collections.singletonList(
         new SimpleModule("AvroInputRowParserModule")
             .registerSubtypes(
                 new NamedType(AvroStreamInputRowParser.class, "avro_stream"),

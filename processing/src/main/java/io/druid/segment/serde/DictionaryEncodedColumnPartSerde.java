@@ -42,7 +42,7 @@ import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIntsWriter;
-import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.IndexedMultiValue;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -262,7 +262,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     private int flags = NO_FLAGS;
     private GenericIndexed<String> dictionary = null;
     private WritableSupplier<IndexedInts> singleValuedColumn = null;
-    private WritableSupplier<IndexedMultivalue<IndexedInts>> multiValuedColumn = null;
+    private WritableSupplier<IndexedMultiValue<IndexedInts>> multiValuedColumn = null;
     private BitmapSerdeFactory bitmapSerdeFactory = null;
     private GenericIndexed<ImmutableBitmap> bitmaps = null;
     private ImmutableRTree spatialIndex = null;
@@ -444,7 +444,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         builder.setType(ValueType.STRING);
 
         final WritableSupplier<IndexedInts> rSingleValuedColumn;
-        final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
+        final WritableSupplier<IndexedMultiValue<IndexedInts>> rMultiValuedColumn;
 
         if (hasMultipleValues) {
           rMultiValuedColumn = readMultiValuedColum(rVersion, buffer, rFlags, builder.getFileMapper());
@@ -500,7 +500,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         throw new IAE("Unsupported single-value version[%s]", version);
       }
 
-      private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColum(
+      private WritableSupplier<IndexedMultiValue<IndexedInts>> readMultiValuedColum(
           VERSION version, ByteBuffer buffer, int flags, SmooshedFileMapper fileMapper
       )
       {

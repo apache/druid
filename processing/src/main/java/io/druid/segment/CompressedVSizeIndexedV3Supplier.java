@@ -25,7 +25,7 @@ import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.IndexedMultiValue;
 import io.druid.segment.data.WritableSupplier;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ import java.util.List;
  * If we want to streams VSizeInts, we must know the max value in the value sets. It's easy to know the max id of
  * values(like dimension cardinality while encoding dimension), but difficult to known the max id of offsets.
  */
-public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<IndexedMultivalue<IndexedInts>>
+public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<IndexedMultiValue<IndexedInts>>
 {
   public static final byte VERSION = 0x3;
 
@@ -137,7 +137,7 @@ public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<Indexe
   }
 
   @Override
-  public IndexedMultivalue<IndexedInts> get()
+  public IndexedMultiValue<IndexedInts> get()
   {
     return new CompressedVSizeIndexedSupplier.CompressedVSizeIndexed(offsetSupplier.get(), valueSupplier.get());
   }
