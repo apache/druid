@@ -52,7 +52,9 @@ public abstract class BroadcastDistributionRule implements Rule
                                     .anyMatch(source -> eachHolder.getServer().getDataSource(source) != null)) {
               loadServerHolders.add(eachHolder);
             } else if (eachHolder.isServingSegment(segment)) {
-              dropServerHolders.add(eachHolder);
+              if (!eachHolder.getPeon().getSegmentsToDrop().contains(segment)) {
+                dropServerHolders.add(eachHolder);
+              }
             }
           }
       );
@@ -81,12 +83,14 @@ public abstract class BroadcastDistributionRule implements Rule
            .addData("availableSize", holder.getAvailableSize())
            .emit();
       } else {
-        holder.getPeon().loadSegment(
-            segment,
-            null
-        );
+        if (!holder.isLoadingSegment(segment)) {
+          holder.getPeon().loadSegment(
+              segment,
+              null
+          );
 
-        stats.addToGlobalStat(LoadRule.ASSIGNED_COUNT, 1);
+          stats.addToGlobalStat(LoadRule.ASSIGNED_COUNT, 1);
+        }
       }
     }
 

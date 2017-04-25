@@ -30,7 +30,7 @@ import java.util.Objects;
 
 public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
 {
-  static final String TYPE = "broadcastToDataSourcesByInterval";
+  static final String TYPE = "broadcastByInterval";
   private final Interval interval;
   private final List<String> colocatedDataSources;
 
