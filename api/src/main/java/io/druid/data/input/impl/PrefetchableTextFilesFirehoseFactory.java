@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.Files;
 import io.druid.data.input.Firehose;
+import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
@@ -53,7 +54,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * PrefetcheableTextFilesFirehoseFactory is an abstract firehose factory for reading text files.  The firehose returned
+ * PrefetchableTextFilesFirehoseFactory is an abstract firehose factory for reading text files.  The firehose returned
  * by this class provides three key functionalities.
  *
  * <ul>
@@ -72,14 +73,14 @@ import java.util.concurrent.atomic.AtomicLong;
  * IndexTask can read the whole data twice for determining partition specs and generating segments if the intervals of
  * GranularitySpec is not specified.
  */
-public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
+public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
     extends AbstractTextFilesFirehoseFactory<ObjectType>
 {
-  private static final Logger LOG = new Logger(PrefetcheableTextFilesFirehoseFactory.class);
+  private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
   private static final long DEFAULT_MAX_CACHE_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
   private static final long DEFAULT_MAX_FETCH_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
+  private static final long DEFAULT_FETCH_TIMEOUT = 60_000; // 60 secs
   private static final int DEFAULT_MAX_FETCH_RETRY = 3;
-  private static final int DEFAULT_FETCH_TIMEOUT = 60_000; // 60 secs
 
   // The below two variables are roughly the max size of total cached/fetched objects, but the actual cached/fetched
   // size can be larger. The reason is our current client implementations for cloud storages like s3 don't support range
@@ -92,15 +93,15 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
   private final long prefetchTriggerBytes;
   private File baseDir; // Directory for cached and fetched files
 
-  private final List<FetchedFile> cacheFiles;
-  private final LinkedBlockingQueue<FetchedFile> fetchFiles;
+  private final List<File> cacheFiles;
+  private final LinkedBlockingQueue<File> fetchFiles;
 
   // Number of bytes currently fetched files.
   // This is updated when fetch a file is successfully fetched or a fetched file is deleted.
   private final AtomicLong fetchedBytes = new AtomicLong(0);
 
   // timeout for fetching an object from the remote site
-  private final int fetchTimeout;
+  private final long fetchTimeout;
 
   // maximum retry for fetching an object from the remote site
   private final int maxFetchRetry;
@@ -109,12 +110,12 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
 
   private Future<Void> fetchFuture;
 
-  public PrefetcheableTextFilesFirehoseFactory(
+  public PrefetchableTextFilesFirehoseFactory(
       Collection<ObjectType> objects,
       Long maxCacheCapacityBytes,
       Long maxFetchCapacityBytes,
       Long prefetchTriggerBytes,
-      Integer fetchTimeout,
+      Long fetchTimeout,
       Integer maxFetchRetry
   )
   {
@@ -136,7 +137,7 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
   }
 
   @VisibleForTesting
-  List<FetchedFile> getCacheFiles()
+  List<File> getCacheFiles()
   {
     return cacheFiles;
   }
@@ -154,7 +155,7 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
         LOG.info("Caching object[%s]", object);
         final File outFile = File.createTempFile("cache-", null, baseDir);
         totalFetchedBytes += download(object, outFile, 0);
-        cacheFiles.add(new FetchedFile(outFile, isGzipped(object)));
+        cacheFiles.add(outFile);
         nextFetchIndex++;
       }
     }
@@ -177,7 +178,7 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
       LOG.info("Fetching object[%s]", object);
       final File outFile = File.createTempFile("fetch-", null, baseDir);
       fetchedBytes.addAndGet(download(object, outFile, 0));
-      fetchFiles.put(new FetchedFile(outFile, isGzipped(object)));
+      fetchFiles.put(outFile);
       nextFetchIndex++;
     }
   }
@@ -229,9 +230,9 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
         {
-          final Iterator<FetchedFile> cacheFileIterator = cacheFiles.iterator();
+          final Iterator<File> cacheFileIterator = cacheFiles.iterator();
           long remainingCachedBytes = cacheFiles.stream()
-                                                .mapToLong(fetchedFile -> fetchedFile.file.length())
+                                                .mapToLong(File::length)
                                                 .sum();
 
           {
@@ -278,12 +279,12 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
               }
             }
 
-            final FetchedFile fetchedFile;
+            final File fetchedFile;
             final Closeable closeable;
             // Check cache first
             if (cacheFileIterator.hasNext()) {
               fetchedFile = cacheFileIterator.next();
-              remainingCachedBytes -= fetchedFile.file.length();
+              remainingCachedBytes -= fetchedFile.length();
               fetchIfNeeded(remainingCachedBytes);
               closeable = () -> {
               };
@@ -306,18 +307,21 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
                 }
               }
               closeable = () -> {
-                final long fileSize = fetchedFile.file.length();
-                fetchedFile.file.delete();
+                final long fileSize = fetchedFile.length();
+                fetchedFile.delete();
                 fetchedBytes.addAndGet(-fileSize);
               };
             }
 
             try {
-              final InputStream stream = FileUtils.openInputStream(fetchedFile.file);
+              InputStream stream = FileUtils.openInputStream(fetchedFile);
+              if (fetchedFile.getName().endsWith(".gz")) {
+                stream = CompressionUtils.gzipInputStream(stream);
+              }
 
               return new ResourceCloseableLineIterator(
                   new BufferedReader(
-                      new InputStreamReader(wrapIfNeeded(stream, fetchedFile.isGzipped), Charsets.UTF_8)
+                      new InputStreamReader(stream, Charsets.UTF_8)
                   ),
                   closeable
               );
@@ -330,18 +334,6 @@ public abstract class PrefetcheableTextFilesFirehoseFactory<ObjectType>
         firehoseParser,
         fetchExecutor::shutdown
     );
-  }
-
-  static class FetchedFile
-  {
-    private final File file;
-    private final boolean isGzipped;
-
-    FetchedFile(File file, boolean isGzipped)
-    {
-      this.file = file;
-      this.isGzipped = isGzipped;
-    }
   }
 
   /**

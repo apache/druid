@@ -22,7 +22,8 @@ package io.druid.firehose.cloudfiles;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetcheableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.cloudfiles.CloudFilesByteSource;
 import io.druid.storage.cloudfiles.CloudFilesObjectApiProxy;
@@ -32,7 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-public class StaticCloudFilesFirehoseFactory extends PrefetcheableTextFilesFirehoseFactory<CloudFilesBlob>
+public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<CloudFilesBlob>
 {
   private static final Logger log = new Logger(StaticCloudFilesFirehoseFactory.class);
 
@@ -45,7 +46,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetcheableTextFilesFireh
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
-      @JsonProperty("fetchTimeout") Integer fetchTimeout,
+      @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
@@ -73,13 +74,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetcheableTextFilesFireh
         cloudFilesApi, region, container);
     final CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
 
-    return byteSource.openStream();
+    final InputStream stream = byteSource.openStream();
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
-
-  @Override
-  protected boolean isGzipped(CloudFilesBlob object)
-  {
-    return object.getPath().endsWith(".gz");
-  }
-
 }

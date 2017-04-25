@@ -24,7 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
-import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
@@ -54,7 +53,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
 
   public AbstractTextFilesFirehoseFactory(Collection<ObjectType> objects)
   {
-    this.objects = ImmutableList.copyOf(Preconditions.checkNotNull(objects));
+    this.objects = ImmutableList.copyOf(Preconditions.checkNotNull(objects, "objects"));
   }
 
   @Override
@@ -78,10 +77,9 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
             }
             final ObjectType object = iterator.next();
             try {
-              final InputStream stream = openStream(object);
               return IOUtils.lineIterator(
                   new BufferedReader(
-                      new InputStreamReader(wrapIfNeeded(object, stream), Charsets.UTF_8)
+                      new InputStreamReader(openStream(object), Charsets.UTF_8)
                   )
               );
             }
@@ -105,32 +103,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
   }
 
   /**
-   * Wrap the given stream if needed, currently when the given object is compressed with gzip.
-   *
-   * @param object an object
-   * @param innerStream input stream for object
-   *
-   * @return wrapped input stream if the object is gzipped
-   *
-   * @throws IOException
-   */
-  protected InputStream wrapIfNeeded(ObjectType object, InputStream innerStream) throws IOException
-  {
-    return wrapIfNeeded(innerStream, isGzipped(object));
-  }
-
-  protected static InputStream wrapIfNeeded(InputStream innerStream, boolean isGzipped) throws IOException
-  {
-    if (isGzipped) {
-      return CompressionUtils.gzipInputStream(innerStream);
-    }
-
-    return innerStream;
-  }
-
-  /**
    * Open an input stream from the given object.
-   * The result input stream must not be wrapped even if the object is compressed with gzip.
    *
    * @param object an object to be read
    *
@@ -139,13 +112,4 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
    * @throws IOException
    */
   protected abstract InputStream openStream(ObjectType object) throws IOException;
-
-  /**
-   * Check if the object is compressed with gzip.
-   *
-   * @param object an object to be checked
-   *
-   * @return true if the object is compressed with gzip
-   */
-  protected abstract boolean isGzipped(ObjectType object);
 }

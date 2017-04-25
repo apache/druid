@@ -23,7 +23,8 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.data.input.impl.PrefetcheableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -38,7 +39,7 @@ import java.util.List;
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
  */
-public class StaticS3FirehoseFactory extends PrefetcheableTextFilesFirehoseFactory<URI>
+public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
@@ -51,12 +52,12 @@ public class StaticS3FirehoseFactory extends PrefetcheableTextFilesFirehoseFacto
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
-      @JsonProperty("fetchTimeout") Integer fetchTimeout,
+      @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
     super(uris, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
-    this.s3Client = Preconditions.checkNotNull(s3Client, "null s3Client");;
+    this.s3Client = Preconditions.checkNotNull(s3Client, "null s3Client");
 
     for (final URI inputURI : uris) {
       Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
@@ -82,17 +83,12 @@ public class StaticS3FirehoseFactory extends PrefetcheableTextFilesFirehoseFacto
     log.info("Reading from bucket[%s] object[%s] (%s)", s3Bucket, s3Object.getKey(), object);
 
     try {
-      return s3Client.getObject(new S3Bucket(s3Bucket), s3Object.getKey()).getDataInputStream();
+      final InputStream stream = s3Client.getObject(new S3Bucket(s3Bucket), s3Object.getKey()).getDataInputStream();
+      return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
     }
     catch (ServiceException e) {
       throw new IOException(e);
     }
-  }
-
-  @Override
-  protected boolean isGzipped(URI object)
-  {
-    return object.getPath().endsWith(".gz");
   }
 
   @Override

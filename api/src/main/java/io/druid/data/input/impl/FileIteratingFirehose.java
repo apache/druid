@@ -101,10 +101,22 @@ public class FileIteratingFirehose implements Firehose
   @Override
   public void close() throws IOException
   {
-    if (lineIterator != null) {
-      lineIterator.close();
+    try {
+      if (lineIterator != null) {
+        lineIterator.close();
+      }
     }
-
+    catch (Throwable t) {
+      try {
+        if (closer != null) {
+          closer.close();
+        }
+      }
+      catch (Exception e) {
+        t.addSuppressed(e);
+      }
+      throw t;
+    }
     if (closer != null) {
       closer.close();
     }

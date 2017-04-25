@@ -22,7 +22,8 @@ package io.druid.firehose.google;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetcheableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.google.GoogleByteSource;
 import io.druid.storage.google.GoogleStorage;
 
@@ -30,7 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-public class StaticGoogleBlobStoreFirehoseFactory extends PrefetcheableTextFilesFirehoseFactory<GoogleBlob>
+public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<GoogleBlob>
 {
   private final GoogleStorage storage;
 
@@ -41,7 +42,7 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetcheableTextFiles
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
-      @JsonProperty("fetchTimeout") Integer fetchTimeout,
+      @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
@@ -62,13 +63,8 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetcheableTextFiles
                         ? object.getPath().substring(1)
                         : object.getPath();
 
-    return new GoogleByteSource(storage, bucket, path).openStream();
-  }
-
-  @Override
-  protected boolean isGzipped(GoogleBlob object)
-  {
-    return object.getPath().endsWith(".gz");
+    final InputStream stream = new GoogleByteSource(storage, bucket, path).openStream();
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 }
 

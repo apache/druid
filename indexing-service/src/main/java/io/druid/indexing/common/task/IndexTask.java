@@ -167,14 +167,12 @@ public class IndexTask extends AbstractTask
                                                        .bucketIntervals()
                                                        .isPresent();
 
-    final FirehoseFactory delegateFirehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
-    if (delegateFirehoseFactory instanceof IngestSegmentFirehoseFactory) {
+    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
       // pass toolbox to Firehose
-      ((IngestSegmentFirehoseFactory) delegateFirehoseFactory).setTaskToolbox(toolbox);
+      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
     }
-
-    final FirehoseFactory firehoseFactory = delegateFirehoseFactory;
 
     final Map<Interval, List<ShardSpec>> shardSpecs = determineShardSpecs(toolbox, firehoseFactory);
 

@@ -57,7 +57,6 @@ public class StaticS3FirehoseFactoryTest
 
     Assert.assertEquals(factory, outputFact);
     Assert.assertEquals(uris, outputFact.getUris());
-    Assert.assertTrue(uris.stream().allMatch(outputFact::isGzipped));
   }
 
   // This class is a workaround for the injectable value that StaticS3FirehoseFactory requires

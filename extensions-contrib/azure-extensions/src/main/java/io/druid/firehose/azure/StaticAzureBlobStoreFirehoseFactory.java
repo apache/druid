@@ -22,7 +22,8 @@ package io.druid.firehose.azure;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetcheableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.azure.AzureByteSource;
 import io.druid.storage.azure.AzureStorage;
 
@@ -33,7 +34,7 @@ import java.util.List;
 /**
  * This class is heavily inspired by the StaticS3FirehoseFactory class in the io.druid.firehose.s3 package
  */
-public class StaticAzureBlobStoreFirehoseFactory extends PrefetcheableTextFilesFirehoseFactory<AzureBlob>
+public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<AzureBlob>
 {
   private final AzureStorage azureStorage;
 
@@ -44,7 +45,7 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetcheableTextFilesF
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
-      @JsonProperty("fetchTimeout") Integer fetchTimeout,
+      @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
@@ -61,13 +62,12 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetcheableTextFilesF
   @Override
   protected InputStream openStream(AzureBlob object) throws IOException
   {
-    return makeByteSource(azureStorage, object).openStream();
-  }
-
-  @Override
-  protected boolean isGzipped(AzureBlob object)
-  {
-    return object.getPath().endsWith(".gz");
+    final InputStream stream = makeByteSource(azureStorage, object).openStream();
+    if (object.getPath().endsWith(".gz")) {
+      return CompressionUtils.gzipInputStream(stream);
+    } else {
+      return stream;
+    }
   }
 
   private static AzureByteSource makeByteSource(AzureStorage azureStorage, AzureBlob object)
