@@ -98,7 +98,7 @@ public class DelimitedParseSpecTest
     );
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testDefaultColumnList()
   {
     final DelimitedParseSpec spec = new DelimitedParseSpec(
@@ -114,7 +114,6 @@ public class DelimitedParseSpecTest
         ),
         ",",
         null,
-        // pass null columns not allowed
         null,
         false
     );

@@ -106,12 +106,14 @@ public class DelimitedParseSpec extends ParseSpec
       return new DelimitedParser(
           Optional.fromNullable(delimiter),
           Optional.fromNullable(listDelimiter),
+          columns,
           firstRowIsHeader
       );
     } else {
       return new DelimitedParser(
           Optional.fromNullable(delimiter),
-          Optional.fromNullable(listDelimiter)
+          Optional.fromNullable(listDelimiter),
+          columns
       );
     }
   }

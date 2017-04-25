@@ -100,6 +100,7 @@ public class DelimitedParser implements Parser<String, Object>
   public DelimitedParser(
       final Optional<String> delimiter,
       final Optional<String> listDelimiter,
+      final Iterable<String> fieldNames,
       final boolean firstRowIsHeader
   )
   {
