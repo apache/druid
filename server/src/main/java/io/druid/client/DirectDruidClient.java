@@ -269,13 +269,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           long stopTimeNs = System.nanoTime();
           long nodeTimeNs = stopTimeNs - responseStartTimeNs;
+          final long nodeTimeMs = TimeUnit.NANOSECONDS.toMillis(nodeTimeNs);
           log.debug(
               "Completed queryId[%s] request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
               query.getId(),
               url,
               byteCount.get(),
-              TimeUnit.NANOSECONDS.toMillis(nodeTimeNs),
-              byteCount.get() / TimeUnit.NANOSECONDS.toSeconds(nodeTimeNs)
+              nodeTimeMs,
+              byteCount.get() / (0.001 * nodeTimeMs) // Floating math; division by zero will yield Inf, not exception
           );
           queryMetrics.reportNodeTime(nodeTimeNs);
           queryMetrics.reportNodeBytes(byteCount.get());
