@@ -316,6 +316,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException;
 
+  public abstract int getLastRowIndex();
+
   protected abstract AggregatorType[] getAggsForRow(int rowOffset);
 
   protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
