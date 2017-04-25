@@ -57,9 +57,12 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
+import org.eclipse.jetty.http2.server.HTTP2CServerConnectionFactory;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -169,7 +172,14 @@ public class JettyServerModule extends JerseyServletModule
     // to fire on main exit. Related bug: https://github.com/druid-io/druid/pull/1627
     server.addBean(new ScheduledExecutorScheduler("JettyScheduler", true), true);
 
-    ServerConnector connector = new ServerConnector(server);
+    final HttpConfiguration httpConfiguration = new HttpConfiguration();
+    httpConfiguration.setSendXPoweredBy(false);
+
+    final ServerConnector connector = new ServerConnector(
+        server,
+        new HttpConnectionFactory(httpConfiguration),
+        new HTTP2CServerConnectionFactory(httpConfiguration)
+    );
     connector.setPort(node.getPort());
     connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
     // workaround suggested in -
