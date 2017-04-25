@@ -43,10 +43,10 @@ public class StaticCloudFilesFirehoseFactory extends PrefetcheableTextFilesFireh
       @JacksonInject("objectApi") CloudFilesApi cloudFilesApi,
       @JsonProperty("blobs") List<CloudFilesBlob> blobs,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
-      @JsonProperty("maxCacheCapacityBytes") Long maxFetchCapacityBytes,
-      @JsonProperty("maxCacheCapacityBytes") Long prefetchTriggerBytes,
-      @JsonProperty("maxCacheCapacityBytes") Integer fetchTimeout,
-      @JsonProperty("maxCacheCapacityBytes") Integer maxFetchRetry
+      @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
+      @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
+      @JsonProperty("fetchTimeout") Integer fetchTimeout,
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
     super(blobs, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);

@@ -39,10 +39,10 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetcheableTextFiles
       @JacksonInject GoogleStorage storage,
       @JsonProperty("blobs") List<GoogleBlob> blobs,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
-      @JsonProperty("maxCacheCapacityBytes") Long maxFetchCapacityBytes,
-      @JsonProperty("maxCacheCapacityBytes") Long prefetchTriggerBytes,
-      @JsonProperty("maxCacheCapacityBytes") Integer fetchTimeout,
-      @JsonProperty("maxCacheCapacityBytes") Integer maxFetchRetry
+      @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
+      @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
+      @JsonProperty("fetchTimeout") Integer fetchTimeout,
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
     super(blobs, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);

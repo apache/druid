@@ -42,10 +42,10 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetcheableTextFilesF
       @JacksonInject("azureStorage") AzureStorage azureStorage,
       @JsonProperty("blobs") List<AzureBlob> blobs,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
-      @JsonProperty("maxCacheCapacityBytes") Long maxFetchCapacityBytes,
-      @JsonProperty("maxCacheCapacityBytes") Long prefetchTriggerBytes,
-      @JsonProperty("maxCacheCapacityBytes") Integer fetchTimeout,
-      @JsonProperty("maxCacheCapacityBytes") Integer maxFetchRetry
+      @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
+      @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
+      @JsonProperty("fetchTimeout") Integer fetchTimeout,
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
     super(blobs, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
