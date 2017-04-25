@@ -44,7 +44,6 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
-import io.druid.segment.VirtualColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
@@ -77,7 +76,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableBitSet;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
