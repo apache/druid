@@ -40,7 +40,7 @@ public class CSVParser implements Parser<String, Object>
   private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
 
   private ArrayList<String> fieldNames = null;
-  private boolean firstRowIsHeader = false;
+  private boolean hasHeaderRow = false;
   private boolean hasParsedHeader = true;
 
   public CSVParser(final Optional<String> listDelimiter)
@@ -83,13 +83,13 @@ public class CSVParser implements Parser<String, Object>
   public CSVParser(
       final Optional<String> listDelimiter,
       final Iterable<String> fieldNames,
-      final boolean firstRowIsHeader
+      final boolean hasHeaderRow
   )
   {
     this(listDelimiter, fieldNames);
 
-    this.firstRowIsHeader = firstRowIsHeader;
-    this.hasParsedHeader = !firstRowIsHeader;
+    this.hasHeaderRow = hasHeaderRow;
+    this.hasParsedHeader = !hasHeaderRow;
   }
 
   public String getListDelimiter()
@@ -128,7 +128,7 @@ public class CSVParser implements Parser<String, Object>
     try {
       String[] values = parser.parseLine(input);
 
-      if (firstRowIsHeader && !hasParsedHeader) {
+      if (hasHeaderRow && !hasParsedHeader) {
         if (fieldNames == null) {
           setFieldNames(Arrays.asList(values));
         }
@@ -150,6 +150,6 @@ public class CSVParser implements Parser<String, Object>
   @Override
   public void reset()
   {
-    hasParsedHeader = !firstRowIsHeader;
+    hasParsedHeader = !hasHeaderRow;
   }
 }

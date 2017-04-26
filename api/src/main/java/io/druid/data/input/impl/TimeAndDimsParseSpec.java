@@ -21,7 +21,6 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
@@ -63,12 +62,6 @@ public class TimeAndDimsParseSpec extends ParseSpec
       public List<String> getFieldNames()
       {
         throw new UnsupportedOperationException("not supported");
-      }
-
-      @Override
-      public void reset()
-      {
-        // do nothing
       }
     };
   }

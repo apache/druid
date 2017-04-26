@@ -79,20 +79,25 @@ If you have nested JSON, [Druid can automatically flatten it for you](flatten-js
       "column" : "timestamp"
     },
     "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"],
-    "firstRowIsHeader" : "false",
     "dimensionsSpec" : {
       "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
     }
   }
 ```
 
-If your file does not have a header as the first line of the file, you must set the `columns` field and ensure that the order of the fields matches the columns of your input data in the same order.
-If your file does have a header, set `firstRowIsHeader` to true, and do not include the `columns` key.
+#### CSV Index Tasks
 
-### TSV
+If your file does not have a header as the first line of the file, you must set the `columns` field and ensure that the order of the fields matches the columns of your input data in the same order.
+If your file does have a header, you can set a field called `hasHeaderRow` to true, and do not include the `columns` key.
+
+#### Other CSV Ingestion Tasks
+
+The `columns` field must be included and and ensure that the order of the fields matches the columns of your input data in the same order.
+
+### TSV (Delimited)
 
 ```json
-  "parseSpec":{
+  "parseSpec": {
     "format" : "tsv",
     "timestampSpec" : {
       "column" : "timestamp"
@@ -105,10 +110,16 @@ If your file does have a header, set `firstRowIsHeader` to true, and do not incl
   }
 ```
 
+#### TSV (Delimited) Index Tasks
+
 If your file does not have a header as the first line of the file, you must set the `columns` field and ensure that the order of the fields matches the columns of your input data in the same order.
-If your file does have a header, set `firstRowIsHeader` to true, and do not include the `columns` key.
+If your file does have a header, you can set a field called `hasHeaderRow` to true, and do not include the `columns` key.
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
+
+#### Other TSV (Delimited) Ingestion Tasks
+
+The `columns` field must be included and and ensure that the order of the fields matches the columns of your input data in the same order.
 
 ### Regex
 

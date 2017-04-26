@@ -35,7 +35,7 @@ public class DelimitedParseSpec extends ParseSpec
   private final String delimiter;
   private final String listDelimiter;
   private final List<String> columns;
-  private final boolean firstRowIsHeader;
+  private final boolean hasHeaderRow;
 
   @JsonCreator
   public DelimitedParseSpec(
@@ -44,7 +44,7 @@ public class DelimitedParseSpec extends ParseSpec
       @JsonProperty("delimiter") String delimiter,
       @JsonProperty("listDelimiter") String listDelimiter,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("firstRowIsHeader") boolean firstRowIsHeader
+      @JsonProperty("hasHeaderRow") boolean hasHeaderRow
   )
   {
     super(timestampSpec, dimensionsSpec);
@@ -59,12 +59,12 @@ public class DelimitedParseSpec extends ParseSpec
       verify(dimensionsSpec.getDimensionNames());
     } else {
       Preconditions.checkArgument(
-          firstRowIsHeader,
-          "If columns field is not set, the first row of your data must have your header and firstRowIsHeader must be set to true."
+          hasHeaderRow,
+          "If columns field is not set, the first row of your data must have your header and hasHeaderRow must be set to true."
       );
     }
 
-    this.firstRowIsHeader = firstRowIsHeader;
+    this.hasHeaderRow = hasHeaderRow;
   }
 
   @JsonProperty("delimiter")
@@ -86,9 +86,9 @@ public class DelimitedParseSpec extends ParseSpec
   }
 
   @JsonProperty
-  public boolean isFirstRowIsHeader()
+  public boolean isHasHeaderRow()
   {
-    return firstRowIsHeader;
+    return hasHeaderRow;
   }
 
   @Override
@@ -102,50 +102,42 @@ public class DelimitedParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    if (firstRowIsHeader) {
-      return new DelimitedParser(
-          Optional.fromNullable(delimiter),
-          Optional.fromNullable(listDelimiter),
-          columns,
-          firstRowIsHeader
-      );
-    } else {
-      return new DelimitedParser(
-          Optional.fromNullable(delimiter),
-          Optional.fromNullable(listDelimiter),
-          columns
-      );
-    }
+    return new DelimitedParser(
+        Optional.fromNullable(delimiter),
+        Optional.fromNullable(listDelimiter),
+        columns,
+        hasHeaderRow
+    );
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new DelimitedParseSpec(spec, getDimensionsSpec(), delimiter, listDelimiter, columns, firstRowIsHeader);
+    return new DelimitedParseSpec(spec, getDimensionsSpec(), delimiter, listDelimiter, columns, hasHeaderRow);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new DelimitedParseSpec(getTimestampSpec(), spec, delimiter, listDelimiter, columns, firstRowIsHeader);
+    return new DelimitedParseSpec(getTimestampSpec(), spec, delimiter, listDelimiter, columns, hasHeaderRow);
   }
 
   public ParseSpec withDelimiter(String delim)
   {
     return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delim, listDelimiter, columns,
-                                  firstRowIsHeader
+                                  hasHeaderRow
     );
   }
 
   public ParseSpec withListDelimiter(String delim)
   {
-    return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delimiter, delim, columns, firstRowIsHeader);
+    return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delimiter, delim, columns, hasHeaderRow);
   }
 
   public ParseSpec withColumns(List<String> cols)
   {
     return new DelimitedParseSpec(getTimestampSpec(), getDimensionsSpec(), delimiter, listDelimiter, cols,
-                                  firstRowIsHeader
+                                  hasHeaderRow
     );
   }
 }

@@ -34,7 +34,7 @@ public class CSVParseSpec extends ParseSpec
 {
   private final String listDelimiter;
   private final List<String> columns;
-  private final boolean firstRowIsHeader;
+  private final boolean hasHeaderRow;
 
   @JsonCreator
   public CSVParseSpec(
@@ -42,7 +42,7 @@ public class CSVParseSpec extends ParseSpec
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("listDelimiter") String listDelimiter,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("firstRowIsHeader") boolean firstRowIsHeader
+      @JsonProperty("hasHeaderRow") boolean hasHeaderRow
   )
   {
     super(timestampSpec, dimensionsSpec);
@@ -57,12 +57,12 @@ public class CSVParseSpec extends ParseSpec
       verify(dimensionsSpec.getDimensionNames());
     } else {
       Preconditions.checkArgument(
-          firstRowIsHeader,
-          "If columns field is not set, the first row of your data must have your header and firstRowIsHeader must be set to true."
+          hasHeaderRow,
+          "If columns field is not set, the first row of your data must have your header and hasHeaderRow must be set to true."
       );
     }
 
-    this.firstRowIsHeader = firstRowIsHeader;
+    this.hasHeaderRow = hasHeaderRow;
   }
 
   @JsonProperty
@@ -78,9 +78,9 @@ public class CSVParseSpec extends ParseSpec
   }
 
   @JsonProperty
-  public boolean isFirstRowIsHeader()
+  public boolean isHasHeaderRow()
   {
-    return firstRowIsHeader;
+    return hasHeaderRow;
   }
 
   @Override
@@ -94,27 +94,23 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    if (firstRowIsHeader) {
-      return new CSVParser(Optional.fromNullable(listDelimiter), columns, firstRowIsHeader);
-    } else {
-      return new CSVParser(Optional.fromNullable(listDelimiter), columns);
-    }
+    return new CSVParser(Optional.fromNullable(listDelimiter), columns, hasHeaderRow);
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, firstRowIsHeader);
+    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, hasHeaderRow);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, firstRowIsHeader);
+    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow);
   }
 
   public ParseSpec withColumns(List<String> cols)
   {
-    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, firstRowIsHeader);
+    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, hasHeaderRow);
   }
 }

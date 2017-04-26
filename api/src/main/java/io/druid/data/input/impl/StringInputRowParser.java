@@ -129,9 +129,9 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   }
 
   public InputRow parse(String input)
-    {
-      return parseMap(parseString(input));
-    }
+  {
+    return parseMap(parseString(input));
+  }
 
   private Map<String, Object> parseString(String inputString)
   {

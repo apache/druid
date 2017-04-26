@@ -37,7 +37,10 @@ public interface Parser<K, V>
   /**
    * Resets state within a parser.
    */
-  public void reset();
+  public default void reset()
+  {
+    // do nothing
+  }
 
   /**
    * Set the fieldNames that you expect to see in parsed Maps. Deprecated; Parsers should not, in general, be

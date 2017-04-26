@@ -99,10 +99,4 @@ public class JavaScriptParser implements Parser<String, Object>
   {
     throw new UnsupportedOperationException();
   }
-
-  @Override
-  public void reset()
-  {
-    // do nothing
-  }
 }

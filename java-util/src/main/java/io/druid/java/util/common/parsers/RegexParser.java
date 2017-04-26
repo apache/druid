@@ -121,10 +121,4 @@ public class RegexParser implements Parser<String, Object>
   {
     return fieldNames;
   }
-
-  @Override
-  public void reset()
-  {
-    // do nothing
-  }
 }
