@@ -574,9 +574,9 @@ public class ServerManagerTest
     }
 
     @Override
-    public QueryMetrics<Query<?>> makeMetrics(QueryType query)
+    public QueryMetrics<QueryType> makeMetrics(QueryType query)
     {
-      return new DefaultQueryMetrics<>(new DefaultObjectMapper());
+      return (QueryMetrics<QueryType>) new DefaultQueryMetrics<>(new DefaultObjectMapper());
     }
 
     @Override

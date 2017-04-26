@@ -172,11 +172,11 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
   @Override
   public Query<Row> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec)
   {
-    return withQuerySegmentSpec(dataSource.getFirstName(), spec);
+    return withQuerySegmentSpec(dataSource.getConcatenatedName(), spec);
   }
 
   @Override
-  public Query<Row> withQuerySegmentSpec(String firstDataSourceName, QuerySegmentSpec spec)
+  public Query<Row> withQuerySegmentSpec(String concatenatedDataSourceName, QuerySegmentSpec spec)
   {
     final JoinSpecVisitor visitor = new JoinSpecVisitor()
     {
@@ -191,7 +191,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
       @Override
       public DataInput visit(DataInput dataInput)
       {
-        if (dataInput.getDataSource().getFirstName().equals(firstDataSourceName)) {
+        if (dataInput.getDataSource().getConcatenatedName().equals(concatenatedDataSourceName)) {
           return new DataInput(dataInput.getDataSource(), spec);
         } else {
           return dataInput;

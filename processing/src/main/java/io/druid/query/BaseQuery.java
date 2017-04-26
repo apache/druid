@@ -197,9 +197,9 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @Override
-  public Query<T> withQuerySegmentSpec(String firstDataSourceName, QuerySegmentSpec spec)
+  public Query<T> withQuerySegmentSpec(String concatenatedDataSourceName, QuerySegmentSpec spec)
   {
-    Preconditions.checkArgument(this.dataSource.getFirstName().equals(firstDataSourceName));
+    Preconditions.checkArgument(this.dataSource.getConcatenatedName().equals(concatenatedDataSourceName));
     return withQuerySegmentSpec(this.dataSource, spec);
   }
 

@@ -148,7 +148,7 @@ public interface Query<T>
 
   Query<T> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec);
 
-  Query<T> withQuerySegmentSpec(String firstDataSourceName, QuerySegmentSpec spec);
+  Query<T> withQuerySegmentSpec(String concatenatedDataSourceName, QuerySegmentSpec spec);
 
   Query<T> replaceDataSourceWith(DataSource src, DataSource dst);
 }

@@ -19,198 +19,47 @@
 
 package io.druid.query;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
+public class DefaultQueryMetrics<QueryType extends BaseQuery<?>> extends AbstractQueryMetrics<QueryType>
 {
-  protected final ObjectMapper jsonMapper;
-  protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-  protected final Map<String, Number> metrics = new HashMap<>();
-
   public DefaultQueryMetrics(ObjectMapper jsonMapper)
   {
-    this.jsonMapper = jsonMapper;
+    super(jsonMapper);
   }
 
   @Override
   public void query(QueryType query)
   {
-    dataSourcesAndIntervals(query);
+    dataSource(query);
     queryType(query);
+    interval(query);
     hasFilters(query);
     duration(query);
     queryId(query);
   }
 
-  @Override
-  public void dataSourcesAndIntervals(QueryType query)
+  /**
+   * Sets {@link BaseQuery#getDataSource()} of the given query as dimension.
+   */
+  public void dataSource(QueryType query)
   {
-    final List<String> specs = query.getDataSources().stream()
-                                    .map(DataSourceWithSegmentSpec::toString)
-                                    .collect(Collectors.toList());
-    builder.setDimension(DruidMetrics.DATASOURCE, specs.toArray(new String[specs.size()]));
+    builder.setDimension(
+        DruidMetrics.DATASOURCE,
+        DataSourceUtil.getMetricName(query.getDataSource())
+    );
   }
 
-  @Override
-  public void queryType(QueryType query)
+  /**
+   * Sets {@link BaseQuery#getIntervals()} of the given query as dimension.
+   */
+  public void interval(QueryType query)
   {
-    builder.setDimension(DruidMetrics.TYPE, query.getType());
-  }
-
-  @Override
-  public void hasFilters(QueryType query)
-  {
-    builder.setDimension("hasFilters", String.valueOf(query.hasFilters()));
-  }
-
-  @Override
-  public void duration(QueryType query)
-  {
-    builder.setDimension("duration", query.getTotalDuration().toString());
-  }
-
-  @Override
-  public void queryId(QueryType query)
-  {
-    builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
-  }
-
-  @Override
-  public void context(QueryType query)
-  {
-    try {
-      builder.setDimension(
-          "context",
-          jsonMapper.writeValueAsString(query.getContext())
-      );
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
-  public void server(String host)
-  {
-    builder.setDimension("server", host);
-  }
-
-  @Override
-  public void remoteAddress(String remoteAddress)
-  {
-    builder.setDimension("remoteAddress", remoteAddress);
-  }
-
-  @Override
-  public void status(String status)
-  {
-    builder.setDimension(DruidMetrics.STATUS, status);
-  }
-
-  @Override
-  public void success(boolean success)
-  {
-    builder.setDimension("success", String.valueOf(success));
-  }
-
-  @Override
-  public void segment(String segmentIdentifier)
-  {
-    builder.setDimension("segment", segmentIdentifier);
-  }
-
-  @Override
-  public void chunkInterval(Interval interval)
-  {
-    builder.setDimension("chunkInterval", interval.toString());
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportQueryTime(long timeNs)
-  {
-    return defaultTimeMetric("query/time", timeNs);
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportQueryBytes(long byteCount)
-  {
-    metrics.put("query/bytes", byteCount);
-    return this;
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportWaitTime(long timeNs)
-  {
-    return defaultTimeMetric("query/wait/time", timeNs);
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportSegmentTime(long timeNs)
-  {
-    return defaultTimeMetric("query/segment/time", timeNs);
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs)
-  {
-    return defaultTimeMetric("query/segmentAndCache/time", timeNs);
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
-  {
-    return defaultTimeMetric("query/intervalChunk/time", timeNs);
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportCpuTime(long timeNs)
-  {
-    metrics.put("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(timeNs));
-    return this;
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs)
-  {
-    return defaultTimeMetric("query/node/ttfb", timeNs);
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportNodeTime(long timeNs)
-  {
-    return defaultTimeMetric("query/node/time", timeNs);
-  }
-
-  private QueryMetrics<QueryType> defaultTimeMetric(String metricName, long timeNs)
-  {
-    metrics.put(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
-    return this;
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportNodeBytes(long byteCount)
-  {
-    metrics.put("query/node/bytes", byteCount);
-    return this;
-  }
-
-  @Override
-  public void emit(ServiceEmitter emitter)
-  {
-    for (Map.Entry<String, Number> metric : metrics.entrySet()) {
-      emitter.emit(builder.build(metric.getKey(), metric.getValue()));
-    }
-    metrics.clear();
+    builder.setDimension(
+        DruidMetrics.INTERVAL,
+        query.getIntervals().stream()
+             .map(Interval::toString).toArray(String[]::new)
+    );
   }
 }

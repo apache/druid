@@ -17,17 +17,26 @@
  * under the License.
  */
 
-package io.druid.query;
+package io.druid.query.join;
 
-/**
- * This factory is used for DI of custom {@link QueryMetrics} implementations for all query types, which don't (yet)
- * need to emit custom dimensions and/or metrics, i. e. they are good with the generic {@link QueryMetrics} interface.
- */
-public interface GenericQueryMetricsFactory<QueryType extends Query<?>>
+import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
+
+public interface JoinQueryMetrics extends QueryMetrics<JoinQuery>
 {
   /**
-   * Creates a {@link QueryMetrics} for query, which doesn't have predefined QueryMetrics subclass. This method must
-   * call {@link QueryMetrics#query(Query)} with the given query on the created QueryMetrics object before returning.
+   * Sets the size of {@link Query#getDataSources()} of the given query as dimension.
    */
-  QueryMetrics<QueryType> makeMetrics(QueryType query);
+  void numDataSources(JoinQuery query);
+
+  /**
+   * Sets the dataSource of {@link Query#getDistributionTarget()} of the given query as dimension.
+   */
+  void distributionTarget(JoinQuery query);
+
+  /**
+   * Sets the duration of {@link Query#getDistributionTarget()} of the given query as dimension.
+   * @param query
+   */
+  void distributionTargetDuration(JoinQuery query);
 }
