@@ -236,12 +236,6 @@ public class URIExtractionNamespace implements ExtractionNamespace
     {
       return delegate.getFieldNames();
     }
-
-    @Override
-    public void reset()
-    {
-      // do nothing
-    }
   }
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format")
