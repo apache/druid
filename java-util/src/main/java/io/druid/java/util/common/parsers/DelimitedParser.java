@@ -149,8 +149,10 @@ public class DelimitedParser implements Parser<String, Object>
   @Override
   public void setFieldNames(final Iterable<String> fieldNames)
   {
-    ParserUtils.validateFields(fieldNames);
-    this.fieldNames = Lists.newArrayList(fieldNames);
+    if (fieldNames != null) {
+      ParserUtils.validateFields(fieldNames);
+      this.fieldNames = Lists.newArrayList(fieldNames);
+    }
   }
 
   public void setFieldNames(String header)
