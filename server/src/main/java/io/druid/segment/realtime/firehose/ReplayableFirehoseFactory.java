@@ -163,6 +163,7 @@ public class ReplayableFirehoseFactory implements FirehoseFactory<InputRowParser
                 try {
                   InputRow row = delegateFirehose.nextRow();
 
+                  // If a header is present in the data (and with proper configurations), a null InputRow will get created
                   if (row == null) {
                     continue;
                   }

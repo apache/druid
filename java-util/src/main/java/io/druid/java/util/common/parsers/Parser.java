@@ -35,7 +35,7 @@ public interface Parser<K, V>
   public Map<K, V> parse(String input);
 
   /**
-   * Resets state within a parser.
+   * Resets state within a parser. This may or may not get called at the start of reading of every file.
    */
   public default void reset()
   {

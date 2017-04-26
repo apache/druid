@@ -140,7 +140,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
 
   private InputRow parseMap(Map<String, Object> theMap)
   {
-    // if the file has a header, null is returned
+    // If a header is present in the data (and with proper configurations), a null is returned
     if (theMap == null) {
       return null;
     }
