@@ -424,6 +424,7 @@ public class ServerManagerTest
                                     .granularity(granularity)
                                     .limit(10000)
                                     .query("wow")
+                                    .updateDistributionTarget()
                                     .build();
     final QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(
         query.updateDistributionTarget(),

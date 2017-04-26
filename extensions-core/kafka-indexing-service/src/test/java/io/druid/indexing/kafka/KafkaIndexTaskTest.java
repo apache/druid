@@ -1611,6 +1611,7 @@ public class KafkaIndexTaskTest
                                       )
                                   ).granularity(Granularities.ALL)
                                   .intervals("0000/3000")
+                                  .updateDistributionTarget()
                                   .build();
 
     ArrayList<Result<TimeseriesResultValue>> results = Sequences.toList(
