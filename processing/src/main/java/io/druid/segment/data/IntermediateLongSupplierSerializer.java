@@ -134,7 +134,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
       int available = numInserted;
       while (available > 0) {
         delegate.add(tempIn.readLong());
-        available -= Longs.BYTES;
+        available--;
       }
     }
   }
