@@ -31,6 +31,7 @@ import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 
 public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<CloudFilesBlob>
@@ -38,6 +39,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
   private static final Logger log = new Logger(StaticCloudFilesFirehoseFactory.class);
 
   private final CloudFilesApi cloudFilesApi;
+  private final List<CloudFilesBlob> blobs;
 
   @JsonCreator
   public StaticCloudFilesFirehoseFactory(
@@ -50,14 +52,21 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
-    super(blobs, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
+    super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.cloudFilesApi = cloudFilesApi;
+    this.blobs = blobs;
   }
 
   @JsonProperty
   public List<CloudFilesBlob> getBlobs()
   {
-    return getObjects();
+    return blobs;
+  }
+
+  @Override
+  protected Collection<CloudFilesBlob> initObjects()
+  {
+    return blobs;
   }
 
   @Override

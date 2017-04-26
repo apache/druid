@@ -49,10 +49,6 @@ public class TaskAnnouncementTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-
-    final File baseDir = new File("lol");
-    baseDir.mkdir();
-    baseDir.deleteOnExit();
   }
 
   @Test

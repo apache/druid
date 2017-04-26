@@ -34,7 +34,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -70,20 +69,6 @@ public class LocalFirehoseFactoryTest
     }
 
     factory = new LocalFirehoseFactory(temporaryFolder.getRoot(), "test_*", null);
-  }
-
-  @Test
-  public void testGetObjects() throws InterruptedException
-  {
-    final List<File> files = factory.getObjects();
-    Assert.assertEquals(5, files.size());
-  }
-
-  @Test
-  public void testIsGzipped()
-  {
-    Assert.assertTrue(factory.isGzipped(new File("test.gz")));
-    Assert.assertFalse(factory.isGzipped(new File("test.g")));
   }
 
   @Test

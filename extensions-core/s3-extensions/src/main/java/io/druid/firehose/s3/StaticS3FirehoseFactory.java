@@ -34,6 +34,7 @@ import org.jets3t.service.model.S3Object;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -44,6 +45,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
   private final RestS3Service s3Client;
+  private final List<URI> uris;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
@@ -56,8 +58,9 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
-    super(uris, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
+    super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.s3Client = Preconditions.checkNotNull(s3Client, "null s3Client");
+    this.uris = uris;
 
     for (final URI inputURI : uris) {
       Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
@@ -67,7 +70,13 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   @JsonProperty
   public List<URI> getUris()
   {
-    return getObjects();
+    return uris;
+  }
+
+  @Override
+  protected Collection<URI> initObjects()
+  {
+    return uris;
   }
 
   @Override

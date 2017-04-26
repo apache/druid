@@ -29,6 +29,7 @@ import io.druid.storage.azure.AzureStorage;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -37,6 +38,7 @@ import java.util.List;
 public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<AzureBlob>
 {
   private final AzureStorage azureStorage;
+  private final List<AzureBlob> blobs;
 
   @JsonCreator
   public StaticAzureBlobStoreFirehoseFactory(
@@ -49,14 +51,21 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
-    super(blobs, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
+    super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
+    this.blobs = blobs;
     this.azureStorage = azureStorage;
   }
 
   @JsonProperty
   public List<AzureBlob> getBlobs()
   {
-    return getObjects();
+    return blobs;
+  }
+
+  @Override
+  protected Collection<AzureBlob> initObjects()
+  {
+    return blobs;
   }
 
   @Override

@@ -23,13 +23,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.Pair;
-import junit.framework.Assert;
-
 import org.apache.commons.io.LineIterator;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.List;
@@ -44,6 +45,16 @@ public class FileIteratingFirehoseTest
       Pair.of(new String[]{"2000,foo\n2000,bar\n", "", "2000,baz", ""}, ImmutableList.of("foo", "bar", "baz")),
       Pair.of(new String[]{""}, ImmutableList.<String>of()),
       Pair.of(new String[]{}, ImmutableList.<String>of())
+  );
+
+  private static final StringInputRowParser parser = new StringInputRowParser(
+      new CSVParseSpec(
+          new TimestampSpec("ts", "auto", null),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
+          ",",
+          ImmutableList.of("ts", "x")
+      ),
+      null
   );
 
   @Test
@@ -62,16 +73,6 @@ public class FileIteratingFirehoseTest
           }
       );
 
-      final StringInputRowParser parser = new StringInputRowParser(
-          new CSVParseSpec(
-              new TimestampSpec("ts", "auto", null),
-              new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
-              ",",
-              ImmutableList.of("ts", "x")
-          ),
-          null
-      );
-
       final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser);
       final List<String> results = Lists.newArrayList();
 
@@ -80,6 +81,48 @@ public class FileIteratingFirehoseTest
       }
 
       Assert.assertEquals(fixture.rhs, results);
+    }
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testClose() throws IOException
+  {
+    final LineIterator lineIterator = new LineIterator(new Reader()
+    {
+      @Override
+      public int read(char[] cbuf, int off, int len) throws IOException
+      {
+        final char[] chs = "\n".toCharArray();
+        System.arraycopy(chs, 0, cbuf, 0, chs.length);
+        return chs.length;
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        throw new RuntimeException("close test for FileIteratingFirehose");
+      }
+    });
+
+    final TestCloseable closeable = new TestCloseable();
+    final FileIteratingFirehose firehose = new FileIteratingFirehose(
+        ImmutableList.of(lineIterator).iterator(),
+        parser,
+        closeable
+    );
+    firehose.hasMore(); // initialize lineIterator
+    firehose.close();
+    Assert.assertTrue(closeable.closed);
+  }
+
+  private static final class TestCloseable implements Closeable
+  {
+    private boolean closed;
+
+    @Override
+    public void close() throws IOException
+    {
+      closed = true;
     }
   }
 }

@@ -77,10 +77,6 @@ public class TaskSerdeTest
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
-
-    final File baseDir = new File("lol");
-    baseDir.mkdir();
-    baseDir.deleteOnExit();
   }
 
   @Test

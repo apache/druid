@@ -20,7 +20,9 @@
 package io.druid.data.input.impl;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.Files;
 import io.druid.data.input.Firehose;
@@ -40,7 +42,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -111,7 +112,6 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   private Future<Void> fetchFuture;
 
   public PrefetchableTextFilesFirehoseFactory(
-      Collection<ObjectType> objects,
       Long maxCacheCapacityBytes,
       Long maxFetchCapacityBytes,
       Long prefetchTriggerBytes,
@@ -119,7 +119,6 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
       Integer maxFetchRetry
   )
   {
-    super(objects);
     this.maxCacheCapacityBytes = maxCacheCapacityBytes == null
                                  ? DEFAULT_MAX_CACHE_CAPACITY_BYTES
                                  : maxCacheCapacityBytes;
@@ -145,10 +144,9 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   /**
    * Cache objects in a local disk up to {@link #maxCacheCapacityBytes}.
    */
-  private void cache()
+  private void cache(final List<ObjectType> objects)
   {
     double totalFetchedBytes = 0;
-    final List<ObjectType> objects = getObjects();
     try {
       for (int i = 0; i < objects.size() && totalFetchedBytes < maxCacheCapacityBytes; i++) {
         final ObjectType object = objects.get(i);
@@ -170,9 +168,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
    * This is for simplifying design, and should be improved when our client implementations for cloud storages like S3
    * support range scan.
    */
-  private void fetch() throws Exception
+  private void fetch(final List<ObjectType> objects) throws Exception
   {
-    final List<ObjectType> objects = getObjects();
     for (int i = nextFetchIndex; i < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; i++) {
       final ObjectType object = objects.get(i);
       LOG.info("Fetching object[%s]", object);
@@ -216,10 +213,11 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
+    final List<ObjectType> objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
     if (baseDir == null) {
       baseDir = Files.createTempDir();
       baseDir.deleteOnExit();
-      cache();
+      cache(objects);
     } else {
       nextFetchIndex = cacheFiles.size();
     }
@@ -244,7 +242,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           {
             return cacheFileIterator.hasNext()
                    || !fetchFiles.isEmpty()
-                   || nextFetchIndex < getObjects().size();
+                   || nextFetchIndex < objects.size();
           }
 
           private void fetchIfNeeded(long remainingBytes)
@@ -253,7 +251,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
                 && remainingBytes <= prefetchTriggerBytes) {
               fetchFuture = fetchExecutor.submit(
                   () -> {
-                    fetch();
+                    fetch(objects);
                     return null;
                   }
               );

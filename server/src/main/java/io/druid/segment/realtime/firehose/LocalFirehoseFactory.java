@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.java.util.common.CompressionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
@@ -32,6 +33,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 
 /**
  */
@@ -51,18 +53,9 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
       @JsonProperty("parser") StringInputRowParser parser
   )
   {
-    super(
-        FileUtils.listFiles(
-            Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
-            new WildcardFileFilter(filter),
-            TrueFileFilter.INSTANCE
-        )
-    );
     this.baseDir = baseDir;
     this.filter = filter;
     this.parser = parser;
-
-    log.info("Initialized with " + getObjects() + " files");
   }
 
   @JsonProperty
@@ -84,14 +77,21 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   }
 
   @Override
-  protected InputStream openStream(File object) throws IOException
+  protected Collection<File> initObjects()
   {
-    return FileUtils.openInputStream(object);
+    final Collection<File> files = FileUtils.listFiles(
+        Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
+        new WildcardFileFilter(filter),
+        TrueFileFilter.INSTANCE
+    );
+    log.info("Initialized with " + files + " files");
+    return files;
   }
 
   @Override
-  protected boolean isGzipped(File object)
+  protected InputStream openStream(File object) throws IOException
   {
-    return object.getPath().endsWith(".gz");
+    final InputStream stream = FileUtils.openInputStream(object);
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 }

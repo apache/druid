@@ -29,11 +29,13 @@ import io.druid.storage.google.GoogleStorage;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 
 public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<GoogleBlob>
 {
   private final GoogleStorage storage;
+  private final List<GoogleBlob> blobs;
 
   @JsonCreator
   public StaticGoogleBlobStoreFirehoseFactory(
@@ -46,13 +48,20 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
-    super(blobs, maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
+    super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.storage = storage;
+    this.blobs = blobs;
   }
 
   @JsonProperty
   public List<GoogleBlob> getBlobs() {
-    return getObjects();
+    return blobs;
+  }
+
+  @Override
+  protected Collection<GoogleBlob> initObjects()
+  {
+    return blobs;
   }
 
   @Override

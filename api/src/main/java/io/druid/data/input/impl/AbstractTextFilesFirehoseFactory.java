@@ -49,16 +49,10 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
 {
   private static final Logger LOG = new Logger(AbstractTextFilesFirehoseFactory.class);
 
-  private final List<ObjectType> objects;
-
-  public AbstractTextFilesFirehoseFactory(Collection<ObjectType> objects)
-  {
-    this.objects = ImmutableList.copyOf(Preconditions.checkNotNull(objects, "objects"));
-  }
-
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
+    final List<ObjectType> objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
     final Iterator<ObjectType> iterator = objects.iterator();
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
@@ -97,10 +91,14 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
     );
   }
 
-  public List<ObjectType> getObjects()
-  {
-    return objects;
-  }
+  /**
+   * Initialize objects to be read by this firehose.  Since firehose factories are constructed whenever
+   * io.druid.indexing.common.task.Task objects are deserialized, actual initialization of objects is deferred
+   * until {@link #connect(StringInputRowParser)} is called.
+   *
+   * @return a collection of initialized objects.
+   */
+  protected abstract Collection<ObjectType> initObjects();
 
   /**
    * Open an input stream from the given object.

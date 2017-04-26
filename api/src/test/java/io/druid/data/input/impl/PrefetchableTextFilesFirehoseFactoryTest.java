@@ -43,6 +43,7 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -242,7 +243,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
   static class TestPrefetchableTextFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<File>
   {
-    private long sleepMillis;
+    private final long sleepMillis;
+    private final File baseDir;
     private int openExceptionCount;
 
     static TestPrefetchableTextFilesFirehoseFactory withoutCache(File baseDir)
@@ -327,11 +329,6 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     )
     {
       super(
-          FileUtils.listFiles(
-              Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
-              TrueFileFilter.INSTANCE,
-              TrueFileFilter.INSTANCE
-          ),
           maxCacheCapacityBytes,
           maxFetchCapacityBytes,
           prefetchTriggerThreshold,
@@ -340,6 +337,17 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       );
       this.openExceptionCount = openExceptionCount;
       this.sleepMillis = sleepMillis;
+      this.baseDir = baseDir;
+    }
+
+    @Override
+    protected Collection<File> initObjects()
+    {
+      return FileUtils.listFiles(
+          Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
+          TrueFileFilter.INSTANCE,
+          TrueFileFilter.INSTANCE
+      );
     }
 
     @Override

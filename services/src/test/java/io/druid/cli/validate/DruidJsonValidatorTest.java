@@ -141,9 +141,6 @@ public class DruidJsonValidatorTest
       jsonMapper.registerModule(jacksonModule);
     }
 
-    final File file = new File("lol");
-    file.mkdir();
-
     final RealtimeIndexTask task = new RealtimeIndexTask(
         null,
         new TaskResource("rofl", 2),
@@ -194,7 +191,6 @@ public class DruidJsonValidatorTest
     jsonMapper.writeValue(tmp, task);
 
     parseCommand("validator", "-f", tmp.getAbsolutePath(), "-t", "task").run();
-    file.delete();
   }
 
   @After
