@@ -61,7 +61,7 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
     this.schema = schema;
     String schemaStr = mapper.writeValueAsString(schema);
 
-    LOGGER.info("Schema string [%s]", schemaStr);
+    LOGGER.debug("Schema string [%s]", schemaStr);
     this.schemaObj = new Schema.Parser().parse(schemaStr);
     this.reader = new GenericDatumReader<>(this.schemaObj);
   }

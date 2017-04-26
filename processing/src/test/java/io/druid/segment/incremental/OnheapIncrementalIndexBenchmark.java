@@ -205,6 +205,12 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       return numEntries.get();
     }
+
+    @Override
+    public int getLastRowIndex()
+    {
+      return indexIncrement.get() - 1;
+    }
   }
 
   @Parameterized.Parameters

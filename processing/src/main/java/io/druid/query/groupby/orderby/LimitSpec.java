@@ -29,6 +29,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -39,6 +40,11 @@ import java.util.List;
 })
 public interface LimitSpec extends Cacheable
 {
+  static LimitSpec nullToNoopLimitSpec(@Nullable LimitSpec limitSpec)
+  {
+    return (limitSpec == null) ? NoopLimitSpec.instance() : limitSpec;
+  }
+
   /**
    * Returns a function that applies a limit to an input sequence that is assumed to be sorted on dimensions.
    *

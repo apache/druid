@@ -73,7 +73,7 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
       Map<String, Object> schema = e.getValue();
       String schemaStr = mapper.writeValueAsString(schema);
 
-      LOGGER.info("Schema string [%s] = [%s]", id, schemaStr);
+      LOGGER.debug("Schema string [%s] = [%s]", id, schemaStr);
       schemaObjs.put(id, new Schema.Parser().parse(schemaStr));
     }
   }

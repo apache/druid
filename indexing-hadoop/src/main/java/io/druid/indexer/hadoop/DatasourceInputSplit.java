@@ -74,7 +74,9 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   @Override
   public void write(DataOutput out) throws IOException
   {
-    out.writeUTF(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(segments));
+    final byte[] segmentsBytes = HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(segments);
+    out.writeInt(segmentsBytes.length);
+    out.write(segmentsBytes);
     out.writeInt(locations.length);
     for (String location : locations) {
       out.writeUTF(location);
@@ -84,8 +86,11 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   @Override
   public void readFields(DataInput in) throws IOException
   {
+    final int segmentsBytesLength = in.readInt();
+    final byte[] buf = new byte[segmentsBytesLength];
+    in.readFully(buf);
     segments = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-        in.readUTF(),
+        buf,
         new TypeReference<List<WindowedDataSegment>>()
         {
         }
