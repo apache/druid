@@ -131,8 +131,10 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 
     try (DataInputStream tempIn = new DataInputStream(new BufferedInputStream(ioPeon.makeInputStream(tempFile)))) {
       delegate.open();
-      while (tempIn.available() > 0) {
+      int available = tempIn.available();
+      while (available > 0) {
         delegate.add(tempIn.readLong());
+        available -= Longs.BYTES;
       }
     }
   }
