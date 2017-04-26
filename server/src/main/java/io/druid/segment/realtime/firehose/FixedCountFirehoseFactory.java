@@ -27,6 +27,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -60,12 +61,12 @@ public class FixedCountFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect(final InputRowParser parser) throws IOException
+  public Firehose connect(final InputRowParser parser, File temporaryDirectory) throws IOException
   {
     return new Firehose()
     {
       private int i = 0;
-      private Firehose delegateFirehose = delegate.connect(parser);
+      private Firehose delegateFirehose = delegate.connect(parser, temporaryDirectory);
 
       @Override
       public boolean hasMore()

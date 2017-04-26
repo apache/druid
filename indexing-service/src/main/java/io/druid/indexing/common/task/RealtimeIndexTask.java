@@ -26,6 +26,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
@@ -63,6 +64,7 @@ import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -324,6 +326,7 @@ public class RealtimeIndexTask extends AbstractTask
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     Supplier<Committer> committerSupplier = null;
+    final File firehoseTempDir = Files.createTempDir();
 
     try {
       plumber.startJob();
@@ -332,13 +335,14 @@ public class RealtimeIndexTask extends AbstractTask
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
 
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
+      FileUtils.forceMkdir(firehoseTempDir);
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
       final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
 
       // Skip connecting firehose if we've been stopped before we got started.
       synchronized (this) {
         if (!gracefullyStopped) {
-          firehose = firehoseFactory.connect(spec.getDataSchema().getParser());
+          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
           committerSupplier = Committers.supplierFromFirehose(firehose);
         }
       }
@@ -410,6 +414,8 @@ public class RealtimeIndexTask extends AbstractTask
               plumber.finishJob();
             }
           }
+
+          FileUtils.forceDelete(firehoseTempDir);
         }
         catch (InterruptedException e) {
           log.debug(e, "Interrupted while finishing the job");

@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CountingOutputStream;
-import com.google.common.io.Files;
 import io.druid.data.input.Firehose;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -59,7 +58,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * by this class provides three key functionalities.
  *
  * <ul>
- * <li>Caching: for the first call of {@link #connect(StringInputRowParser)}, it caches objects in a local disk
+ * <li>Caching: for the first call of {@link #connect(StringInputRowParser, File)}, it caches objects in a local disk
  * up to {@link #maxCacheCapacityBytes}.  These caches are NOT deleted until the process terminates,
  * and thus can be used for future reads.</li>
  * <li>Fetching: when it reads all cached data, it fetches remaining objects into a local disk and reads data from
@@ -82,6 +81,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   private static final long DEFAULT_MAX_FETCH_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
   private static final long DEFAULT_FETCH_TIMEOUT = 60_000; // 60 secs
   private static final int DEFAULT_MAX_FETCH_RETRY = 3;
+  private static final String CACHE_FILE_PREFIX = "cache-";
+  private static final String FETCH_FILE_PREFIX = "fetch-";
 
   // The below two variables are roughly the max size of total cached/fetched objects, but the actual cached/fetched
   // size can be larger. The reason is our current client implementations for cloud storages like s3 don't support range
@@ -92,7 +93,6 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   private final long maxFetchCapacityBytes;
 
   private final long prefetchTriggerBytes;
-  private File baseDir; // Directory for cached and fetched files
 
   private final List<File> cacheFiles;
   private final LinkedBlockingQueue<File> fetchFiles;
@@ -110,6 +110,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   private volatile int nextFetchIndex;
 
   private Future<Void> fetchFuture;
+
+  private boolean needCache = true;
 
   public PrefetchableTextFilesFirehoseFactory(
       Long maxCacheCapacityBytes,
@@ -144,14 +146,14 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   /**
    * Cache objects in a local disk up to {@link #maxCacheCapacityBytes}.
    */
-  private void cache(final List<ObjectType> objects)
+  private void cache(final List<ObjectType> objects, File baseDir)
   {
     double totalFetchedBytes = 0;
     try {
       for (int i = 0; i < objects.size() && totalFetchedBytes < maxCacheCapacityBytes; i++) {
         final ObjectType object = objects.get(i);
         LOG.info("Caching object[%s]", object);
-        final File outFile = File.createTempFile("cache-", null, baseDir);
+        final File outFile = File.createTempFile(CACHE_FILE_PREFIX, null, baseDir);
         totalFetchedBytes += download(object, outFile, 0);
         cacheFiles.add(outFile);
         nextFetchIndex++;
@@ -168,12 +170,12 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
    * This is for simplifying design, and should be improved when our client implementations for cloud storages like S3
    * support range scan.
    */
-  private void fetch(final List<ObjectType> objects) throws Exception
+  private void fetch(final List<ObjectType> objects, File baseDir) throws Exception
   {
     for (int i = nextFetchIndex; i < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; i++) {
       final ObjectType object = objects.get(i);
       LOG.info("Fetching object[%s]", object);
-      final File outFile = File.createTempFile("fetch-", null, baseDir);
+      final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, baseDir);
       fetchedBytes.addAndGet(download(object, outFile, 0));
       fetchFiles.put(outFile);
       nextFetchIndex++;
@@ -211,13 +213,27 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   }
 
   @Override
-  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
     final List<ObjectType> objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
-    if (baseDir == null) {
-      baseDir = Files.createTempDir();
-      baseDir.deleteOnExit();
-      cache(objects);
+//    if (baseDir == null) {
+//      baseDir = Files.createTempDir();
+//      baseDir.deleteOnExit();
+//      cache(objects);
+//    } else {
+//      nextFetchIndex = cacheFiles.size();
+//    }
+
+    Preconditions.checkState(temporaryDirectory.exists(), "temporaryDirectory[%s] does not exist", temporaryDirectory);
+    Preconditions.checkState(
+        temporaryDirectory.isDirectory(),
+        "temporaryDirectory[%s] is not a directory",
+        temporaryDirectory
+    );
+
+    if (needCache) {
+      cache(objects, temporaryDirectory);
+      needCache = false;
     } else {
       nextFetchIndex = cacheFiles.size();
     }
@@ -251,7 +267,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
                 && remainingBytes <= prefetchTriggerBytes) {
               fetchFuture = fetchExecutor.submit(
                   () -> {
-                    fetch(objects);
+                    fetch(objects, temporaryDirectory);
                     return null;
                   }
               );

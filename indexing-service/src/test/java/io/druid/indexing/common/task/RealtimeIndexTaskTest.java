@@ -219,7 +219,7 @@ public class RealtimeIndexTaskTest
     }
 
     @Override
-    public Firehose connect(InputRowParser parser) throws IOException, ParseException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException, ParseException
     {
       return new TestFirehose();
     }

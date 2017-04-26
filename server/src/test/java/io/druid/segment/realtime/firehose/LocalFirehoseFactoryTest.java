@@ -90,7 +90,7 @@ public class LocalFirehoseFactoryTest
             Arrays.asList("timestamp", "a")
         ),
         Charsets.UTF_8.name()
-    ))) {
+    ), null)) {
       final List<Row> rows = new ArrayList<>();
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());

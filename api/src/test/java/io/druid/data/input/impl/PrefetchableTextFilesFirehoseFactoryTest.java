@@ -50,8 +50,9 @@ import java.util.concurrent.TimeoutException;
 public class PrefetchableTextFilesFirehoseFactoryTest
 {
   private static File testDir;
+  private static File firehoseTempDir;
 
-  private final StringInputRowParser parser = new StringInputRowParser(
+  private static final StringInputRowParser parser = new StringInputRowParser(
       new CSVParseSpec(
           new TimestampSpec(
               "timestamp",
@@ -75,9 +76,13 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   @BeforeClass
   public static void setup() throws IOException
   {
-    testDir = File.createTempFile(PrefetchableTextFilesFirehoseFactoryTest.class.getSimpleName(), "");
+    testDir = File.createTempFile(PrefetchableTextFilesFirehoseFactoryTest.class.getSimpleName(), "testDir");
     FileUtils.forceDelete(testDir);
     FileUtils.forceMkdir(testDir);
+
+    firehoseTempDir = File.createTempFile(PrefetchableTextFilesFirehoseFactoryTest.class.getSimpleName(), "baseDir");
+    FileUtils.forceDelete(firehoseTempDir);
+    FileUtils.forceMkdir(firehoseTempDir);
 
     for (int i = 0; i < 10; i++) {
       // Each file is 1390 bytes
@@ -96,6 +101,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   public static void teardown() throws IOException
   {
     FileUtils.forceDelete(testDir);
+    FileUtils.forceDelete(firehoseTempDir);
   }
 
   private static void assertResult(List<Row> rows)
@@ -131,7 +137,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         TestPrefetchableTextFilesFirehoseFactory.withoutCache(testDir);
 
     final List<Row> rows = new ArrayList<>();
-    try (Firehose firehose = factory.connect(parser)) {
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
       Assert.assertEquals(0, factory.getCacheFiles().size());
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
@@ -148,7 +154,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         TestPrefetchableTextFilesFirehoseFactory.withZeroFetchCapacity(testDir);
 
     final List<Row> rows = new ArrayList<>();
-    try (Firehose firehose = factory.connect(parser)) {
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -164,7 +170,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         TestPrefetchableTextFilesFirehoseFactory.of(testDir);
 
     final List<Row> rows = new ArrayList<>();
-    try (Firehose firehose = factory.connect(parser)) {
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -180,7 +186,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         TestPrefetchableTextFilesFirehoseFactory.withOpenExceptions(testDir, 1);
 
     final List<Row> rows = new ArrayList<>();
-    try (Firehose firehose = factory.connect(parser)) {
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -200,7 +206,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         TestPrefetchableTextFilesFirehoseFactory.withOpenExceptions(testDir, 5);
 
     final List<Row> rows = new ArrayList<>();
-    try (Firehose firehose = factory.connect(parser)) {
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -217,7 +223,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         TestPrefetchableTextFilesFirehoseFactory.withSleepMillis(testDir, 1000);
 
     final List<Row> rows = new ArrayList<>();
-    try (Firehose firehose = factory.connect(parser)) {
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -232,7 +238,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     for (int i = 0; i < 5; i++) {
       final List<Row> rows = new ArrayList<>();
-      try (Firehose firehose = factory.connect(parser)) {
+      try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
         while (firehose.hasMore()) {
           rows.add(firehose.nextRow());
         }

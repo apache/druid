@@ -30,6 +30,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -40,7 +41,7 @@ import java.util.NoSuchElementException;
 
 /**
  * This is an abstract class for firehose factory for making firehoses reading text files.
- * It provides an unified {@link #connect(StringInputRowParser)} implementation for its subclasses.
+ * It provides an unified {@link #connect(StringInputRowParser, File)} implementation for its subclasses.
  *
  * @param <ObjectType> object type representing input data
  */
@@ -50,7 +51,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
   private static final Logger LOG = new Logger(AbstractTextFilesFirehoseFactory.class);
 
   @Override
-  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
     final List<ObjectType> objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
     final Iterator<ObjectType> iterator = objects.iterator();
@@ -94,7 +95,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
   /**
    * Initialize objects to be read by this firehose.  Since firehose factories are constructed whenever
    * io.druid.indexing.common.task.Task objects are deserialized, actual initialization of objects is deferred
-   * until {@link #connect(StringInputRowParser)} is called.
+   * until {@link #connect(StringInputRowParser, File)} is called.
    *
    * @return a collection of initialized objects.
    */

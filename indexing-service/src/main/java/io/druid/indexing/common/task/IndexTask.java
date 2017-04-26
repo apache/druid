@@ -38,6 +38,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.google.common.io.Files;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
@@ -88,6 +89,7 @@ import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
+import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -162,6 +164,9 @@ public class IndexTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    final File firehoseTempDir = Files.createTempDir();
+    FileUtils.forceMkdir(firehoseTempDir);
+
     final boolean determineIntervals = !ingestionSchema.getDataSchema()
                                                        .getGranularitySpec()
                                                        .bucketIntervals()
@@ -174,7 +179,7 @@ public class IndexTask extends AbstractTask
       ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
     }
 
-    final Map<Interval, List<ShardSpec>> shardSpecs = determineShardSpecs(toolbox, firehoseFactory);
+    final Map<Interval, List<ShardSpec>> shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir);
 
     final String version;
     final DataSchema dataSchema;
@@ -196,10 +201,15 @@ public class IndexTask extends AbstractTask
       dataSchema = ingestionSchema.getDataSchema();
     }
 
-    if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, version, firehoseFactory)) {
-      return TaskStatus.success(getId());
-    } else {
-      return TaskStatus.failure(getId());
+    try {
+      if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, version, firehoseFactory, firehoseTempDir)) {
+        return TaskStatus.success(getId());
+      } else {
+        return TaskStatus.failure(getId());
+      }
+    }
+    finally {
+      FileUtils.forceDelete(firehoseTempDir);
     }
   }
 
@@ -209,7 +219,8 @@ public class IndexTask extends AbstractTask
    */
   private Map<Interval, List<ShardSpec>> determineShardSpecs(
       final TaskToolbox toolbox,
-      final FirehoseFactory firehoseFactory
+      final FirehoseFactory firehoseFactory,
+      final File firehoseTempDir
   ) throws IOException
   {
     final ObjectMapper jsonMapper = toolbox.getObjectMapper();
@@ -253,7 +264,10 @@ public class IndexTask extends AbstractTask
 
     log.info("Determining intervals and shardSpecs");
     long determineShardSpecsStartMillis = System.currentTimeMillis();
-    try (final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
+    try (final Firehose firehose = firehoseFactory.connect(
+        ingestionSchema.getDataSchema().getParser(),
+        firehoseTempDir)
+    ) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
@@ -333,7 +347,8 @@ public class IndexTask extends AbstractTask
       final DataSchema dataSchema,
       final Map<Interval, List<ShardSpec>> shardSpecs,
       final String version,
-      final FirehoseFactory firehoseFactory
+      final FirehoseFactory firehoseFactory,
+      final File firehoseTempDir
   ) throws IOException, InterruptedException
 
   {
@@ -386,7 +401,7 @@ public class IndexTask extends AbstractTask
             segmentAllocator,
             fireDepartmentMetrics
         );
-        final Firehose firehose = firehoseFactory.connect(dataSchema.getParser())
+        final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
       final Map<Interval, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();

@@ -81,6 +81,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -143,7 +144,7 @@ public class RealtimeManagerTest
         new FirehoseFactory()
         {
           @Override
-          public Firehose connect(InputRowParser parser) throws IOException
+          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
           {
             return new TestFirehose(rows.iterator());
           }

@@ -43,6 +43,7 @@ import twitter4j.TwitterStreamFactory;
 import twitter4j.User;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -113,7 +114,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
   }
 
   @Override
-  public Firehose connect(InputRowParser parser) throws IOException
+  public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
   {
     final ConnectionLifeCycleListener connectionLifeCycleListener = new ConnectionLifeCycleListener()
     {

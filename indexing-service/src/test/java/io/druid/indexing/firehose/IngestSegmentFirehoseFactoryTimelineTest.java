@@ -144,7 +144,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     int count = 0;
     long sum = 0;
 
-    try (final Firehose firehose = factory.connect(ROW_PARSER)) {
+    try (final Firehose firehose = factory.connect(ROW_PARSER, null)) {
       while (firehose.hasMore()) {
         final InputRow row = firehose.nextRow();
         count++;

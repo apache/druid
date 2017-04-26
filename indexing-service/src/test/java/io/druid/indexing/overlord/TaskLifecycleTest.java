@@ -238,7 +238,7 @@ public class TaskLifecycleTest
   private static class MockExceptionalFirehoseFactory implements FirehoseFactory
   {
     @Override
-    public Firehose connect(InputRowParser parser) throws IOException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
     {
       return new Firehose()
       {
@@ -288,7 +288,7 @@ public class TaskLifecycleTest
     }
 
     @Override
-    public Firehose connect(InputRowParser parser) throws IOException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
     {
       final Iterator<InputRow> inputRowIterator = usedByRealtimeIdxTask
                                                   ? realtimeIdxTaskInputRows.iterator()
