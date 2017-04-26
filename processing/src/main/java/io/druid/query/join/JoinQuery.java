@@ -172,7 +172,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
   @Override
   public Query<Row> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec)
   {
-    return withQuerySegmentSpec(dataSource.getConcatenatedName(), spec);
+    return withQuerySegmentSpec(dataSource.getFirstName(), spec);
   }
 
   @Override

@@ -279,7 +279,8 @@ public class ServerManager implements QuerySegmentWalker
     final Map<String, List<SegmentDescriptor>> broadcastSegmentDescMap = new HashMap<>();
     query.getDataSources().forEach(
         spec -> {
-          final String sourceName = getDataSourceName(spec.getDataSource());
+          // Get concatenated name to handle broadcasted union dataSource
+          final String sourceName = spec.getDataSource().getConcatenatedName();
           final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(sourceName);
           if (!sourceName.equals(nonBroadcastDataSourceName)) {
             spec.getQuerySegmentSpec().getIntervals().stream()
@@ -418,7 +419,8 @@ public class ServerManager implements QuerySegmentWalker
     final Map<String, List<SegmentDescriptor>> broadcastSegmentDescMap = new HashMap<>();
     query.getDataSources().forEach(
         spec -> {
-          final String sourceName = getDataSourceName(spec.getDataSource());
+          // Get concatenated name to handle broadcasted union dataSource
+          final String sourceName = spec.getDataSource().getConcatenatedName();
           final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(sourceName);
           if (!sourceName.equals(nonBroadcastDataSourceName)) {
             spec.getQuerySegmentSpec().getIntervals().stream()

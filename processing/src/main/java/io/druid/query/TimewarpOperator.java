@@ -22,7 +22,6 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -95,7 +94,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
         return Sequences.map(
             baseRunner.run(
                 query.withQuerySegmentSpec(
-                    Iterables.getOnlyElement(spec.getDataSource().getNames()),
+                    spec.getDataSource(),
                     new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval))
                 ),
                 responseContext

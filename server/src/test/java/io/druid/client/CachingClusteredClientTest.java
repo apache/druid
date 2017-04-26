@@ -2003,7 +2003,7 @@ public class CachingClusteredClientTest
                     expected,
                     runner.run(
                         query.withQuerySegmentSpec(
-                            Iterables.getOnlyElement(spec.getDataSource().getNames()),
+                            spec.getDataSource(),
                             new MultipleIntervalSegmentSpec(
                                 ImmutableList.of(
                                     actualQueryInterval
@@ -2230,7 +2230,7 @@ public class CachingClusteredClientTest
                     ),
                     runner.run(
                         query.withQuerySegmentSpec(
-                            Iterables.getOnlyElement(spec.getDataSource().getNames()),
+                            spec.getDataSource(),
                             new MultipleIntervalSegmentSpec(
                                 ImmutableList.of(
                                     actualQueryInterval

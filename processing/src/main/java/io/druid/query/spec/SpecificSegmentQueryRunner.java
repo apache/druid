@@ -63,10 +63,14 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> input, final Map<String, Object> responseContext)
   {
-    final Query<T> query = input.withQuerySegmentSpec(dataSourceName, specificSpec);
+    // Here, dataSourceName must be the name of the distributionTarget
+    final DataSourceWithSegmentSpec distributionTarget = input.getDistributionTarget();
+    Preconditions.checkArgument(distributionTarget.getDataSource().getNames().contains(dataSourceName));
+    final Query<T> query = input.withQuerySegmentSpec(distributionTarget.getDataSource(), specificSpec);
 
     final Thread currThread = Thread.currentThread();
     final String currThreadName = currThread.getName();
+    // If any other data sources contain dataSourceName, then error
     final List<DataSourceWithSegmentSpec> specs = input.getDataSources().stream()
                                                        .filter(spec -> spec.getDataSource().getNames()
                                                                            .contains(dataSourceName))

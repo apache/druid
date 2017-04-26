@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -167,9 +166,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     }
 
     final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
-    final List<String> dataSourceNames = spec.getDataSource().getNames();
-    Preconditions.checkArgument(dataSourceNames.size() > 0);
-    final String dataSourceName = dataSourceNames.get(0);
 
     TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(spec.getDataSource());
 
@@ -437,7 +433,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               if (!server.isAssignable() || !populateCache || isBySegment) { // Direct server queryable
                 if (!isBySegment) {
                   resultSeqToAdd = clientQueryable.run(
-                      query.withQuerySegmentSpec(dataSourceName, segmentSpec),
+                      query.withQuerySegmentSpec(spec.getDataSource(), segmentSpec),
                       responseContext
                   );
                 } else {
@@ -449,7 +445,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
                   @SuppressWarnings("unchecked")
                   final Sequence<Result<BySegmentResultValueClass<T>>> resultSequence = clientQueryable.run(
-                      bySegmentQuery.withQuerySegmentSpec(dataSourceName, segmentSpec),
+                      bySegmentQuery.withQuerySegmentSpec(spec.getDataSource(), segmentSpec),
                       responseContext
                   );
 
@@ -482,7 +478,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               } else { // Requires some manipulation on broker side
                 @SuppressWarnings("unchecked")
                 final Sequence<Result<BySegmentResultValueClass<T>>> runningSequence = clientQueryable.run(
-                    rewrittenQuery.withQuerySegmentSpec(dataSourceName, segmentSpec),
+                    rewrittenQuery.withQuerySegmentSpec(spec.getDataSource(), segmentSpec),
                     responseContext
                 );
                 resultSeqToAdd = new MergeSequence(

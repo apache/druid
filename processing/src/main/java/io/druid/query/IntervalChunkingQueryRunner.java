@@ -20,7 +20,6 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -116,7 +115,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                         executor, queryWatcher
                     ).run(
                         query.withQuerySegmentSpec(
-                            Iterables.getOnlyElement(spec.getDataSource().getNames()),
+                            spec.getDataSource(),
                             new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))
                         ),
                         responseContext
