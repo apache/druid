@@ -30,6 +30,7 @@ import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.MultiSourceBaseQuery;
 import io.druid.query.Queries;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -165,7 +166,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
         metrics,
         virtualColumns,
         filter,
-        computeOverridenContext(contextOverride)
+        QueryContexts.computeOverriddenContext(getContext(), contextOverride)
     );
   }
 

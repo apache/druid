@@ -2712,11 +2712,11 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
 
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
     );
 
     // Now try it with an expression based aggregator.
-    builder.limit(Integer.MAX_VALUE)
+    builder.setLimit(Integer.MAX_VALUE)
            .setAggregatorSpecs(
                Arrays.asList(
                    QueryRunnerTestHelper.rowsCount,
@@ -2739,11 +2739,11 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(builder.build(), context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
     );
 
     // Now try it with an expression virtual column.
-    builder.limit(Integer.MAX_VALUE)
+    builder.setLimit(Integer.MAX_VALUE)
            .setVirtualColumns(
                new ExpressionVirtualColumn("expr", "index / 2 + indexMin")
            )
@@ -2756,7 +2756,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(builder.build(), context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
     );
   }
 
@@ -2796,7 +2796,7 @@ public class GroupByQueryRunnerTest
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
     );
   }
 
@@ -2837,7 +2837,7 @@ public class GroupByQueryRunnerTest
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
     );
   }
 
@@ -2877,7 +2877,7 @@ public class GroupByQueryRunnerTest
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
     );
   }
 

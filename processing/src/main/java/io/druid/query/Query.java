@@ -22,7 +22,6 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
@@ -93,16 +92,6 @@ public interface Query<T>
   }
 
   Map<String, Object> getContext();
-
-  default Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
-  {
-    Map<String, Object> overridden = Maps.newTreeMap();
-    final Map<String, Object> context = getContext();
-    overridden.putAll(context);
-    overridden.putAll(overrides);
-
-    return overridden;
-  }
 
   default <ContextType> ContextType getContextValue(String key)
   {

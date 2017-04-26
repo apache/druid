@@ -271,6 +271,7 @@ public class QueryResource implements QueryCountStatsProvider
                       success = true;
                     } catch (Exception ex) {
                       exceptionStr = ex.toString();
+                      log.error(ex, "Unable to send query response.");
                       throw Throwables.propagate(ex);
                     } finally {
                       try {

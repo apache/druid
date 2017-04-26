@@ -21,7 +21,10 @@ package io.druid.query;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
+
+import java.util.Map;
 
 public class QueryContexts
 {
@@ -172,5 +175,19 @@ public class QueryContexts
     } else {
       throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
     }
+  }
+
+  public static Map<String, Object> computeOverriddenContext(
+      final Map<String, Object> context,
+      final Map<String, Object> overrides
+  )
+  {
+    Preconditions.checkNotNull(context, "context");
+    Preconditions.checkNotNull(context, "overrides");
+    Map<String, Object> overridden = Maps.newTreeMap();
+    overridden.putAll(context);
+    overridden.putAll(overrides);
+
+    return overridden;
   }
 }
