@@ -31,7 +31,7 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
   }
 
   @Override
-  protected void moveSegment(
+  protected boolean moveSegment(
       final BalancerSegmentHolder segment,
       final ImmutableDruidServer toServer,
       final DruidCoordinatorRuntimeParams params
@@ -45,7 +45,8 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
     final String segmentName = segmentToMove.getIdentifier();
 
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
-        !currentlyMovingSegments.get("normal").containsKey(segmentName) &&
+        !fromServerName.equals(toServer.getName()) &&
+        !currentlyMovingSegments.get(toServer.getTier()).containsKey(segmentName) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
       log.info(
           "Moving [%s] from [%s] to [%s]",
@@ -64,13 +65,15 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
           }
         });
 
-        currentlyMovingSegments.get("normal").put(segmentName, segment);
+        currentlyMovingSegments.get(toServer.getTier()).put(segmentName, segment);
+        return true;
       }
       catch (Exception e) {
         log.info(e, String.format("[%s] : Moving exception", segmentName));
       }
     } else {
-      currentlyMovingSegments.get("normal").remove(segmentName);
+      currentlyMovingSegments.get(toServer.getTier()).remove(segmentName);
     }
+    return false;
   }
 }

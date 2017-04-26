@@ -91,13 +91,19 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         params.getDruidCluster().getHistoricals().entrySet()) {
       String tier = entry.getKey();
 
-      if (currentlyMovingSegments.get(tier) == null) {
-        currentlyMovingSegments.put(tier, new ConcurrentHashMap<String, BalancerSegmentHolder>());
+      Map<String, BalancerSegmentHolder> tierMovingSegments = currentlyMovingSegments.computeIfAbsent(tier, key -> new ConcurrentHashMap<>());
+
+      final int numberOfMovingSegments = tierMovingSegments.size();
+
+      if (numberOfMovingSegments > 0) {
+        reduceLifetimes(tier);
+        log.info("[%s]: Still waiting on %,d segments to be moved", tier, numberOfMovingSegments);
       }
 
-      if (!currentlyMovingSegments.get(tier).isEmpty()) {
-        reduceLifetimes(tier);
-        log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.size());
+      final int segmentsToMove = maxSegmentsToMove - numberOfMovingSegments;
+
+      if (segmentsToMove <= 0) {
+        log.info("[%s]: Too many segments are currently moving. Waiting.", tier);
         continue;
       }
 
@@ -118,32 +124,33 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         continue;
       }
       long unmoved = 0L;
-      for (int iter = 0; iter < maxSegmentsToMove; iter++) {
+      long moved = 0L;
+      for (int iter = 0; iter < segmentsToMove; iter++) {
         final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
 
         if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
           final ServerHolder holder = strategy.findNewSegmentHomeBalancer(segmentToMove.getSegment(), serverHolderList);
 
-          if (holder != null) {
-            moveSegment(segmentToMove, holder.getServer(), params);
+          if (holder != null && moveSegment(segmentToMove, holder.getServer(), params)) {
+            ++moved;
           } else {
             ++unmoved;
           }
         }
       }
-      if (unmoved == maxSegmentsToMove) {
+      if (unmoved == segmentsToMove) {
         // Cluster should be alive and constantly adjusting
         log.info("No good moves found in tier [%s]", tier);
       }
       stats.addToTieredStat("unmovedCount", tier, unmoved);
-      stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
+      stats.addToTieredStat("movedCount", tier, moved);
       if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
         strategy.emitStats(tier, stats, serverHolderList);
       }
       log.info(
           "[%s]: Segments Moved: [%d] Segments Let Alone: [%d]",
           tier,
-          currentlyMovingSegments.get(tier).size(),
+          moved,
           unmoved
       );
 
@@ -154,7 +161,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
                  .build();
   }
 
-  protected void moveSegment(
+  protected boolean moveSegment(
       final BalancerSegmentHolder segment,
       final ImmutableDruidServer toServer,
       final DruidCoordinatorRuntimeParams params
@@ -191,6 +198,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
             segmentToMove.getIdentifier(),
             callback
         );
+        return true;
       }
       catch (Exception e) {
         log.makeAlert(e, String.format("[%s] : Moving exception", segmentName)).emit();
@@ -201,6 +209,6 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     } else {
       currentlyMovingSegments.get(toServer.getTier()).remove(segmentName);
     }
-
+    return false;
   }
 }
