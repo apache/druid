@@ -23,11 +23,11 @@ package io.druid.query;
  * This factory is used for DI of custom {@link QueryMetrics} implementations for all query types, which don't (yet)
  * need to emit custom dimensions and/or metrics, i. e. they are good with the generic {@link QueryMetrics} interface.
  */
-public interface GenericQueryMetricsFactory<QueryType extends Query<?>>
+public interface GenericQueryMetricsFactory
 {
   /**
    * Creates a {@link QueryMetrics} for query, which doesn't have predefined QueryMetrics subclass. This method must
    * call {@link QueryMetrics#query(Query)} with the given query on the created QueryMetrics object before returning.
    */
-  QueryMetrics<QueryType> makeMetrics(QueryType query);
+  QueryMetrics<Query<?>> makeMetrics(Query<?> query);
 }

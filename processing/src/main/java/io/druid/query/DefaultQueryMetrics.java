@@ -19,47 +19,228 @@
 
 package io.druid.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
-public class DefaultQueryMetrics<QueryType extends BaseQuery<?>> extends AbstractQueryMetrics<QueryType>
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
+  protected final ObjectMapper jsonMapper;
+  protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+  protected final Map<String, Number> metrics = new HashMap<>();
+
   public DefaultQueryMetrics(ObjectMapper jsonMapper)
   {
-    super(jsonMapper);
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
   public void query(QueryType query)
   {
-    dataSource(query);
+//    dataSource(query);
+    dataSourcesAndDurations(query);
     queryType(query);
-    interval(query);
+    intervals(query);
     hasFilters(query);
-    duration(query);
+//    duration(query);
     queryId(query);
   }
 
-  /**
-   * Sets {@link BaseQuery#getDataSource()} of the given query as dimension.
-   */
-  public void dataSource(QueryType query)
+//  /**
+//   * Sets {@link BaseQuery#getDataSource()} of the given query as dimension.
+//   */
+//  public void dataSource(QueryType query)
+//  {
+//    builder.setDimension(
+//        DruidMetrics.DATASOURCE,
+//        DataSourceUtil.getMetricName(query.getDataSource())
+//    );
+//  }
+
+  @Override
+  public void dataSourcesAndDurations(QueryType query)
   {
     builder.setDimension(
         DruidMetrics.DATASOURCE,
-        DataSourceUtil.getMetricName(query.getDataSource())
+        DataSourceUtil.getMetricName(getOnlyDataSourceWithSegmentSpec(query).getDataSource())
     );
+    builder.setDimension("duration", query.getTotalDuration().toString());
   }
 
-  /**
-   * Sets {@link BaseQuery#getIntervals()} of the given query as dimension.
-   */
-  public void interval(QueryType query)
+  @Override
+  public void intervals(QueryType query)
   {
     builder.setDimension(
         DruidMetrics.INTERVAL,
-        query.getIntervals().stream()
-             .map(Interval::toString).toArray(String[]::new)
+        getOnlyDataSourceWithSegmentSpec(query).getQuerySegmentSpec().getIntervals().stream()
+                                               .map(Interval::toString).toArray(String[]::new)
     );
+  }
+
+  @Override
+  public void queryType(QueryType query)
+  {
+    builder.setDimension(DruidMetrics.TYPE, query.getType());
+  }
+
+  @Override
+  public void hasFilters(QueryType query)
+  {
+    builder.setDimension("hasFilters", String.valueOf(query.hasFilters()));
+  }
+
+//  @Override
+//  public void duration(QueryType query)
+//  {
+//    builder.setDimension("duration", query.getTotalDuration().toString());
+//  }
+
+  @Override
+  public void queryId(QueryType query)
+  {
+    builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
+  }
+
+  @Override
+  public void context(QueryType query)
+  {
+    try {
+      builder.setDimension(
+          "context",
+          jsonMapper.writeValueAsString(query.getContext())
+      );
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public void server(String host)
+  {
+    builder.setDimension("server", host);
+  }
+
+  @Override
+  public void remoteAddress(String remoteAddress)
+  {
+    builder.setDimension("remoteAddress", remoteAddress);
+  }
+
+  @Override
+  public void status(String status)
+  {
+    builder.setDimension(DruidMetrics.STATUS, status);
+  }
+
+  @Override
+  public void success(boolean success)
+  {
+    builder.setDimension("success", String.valueOf(success));
+  }
+
+  @Override
+  public void segment(String segmentIdentifier)
+  {
+    builder.setDimension("segment", segmentIdentifier);
+  }
+
+  @Override
+  public void chunkInterval(Interval interval)
+  {
+    builder.setDimension("chunkInterval", interval.toString());
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportQueryTime(long timeNs)
+  {
+    return defaultTimeMetric("query/time", timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportQueryBytes(long byteCount)
+  {
+    metrics.put("query/bytes", byteCount);
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportWaitTime(long timeNs)
+  {
+    return defaultTimeMetric("query/wait/time", timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentTime(long timeNs)
+  {
+    return defaultTimeMetric("query/segment/time", timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs)
+  {
+    return defaultTimeMetric("query/segmentAndCache/time", timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
+  {
+    return defaultTimeMetric("query/intervalChunk/time", timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportCpuTime(long timeNs)
+  {
+    metrics.put("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(timeNs));
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs)
+  {
+    return defaultTimeMetric("query/node/ttfb", timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportNodeTime(long timeNs)
+  {
+    return defaultTimeMetric("query/node/time", timeNs);
+  }
+
+  private QueryMetrics<QueryType> defaultTimeMetric(String metricName, long timeNs)
+  {
+    metrics.put(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportNodeBytes(long byteCount)
+  {
+    metrics.put("query/node/bytes", byteCount);
+    return this;
+  }
+
+  @Override
+  public void emit(ServiceEmitter emitter)
+  {
+    for (Map.Entry<String, Number> metric : metrics.entrySet()) {
+      emitter.emit(builder.build(metric.getKey(), metric.getValue()));
+    }
+    metrics.clear();
+  }
+
+  private static <QueryType extends Query<?>> DataSourceWithSegmentSpec getOnlyDataSourceWithSegmentSpec(
+      QueryType query
+  )
+  {
+    return Iterables.getOnlyElement(query.getDataSources());
   }
 }

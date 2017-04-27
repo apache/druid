@@ -19,27 +19,31 @@
 
 package io.druid.query.join;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.Query;
+import io.druid.query.CachingEmitter;
+import io.druid.query.DataSourceWithSegmentSpec;
+import io.druid.query.DefaultQueryMetricsTest;
+import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.TableDataSource;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.VirtualColumns;
+import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
+import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-
-public class JoinQueryTest
+public class DefaultJoinQueryMetricsTest
 {
-  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
-  public void testSerde() throws IOException
+  public void testDefaultJoinQueryMetricsQuery()
   {
+    CachingEmitter cachingEmitter = new CachingEmitter();
+    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
+    DefaultJoinQueryMetrics queryMetrics = new DefaultJoinQueryMetrics(new DefaultObjectMapper());
     final JoinSpec leftChildSpec = new JoinSpec(
         JoinType.INNER,
         new AndPredicate(
@@ -74,27 +78,60 @@ public class JoinQueryTest
         new DataInput(new TableDataSource("src3"), QueryRunnerTestHelper.firstToThird)
     );
 
-    final Query query = JoinQuery.builder()
+    JoinQuery query = JoinQuery.builder()
                                  .setJoinSpec(joinSpec)
                                  .setGranularity(QueryRunnerTestHelper.dayGran)
                                  .setDimensions(
-                                     ImmutableList.of(
-                                         new DefaultDimensionSpec("src1", "dim5", "dim5"),
-                                         new DefaultDimensionSpec("src2", "dim5", "dim5"),
-                                         new DefaultDimensionSpec("src3", "dim5", "dim5")
+                                         ImmutableList.of(
+                                             new DefaultDimensionSpec("src1", "dim5", "dim5"),
+                                             new DefaultDimensionSpec("src2", "dim5", "dim5"),
+                                             new DefaultDimensionSpec("src3", "dim5", "dim5")
+                                         )
                                      )
-                                 )
                                  .setMetrics(
-                                     ImmutableList.of(
-                                         "met1", "met2", "met3"
+                                         ImmutableList.of(
+                                             "met1", "met2", "met3"
+                                         )
                                      )
-                                 )
                                  .setVirtualColumns(VirtualColumns.EMPTY)
                                  .build();
+    final DataSourceWithSegmentSpec distributionTarget = query.getDataSources().get(0);
+    query = (JoinQuery) query.distributeBy(distributionTarget);
+    queryMetrics.query(query);
 
-    final String json = JSON_MAPPER.writeValueAsString(query);
-    final Query fromJson = JSON_MAPPER.readValue(json, Query.class);
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
+    Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Assert.assertEquals(12, actualEvent.size());
+    Assert.assertTrue(actualEvent.containsKey("feed"));
+    Assert.assertTrue(actualEvent.containsKey("timestamp"));
+    Assert.assertEquals("", actualEvent.get("host"));
+    Assert.assertEquals("", actualEvent.get("service"));
+    Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
+    Assert.assertEquals("false", actualEvent.get("hasFilters"));
+    Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
 
-    assertEquals(query, fromJson);
+    // Join-specific dimensions
+    Assert.assertEquals("3", actualEvent.get("numDataSources"));
+    Assert.assertEquals(
+        distributionTarget.getDataSource().toString(),
+        actualEvent.get("distributionTarget")
+    );
+    Assert.assertEquals(
+        query.getDuration(distributionTarget).toString(),
+        actualEvent.get("distributionTargetDuration")
+    );
+
+    // Metric
+    Assert.assertEquals("query/time", actualEvent.get("metric"));
+    Assert.assertEquals(0L, actualEvent.get("value"));
+  }
+
+  @Test
+  public void testDefaultJoinQueryMetricsMetricNamesAndUnits()
+  {
+    CachingEmitter cachingEmitter = new CachingEmitter();
+    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
+    DefaultJoinQueryMetrics queryMetrics = new DefaultJoinQueryMetrics(new DefaultObjectMapper());
+    DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

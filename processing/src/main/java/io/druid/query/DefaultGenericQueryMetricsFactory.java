@@ -24,7 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import io.druid.jackson.DefaultObjectMapper;
 
-public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFactory<BaseQuery<?>>
+public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFactory
 {
   private static final GenericQueryMetricsFactory INSTANCE =
       new DefaultGenericQueryMetricsFactory(new DefaultObjectMapper());
@@ -49,9 +49,9 @@ public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFac
   }
 
   @Override
-  public QueryMetrics<BaseQuery<?>> makeMetrics(BaseQuery<?> query)
+  public QueryMetrics<Query<?>> makeMetrics(Query<?> query)
   {
-    DefaultQueryMetrics<BaseQuery<?>> queryMetrics = new DefaultQueryMetrics<>(jsonMapper);
+    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>(jsonMapper);
     queryMetrics.query(query);
     return queryMetrics;
   }

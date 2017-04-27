@@ -82,6 +82,11 @@ public interface Query<T>
 
   Duration getDuration(DataSource dataSource);
 
+  default Duration getDuration(DataSourceWithSegmentSpec dataSourceWithSegmentSpec)
+  {
+    return getDuration(dataSourceWithSegmentSpec.getDataSource());
+  }
+
   default Duration getTotalDuration()
   {
     Duration totalDuration = new Duration(0);

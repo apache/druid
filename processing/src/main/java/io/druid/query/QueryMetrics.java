@@ -145,6 +145,10 @@ public interface QueryMetrics<QueryType extends Query<?>>
    */
   void query(QueryType query);
 
+  void dataSourcesAndDurations(QueryType query);
+
+  void intervals(QueryType query);
+
   /**
    * Sets {@link Query#getType()} of the given query as dimension.
    */
@@ -155,10 +159,10 @@ public interface QueryMetrics<QueryType extends Query<?>>
    */
   void hasFilters(QueryType query);
 
-  /**
-   * Sets {@link Query#getTotalDuration()} of the given query as dimension.
-   */
-  void duration(QueryType query);
+//  /**
+//   * Sets {@link Query#getTotalDuration()} of the given query as dimension.
+//   */
+//  void duration(QueryType query);
 
   /**
    * Sets {@link Query#getId()} of the given query as dimension.

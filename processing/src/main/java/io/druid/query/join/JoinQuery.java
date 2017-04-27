@@ -52,7 +52,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
   private final VirtualColumns virtualColumns;
   private final DimFilter filter;
 
-  public static Builder newBuilder()
+  public static Builder builder()
   {
     return new Builder();
   }

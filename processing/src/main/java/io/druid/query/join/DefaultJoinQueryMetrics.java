@@ -20,11 +20,12 @@
 package io.druid.query.join;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.query.AbstractQueryMetrics;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.DataSourceWithSegmentSpec;
+import io.druid.query.DefaultQueryMetrics;
+import io.druid.query.DruidMetrics;
 
-public class DefaultJoinQueryMetrics extends AbstractQueryMetrics<JoinQuery> implements JoinQueryMetrics
+public class DefaultJoinQueryMetrics extends DefaultQueryMetrics<JoinQuery> implements JoinQueryMetrics
 {
   public DefaultJoinQueryMetrics(ObjectMapper jsonMapper)
   {
@@ -40,6 +41,26 @@ public class DefaultJoinQueryMetrics extends AbstractQueryMetrics<JoinQuery> imp
     numDataSources(query);
     hasFilters(query);
     queryId(query);
+  }
+
+  @Override
+  public void dataSourcesAndDurations(JoinQuery query)
+  {
+    builder.setDimension(
+        "dataSourcesAndDurations",
+        DataSourceUtil.getMetricName(query.getDataSources())
+    );
+  }
+
+  @Override
+  public void intervals(JoinQuery query)
+  {
+    builder.setDimension(
+        DruidMetrics.INTERVAL,
+        query.getDataSources().stream()
+             .map(spec -> spec.getQuerySegmentSpec().getIntervals().toString())
+             .toArray(String[]::new)
+    );
   }
 
   @Override
