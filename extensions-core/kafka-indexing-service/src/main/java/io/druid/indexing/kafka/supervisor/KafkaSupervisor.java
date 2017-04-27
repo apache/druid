@@ -355,7 +355,7 @@ public class KafkaSupervisor implements Supervisor
         metricEmittingExec.scheduleAtFixedRate(
             computeAndEmitLag(taskClient),
             ioConfig.getStartDelay().getMillis() + 10000, // wait for tasks to start up
-            monitorSchedulerConfig.getEmitterPeriod().getMillis(),
+            Math.max(monitorSchedulerConfig.getEmitterPeriod().getMillis(), 60 * 1000),
             TimeUnit.MILLISECONDS
         );
 
