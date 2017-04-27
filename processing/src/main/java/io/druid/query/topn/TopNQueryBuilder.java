@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A Builder for TopNQuery.
@@ -107,7 +108,7 @@ public class TopNQueryBuilder
       this.granularity = query.getGranularity();
       this.aggregatorSpecs = query.getAggregatorSpecs();
       this.postAggregatorSpecs = query.getPostAggregatorSpecs();
-      this.context = query.getContext();
+      this.context = new TreeMap<>(query.getContext());
   }
 
   public DataSource getDataSource()

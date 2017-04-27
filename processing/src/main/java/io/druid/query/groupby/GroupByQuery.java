@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  */
@@ -472,7 +473,7 @@ public class GroupByQuery extends BaseQuery<Row>
       havingSpec = query.getHavingSpec();
       limitSpec = query.getLimitSpec();
       postProcessingFn = query.postProcessingFn;
-      context = query.getContext();
+      context = new TreeMap<>(query.getContext());
     }
 
     public Builder(Builder builder)
