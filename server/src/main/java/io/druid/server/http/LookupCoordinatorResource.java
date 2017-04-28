@@ -31,7 +31,6 @@ import com.google.inject.Inject;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.utils.ServletResourceUtils;
-import io.druid.common.utils.StringUtils;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.IAE;
@@ -307,7 +306,7 @@ public class LookupCoordinatorResource
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
       if (configuredLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
-                       .entity("No lookups found")
+                       .entity(ServletResourceUtils.jsonize("No lookups found"))
                        .build();
       }
 
@@ -354,14 +353,14 @@ public class LookupCoordinatorResource
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
       if (configuredLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
-                       .entity("No lookups found")
+                       .entity(ServletResourceUtils.jsonize("No lookups found"))
                        .build();
       }
 
       Map<String, LookupExtractorFactoryMapContainer> tierLookups = configuredLookups.get(tier);
       if (tierLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
-                       .entity(StringUtils.safeFormat("No lookups found for tier [%s].", tier))
+                       .entity(ServletResourceUtils.jsonize("No lookups found for tier [%s].", tier))
                        .build();
       }
 
@@ -398,21 +397,21 @@ public class LookupCoordinatorResource
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
       if (configuredLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
-                       .entity("No lookups found")
+                       .entity(ServletResourceUtils.jsonize("No lookups found"))
                        .build();
       }
 
       Map<String, LookupExtractorFactoryMapContainer> tierLookups = configuredLookups.get(tier);
       if (tierLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
-                       .entity(StringUtils.safeFormat("No lookups found for tier [%s].", tier))
+                       .entity(ServletResourceUtils.jsonize("No lookups found for tier [%s].", tier))
                        .build();
       }
 
       LookupExtractorFactoryMapContainer lookupDef = tierLookups.get(lookup);
       if (lookupDef == null) {
         return Response.status(Response.Status.NOT_FOUND)
-                       .entity(StringUtils.safeFormat("Lookup [%s] not found for tier [%s].", lookup, tier))
+                       .entity(ServletResourceUtils.jsonize("Lookup [%s] not found for tier [%s].", lookup, tier))
                        .build();
       }
 
@@ -476,7 +475,7 @@ public class LookupCoordinatorResource
         Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
         if (configuredLookups == null) {
           return Response.status(Response.Status.NOT_FOUND)
-                         .entity("No lookups configured.")
+                         .entity(ServletResourceUtils.jsonize("No lookups configured."))
                          .build();
         }
         tiers = configuredLookups.keySet();
@@ -553,7 +552,7 @@ public class LookupCoordinatorResource
       LookupsState<LookupExtractorFactoryMapContainer> lookupsState = lookupsStateOnHosts.get(hostAndPort);
       if (lookupsState == null) {
         return Response.status(Response.Status.NOT_FOUND)
-                       .entity(ServletResourceUtils.sanitizeException(new RE("Node [%s] status is unknown.", hostAndPort)))
+                       .entity(ServletResourceUtils.jsonize("Node [%s] status is unknown.", hostAndPort))
                        .build();
       } else {
         return Response.ok(lookupsState).build();
