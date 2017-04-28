@@ -17,27 +17,21 @@
  * under the License.
  */
 
-package io.druid.server.listener.resource;
+package io.druid.java.util.common;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import javax.ws.rs.core.Response;
-import java.io.InputStream;
+import java.io.IOException;
 
 /**
- * A handler for events related to the listening-announcer.
- * Developers are *STRONGLY* encouraged to use AbstractListenerHandler instead to adhere to return codes.
  */
-public interface ListenerHandler
+public class IOE extends IOException
 {
-  Response handlePOST(InputStream inputStream, ObjectMapper mapper, String id);
-  Response handlePOSTAll(InputStream inputStream, ObjectMapper mapper);
-  Response handleGET(String id);
-  Response handleGETAll();
-  Response handleDELETE(String id);
-  Response handleUpdates(InputStream inputStream, ObjectMapper mapper);
+  public IOE(String formatText, Object... arguments)
+  {
+    super(StringUtils.safeFormat(formatText, arguments));
+  }
 
-  void use_AbstractListenerHandler_instead();
-
-
+  public IOE(Throwable cause, String formatText, Object... arguments)
+  {
+    super(StringUtils.safeFormat(formatText, arguments), cause);
+  }
 }

@@ -27,6 +27,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.LookupExtractor;
+import io.druid.query.lookup.LookupExtractorFactoryContainer;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.lookup.MapLookupExtractorFactory;
 import junitparams.JUnitParamsRunner;
@@ -50,7 +51,11 @@ public class LookupDimensionSpecTest
   private static final LookupReferencesManager LOOKUP_REF_MANAGER = EasyMock.createMock(LookupReferencesManager.class);
 
   static {
-    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(new MapLookupExtractorFactory(STRING_MAP, false)
+    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(
+        new LookupExtractorFactoryContainer(
+            "v0",
+            new MapLookupExtractorFactory(STRING_MAP, false)
+        )
     ).anyTimes();
     EasyMock.replay(LOOKUP_REF_MANAGER);
   }

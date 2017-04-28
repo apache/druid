@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
-
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.utils.ServletResourceUtils;
@@ -34,6 +33,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
+import io.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -86,7 +86,7 @@ public class LookupCoordinatorResource
       if (discover) {
         return Response.ok().entity(lookupCoordinatorManager.discoverTiers()).build();
       }
-      final Map<String, Map<String, Map<String, Object>>> knownLookups = lookupCoordinatorManager.getKnownLookups();
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager.getKnownLookups();
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
@@ -112,9 +112,9 @@ public class LookupCoordinatorResource
     try {
       final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(req.getContentType());
       final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
-      final Map<String, Map<String, Map<String, Object>>> map;
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> map;
       try {
-        map = mapper.readValue(in, new TypeReference<Map<String, Map<String, Map<String, Object>>>>()
+        map = mapper.readValue(in, new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
         {
         });
       }
@@ -195,11 +195,9 @@ public class LookupCoordinatorResource
       }
       final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(req.getContentType());
       final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
-      final Map<String, Object> lookupSpec;
+      final LookupExtractorFactoryMapContainer lookupSpec;
       try {
-        lookupSpec = mapper.readValue(in, new TypeReference<Map<String, Object>>()
-        {
-        });
+        lookupSpec = mapper.readValue(in, LookupExtractorFactoryMapContainer.class);
       }
       catch (IOException e) {
         return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(e)).build();
@@ -240,7 +238,7 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.sanitizeException(new NullPointerException("`lookup` required")))
                        .build();
       }
-      final Map<String, Object> map = lookupCoordinatorManager.getLookup(tier, lookup);
+      final LookupExtractorFactoryMapContainer map = lookupCoordinatorManager.getLookup(tier, lookup);
       if (map == null) {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(ServletResourceUtils.sanitizeException(new RE("lookup [%s] not found", lookup)))
@@ -267,13 +265,13 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.sanitizeException(new NullPointerException("`tier` required")))
                        .build();
       }
-      final Map<String, Map<String, Map<String, Object>>> map = lookupCoordinatorManager.getKnownLookups();
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> map = lookupCoordinatorManager.getKnownLookups();
       if (map == null) {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(ServletResourceUtils.sanitizeException(new RE("No lookups found")))
                        .build();
       }
-      final Map<String, Map<String, Object>> tierLookups = map.get(tier);
+      final Map<String, LookupExtractorFactoryMapContainer> tierLookups = map.get(tier);
       if (tierLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(ServletResourceUtils.sanitizeException(new RE("Tier [%s] not found", tier)))
