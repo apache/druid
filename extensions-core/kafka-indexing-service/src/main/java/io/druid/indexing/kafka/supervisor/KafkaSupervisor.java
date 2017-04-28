@@ -1759,7 +1759,8 @@ public class KafkaSupervisor implements Supervisor
               );
             }
           }
-          // not using futureTimeoutInSeconds as its min value is 120 seconds and this metric is emitted every minute
+          // not using futureTimeoutInSeconds as its min value is 120 seconds
+          // and minimum emission period for this metric is 60 seconds
           Futures.successfulAsList(futures).get(30, TimeUnit.SECONDS);
 
           // for each partition, seek to end to get the highest offset
