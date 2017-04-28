@@ -38,11 +38,11 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -115,7 +115,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
       {
-        if (BaseQuery.getContextBySegment(query, false)) {
+        if (QueryContexts.isBySegment(query)) {
           return runner.run(query, responseContext);
         }
 
@@ -204,7 +204,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       );
 
       final Sequence<Row> finalizingResults;
-      if (GroupByQuery.getContextFinalize(subquery, false)) {
+      if (QueryContexts.isFinalize(subquery, false)) {
         finalizingResults = new MappedSequence<>(
             subqueryResult,
             makePreComputeManipulatorFn(

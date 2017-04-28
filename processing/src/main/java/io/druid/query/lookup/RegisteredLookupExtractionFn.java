@@ -141,7 +141,9 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       synchronized (delegateLock) {
         if (null == delegate) {
           delegate = new LookupExtractionFn(
-              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
+              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup())
+                           .getLookupExtractorFactory()
+                           .get(),
               isRetainMissingValue(),
               getReplaceMissingValueWith(),
               isInjective(),

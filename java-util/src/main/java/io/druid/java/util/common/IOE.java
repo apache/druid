@@ -17,11 +17,21 @@
  * under the License.
  */
 
-package io.druid.query;
+package io.druid.java.util.common;
 
-public class QueryContextKeys
+import java.io.IOException;
+
+/**
+ */
+public class IOE extends IOException
 {
-  public static final String PRIORITY = "priority";
-  public static final String TIMEOUT = "timeout";
-  public static final String CHUNK_PERIOD = "chunkPeriod";
+  public IOE(String formatText, Object... arguments)
+  {
+    super(StringUtils.safeFormat(formatText, arguments));
+  }
+
+  public IOE(Throwable cause, String formatText, Object... arguments)
+  {
+    super(StringUtils.safeFormat(formatText, arguments), cause);
+  }
 }

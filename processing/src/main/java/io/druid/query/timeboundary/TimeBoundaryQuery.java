@@ -27,6 +27,7 @@ import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
@@ -82,22 +83,17 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return dimFilter != null;
   }
 
+  @JsonProperty("filter")
   @Override
   public DimFilter getFilter()
   {
-    return null;
+    return dimFilter;
   }
 
   @Override
   public String getType()
   {
     return Query.TIME_BOUNDARY;
-  }
-
-  @JsonProperty("filter")
-  public DimFilter getDimensionsFilter()
-  {
-    return dimFilter;
   }
 
   @JsonProperty
@@ -109,37 +105,20 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   @Override
   public TimeBoundaryQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new TimeBoundaryQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        bound,
-        dimFilter,
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.TimeBoundaryQueryBuilder.copy(this).context(newContext).build();
   }
 
   @Override
   public TimeBoundaryQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new TimeBoundaryQuery(
-        getDataSource(),
-        spec,
-        bound,
-        dimFilter,
-        getContext()
-    );
+    return Druids.TimeBoundaryQueryBuilder.copy(this).intervals(spec).build();
   }
 
   @Override
   public Query<Result<TimeBoundaryResultValue>> withDataSource(DataSource dataSource)
   {
-    return new TimeBoundaryQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        bound,
-        dimFilter,
-        getContext()
-    );
+    return Druids.TimeBoundaryQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   public byte[] getCacheKey()

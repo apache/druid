@@ -140,7 +140,7 @@ public class LookupDimensionSpec implements DimensionSpec
                                                 lookupReferencesManager.get(name),
                                                 "Lookup [%s] not found",
                                                 name
-                                            ).get();
+                                            ).getLookupExtractorFactory().get();
 
     return new LookupExtractionFn(
         lookupExtractor,

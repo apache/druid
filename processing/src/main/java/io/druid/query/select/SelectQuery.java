@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
@@ -146,83 +147,29 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
 
   public SelectQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
-    return new SelectQuery(
-        getDataSource(),
-        querySegmentSpec,
-        isDescending(),
-        dimFilter,
-        granularity,
-        dimensions,
-        metrics,
-        virtualColumns,
-        pagingSpec,
-        getContext()
-    );
+    return Druids.SelectQueryBuilder.copy(this).intervals(querySegmentSpec).build();
   }
 
   @Override
   public Query<Result<SelectResultValue>> withDataSource(DataSource dataSource)
   {
-    return new SelectQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        isDescending(),
-        dimFilter,
-        granularity,
-        dimensions,
-        metrics,
-        virtualColumns,
-        pagingSpec,
-        getContext()
-    );
+    return Druids.SelectQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   public SelectQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new SelectQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        dimFilter,
-        granularity,
-        dimensions,
-        metrics,
-        virtualColumns,
-        pagingSpec,
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.SelectQueryBuilder.copy(this).context(newContext).build();
   }
 
   public SelectQuery withPagingSpec(PagingSpec pagingSpec)
   {
-    return new SelectQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        dimFilter,
-        granularity,
-        dimensions,
-        metrics,
-        virtualColumns,
-        pagingSpec,
-        getContext()
-    );
+    return Druids.SelectQueryBuilder.copy(this).pagingSpec(pagingSpec).build();
   }
 
   public SelectQuery withDimFilter(DimFilter dimFilter)
   {
-    return new SelectQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        dimFilter,
-        granularity,
-        dimensions,
-        metrics,
-        virtualColumns,
-        pagingSpec,
-        getContext()
-    );
+    return Druids.SelectQueryBuilder.copy(this).filters(dimFilter).build();
   }
 
   @Override

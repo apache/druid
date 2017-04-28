@@ -17,38 +17,45 @@
  * under the License.
  */
 
-package io.druid.indexing.overlord.setup;
+package io.druid.query.groupby.epinephelinae;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Maps;
+import java.util.Objects;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- */
-public class FillCapacityWithAffinityConfig
+public class AggregateResult
 {
-  // key:Datasource, value:[nodeHostNames]
-  private Map<String, List<String>> affinity = Maps.newHashMap();
+  private static final AggregateResult OK = new AggregateResult(true, null);
 
-  @JsonCreator
-  public FillCapacityWithAffinityConfig(
-      @JsonProperty("affinity") Map<String, List<String>> affinity
-  )
+  private final boolean ok;
+  private final String reason;
+
+  public static AggregateResult ok()
   {
-    this.affinity = affinity;
+    return OK;
   }
 
-  @JsonProperty
-  public Map<String, List<String>> getAffinity()
+  public static AggregateResult failure(final String reason)
   {
-    return affinity;
+    return new AggregateResult(false, reason);
+  }
+
+  private AggregateResult(final boolean ok, final String reason)
+  {
+    this.ok = ok;
+    this.reason = reason;
+  }
+
+  public boolean isOk()
+  {
+    return ok;
+  }
+
+  public String getReason()
+  {
+    return reason;
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -56,21 +63,23 @@ public class FillCapacityWithAffinityConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    FillCapacityWithAffinityConfig that = (FillCapacityWithAffinityConfig) o;
-
-    if (affinity != null
-        ? !Maps.difference(affinity, that.affinity).entriesDiffering().isEmpty()
-        : that.affinity != null) {
-      return false;
-    }
-
-    return true;
+    final AggregateResult that = (AggregateResult) o;
+    return ok == that.ok &&
+           Objects.equals(reason, that.reason);
   }
 
   @Override
   public int hashCode()
   {
-    return affinity != null ? affinity.hashCode() : 0;
+    return Objects.hash(ok, reason);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AggregateResult{" +
+           "ok=" + ok +
+           ", reason='" + reason + '\'' +
+           '}';
   }
 }

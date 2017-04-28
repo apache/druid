@@ -84,7 +84,7 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
 
   public void write(List<Integer> ints) throws IOException
   {
-    byte[] bytesToWrite = ints == null ? EMPTY_ARRAY : VSizeIndexedInts.getBytesNoPaddingfromList(ints, maxId);
+    byte[] bytesToWrite = ints == null ? EMPTY_ARRAY : VSizeIndexedInts.getBytesNoPaddingFromList(ints, maxId);
 
     valuesOut.write(bytesToWrite);
 

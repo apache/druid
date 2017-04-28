@@ -58,9 +58,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
 
 
   @Override
-  public Sequence<T> run(
-      final Query<T> query, final Map<String, Object> responseContext
-  )
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
     final Sequence<T> baseSequence = delegate.run(query, responseContext);
     return Sequences.wrap(
@@ -91,7 +89,6 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
         }
     );
   }
-
   public static <T> QueryRunner<T> safeBuild(
       QueryRunner<T> delegate,
       QueryToolChest<?, ? super Query<T>> queryToolChest,
