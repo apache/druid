@@ -351,12 +351,6 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      if (Strings.isNullOrEmpty(tier)) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("`tier` required")
-                       .build();
-      }
-
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
       if (configuredLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
@@ -401,18 +395,6 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      if (Strings.isNullOrEmpty(tier)) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("`tier` required")
-                       .build();
-      }
-
-      if (Strings.isNullOrEmpty(lookup)) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("`lookup` required")
-                       .build();
-      }
-
       Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
       if (configuredLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
@@ -535,12 +517,6 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      if (Strings.isNullOrEmpty(tier)) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("`tier` required")
-                       .build();
-      }
-
       Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager.getLastKnownLookupsStateOnNodes();
 
       Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> tierNodesStatus = new HashMap<>();
@@ -568,25 +544,13 @@ public class LookupCoordinatorResource
   @Path("/nodeStatus/{tier}/{hostAndPort}")
   public Response getSpecificNodeStatus(
       @PathParam("tier") String tier,
-      @PathParam("hostAndPort") String hostAndPort
+      @PathParam("hostAndPort") HostAndPort hostAndPort
   )
   {
     try {
-      if (Strings.isNullOrEmpty(tier)) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("`tier` required")
-                       .build();
-      }
-
-      if (Strings.isNullOrEmpty(hostAndPort)) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("`hostAndPort` required")
-                       .build();
-      }
-
       Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager.getLastKnownLookupsStateOnNodes();
 
-      LookupsState<LookupExtractorFactoryMapContainer> lookupsState = lookupsStateOnHosts.get(HostAndPort.fromString(hostAndPort));
+      LookupsState<LookupExtractorFactoryMapContainer> lookupsState = lookupsStateOnHosts.get(hostAndPort);
       if (lookupsState == null) {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(ServletResourceUtils.sanitizeException(new RE("Node [%s] status is unknown.", hostAndPort)))
@@ -609,12 +573,12 @@ public class LookupCoordinatorResource
 
     @JsonProperty
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private List<HostAndPort> pendingHosts;
+    private List<HostAndPort> pendingNodes;
 
     public LookupStatus(boolean loaded, List<HostAndPort> pendingHosts)
     {
       this.loaded = loaded;
-      this.pendingHosts = pendingHosts;
+      this.pendingNodes = pendingHosts;
     }
 
     @Override
@@ -628,13 +592,13 @@ public class LookupCoordinatorResource
       }
       LookupStatus that = (LookupStatus) o;
       return Objects.equals(loaded, that.loaded) &&
-             Objects.equals(pendingHosts, that.pendingHosts);
+             Objects.equals(pendingNodes, that.pendingNodes);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(loaded, pendingHosts);
+      return Objects.hash(loaded, pendingNodes);
     }
   }
 }

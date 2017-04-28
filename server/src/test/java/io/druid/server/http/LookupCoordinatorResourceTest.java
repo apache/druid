@@ -1055,7 +1055,7 @@ public class LookupCoordinatorResourceTest
         mapper
     );
 
-    final Response response = lookupCoordinatorResource.getSpecificNodeStatus(LOOKUP_TIER, LOOKUP_NODE.toString());
+    final Response response = lookupCoordinatorResource.getSpecificNodeStatus(LOOKUP_TIER, LOOKUP_NODE);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
         LOOKUP_STATE, response.getEntity()
