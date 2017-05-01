@@ -72,6 +72,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final DruidServerMetadata me;
   private final CuratorFramework curator;
   private final DataSegmentAnnouncer announcer;
+  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final ServerManager serverManager;
   private final ScheduledExecutorService exec;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
@@ -87,6 +88,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       ZkPathsConfig zkPaths,
       DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
+      DataSegmentServerAnnouncer serverAnnouncer,
       CuratorFramework curator,
       ServerManager serverManager,
       ScheduledExecutorFactory factory
@@ -98,6 +100,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     this.me = me;
     this.curator = curator;
     this.announcer = announcer;
+    this.serverAnnouncer = serverAnnouncer;
     this.serverManager = serverManager;
 
     this.exec = factory.create(1, "ZkCoordinator-Exec--%d");
@@ -113,6 +116,8 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       }
 
       log.info("Starting zkCoordinator for server[%s]", me.getName());
+
+      serverAnnouncer.announce();
 
       final String loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
       final String servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
@@ -226,6 +231,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
       try {
         loadQueueCache.close();
+        serverAnnouncer.unannounce();
       }
       catch (Exception e) {
         throw Throwables.propagate(e);

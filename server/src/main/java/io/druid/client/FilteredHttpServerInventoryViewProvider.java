@@ -69,7 +69,8 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
   public HttpServerInventoryView get()
   {
     return new HttpServerInventoryView(
-        jsonMapper, smileMapper, httpClient,curator, zkPaths.getAnnouncementsPath(),
+        jsonMapper, smileMapper, httpClient,
+        new DruidServerDiscovery(curator, zkPaths.getAnnouncementsPath(), jsonMapper),
         Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue(),
         config
     );

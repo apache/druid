@@ -20,7 +20,6 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -31,8 +30,6 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.server.coordination.DataSegmentAnnouncer;
-import io.druid.server.coordination.SegmentChangeRequestHistory;
-import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -114,12 +111,6 @@ public class Appenderators
           public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
           {
             // Do nothing
-          }
-
-          @Override
-          public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
-          {
-            throw new UnsupportedOperationException("not supported");
           }
         },
         null,

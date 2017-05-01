@@ -29,12 +29,13 @@ import com.metamx.emitter.EmittingLogger;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.SegmentChangeRequestHistory;
 import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.security.AuthConfig;
 
+import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
@@ -60,14 +61,14 @@ public class SegmentListerResource
   protected final ObjectMapper jsonMapper;
   protected final ObjectMapper smileMapper;
   protected final AuthConfig authConfig;
-  private final DataSegmentAnnouncer announcer;
+  private final BatchDataSegmentAnnouncer announcer;
 
   @Inject
   public SegmentListerResource(
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       AuthConfig authConfig,
-      DataSegmentAnnouncer announcer
+      @Nullable BatchDataSegmentAnnouncer announcer
   )
   {
     this.jsonMapper = jsonMapper;
@@ -113,11 +114,13 @@ public class SegmentListerResource
       @Context final HttpServletRequest req
   ) throws IOException
   {
+    if (announcer == null) {
+      sendErrorResponse(req, HttpServletResponse.SC_NOT_FOUND, "announcer is not available.");
+      return;
+    }
+
     if (timeout <= 0) {
-      AsyncContext asyncContext = req.startAsync();
-      HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-      response.sendError(HttpServletResponse.SC_BAD_REQUEST, "timeout must be > 0");
-      asyncContext.complete();
+      sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "timeout must be positive.");
       return;
     }
 
@@ -198,6 +201,14 @@ public class SegmentListerResource
     );
 
     asyncContext.setTimeout(timeout);
+  }
+
+  private void sendErrorResponse(HttpServletRequest req, int code, String error) throws IOException
+  {
+    AsyncContext asyncContext = req.startAsync();
+    HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+    response.sendError(code, error);
+    asyncContext.complete();
   }
 
   private ResponseContext createContext(String requestType)

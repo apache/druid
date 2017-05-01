@@ -147,7 +147,6 @@ public class BatchDataSegmentAnnouncerTest
         announcer,
         jsonMapper
     );
-    segmentAnnouncer.start();
 
     testSegments = Sets.newHashSet();
     for (int i = 0; i < 100; i++) {
@@ -158,7 +157,6 @@ public class BatchDataSegmentAnnouncerTest
   @After
   public void tearDown() throws Exception
   {
-    segmentAnnouncer.stop();
     announcer.stop();
     cf.close();
     testingCluster.stop();

@@ -46,6 +46,7 @@ import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -70,6 +71,7 @@ public class TaskToolbox
   private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentMover dataSegmentMover;
   private final DataSegmentAnnouncer segmentAnnouncer;
+  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final MonitorScheduler monitorScheduler;
@@ -93,6 +95,7 @@ public class TaskToolbox
       DataSegmentMover dataSegmentMover,
       DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
+      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       ExecutorService queryExecutorService,
@@ -116,6 +119,7 @@ public class TaskToolbox
     this.dataSegmentMover = dataSegmentMover;
     this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
+    this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
     this.queryExecutorService = queryExecutorService;
@@ -168,6 +172,11 @@ public class TaskToolbox
   public DataSegmentAnnouncer getSegmentAnnouncer()
   {
     return segmentAnnouncer;
+  }
+
+  public DataSegmentServerAnnouncer getDataSegmentServerAnnouncer()
+  {
+    return serverAnnouncer;
   }
 
   public SegmentHandoffNotifierFactory getSegmentHandoffNotifierFactory()

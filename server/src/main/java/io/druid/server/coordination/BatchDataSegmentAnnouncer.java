@@ -52,7 +52,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
-public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
+public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 {
   private static final Logger log = new Logger(BatchDataSegmentAnnouncer.class);
 
@@ -81,7 +81,6 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
       ObjectMapper jsonMapper
   )
   {
-    super(server, zkPaths, announcer, jsonMapper);
     this.config = config;
     this.announcer = announcer;
     this.jsonMapper = jsonMapper;
@@ -276,7 +275,9 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     }
   }
 
-  @Override
+  /**
+   * Returns Future that lists the segment load/drop requests since given counter.
+   */
   public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
   {
     if (counter.getCounter() < 0) {
@@ -295,7 +296,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
         );
 
         SettableFuture<SegmentChangeRequestsSnapshot> future = SettableFuture.create();
-        future.set(new SegmentChangeRequestsSnapshot(changes.getLastCounter(), Lists.newArrayList(segments)));
+        future.set(SegmentChangeRequestsSnapshot.success(changes.getLastCounter(), Lists.newArrayList(segments)));
         return future;
       }
     } else {

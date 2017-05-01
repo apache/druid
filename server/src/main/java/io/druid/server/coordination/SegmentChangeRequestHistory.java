@@ -22,10 +22,12 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.druid.common.utils.StringUtils;
 import io.druid.java.util.common.IAE;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -52,7 +54,8 @@ public class SegmentChangeRequestHistory
   private final int maxSize;
 
   @GuardedBy("this")
-  private final List<Holder> changes;
+  private final CircularBuffer<Holder> changes;
+
 
   @VisibleForTesting
   @GuardedBy("waitingFutures")
@@ -66,11 +69,10 @@ public class SegmentChangeRequestHistory
     this(MAX_SIZE);
   }
 
-  @VisibleForTesting
-  SegmentChangeRequestHistory(int maxSize)
+  public SegmentChangeRequestHistory(int maxSize)
   {
     this.maxSize = maxSize;
-    this.changes = new ArrayList<>(maxSize);
+    this.changes = new CircularBuffer(maxSize);
 
     this.waitingFutures = new LinkedHashMap<>();
 
@@ -100,9 +102,6 @@ public class SegmentChangeRequestHistory
   public synchronized void addSegmentChangeRequests(List<DataSegmentChangeRequest> requests)
   {
     for (DataSegmentChangeRequest request : requests) {
-      if (changes.size() >= maxSize) {
-        changes.remove(0);
-      }
       changes.add(new Holder(request, getLastCounter().inc()));
     }
 
@@ -121,7 +120,8 @@ public class SegmentChangeRequestHistory
    * Returns a Future that , on completion, returns list of segment updates and associated counter.
    * If there are no update since given counter then Future completion waits till an updates is provided.
    *
-   * If counter is very older than max number of changes maintained than IAE exception is thrown.
+   * If counter is older than max number of changes maintained then SegmentChangeRequestsSnapshot is returned
+   * with resetCounter set to True.
    *
    * If there were no updates to provide immediately then a future is created and returned to caller. This future
    * is added to the "waitingFutures" list and all the futures in the list get resolved as soon as a segment
@@ -132,7 +132,7 @@ public class SegmentChangeRequestHistory
     final CustomSettableFuture future = new CustomSettableFuture(waitingFutures);
 
     if (counter.counter < 0) {
-      future.setException(new IAE("counter must be >= 0"));
+      future.setException(new IAE("counter[%s] must be >= 0", counter));
       return future;
     }
 
@@ -140,7 +140,7 @@ public class SegmentChangeRequestHistory
 
     if (counter.counter == lastCounter.counter) {
       if (!counter.matches(lastCounter)) {
-        future.setException(new IAE("counter failed to match"));
+        future.setException(new IAE("counter[%s] failed to match with [%s]", counter, lastCounter));
       } else {
         synchronized (waitingFutures) {
           waitingFutures.put(future, counter);
@@ -162,15 +162,23 @@ public class SegmentChangeRequestHistory
     Counter lastCounter = getLastCounter();
 
     if (counter.counter >= lastCounter.counter) {
-      throw new IAE("counter >= last counter");
+      throw new IAE("counter[%s] >= last counter[%s]", counter, lastCounter);
     } else if (lastCounter.counter - counter.counter >= maxSize) {
-      throw new IAE("can't serve request, not enough history is kept");
+      // Note: counter reset is requested when client ask for "maxSize" number of changes even if all those changes
+      // are present in the history because one extra elements is needed to match the counter hash.
+      return SegmentChangeRequestsSnapshot.fail(
+          StringUtils.safeFormat(
+              "can't serve request, not enough history is kept. given counter [%s] and current last counter [%s]",
+              counter,
+              lastCounter
+          )
+      );
     } else {
       int changeStartIndex = (int) (counter.counter + changes.size() - lastCounter.counter);
 
       Counter counterToMatch = counter.counter == 0 ? Counter.ZERO : changes.get(changeStartIndex - 1).counter;
       if (!counterToMatch.matches(counter)) {
-        throw new IAE("counter failed to match");
+        throw new IAE("counter[%s] failed to match with [%s]", counter, counterToMatch);
       }
 
       List<DataSegmentChangeRequest> result = new ArrayList<>();
@@ -178,7 +186,7 @@ public class SegmentChangeRequestHistory
         result.add(changes.get(i).changeRequest);
       }
 
-      return new SegmentChangeRequestsSnapshot(changes.get(changes.size() - 1).counter, result);
+      return SegmentChangeRequestsSnapshot.success(changes.get(changes.size() - 1).counter, result);
     }
   }
 
@@ -229,8 +237,7 @@ public class SegmentChangeRequestHistory
 
     public Counter(long counter)
     {
-      this.counter = counter;
-      this.hash = System.currentTimeMillis();
+      this(counter, System.currentTimeMillis());
     }
 
     @JsonCreator
@@ -264,6 +271,15 @@ public class SegmentChangeRequestHistory
     {
       return this.counter == other.counter && this.hash == other.hash;
     }
+
+    @Override
+    public String toString()
+    {
+      return "Counter{" +
+             "counter=" + counter +
+             ", hash=" + hash +
+             '}';
+    }
   }
 
   // Future with cancel() implementation to remove it from "waitingFutures" list
@@ -295,6 +311,48 @@ public class SegmentChangeRequestHistory
         waitingFutures.remove(this);
       }
       return true;
+    }
+  }
+
+  static class CircularBuffer<E>
+  {
+    private final E[] buffer;
+
+    private int start = 0;
+    private int size = 0;
+
+    CircularBuffer(int capacity)
+    {
+      buffer = (E[]) new Object[capacity];
+    }
+
+    void add(E item)
+    {
+      buffer[start++] = item;
+
+      if (start >= buffer.length) {
+        start = 0;
+      }
+
+      if (size < buffer.length) {
+        size++;
+      }
+    }
+
+    E get(int index)
+    {
+      Preconditions.checkArgument(index >= 0 && index < size, "invalid index");
+
+      int bufferIndex = (start-size+index) % buffer.length;
+      if (bufferIndex < 0) {
+        bufferIndex += buffer.length;
+      }
+      return buffer[bufferIndex];
+    }
+
+    int size()
+    {
+      return size;
     }
   }
 }

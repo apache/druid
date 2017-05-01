@@ -318,6 +318,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           null, // segment mover
           null, // segment archiver
           null, // segment announcer,
+          null,
           notifierFactory,
           null, // query runner factory conglomerate corporation unionized collective
           null, // query executor service

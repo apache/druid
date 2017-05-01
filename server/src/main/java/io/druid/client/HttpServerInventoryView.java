@@ -36,12 +36,10 @@ import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
+import com.metamx.http.client.io.AppendableByteArrayInputStream;
 import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.SequenceInputStreamResponseHandler;
-import io.druid.concurrent.Execs;
-import io.druid.curator.inventory.CuratorInventoryManager;
-import io.druid.curator.inventory.CuratorInventoryManagerStrategy;
-import io.druid.curator.inventory.InventoryManagerConfig;
+import com.metamx.http.client.response.InputStreamResponseHandler;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
@@ -56,7 +54,6 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestHistory;
 import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
 import io.druid.timeline.DataSegment;
-import org.apache.curator.framework.CuratorFramework;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -78,9 +75,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class uses CuratorInventoryManager to listen for queryable server membership which serve segments(e.g. Historicals).
@@ -89,8 +83,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
   private final EmittingLogger log = new EmittingLogger(HttpServerInventoryView.class);
-  private final CuratorInventoryManager<DruidServer, Object> inventoryManager;
-  private final AtomicBoolean started = new AtomicBoolean(false);
+  private final DruidServerDiscovery serverDiscovery;
+
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new MapMaker().makeMap();
   private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new MapMaker().makeMap();
@@ -122,15 +117,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       final @Json ObjectMapper jsonMapper,
       final @Smile ObjectMapper smileMapper,
       final @Global HttpClient httpClient,
-      final CuratorFramework curator,
-      final String announcementsPath,
+      final DruidServerDiscovery serverDiscovery,
       final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
       final HttpServerInventoryViewConfig config
   )
   {
     this.httpClient = httpClient;
     this.smileMapper = smileMapper;
-    this.inventoryManager = initCuratorInventoryManager(curator, announcementsPath, jsonMapper);
+    this.serverDiscovery = serverDiscovery;
     this.defaultFilter = defaultFilter;
     this.finalPredicate = defaultFilter;
     this.config = config;
@@ -140,10 +134,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   @LifecycleStart
   public void start() throws Exception
   {
-    synchronized (started) {
-      if (!started.get()) {
-        log.info("Starting HttpServerInventoryView.");
+    synchronized (lifecycleLock) {
+      if (!lifecycleLock.canStart()) {
+        throw new ISE("can't start.");
+      }
 
+      log.info("Starting HttpServerInventoryView.");
+
+      try {
         executor = Executors.newFixedThreadPool(
             config.getNumThreads(),
             new ThreadFactoryBuilder().setDaemon(true).setNameFormat("HttpServerInventoryView-%s").build()
@@ -155,7 +153,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               @Override
               public void run()
               {
-                while (!Thread.currentThread().isInterrupted()) {
+                if (!lifecycleLock.awaitStarted()) {
+                  log.error("WTF! lifecycle not started, segments will not be discovered.");
+                  return;
+                }
+
+                while (!Thread.interrupted() && lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
                   try {
                     String name = queue.take();
 
@@ -180,9 +183,41 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             }
         );
 
-        inventoryManager.start();
-        started.set(true);
+        serverDiscovery.registerListener(
+            new DruidServerDiscovery.Listener()
+            {
+              @Override
+              public void serverAdded(DruidServer server)
+              {
+                serverAddedOrUpdated(server);
+              }
+
+              @Override
+              public DruidServer serverUpdated(DruidServer oldServer, DruidServer newServer)
+              {
+                return serverAddedOrUpdated(newServer);
+              }
+
+              @Override
+              public void serverRemoved(DruidServer server)
+              {
+                HttpServerInventoryView.this.serverRemoved(server);
+                runServerCallbacks(server);
+              }
+
+              @Override
+              public void initialized()
+              {
+                serverInventoryInitialized();
+              }
+            }
+        );
+        serverDiscovery.start();
+
         log.info("Started HttpServerInventoryView.");
+        lifecycleLock.started();
+      } finally {
+        lifecycleLock.exitStart();
       }
     }
   }
@@ -190,119 +225,24 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   @LifecycleStop
   public void stop() throws IOException
   {
-    synchronized (started) {
-      if (started.getAndSet(false)) {
-        log.info("Stopping HttpServerInventoryView.");
-
-        inventoryManager.stop();
-
-        if (executor != null) {
-          executor.shutdownNow();
-          executor = null;
-        }
-
-        queue.clear();
-
-        log.info("Stopped HttpServerInventoryView.");
+    synchronized (lifecycleLock) {
+      if (!lifecycleLock.canStop()) {
+        throw new ISE("can't stop.");
       }
+
+      log.info("Stopping HttpServerInventoryView.");
+
+      serverDiscovery.stop();
+
+      if (executor != null) {
+        executor.shutdownNow();
+        executor = null;
+      }
+
+      queue.clear();
+
+      log.info("Stopped HttpServerInventoryView.");
     }
-  }
-
-  private CuratorInventoryManager initCuratorInventoryManager(
-      final CuratorFramework curator,
-      final String announcementsPath,
-      final ObjectMapper jsonMapper
-  )
-  {
-    return new CuratorInventoryManager<>(
-        curator,
-        new InventoryManagerConfig()
-        {
-          @Override
-          public String getContainerPath()
-          {
-            return announcementsPath;
-          }
-
-          @Override
-          public String getInventoryPath()
-          {
-            return "/NON_EXISTENT_DUMMY_INVENTORY_PATH";
-          }
-        },
-        Execs.singleThreaded("HttpServerInventoryView-Curator-%s"),
-        new CuratorInventoryManagerStrategy<DruidServer, Object>()
-        {
-          @Override
-          public DruidServer deserializeContainer(byte[] bytes)
-          {
-            try {
-              return jsonMapper.readValue(bytes, DruidServer.class);
-            }
-            catch (IOException e) {
-              throw Throwables.propagate(e);
-            }
-          }
-
-          @Override
-          public void newContainer(DruidServer container)
-          {
-            log.info("New Server[%s]", container);
-            serverAddedOrUpdated(container);
-          }
-
-          @Override
-          public void deadContainer(DruidServer deadContainer)
-          {
-            log.info("Server Disappeared[%s]", deadContainer);
-            serverRemoved(deadContainer);
-            runServerCallbacks(deadContainer);
-          }
-
-          @Override
-          public DruidServer updateContainer(DruidServer oldContainer, DruidServer newContainer)
-          {
-            return serverUpdated(oldContainer, newContainer);
-          }
-
-          @Override
-          public Object deserializeInventory(byte[] bytes)
-          {
-            throw new ISE("no inventory should exist.");
-          }
-
-          @Override
-          public DruidServer addInventory(
-              final DruidServer container,
-              String inventoryKey,
-              final Object inventory
-          )
-          {
-            throw new ISE("no inventory should exist.");
-          }
-
-          @Override
-          public DruidServer updateInventory(
-              DruidServer container, String inventoryKey, Object inventory
-          )
-          {
-            throw new ISE("no inventory should exist.");
-          }
-
-          @Override
-          public DruidServer removeInventory(final DruidServer container, String inventoryKey)
-          {
-            throw new ISE("no inventory should exist.");
-          }
-
-          @Override
-          public void inventoryInitialized()
-          {
-            log.info("Server inventory initialized.");
-            serverInventoryInitialized();
-          }
-        }
-    );
   }
 
   @Override
@@ -335,8 +275,16 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   public DruidServer getInventoryValue(String containerKey)
   {
     synchronized (servers) {
-      return servers.get(containerKey).druidServer;
+      DruidServerHolder holder = servers.get(containerKey);
+      if (holder != null) {
+        DruidServer server = holder.druidServer;
+        if (server.getCurrSize() > 0) {
+          return server;
+        }
+      }
     }
+
+    return null;
   }
 
   @Override
@@ -432,15 +380,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       servers.put(server.getName(), newHolder);
     }
 
-    //fetch list of segments
-    if (curr == null) {
-      try {
-        Future<?> future = newHolder.updateSegmentsListAsync();
-        future.get(config.getServerTimeout(), TimeUnit.MILLISECONDS);
-      } catch (Throwable th) {
-        log.error(th, "Failed to fetch segment list from %s , will be retried", server.getName());
-      }
-    }
+    newHolder.updateSegmentsListAsync();
 
     return newHolder.druidServer;
   }
@@ -460,7 +400,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   @Override
   public boolean isStarted()
   {
-    return started.get();
+    return lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -468,7 +408,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   {
     synchronized (servers) {
       DruidServerHolder holder = servers.get(serverKey);
-      return holder.druidServer.getSegment(segment.getIdentifier()) != null;
+      if (holder != null) {
+        return holder.druidServer.getSegment(segment.getIdentifier()) != null;
+      } else {
+        return false;
+      }
     }
   }
 
@@ -476,12 +420,16 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   {
     private final Object lock = new Object();
 
+    //lock is used to keep state in counter and and segment list in druidServer consistent
+    // so that in "updateHolder()" method, new DruidServerHolder with updated DruidServer info
+    // can be safely created
     @GuardedBy("lock")
     private final DruidServer druidServer;
-    private final HostAndPort serverHostAndPort;
 
     @GuardedBy("lock")
     private volatile SegmentChangeRequestHistory.Counter counter = null;
+
+    private final HostAndPort serverHostAndPort;
 
     private final DataSegmentChangeHandler changeHandler;
     private final long serverHttpTimeout = config.getServerTimeout() + 1000;
@@ -580,23 +528,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         }
         URL url = new URL("http", serverHostAndPort.getHostText(), serverHostAndPort.getPort(), req);
 
-        final AtomicInteger returnCode = new AtomicInteger();
-        final AtomicReference<String> reasonString = new AtomicReference<>();
+        BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
 
-        SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler()
-        {
-          @Override
-          public ClientResponse<InputStream> handleResponse(HttpResponse response)
-          {
-            returnCode.set(response.getStatus().getCode());
-            reasonString.set(response.getStatus().getReasonPhrase());
-            return super.handleResponse(response);
-          }
-        };
-
-        if (log.isDebugEnabled()) {
-          log.debug("Sending segment list fetch request to [%s] on URL [%s]", druidServer.getName(), url);
-        }
+        log.debug("Sending segment list fetch request to [%s] on URL [%s]", druidServer.getName(), url);
 
         ListenableFuture<InputStream> future = httpClient.go(
             new Request(HttpMethod.GET, url)
@@ -609,9 +543,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             new Duration(serverHttpTimeout)
         );
 
-        if (log.isDebugEnabled()) {
-          log.debug("Sent segment list fetch request to [%s]", druidServer.getName());
-        }
+        log.debug("Sent segment list fetch request to [%s]", druidServer.getName());
 
         Futures.addCallback(
             future,
@@ -621,30 +553,34 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               public void onSuccess(InputStream stream)
               {
                 try {
-                  if (returnCode.get() == HttpServletResponse.SC_NO_CONTENT) {
-                    if (log.isDebugEnabled()) {
-                      log.debug("Received NO CONTENT from [%s]", druidServer.getName());
-                    }
+                  if (responseHandler.status == HttpServletResponse.SC_NO_CONTENT) {
+                    log.debug("Received NO CONTENT from [%s]", druidServer.getName());
                     return;
-                  } else if (returnCode.get() != HttpServletResponse.SC_OK) {
+                  } else if (responseHandler.status != HttpServletResponse.SC_OK) {
                     onFailure(null);
                     return;
                   }
 
-                  if (log.isDebugEnabled()) {
-                    log.debug("Received segment list response from [%s]", druidServer.getName());
-                  }
+                  log.debug("Received segment list response from [%s]", druidServer.getName());
 
                   SegmentChangeRequestsSnapshot delta = smileMapper.readValue(
                       stream,
                       SegmentChangeRequestsSnapshot.class
                   );
 
-                  if (log.isDebugEnabled()) {
-                    log.debug("Finished reading segment list response from [%s]", druidServer.getName());
-                  }
+                  log.debug("Finished reading segment list response from [%s]", druidServer.getName());
 
                   synchronized (lock) {
+                    if (delta.isResetCounter()) {
+                      log.debug(
+                          "Server [%s] requested resetCounter for reason [%s].",
+                          druidServer.getName(),
+                          delta.getResetCause()
+                      );
+                      counter = null;
+                      return;
+                    }
+
                     if (counter == null) {
                       druidServer.removeAllSegments();
                     }
@@ -674,22 +610,23 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                         t,
                         "failed to fetch segment list from server [%s]. Return code [%s], Reason: [%s]",
                         druidServer.getName(),
-                        returnCode.get(),
-                        reasonString.get()
+                        responseHandler.status,
+                        responseHandler.description
                     );
                   } else {
                     log.error(
                         "failed to fetch segment list from server [%s]. Return code [%s], Reason: [%s]",
                         druidServer.getName(),
-                        returnCode.get(),
-                        reasonString.get()
+                        responseHandler.status,
+                        responseHandler.description
                     );
                   }
 
-                  if (returnCode.get() == HttpServletResponse.SC_BAD_REQUEST) {
-                    synchronized (lock) {
-                      counter = null;
-                    }
+                  // sleep for a bit so that retry does not happen immediately.
+                  try {
+                    Thread.sleep(5000);
+                  } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
                   }
                 }
                 finally {
@@ -714,6 +651,20 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         throw Throwables.propagate(th);
       }
+    }
+  }
+
+  private static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
+  {
+    private int status;
+    private String description;
+
+    @Override
+    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response)
+    {
+      status = response.getStatus().getCode();
+      description = response.getStatus().getReasonPhrase();
+      return ClientResponse.unfinished(super.handleResponse(response).getObj());
     }
   }
 }
