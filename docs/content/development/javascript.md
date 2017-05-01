@@ -10,9 +10,9 @@ This page discusses how to use JavaScript to extend Druid.
 JavaScript can be used to extend Druid in a variety of ways:
 
 - [Aggregators](../querying/aggregations.html#javascript-aggregator)
-- [Extraction functions](../querying/aggregations.html#javascript-extraction-function)
-- [Filters](../querying/aggregations.html#javascript-filter)
-- [Post-aggregators](../querying/aggregations.html#javascript-post-aggregator)
+- [Extraction functions](../querying/dimensionspecs.html#javascript-extraction-function)
+- [Filters](../querying/filters.html#javascript-filter)
+- [Post-aggregators](../querying/post-aggregations.html#javascript-post-aggregator)
 - [Input parsers](../ingestion/data-formats.html#javascript)
 - [Router strategy](../development/router.html#javascript)
 - [Worker select strategy](../configuration/indexing-service.html#javascript)
@@ -25,7 +25,7 @@ Druid uses the Mozilla Rhino engine at optimization level 9 to compile and execu
 ## Security
 
 Druid does not execute JavaScript functions in a sandbox, so they have full access to the machine. So Javascript
-functions allow users to execute arbutrary code inside druid process. So, by default, Javascript is disabled.
+functions allow users to execute arbitrary code inside druid process. So, by default, Javascript is disabled.
 However, on dev/staging environments or secured production environments you can enable those by setting
 the [configuration property](../configuration/index.html)
 `druid.javascript.enabled = true`.
