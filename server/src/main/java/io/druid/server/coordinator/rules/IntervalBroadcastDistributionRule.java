@@ -21,60 +21,41 @@ package io.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
-
-import io.druid.client.DruidServer;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Map;
+import java.util.List;
+import java.util.Objects;
 
-/**
- */
-public class IntervalLoadRule extends LoadRule
+public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
 {
-  private static final Logger log = new Logger(IntervalLoadRule.class);
-
+  static final String TYPE = "broadcastByInterval";
   private final Interval interval;
-  private final Map<String, Integer> tieredReplicants;
+  private final List<String> colocatedDataSources;
 
   @JsonCreator
-  public IntervalLoadRule(
+  public IntervalBroadcastDistributionRule(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
+      @JsonProperty("colocatedDataSources") List<String> colocatedDataSources
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
-    validateTieredReplicants(this.tieredReplicants);
     this.interval = interval;
+    this.colocatedDataSources = colocatedDataSources;
   }
 
   @Override
   @JsonProperty
   public String getType()
   {
-    return "loadByInterval";
-  }
-
-  @JsonProperty
-  public Map<String, Integer> getTieredReplicants()
-  {
-    return tieredReplicants;
+    return TYPE;
   }
 
   @Override
-  public int getNumReplicants(String tier)
-  {
-    final Integer retVal = tieredReplicants.get(tier);
-    return retVal == null ? 0 : retVal;
-  }
-
   @JsonProperty
-  public Interval getInterval()
+  public List<String> getColocatedDataSources()
   {
-    return interval;
+    return colocatedDataSources;
   }
 
   @Override
@@ -84,38 +65,40 @@ public class IntervalLoadRule extends LoadRule
   }
 
   @Override
-  public boolean appliesTo(Interval theInterval, DateTime referenceTimestamp)
+  public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
-    return Rules.eligibleForLoad(interval, theInterval);
+    return Rules.eligibleForLoad(this.interval, interval);
+  }
+
+  @JsonProperty
+  public Interval getInterval()
+  {
+    return interval;
   }
 
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) {
+    if (o == this) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+
+    if (o == null || o.getClass() != getClass()) {
       return false;
     }
 
-    IntervalLoadRule that = (IntervalLoadRule) o;
+    IntervalBroadcastDistributionRule that = (IntervalBroadcastDistributionRule) o;
 
-    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
-      return false;
-    }
-    if (tieredReplicants != null ? !tieredReplicants.equals(that.tieredReplicants) : that.tieredReplicants != null) {
+    if (!Objects.equals(interval, that.interval)) {
       return false;
     }
 
-    return true;
+    return Objects.equals(colocatedDataSources, that.colocatedDataSources);
   }
 
   @Override
   public int hashCode()
   {
-    int result = interval != null ? interval.hashCode() : 0;
-    result = 31 * result + (tieredReplicants != null ? tieredReplicants.hashCode() : 0);
-    return result;
+    return Objects.hash(getType(), interval, colocatedDataSources);
   }
 }

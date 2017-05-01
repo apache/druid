@@ -21,62 +21,43 @@ package io.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
-
-import io.druid.client.DruidServer;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import java.util.Map;
+import java.util.List;
+import java.util.Objects;
 
-/**
- */
-public class PeriodLoadRule extends LoadRule
+public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
 {
-  private static final Logger log = new Logger(PeriodLoadRule.class);
+  static final String TYPE = "broadcastByPeriod";
 
   private final Period period;
-  private final Map<String, Integer> tieredReplicants;
+  private final List<String> colocatedDataSources;
 
   @JsonCreator
-  public PeriodLoadRule(
+  public PeriodBroadcastDistributionRule(
       @JsonProperty("period") Period period,
-      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
+      @JsonProperty("colocatedDataSources") List<String> colocatedDataSources
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
-    validateTieredReplicants(this.tieredReplicants);
     this.period = period;
+    this.colocatedDataSources = colocatedDataSources;
   }
 
   @Override
   @JsonProperty
   public String getType()
   {
-    return "loadByPeriod";
-  }
-
-  @JsonProperty
-  public Period getPeriod()
-  {
-    return period;
+    return TYPE;
   }
 
   @Override
   @JsonProperty
-  public Map<String, Integer> getTieredReplicants()
+  public List<String> getColocatedDataSources()
   {
-    return tieredReplicants;
-  }
-
-  @Override
-  public int getNumReplicants(String tier)
-  {
-    final Integer retVal = tieredReplicants.get(tier);
-    return retVal == null ? 0 : retVal;
+    return colocatedDataSources;
   }
 
   @Override
@@ -89,5 +70,37 @@ public class PeriodLoadRule extends LoadRule
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
     return Rules.eligibleForLoad(period, interval, referenceTimestamp);
+  }
+
+  @JsonProperty
+  public Period getPeriod()
+  {
+    return period;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || o.getClass() != getClass()) {
+      return false;
+    }
+
+    PeriodBroadcastDistributionRule that = (PeriodBroadcastDistributionRule) o;
+
+    if (!Objects.equals(period, that.period)) {
+      return false;
+    }
+
+    return Objects.equals(colocatedDataSources, that.colocatedDataSources);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getType(), period, colocatedDataSources);
   }
 }
