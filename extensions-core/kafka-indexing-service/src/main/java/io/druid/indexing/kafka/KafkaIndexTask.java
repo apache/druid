@@ -887,66 +887,30 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
       );
     }
-
-    log.info("Trying to restore check points: [%s]", checkPoints);
-
-    if (checkPoints.size() > 0) {
+    log.info("Got check points: [%s]", checkPoints);
+    // Restore from check points only when there are no persisted drivers
+    if (persistedDrivers.size() == 0 && checkPoints.size() > 0) {
+      log.info("Trying to restore check points: [%s]", checkPoints);
       // check consistency and create and start new drivers if necessary
       Collections.reverse(checkPoints);
       int checkPointIdx = checkPoints.size() - 1;
-      int driverIdx = driverHolders.size() - 1;
 
-      // Either there will be one driver that was created in earlier step
-      // or if we restored drivers list then there cannot be more check points than drivers
+      // There will be only driver that was created in earlier step
       Preconditions.checkState(
-          driverIdx == 0 || checkPointIdx <= driverIdx,
-          "Found more checkpoints than drivers, checkpoints: [%s], drivers [%s]",
-          checkPoints,
-          persistedDrivers
+          driverHolders.size() == 1,
+          "Found more than one driver for new task [%s]",
+          driverHolders
       );
+      driverHolders.get(0)
+                   .setEndOffsets((((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx)).getKafkaPartitions()
+                                                                                             .getPartitionOffsetMap()));
 
-      // find out the latest check point which does not align to a driver
-      while (driverIdx >= 0) {
-        if (!driverHolders.get(driverIdx).endOffsets.equals(
-            ((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx))
-                .getKafkaPartitions()
-                .getPartitionOffsetMap())) {
-          break;
-        }
-        driverIdx--;
-        checkPointIdx--;
+      if (driverHolders.get(0).isComplete()) {
+        persistAndPossiblyPublish(driverHolders.get(0));
       }
-
-      // Since the task was sent check points by supervisor so only the latest driver can mismatch with the check point
-      if (driverIdx > 0) {
-        throw new ISE(
-            "Check Point [%s] mismatch with end offset of driver [%d] offset [%s]",
-            (((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx)).getKafkaPartitions()
-                                                                       .getPartitionOffsetMap()),
-            driverIdx,
-            driverHolders.get(driverIdx).endOffsets
-        );
-      }
-
-      // if latest driver did not match up with the check point that means it is a new task with no persisted drivers
-      if (driverIdx == 0) {
-        Preconditions.checkState(
-            driverHolders.size() == 1,
-            "Found more than one driver for new task [%s]",
-            driverHolders
-        );
-        driverHolders.get(0)
-                     .setEndOffsets((((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx)).getKafkaPartitions()
-                                                                                               .getPartitionOffsetMap()));
-
-        if (driverHolders.get(0).isComplete()) {
-          persistAndPossiblyPublish(driverHolders.get(0));
-        }
-        checkPointIdx--;
-      }
+      checkPointIdx--;
 
       // create more drivers corresponding to the check points that this task does not know about
-      // checkPointIdx refers to the check point that this task does know about
       while (checkPointIdx >= 0) {
         driverHolders.add(
             0,
