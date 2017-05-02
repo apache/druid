@@ -145,6 +145,16 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return QueryContexts.parseBoolean(this, key, defaultValue);
   }
 
+  /**
+   * @deprecated use {@link #computeOverriddenContext(Map, Map) computeOverriddenContext(getContext(), overrides))}
+   * instead. This method may be removed in the next minor or major version of Druid.
+   */
+  @Deprecated
+  protected Map<String, Object> computeOverridenContext(final Map<String, Object> overrides)
+  {
+    return computeOverriddenContext(getContext(), overrides);
+  }
+
   protected static Map<String, Object> computeOverriddenContext(
       final Map<String, Object> context,
       final Map<String, Object> overrides
