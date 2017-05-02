@@ -941,7 +941,6 @@ public class AppenderatorImpl implements Appenderator
               }
               removeDirectory(persistDir);
               persistedBytes -= persistFilesSize;
-              log.info("persistFilesSize[%d], persistedBytes[%d]", persistFilesSize, persistedBytes);
             }
 
             return null;
@@ -1021,7 +1020,6 @@ public class AppenderatorImpl implements Appenderator
             indexSpec
         );
         persistedBytes += FileUtils.sizeOfDirectory(persistedFile);
-        log.info("persistedFile[%d], persistedBytes[%d]", FileUtils.sizeOfDirectory(persistedFile), persistedBytes);
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(

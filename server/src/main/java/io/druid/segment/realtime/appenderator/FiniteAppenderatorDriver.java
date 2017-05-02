@@ -221,8 +221,6 @@ public class FiniteAppenderatorDriver implements Closeable
         final int numRows = appenderator.add(identifier, row, wrapCommitterSupplier(committerSupplier));
 
         if (publish && appenderator.getPersistedBytes() > maxPersistedSegmentsBytes) {
-          log.info("trigger publish. maxPersistedSegmentBytes[%d], appenderator.getPersistedBytes()[%d]",
-                   maxPersistedSegmentsBytes, appenderator.getPersistedBytes());
           // publish segments generated so far
           final SegmentsAndMetadata published = publishAndWaitHandoff(publisher, wrapCommitter(committerSupplier.get()));
 
@@ -244,7 +242,6 @@ public class FiniteAppenderatorDriver implements Closeable
                        .map(SegmentIdentifier::fromDataSegment)
                        .collect(Collectors.toList())
           );
-          log.info("published. appenderator.getPersistedBytes()[%d]", appenderator.getPersistedBytes());
         } else if (numRows >= maxRowsPerSegment) {
           moveSegmentOut(sequenceName, ImmutableList.of(identifier), false);
           movedOutSegments.add(identifier);
@@ -420,10 +417,7 @@ public class FiniteAppenderatorDriver implements Closeable
           if (activeSegmentsForSequence == null) {
             activeSegments.put(sequenceName, Maps.<Long, SegmentIdentifier>newTreeMap());
           }
-          final SegmentIdentifier previous = activeSegments.get(sequenceName).put(key, newSegment);
-          if (previous != null) {
-            log.error("previous[%s] is not null for key[%d] and new val[%s]", previous, key, newSegment);
-          }
+          activeSegments.get(sequenceName).put(key, newSegment);
           lastSegmentIds.put(sequenceName, newSegment.getIdentifierAsString());
         } else {
           // Well, we tried.
