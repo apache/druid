@@ -65,6 +65,8 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
+import io.druid.server.metrics.DruidMonitorSchedulerConfig;
+import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -1718,7 +1720,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskMaster,
             indexerMetadataStorageCoordinator,
             taskClientFactory,
-            objectMapper
+            objectMapper,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig()
         )
     );
   }
