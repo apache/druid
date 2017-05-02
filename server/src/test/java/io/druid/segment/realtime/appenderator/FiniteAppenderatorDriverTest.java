@@ -33,6 +33,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.SegmentDescriptor;
@@ -65,8 +66,9 @@ public class FiniteAppenderatorDriverTest
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final int MAX_ROWS_IN_MEMORY = 100;
+  private static final int MAX_ROWS_IN_MEMORY = 4;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
+  private static final long MAX_PERSISTED_SEGMENTS_BYTES = 1024;
   private static final long HANDOFF_CONDITION_TIMEOUT = 0;
 
   private static final List<InputRow> ROWS = Arrays.<InputRow>asList(
@@ -103,6 +105,7 @@ public class FiniteAppenderatorDriverTest
         new TestUsedSegmentChecker(),
         OBJECT_MAPPER,
         MAX_ROWS_PER_SEGMENT,
+        MAX_PERSISTED_SEGMENTS_BYTES,
         HANDOFF_CONDITION_TIMEOUT,
         new FireDepartmentMetrics()
     );
@@ -124,10 +127,10 @@ public class FiniteAppenderatorDriverTest
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertNotNull(driver.add(ROWS.get(i), "dummy", committerSupplier));
+      Assert.assertNotNull(driver.add(ROWS.get(i), "dummy", committerSupplier, makeOkPublisher(), false));
     }
 
-    final SegmentsAndMetadata segmentsAndMetadata = driver.finish(
+    final SegmentsAndMetadata segmentsAndMetadata = driver.publishAndWaitHandoff(
         makeOkPublisher(),
         committerSupplier.get()
     );
@@ -162,12 +165,68 @@ public class FiniteAppenderatorDriverTest
               2.0
           )
       );
-      Assert.assertNotNull(driver.add(row, "dummy", committerSupplier));
+      Assert.assertNotNull(driver.add(row, "dummy", committerSupplier, makeOkPublisher(), false));
     }
 
-    final SegmentsAndMetadata segmentsAndMetadata = driver.finish(makeOkPublisher(), committerSupplier.get());
+    final SegmentsAndMetadata segmentsAndMetadata = driver.publishAndWaitHandoff(
+        makeOkPublisher(),
+        committerSupplier.get()
+    );
     Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
     Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndMetadata.getCommitMetadata());
+  }
+
+  @Test
+  public void testMaxPersistedSegmentsBytes() throws Exception
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+    Assert.assertNull(driver.startJob());
+
+    for (int i = 0; i < 7; i++) { // i = 7
+      committerSupplier.setMetadata(i + 1);
+      InputRow row = new MapBasedInputRow(
+          new DateTime("2000T01"),
+          ImmutableList.of("dim2"),
+          ImmutableMap.<String, Object>of(
+              "dim2",
+              String.format("bar-%d", i),
+              "met1",
+              2.0
+          )
+      );
+      Assert.assertNotNull(driver.add(row, "dummy", committerSupplier, makeOkPublisher(), true));
+    }
+
+    committerSupplier.setMetadata(8);
+    InputRow row = new MapBasedInputRow(
+        new DateTime("2000T01"),
+        ImmutableList.of("dim2"),
+        ImmutableMap.<String, Object>of(
+            "dim2",
+            String.format("bar-%d", 7),
+            "met1",
+            2.0
+        )
+    );
+    final Pair<SegmentIdentifier, List<SegmentIdentifier>> pair = driver.add(
+        row,
+        "dummy",
+        committerSupplier,
+        makeOkPublisher(),
+        true
+    );
+    final SegmentIdentifier added = pair.lhs;
+    final List<SegmentIdentifier> movedOut = pair.rhs;
+
+    Assert.assertNotNull(added);
+    Assert.assertEquals(3, movedOut.size());
+
+    final SegmentsAndMetadata segmentsAndMetadata = driver.publishAndWaitHandoff(
+        makeOkPublisher(),
+        committerSupplier.get()
+    );
+    Assert.assertEquals(0, segmentsAndMetadata.getSegments().size());
+    Assert.assertEquals(8, segmentsAndMetadata.getCommitMetadata());
   }
 
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)
@@ -244,6 +303,7 @@ public class FiniteAppenderatorDriverTest
     @Override
     public SegmentIdentifier allocate(
         final DateTime timestamp,
+        final InputRow row,
         final String sequenceName,
         final String previousSegmentId
     ) throws IOException

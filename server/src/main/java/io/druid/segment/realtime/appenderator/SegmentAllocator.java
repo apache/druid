@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.appenderator;
 
+import io.druid.data.input.InputRow;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
@@ -36,6 +37,7 @@ public interface SegmentAllocator
    */
   SegmentIdentifier allocate(
       DateTime timestamp,
+      InputRow row,
       String sequenceName,
       String previousSegmentId
   ) throws IOException;

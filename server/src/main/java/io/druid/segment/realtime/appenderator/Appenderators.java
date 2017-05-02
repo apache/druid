@@ -31,6 +31,8 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.ShardSpec;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -128,4 +130,8 @@ public class Appenderators
     );
   }
 
+  public static String getSequenceName(Interval interval, String version, ShardSpec shardSpec)
+  {
+    return String.format("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
+  }
 }

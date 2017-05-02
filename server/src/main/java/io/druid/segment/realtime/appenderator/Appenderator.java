@@ -52,6 +52,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    */
   Object startJob();
 
+  long getPersistedBytes();
+
   /**
    * Add a row. Must not be called concurrently from multiple threads.
    * <p>

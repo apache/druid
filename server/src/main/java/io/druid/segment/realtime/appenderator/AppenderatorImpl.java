@@ -121,6 +121,8 @@ public class AppenderatorImpl implements Appenderator
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
 
+  private long persistedBytes;
+
   public AppenderatorImpl(
       DataSchema schema,
       AppenderatorConfig tuningConfig,
@@ -164,6 +166,12 @@ public class AppenderatorImpl implements Appenderator
   public String getDataSource()
   {
     return schema.getDataSource();
+  }
+
+  @Override
+  public long getPersistedBytes()
+  {
+    return persistedBytes;
   }
 
   @Override
@@ -923,7 +931,17 @@ public class AppenderatorImpl implements Appenderator
             }
 
             if (removeOnDiskData) {
-              removeDirectory(computePersistDir(identifier));
+              final File persistDir = computePersistDir(identifier);
+              long persistFilesSize = 0;
+              for (FireHydrant hydrant : sink) {
+                final File innerDir = new File(persistDir, String.valueOf(hydrant.getCount()));
+                if (innerDir.exists()) {
+                  persistFilesSize += FileUtils.sizeOfDirectory(innerDir);
+                }
+              }
+              removeDirectory(persistDir);
+              persistedBytes -= persistFilesSize;
+              log.info("persistFilesSize[%d], persistedBytes[%d]", persistFilesSize, persistedBytes);
             }
 
             return null;
@@ -1002,6 +1020,8 @@ public class AppenderatorImpl implements Appenderator
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
             indexSpec
         );
+        persistedBytes += FileUtils.sizeOfDirectory(persistedFile);
+        log.info("persistedFile[%d], persistedBytes[%d]", FileUtils.sizeOfDirectory(persistedFile), persistedBytes);
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(

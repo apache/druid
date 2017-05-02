@@ -19,6 +19,7 @@
 
 package io.druid.indexing.appenderator;
 
+import io.druid.data.input.InputRow;
 import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.segment.indexing.DataSchema;
@@ -45,6 +46,7 @@ public class ActionBasedSegmentAllocator implements SegmentAllocator
   @Override
   public SegmentIdentifier allocate(
       final DateTime timestamp,
+      final InputRow row,
       final String sequenceName,
       final String previousSegmentId
   ) throws IOException

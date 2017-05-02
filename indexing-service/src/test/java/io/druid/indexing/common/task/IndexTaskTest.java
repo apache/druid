@@ -51,7 +51,7 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.HashBasedNumberedShardSpec;
+import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -107,7 +107,7 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, 2, null, false, false),
+        createIngestionSpec(tmpDir, null, 2, null, null, false, false),
         null,
         jsonMapper
     );
@@ -118,15 +118,13 @@ public class IndexTaskTest
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
     Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(HashBasedNumberedShardSpec.class));
+    Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(LinearShardSpec.class));
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) segments.get(0).getShardSpec()).getPartitions());
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
     Assert.assertEquals(new Interval("2014/P1D"), segments.get(1).getInterval());
-    Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(HashBasedNumberedShardSpec.class));
+    Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(LinearShardSpec.class));
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) segments.get(1).getShardSpec()).getPartitions());
   }
 
   @Test
@@ -145,7 +143,7 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, 2, null, true, false),
+        createIngestionSpec(tmpDir, null, 2, null, null, true, false),
         null,
         jsonMapper
     );
@@ -156,15 +154,13 @@ public class IndexTaskTest
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
     Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(NumberedShardSpec.class));
+    Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(LinearShardSpec.class));
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) segments.get(0).getShardSpec()).getPartitions());
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
     Assert.assertEquals(new Interval("2014/P1D"), segments.get(1).getInterval());
-    Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(NumberedShardSpec.class));
+    Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(LinearShardSpec.class));
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) segments.get(1).getShardSpec()).getPartitions());
   }
 
   @Test
@@ -190,6 +186,7 @@ public class IndexTaskTest
                 Arrays.asList(new Interval("2014/2015"))
             ),
             10,
+            null,
             null,
             false,
             false
@@ -227,6 +224,7 @@ public class IndexTaskTest
             ),
             50,
             null,
+            null,
             false,
             false
         ),
@@ -254,7 +252,7 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, null, 1, false, false),
+        createIngestionSpec(tmpDir, null, null, 1, null, false, false),
         null,
         jsonMapper
     );
@@ -285,7 +283,7 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, 2, null, false, true),
+        createIngestionSpec(tmpDir, null, 2, null, null, false, true),
         null,
         jsonMapper
     );
@@ -330,6 +328,7 @@ public class IndexTaskTest
             ),
             2,
             null,
+            null,
             false,
             false
         ),
@@ -343,17 +342,69 @@ public class IndexTaskTest
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
     Assert.assertEquals(new Interval("2014-01-01T00/PT1H"), segments.get(0).getInterval());
-    Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(NoneShardSpec.class));
+    Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(LinearShardSpec.class));
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
     Assert.assertEquals(new Interval("2014-01-01T01/PT1H"), segments.get(1).getInterval());
-    Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(NoneShardSpec.class));
+    Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(LinearShardSpec.class));
     Assert.assertEquals(0, segments.get(1).getShardSpec().getPartitionNum());
 
     Assert.assertEquals("test", segments.get(2).getDataSource());
     Assert.assertEquals(new Interval("2014-01-01T02/PT1H"), segments.get(2).getInterval());
-    Assert.assertTrue(segments.get(2).getShardSpec().getClass().equals(NoneShardSpec.class));
+    Assert.assertTrue(segments.get(2).getShardSpec().getClass().equals(LinearShardSpec.class));
+    Assert.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
+  }
+
+  @Test
+  public void testWithSmallPersistedSegmentBytes() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    PrintWriter writer = new PrintWriter(tmpFile);
+    writer.println("2014-01-01T00:00:10Z,a,1");
+    writer.println("2014-01-01T01:00:20Z,b,1");
+    writer.println("2014-01-01T02:00:30Z,c,1");
+    writer.close();
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            2,
+            null,
+            10L,
+            false,
+            false
+        ),
+        null,
+        jsonMapper
+    );
+
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(3, segments.size());
+
+    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(new Interval("2014-01-01T00/PT1H"), segments.get(0).getInterval());
+    Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(LinearShardSpec.class));
+    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+
+    Assert.assertEquals("test", segments.get(1).getDataSource());
+    Assert.assertEquals(new Interval("2014-01-01T01/PT1H"), segments.get(1).getInterval());
+    Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(LinearShardSpec.class));
+    Assert.assertEquals(0, segments.get(1).getShardSpec().getPartitionNum());
+
+    Assert.assertEquals("test", segments.get(2).getDataSource());
+    Assert.assertEquals(new Interval("2014-01-01T02/PT1H"), segments.get(2).getInterval());
+    Assert.assertTrue(segments.get(2).getShardSpec().getClass().equals(LinearShardSpec.class));
     Assert.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
   }
 
@@ -437,6 +488,7 @@ public class IndexTaskTest
       GranularitySpec granularitySpec,
       Integer targetPartitionSize,
       Integer numShards,
+      Long persistedSegmentsBytes,
       boolean forceExtendableShardSpecs,
       boolean appendToExisting
   )
@@ -484,6 +536,7 @@ public class IndexTaskTest
         new IndexTask.IndexTuningConfig(
             targetPartitionSize,
             1,
+            persistedSegmentsBytes,
             null,
             numShards,
             indexSpec,

@@ -35,10 +35,10 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -49,12 +49,15 @@ import org.joda.time.DateTime;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  * A FiniteAppenderatorDriver drives an Appenderator to index a finite stream of data. This class does not help you
@@ -79,6 +82,8 @@ public class FiniteAppenderatorDriver implements Closeable
   private final int maxRowsPerSegment;
   private final long handoffConditionTimeout;
   private final FireDepartmentMetrics metrics;
+
+  private final long maxPersistedSegmentsBytes;
 
   // All access to "activeSegments" and "lastSegmentId" must be synchronized on "activeSegments".
 
@@ -111,6 +116,7 @@ public class FiniteAppenderatorDriver implements Closeable
       UsedSegmentChecker usedSegmentChecker,
       ObjectMapper objectMapper,
       int maxRowsPerSegment,
+      long maxPersistedSegmentsBytes,
       long handoffConditionTimeout,
       FireDepartmentMetrics metrics
   )
@@ -122,6 +128,7 @@ public class FiniteAppenderatorDriver implements Closeable
     this.usedSegmentChecker = Preconditions.checkNotNull(usedSegmentChecker, "usedSegmentChecker");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
     this.maxRowsPerSegment = maxRowsPerSegment;
+    this.maxPersistedSegmentsBytes = maxPersistedSegmentsBytes;
     this.handoffConditionTimeout = handoffConditionTimeout;
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
   }
@@ -178,33 +185,69 @@ public class FiniteAppenderatorDriver implements Closeable
   }
 
   /**
-   * Add a row. Must not be called concurrently from multiple threads.
+   * Add a row.  This method may internally incur persisting data added so far.  Also, if too large data are persisted,
+   * it can incur publishing data.  This method must not be called concurrently from multiple threads.
    *
    * @param row               the row to add
    * @param sequenceName      sequenceName for this row's segment
    * @param committerSupplier supplier of a committer associated with all data that has been added, including this row
+   * @param publisher         a publisher to publish segments
+   * @param publish           enable publishing or not
    *
-   * @return segment to which this row was added, or null if segment allocator returned null for this row
+   * @return a pair of a segmentIdentifier and a list of segmentIdentifiers. The lhs of the result pair represents
+   * segment to which this row was added, or null if segment allocator returned null for this row. The rhs of the result
+   * pair is the list identifiers of published segments
    *
    * @throws IOException if there is an I/O error while allocating or writing to a segment
    */
-  public SegmentIdentifier add(
+  public Pair<SegmentIdentifier, List<SegmentIdentifier>> add(
       final InputRow row,
       final String sequenceName,
-      final Supplier<Committer> committerSupplier
-  ) throws IOException
+      final Supplier<Committer> committerSupplier,
+      final TransactionalSegmentPublisher publisher,
+      final boolean publish
+  ) throws IOException, InterruptedException
   {
     Preconditions.checkNotNull(row, "row");
     Preconditions.checkNotNull(sequenceName, "sequenceName");
     Preconditions.checkNotNull(committerSupplier, "committerSupplier");
+    Preconditions.checkNotNull(publisher, "publisher");
 
-    final SegmentIdentifier identifier = getSegment(row.getTimestamp(), sequenceName);
+    final SegmentIdentifier identifier = getSegment(row.getTimestamp(), row, sequenceName);
 
+    final List<SegmentIdentifier> movedOutSegments = new ArrayList<>();
     if (identifier != null) {
       try {
         final int numRows = appenderator.add(identifier, row, wrapCommitterSupplier(committerSupplier));
-        if (numRows >= maxRowsPerSegment) {
-          moveSegmentOut(sequenceName, ImmutableList.of(identifier));
+
+        if (publish && appenderator.getPersistedBytes() > maxPersistedSegmentsBytes) {
+          log.info("trigger publish. maxPersistedSegmentBytes[%d], appenderator.getPersistedBytes()[%d]",
+                   maxPersistedSegmentsBytes, appenderator.getPersistedBytes());
+          // publish segments generated so far
+          final SegmentsAndMetadata published = publishAndWaitHandoff(publisher, wrapCommitter(committerSupplier.get()));
+
+          // find published activeSegments and move them out
+          final Map<String, List<SegmentIdentifier>> sequenceToSegmentId = new HashMap<>();
+          published.getSegments().forEach(segment -> {
+            final SegmentIdentifier moveOutSegmentId = SegmentIdentifier.fromDataSegment(segment);
+            final String moveOutSequence = Appenderators.getSequenceName(
+                segment.getInterval(),
+                segment.getVersion(),
+                segment.getShardSpec()
+            );
+
+            sequenceToSegmentId.computeIfAbsent(moveOutSequence, key -> new ArrayList<>()).add(moveOutSegmentId);
+          });
+          sequenceToSegmentId.forEach((key, val) -> moveSegmentOut(key, val, true));
+          movedOutSegments.addAll(
+              published.getSegments().stream()
+                       .map(SegmentIdentifier::fromDataSegment)
+                       .collect(Collectors.toList())
+          );
+          log.info("published. appenderator.getPersistedBytes()[%d]", appenderator.getPersistedBytes());
+        } else if (numRows >= maxRowsPerSegment) {
+          moveSegmentOut(sequenceName, ImmutableList.of(identifier), false);
+          movedOutSegments.add(identifier);
         }
       }
       catch (SegmentNotWritableException e) {
@@ -212,13 +255,13 @@ public class FiniteAppenderatorDriver implements Closeable
       }
     }
 
-    return identifier;
+    return new Pair<>(identifier, movedOutSegments);
   }
 
   /**
    * Persist all data indexed through this driver so far. Blocks until complete.
    *
-   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier)}.
+   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, TransactionalSegmentPublisher, boolean)} )}.
    *
    * @param committer committer representing all data that has been added so far
    *
@@ -245,8 +288,8 @@ public class FiniteAppenderatorDriver implements Closeable
    * Publish all data indexed through this driver so far, and waits for it to be handed off. Blocks until complete.
    * Retries forever on transient failures, but may exit early on permanent failures.
    *
-   * Should be called after all data has been added and persisted through {@link #add(InputRow, String, Supplier)} and
-   * {@link #persist(Committer)}.
+   * Should be called after all data has been added and persisted through {@link #add(InputRow, String, Supplier, TransactionalSegmentPublisher, boolean)}
+   * and {@link #persist(Committer)}.
    *
    * @param publisher publisher to use for this set of segments
    * @param committer committer representing all data that has been added so far
@@ -254,7 +297,7 @@ public class FiniteAppenderatorDriver implements Closeable
    * @return segments and metadata published if successful, or null if segments could not be handed off due to
    * transaction failure with commit metadata.
    */
-  public SegmentsAndMetadata finish(
+  public SegmentsAndMetadata publishAndWaitHandoff(
       final TransactionalSegmentPublisher publisher,
       final Committer committer
   ) throws InterruptedException
@@ -335,7 +378,11 @@ public class FiniteAppenderatorDriver implements Closeable
    *
    * @throws IOException if an exception occurs while allocating a segment
    */
-  private SegmentIdentifier getSegment(final DateTime timestamp, final String sequenceName) throws IOException
+  private SegmentIdentifier getSegment(
+      final DateTime timestamp,
+      final InputRow row,
+      final String sequenceName
+  ) throws IOException
   {
     synchronized (activeSegments) {
       final SegmentIdentifier existing = getActiveSegment(timestamp, sequenceName);
@@ -346,6 +393,7 @@ public class FiniteAppenderatorDriver implements Closeable
         final NavigableMap<Long, SegmentIdentifier> activeSegmentsForSequence = activeSegments.get(sequenceName);
         final SegmentIdentifier newSegment = segmentAllocator.allocate(
             timestamp,
+            row,
             sequenceName,
             lastSegmentIds.get(sequenceName)
         );
@@ -353,6 +401,11 @@ public class FiniteAppenderatorDriver implements Closeable
         if (newSegment != null) {
           final Long key = newSegment.getInterval().getStartMillis();
 
+          // If an interval is partitioned with the HashBasedNumberedShardSpec, that partition spec is fixed and cannot
+          // be modified. It means, segmentAllocator cannot create a new segmentIdentifier and may return an existing
+          // one. To avoid this, activeSegments are never moved out by setting maxRowsPerSegment to Integer.MAX_VALUE
+          // and disallowing segment publish in the middle of data ingestion. See IndexTask.newDriver() and
+          // IndexTask.determineShardSpecs().
           for (SegmentIdentifier identifier : appenderator.getSegments()) {
             if (identifier.equals(newSegment)) {
               throw new ISE(
@@ -367,7 +420,10 @@ public class FiniteAppenderatorDriver implements Closeable
           if (activeSegmentsForSequence == null) {
             activeSegments.put(sequenceName, Maps.<Long, SegmentIdentifier>newTreeMap());
           }
-          activeSegments.get(sequenceName).put(key, newSegment);
+          final SegmentIdentifier previous = activeSegments.get(sequenceName).put(key, newSegment);
+          if (previous != null) {
+            log.error("previous[%s] is not null for key[%d] and new val[%s]", previous, key, newSegment);
+          }
           lastSegmentIds.put(sequenceName, newSegment.getIdentifierAsString());
         } else {
           // Well, we tried.
@@ -382,21 +438,30 @@ public class FiniteAppenderatorDriver implements Closeable
   /**
    * Move a set of identifiers out from "active", making way for newer segments.
    */
-  private void moveSegmentOut(final String sequenceName, final List<SegmentIdentifier> identifiers)
+  private boolean moveSegmentOut(
+      final String sequenceName,
+      final List<SegmentIdentifier> identifiers,
+      boolean ignoreAbsent
+  )
   {
     synchronized (activeSegments) {
       final NavigableMap<Long, SegmentIdentifier> activeSegmentsForSequence = activeSegments.get(sequenceName);
       if (activeSegmentsForSequence == null) {
-        throw new ISE("WTF?! Asked to remove segments for sequenceName[%s] which doesn't exist...", sequenceName);
+        if (ignoreAbsent) {
+          return false;
+        } else {
+          throw new ISE("WTF?! Asked to remove segments for sequenceName[%s] which doesn't exist...", sequenceName);
+        }
       }
 
       for (final SegmentIdentifier identifier : identifiers) {
         log.info("Moving segment[%s] out of active list.", identifier);
         final long key = identifier.getInterval().getStartMillis();
-        if (activeSegmentsForSequence.remove(key) != identifier) {
+        if (!activeSegmentsForSequence.remove(key).equals(identifier)) {
           throw new ISE("WTF?! Asked to remove segment[%s] that didn't exist...", identifier);
         }
       }
+      return true;
     }
   }
 

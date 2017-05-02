@@ -149,6 +149,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return maxRowsInMemory;
   }
 
+  @Override
+  public long getMaxPersistedSegmentsBytes()
+  {
+    // This option is not supported yet
+    throw new UnsupportedOperationException();
+  }
+
   @JsonProperty
   public Period getIntermediatePersistPeriod()
   {
