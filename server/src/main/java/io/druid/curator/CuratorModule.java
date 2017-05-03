@@ -97,7 +97,11 @@ public class CuratorModule implements Module
           public void stop()
           {
             log.info("Stopping Curator");
-            framework.close();
+            try {
+              framework.close();
+            } catch (Exception e) {
+              log.error(e, "Failed to stop curator framework");
+            }
           }
         }
     );
