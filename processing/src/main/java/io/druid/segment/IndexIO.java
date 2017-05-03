@@ -897,7 +897,15 @@ public class IndexIO
 
       for (String metric : index.getAvailableMetrics()) {
         final MetricHolder metricHolder = index.getMetricHolder(metric);
-        if (metricHolder.getType() == MetricHolder.MetricType.FLOAT) {
+        if (metricHolder.getType() == MetricHolder.MetricType.LONG) {
+          columns.put(
+              metric,
+              new ColumnBuilder()
+                  .setType(ValueType.LONG)
+                  .setGenericColumn(new LongGenericColumnSupplier(metricHolder.longType))
+                  .build()
+          );
+        } else if (metricHolder.getType() == MetricHolder.MetricType.FLOAT) {
           columns.put(
               metric,
               new ColumnBuilder()
