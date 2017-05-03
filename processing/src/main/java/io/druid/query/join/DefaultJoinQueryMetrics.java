@@ -48,7 +48,12 @@ public class DefaultJoinQueryMetrics extends DefaultQueryMetrics<JoinQuery> impl
   {
     builder.setDimension(
         "dataSourcesAndDurations",
-        DataSourceUtil.getMetricName(query.getDataSources())
+        query.getDataSources().stream()
+             .map(
+                 spec -> "{dataSource=" + DataSourceUtil.getMetricName(spec.getDataSource())
+                         + ",duration=" + query.getDuration(spec.getDataSource()) + "}"
+             )
+             .toArray(String[]::new)
     );
   }
 

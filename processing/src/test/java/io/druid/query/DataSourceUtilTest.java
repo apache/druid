@@ -20,12 +20,8 @@
 package io.druid.query;
 
 import com.google.common.collect.Lists;
-import io.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.List;
 
 public class DataSourceUtilTest
 {
@@ -45,41 +41,5 @@ public class DataSourceUtilTest
         )
     );
     Assert.assertEquals("[src1, src2, src3, src4]", DataSourceUtil.getMetricName(unionSource));
-  }
-
-  @Test
-  public void testGetMetricNameFromDataSourceWithSegmentSpec()
-  {
-    final List<DataSourceWithSegmentSpec> specs = Lists.newArrayList(
-        new DataSourceWithSegmentSpec(
-            new TableDataSource("src1"),
-            new MultipleIntervalSegmentSpec(
-                Lists.newArrayList(
-                    new Interval(0, 100),
-                    new Interval(200, 300),
-                    new Interval(400, 500)
-                )
-            )
-        ),
-        new DataSourceWithSegmentSpec(
-            new TableDataSource("src2"),
-            new MultipleIntervalSegmentSpec(
-                Lists.newArrayList(
-                    new Interval(0, 10),
-                    new Interval(20, 30),
-                    new Interval(40, 50)
-                )
-            )
-        )
-    );
-    Assert.assertEquals(
-        "[src1=[1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.100Z, "
-        + "1970-01-01T00:00:00.200Z/1970-01-01T00:00:00.300Z, "
-        + "1970-01-01T00:00:00.400Z/1970-01-01T00:00:00.500Z], "
-        + "src2=[1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.010Z, "
-        + "1970-01-01T00:00:00.020Z/1970-01-01T00:00:00.030Z, "
-        + "1970-01-01T00:00:00.040Z/1970-01-01T00:00:00.050Z]]",
-        DataSourceUtil.getMetricName(specs)
-    );
   }
 }

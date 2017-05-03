@@ -19,8 +19,6 @@
 
 package io.druid.query;
 
-import com.google.common.collect.Iterables;
-
 import java.util.List;
 
 public class DataSourceUtil
@@ -29,10 +27,5 @@ public class DataSourceUtil
   {
     final List<String> names = dataSource.getNames();
     return names.size() == 1 ? names.get(0) : names.toString();
-  }
-
-  public static String getMetricName(List<DataSourceWithSegmentSpec> dataSources)
-  {
-    return Iterables.toString(dataSources);
   }
 }

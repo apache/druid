@@ -24,7 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import io.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -57,6 +59,11 @@ public class DataSourceWithSegmentSpec
   public QuerySegmentSpec getQuerySegmentSpec()
   {
     return querySegmentSpec;
+  }
+
+  public List<Interval> getInterval()
+  {
+    return querySegmentSpec.getIntervals();
   }
 
   @Override

@@ -79,22 +79,22 @@ public class DefaultJoinQueryMetricsTest
     );
 
     JoinQuery query = JoinQuery.builder()
-                                 .setJoinSpec(joinSpec)
-                                 .setGranularity(QueryRunnerTestHelper.dayGran)
-                                 .setDimensions(
-                                         ImmutableList.of(
-                                             new DefaultDimensionSpec("src1", "dim5", "dim5"),
-                                             new DefaultDimensionSpec("src2", "dim5", "dim5"),
-                                             new DefaultDimensionSpec("src3", "dim5", "dim5")
-                                         )
-                                     )
-                                 .setMetrics(
-                                         ImmutableList.of(
-                                             "met1", "met2", "met3"
-                                         )
-                                     )
-                                 .setVirtualColumns(VirtualColumns.EMPTY)
-                                 .build();
+                               .setJoinSpec(joinSpec)
+                               .setGranularity(QueryRunnerTestHelper.dayGran)
+                               .setDimensions(
+                                   ImmutableList.of(
+                                       new DefaultDimensionSpec("src1", "dim5", "dim5"),
+                                       new DefaultDimensionSpec("src2", "dim5", "dim5"),
+                                       new DefaultDimensionSpec("src3", "dim5", "dim5")
+                                   )
+                               )
+                               .setMetrics(
+                                   ImmutableList.of(
+                                       "met1", "met2", "met3"
+                                   )
+                               )
+                               .setVirtualColumns(VirtualColumns.EMPTY)
+                               .build();
     final DataSourceWithSegmentSpec distributionTarget = query.getDataSources().get(0);
     query = (JoinQuery) query.distributeBy(distributionTarget);
     queryMetrics.query(query);
@@ -133,5 +133,87 @@ public class DefaultJoinQueryMetricsTest
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
     DefaultJoinQueryMetrics queryMetrics = new DefaultJoinQueryMetrics(new DefaultObjectMapper());
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
+  }
+
+  @Test
+  public void testDataSourcesAndDurationsAndIntervals()
+  {
+    CachingEmitter cachingEmitter = new CachingEmitter();
+    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
+    DefaultJoinQueryMetrics queryMetrics = new DefaultJoinQueryMetrics(new DefaultObjectMapper());
+    final JoinSpec leftChildSpec = new JoinSpec(
+        JoinType.INNER,
+        new AndPredicate(
+            ImmutableList.of(
+                new EqualPredicate(
+                    new DimExtractPredicate(new DefaultDimensionSpec("src1", "dim1", "dim1")),
+                    new DimExtractPredicate(new DefaultDimensionSpec("src2", "dim1", "dim1"))
+                ),
+                new EqualPredicate(
+                    new AddPredicate(
+                        new DimExtractPredicate(new DefaultDimensionSpec("src2", "dim2", "dim2")),
+                        new LiteralPredicate("10")
+                    ),
+                    new AddPredicate(
+                        new DimExtractPredicate(new DefaultDimensionSpec("src1", "dim2", "dim2")),
+                        new DimExtractPredicate(new DefaultDimensionSpec("src1", "dim3", "dim3"))
+                    )
+                )
+            )
+        ),
+        new DataInput(new TableDataSource("src1"), QueryRunnerTestHelper.firstToThird),
+        new DataInput(new TableDataSource("src2"), QueryRunnerTestHelper.firstToThird)
+    );
+
+    final JoinSpec joinSpec = new JoinSpec(
+        JoinType.INNER,
+        new EqualPredicate(
+            new DimExtractPredicate(new DefaultDimensionSpec("j1", "dim4", "dim4")),
+            new DimExtractPredicate(new DefaultDimensionSpec("src3", "dim4", "dim4"))
+        ),
+        leftChildSpec,
+        new DataInput(new TableDataSource("src3"), QueryRunnerTestHelper.firstToThird)
+    );
+
+    JoinQuery query = JoinQuery.builder().setJoinSpec(joinSpec)
+                               .setGranularity(QueryRunnerTestHelper.dayGran)
+                               .setDimensions(
+                                   ImmutableList.of(
+                                       new DefaultDimensionSpec("src1", "dim5", "dim5"),
+                                       new DefaultDimensionSpec("src2", "dim5", "dim5"),
+                                       new DefaultDimensionSpec("src3", "dim5", "dim5")
+                                   )
+                               )
+                               .setMetrics(
+                                   ImmutableList.of(
+                                       "met1", "met2", "met3"
+                                   )
+                               )
+                               .setVirtualColumns(VirtualColumns.EMPTY)
+                               .build();
+    final DataSourceWithSegmentSpec distributionTarget = query.getDataSources().get(0);
+    query = (JoinQuery) query.distributeBy(distributionTarget);
+    queryMetrics.dataSourcesAndDurations(query);
+    queryMetrics.intervals(query);
+
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
+    Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Assert.assertEquals(8, actualEvent.size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            "{dataSource=src1,duration=PT172800S}",
+            "{dataSource=src2,duration=PT172800S}",
+            "{dataSource=src3,duration=PT172800S}"
+        ),
+        actualEvent.get("dataSourcesAndDurations")
+    );
+    Assert.assertEquals(
+        ImmutableList.of(
+            "[2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z]",
+            "[2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z]",
+            "[2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z]"
+        ),
+        actualEvent.get(DruidMetrics.INTERVAL)
+    );
   }
 }
