@@ -101,7 +101,14 @@ public class CompressedPools
         public ByteBuffer get()
         {
           log.info("Allocating new littleEndByteBuf[%,d]", counter.incrementAndGet());
-          return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN);
+          try {
+            return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN);
+          }
+          catch (OutOfMemoryError e) {
+            log.error(e, "Error allocating memory, shutting down.");
+            System.exit(1);
+            return null; // make compiler shut up.
+          }
         }
       }
   );
