@@ -21,6 +21,7 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,10 +41,7 @@ import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
 import io.druid.concurrent.Execs;
-import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.InputRow;
-import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.*;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
@@ -98,6 +96,7 @@ import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.firehose.FirehoseV2CloseBeforeStartException;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
@@ -212,6 +211,89 @@ public class RealtimeIndexTaskTest
     }
   }
 
+  private static class TestFirehoseV2 implements FirehoseV2
+  {
+    private final List<InputRow> queue = Lists.newLinkedList();
+    private boolean closed = false;
+    private InputRow currRow;
+
+    public void addRows(List<InputRow> rows)
+    {
+      synchronized (this) {
+        queue.addAll(rows);
+        notifyAll();
+      }
+    }
+
+    @Override
+    public InputRow currRow()
+    {
+      if (currRow != null && currRow.getDimensions().contains(FAIL_DIM)) {
+        throw new ParseException(FAIL_DIM);
+      }
+      return currRow;
+    }
+
+    @Override
+    public boolean advance()
+    {
+      try {
+        synchronized (this) {
+          while (queue.isEmpty() && !closed) {
+            wait();
+          }
+          if (!queue.isEmpty()) {
+            currRow = queue.remove(0);
+            return true;
+          } else {
+            currRow = null;
+            return false;
+          }
+        }
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw Throwables.propagate(e);
+      }
+    }
+
+    @Override
+    public Committer makeCommitter()
+    {
+      return new Committer()
+      {
+        @Override
+        public Object getMetadata()
+        {
+          return null;
+        }
+
+        @Override
+        public void run()
+        {
+        }
+      };
+    }
+
+    @Override
+    public void start() throws Exception
+    {
+      if (!advance())
+      {
+        throw new FirehoseV2CloseBeforeStartException("stopped before start");
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      synchronized (this) {
+        closed = true;
+        notifyAll();
+      }
+    }
+  }
+
   private static class TestFirehoseFactory implements FirehoseFactory
   {
     public TestFirehoseFactory()
@@ -225,6 +307,71 @@ public class RealtimeIndexTaskTest
     }
   }
 
+  private static class TestFirehoseFactoryV2 implements FirehoseFactoryV2
+  {
+    public TestFirehoseFactoryV2()
+    {
+    }
+
+    @Override
+    public FirehoseV2 connect(InputRowParser inputRowParser, Object o) throws IOException, ParseException
+    {
+      return new TestFirehoseV2();
+    }
+  }
+
+  private static class TestTaskFirehoseHolder
+  {
+    private TestFirehose firehose;
+    private TestFirehoseV2 firehoseV2;
+    final boolean isV2;
+    final RealtimeIndexTask task;
+
+    public TestTaskFirehoseHolder(
+        RealtimeIndexTask task
+    )
+    {
+      FirehoseFactory firehoseFactory = task.getRealtimeIngestionSchema().getIOConfig().getFirehoseFactory();
+      FirehoseFactoryV2 firehoseFactoryV2 = task.getRealtimeIngestionSchema().getIOConfig().getFirehoseFactoryV2();
+
+      Preconditions.checkArgument((firehoseFactory == null) ^ (firehoseFactoryV2 == null),
+          "either firehoseFactory or firehoseFactoryV2 specified, not both");
+      isV2 = firehoseFactoryV2 != null;
+      this.task = task;
+    }
+
+    public void addRows(List<InputRow> rows)
+    {
+      if(isV2) {
+        Preconditions.checkArgument(firehoseV2 != null, "should use after firehose is connected");
+        firehoseV2.addRows(rows);
+      } else {
+        Preconditions.checkArgument(firehose != null, "should use after firehose is connected");
+        firehose.addRows(rows);
+      }
+    }
+
+    public Object getFirehose()
+    {
+      if (isV2) {
+        firehoseV2 = (TestFirehoseV2)task.getFirehoseV2();
+        return firehoseV2;
+      } else {
+        firehose = (TestFirehose)task.getFirehose();
+        return firehose;
+      }
+    }
+
+    public void close() throws IOException
+    {
+      if(isV2) {
+        firehoseV2.close();
+      } else {
+        firehose.close();
+      }
+    }
+  }
+
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
@@ -232,23 +379,32 @@ public class RealtimeIndexTaskTest
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private final boolean buildV9Directly;
+  private final FirehoseFactory firehoseFactory;
+  private final FirehoseFactoryV2 firehoseFactoryV2;
 
   private DateTime now;
   private ListeningExecutorService taskExec;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
 
-  @Parameterized.Parameters(name = "buildV9Directly = {0}")
+  @Parameterized.Parameters(name = "buildV9Directly = {0}, firehoseFactory = {1}, firehoseFactoryV2 = {2}")
   public static Collection<?> constructorFeeder() throws IOException
   {
     return ImmutableList.of(
-        new Object[]{true},
-        new Object[]{false}
+        new Object[]{true, new TestFirehoseFactory(), null},
+        new Object[]{true, null, new TestFirehoseFactoryV2()},
+        new Object[]{false, new TestFirehoseFactory(), null},
+        new Object[]{false, null, new TestFirehoseFactoryV2()}
     );
   }
 
-  public RealtimeIndexTaskTest(boolean buildV9Directly)
+  public RealtimeIndexTaskTest(
+      boolean buildV9Directly,
+      FirehoseFactory firehoseFactory,
+      FirehoseFactoryV2 firehoseFactoryV2)
   {
     this.buildV9Directly = buildV9Directly;
+    this.firehoseFactory = firehoseFactory;
+    this.firehoseFactoryV2 = firehoseFactoryV2;
   }
 
   @Before
@@ -292,13 +448,12 @@ public class RealtimeIndexTaskTest
     final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
 
     // Wait for firehose to show up, it starts off null.
-    while (task.getFirehose() == null) {
+    TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task);
+    while (holder.getFirehose() == null) {
       Thread.sleep(50);
     }
 
-    final TestFirehose firehose = (TestFirehose) task.getFirehose();
-
-    firehose.addRows(
+    holder.addRows(
         ImmutableList.<InputRow>of(
             new MapBasedInputRow(
                 now,
@@ -309,7 +464,7 @@ public class RealtimeIndexTaskTest
     );
 
     // Stop the firehose, this will drain out existing events.
-    firehose.close();
+    holder.close();
 
     // Wait for publish.
     while (mdc.getPublished().isEmpty()) {
@@ -334,13 +489,12 @@ public class RealtimeIndexTaskTest
     final DataSegment publishedSegment;
 
     // Wait for firehose to show up, it starts off null.
-    while (task.getFirehose() == null) {
+    TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task);
+    while (holder.getFirehose() == null) {
       Thread.sleep(50);
     }
 
-    final TestFirehose firehose = (TestFirehose) task.getFirehose();
-
-    firehose.addRows(
+    holder.addRows(
         ImmutableList.<InputRow>of(
             new MapBasedInputRow(
                 now,
@@ -361,7 +515,7 @@ public class RealtimeIndexTaskTest
     );
 
     // Stop the firehose, this will drain out existing events.
-    firehose.close();
+    holder.close();
 
     // Wait for publish.
     while (mdc.getPublished().isEmpty()) {
@@ -408,13 +562,12 @@ public class RealtimeIndexTaskTest
     final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
 
     // Wait for firehose to show up, it starts off null.
-    while (task.getFirehose() == null) {
+    TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task);
+    while (holder.getFirehose() == null) {
       Thread.sleep(50);
     }
 
-    final TestFirehose firehose = (TestFirehose) task.getFirehose();
-
-    firehose.addRows(
+    holder.addRows(
         ImmutableList.<InputRow>of(
             new MapBasedInputRow(
                 now,
@@ -440,7 +593,7 @@ public class RealtimeIndexTaskTest
     );
 
     // Stop the firehose, this will drain out existing events.
-    firehose.close();
+    holder.close();
 
     // Wait for the task to finish.
     expectedException.expect(ExecutionException.class);
@@ -475,13 +628,12 @@ public class RealtimeIndexTaskTest
     final DataSegment publishedSegment;
 
     // Wait for firehose to show up, it starts off null.
-    while (task.getFirehose() == null) {
+    TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task);
+    while (holder.getFirehose() == null) {
       Thread.sleep(50);
     }
 
-    final TestFirehose firehose = (TestFirehose) task.getFirehose();
-
-    firehose.addRows(
+    holder.addRows(
         Arrays.<InputRow>asList(
             // Good row- will be processed.
             new MapBasedInputRow(
@@ -519,7 +671,7 @@ public class RealtimeIndexTaskTest
     );
 
     // Stop the firehose, this will drain out existing events.
-    firehose.close();
+    holder.close();
 
     // Wait for publish.
     while (mdc.getPublished().isEmpty()) {
@@ -571,13 +723,12 @@ public class RealtimeIndexTaskTest
       final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
-      while (task1.getFirehose() == null) {
+      TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task1);
+      while (holder.getFirehose() == null) {
         Thread.sleep(50);
       }
 
-      final TestFirehose firehose = (TestFirehose) task1.getFirehose();
-
-      firehose.addRows(
+      holder.addRows(
           ImmutableList.<InputRow>of(
               new MapBasedInputRow(
                   now,
@@ -606,16 +757,15 @@ public class RealtimeIndexTaskTest
       final ListenableFuture<TaskStatus> statusFuture = runTask(task2, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
-      while (task2.getFirehose() == null) {
+      TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task2);
+      while (holder.getFirehose() == null) {
         Thread.sleep(50);
       }
 
       // Do a query, at this point the previous data should be loaded.
       Assert.assertEquals(1, sumMetric(task2, "rows"));
 
-      final TestFirehose firehose = (TestFirehose) task2.getFirehose();
-
-      firehose.addRows(
+      holder.addRows(
           ImmutableList.<InputRow>of(
               new MapBasedInputRow(
                   now,
@@ -626,7 +776,7 @@ public class RealtimeIndexTaskTest
       );
 
       // Stop the firehose, this will drain out existing events.
-      firehose.close();
+      holder.close();
 
       // Wait for publish.
       while (mdc.getPublished().isEmpty()) {
@@ -674,13 +824,12 @@ public class RealtimeIndexTaskTest
       final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
-      while (task1.getFirehose() == null) {
+      TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task1);
+      while (holder.getFirehose() == null) {
         Thread.sleep(50);
       }
 
-      final TestFirehose firehose = (TestFirehose) task1.getFirehose();
-
-      firehose.addRows(
+      holder.addRows(
           ImmutableList.<InputRow>of(
               new MapBasedInputRow(
                   now,
@@ -691,7 +840,7 @@ public class RealtimeIndexTaskTest
       );
 
       // Stop the firehose, this will trigger a finishJob.
-      firehose.close();
+      holder.close();
 
       // Wait for publish.
       while (mdc.getPublished().isEmpty()) {
@@ -719,15 +868,13 @@ public class RealtimeIndexTaskTest
       final ListenableFuture<TaskStatus> statusFuture = runTask(task2, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
-      while (task2.getFirehose() == null) {
+      TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task2);
+      while (holder.getFirehose() == null) {
         Thread.sleep(50);
       }
 
-      // Stop the firehose again, this will start another handoff.
-      final TestFirehose firehose = (TestFirehose) task2.getFirehose();
-
       // Stop the firehose, this will trigger a finishJob.
-      firehose.close();
+      holder.close();
 
       // publishedSegment is still published. No reason it shouldn't be.
       Assert.assertEquals(ImmutableSet.of(publishedSegment), mdc.getPublished());
@@ -771,13 +918,12 @@ public class RealtimeIndexTaskTest
       final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
-      while (task1.getFirehose() == null) {
+      TestTaskFirehoseHolder holder = new TestTaskFirehoseHolder(task1);
+      while (holder.getFirehose() == null) {
         Thread.sleep(50);
       }
 
-      final TestFirehose firehose = (TestFirehose) task1.getFirehose();
-
-      firehose.addRows(
+      holder.addRows(
           ImmutableList.<InputRow>of(
               new MapBasedInputRow(
                   now,
@@ -892,9 +1038,9 @@ public class RealtimeIndexTaskTest
         objectMapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
-        new TestFirehoseFactory(),
+        firehoseFactory,
         null,
-        null
+        firehoseFactoryV2
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
         1000,
@@ -922,6 +1068,12 @@ public class RealtimeIndexTaskTest
     {
       @Override
       protected boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
+      {
+        return true;
+      }
+
+      @Override
+      protected boolean isFirehoseV2DrainableByClosing(FirehoseFactoryV2 firehoseFactoryV2)
       {
         return true;
       }
