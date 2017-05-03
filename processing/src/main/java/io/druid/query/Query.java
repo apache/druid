@@ -144,5 +144,5 @@ public interface Query<T>
 
   Query<T> withQuerySegmentSpec(String concatenatedDataSourceName, QuerySegmentSpec spec);
 
-  Query<T> replaceDataSourceWith(DataSource src, DataSource dst);
+  Query<T> replaceDataSource(DataSource oldDataSource, DataSource newDataSource);
 }

@@ -32,7 +32,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 
@@ -95,7 +95,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
             baseRunner.run(
                 query.withQuerySegmentSpec(
                     spec.getDataSource(),
-                    new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval))
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(modifiedInterval))
                 ),
                 responseContext
             ),

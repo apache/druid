@@ -204,10 +204,10 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @Override
-  public Query<T> replaceDataSourceWith(DataSource src, DataSource dst)
+  public Query<T> replaceDataSource(DataSource oldDataSource, DataSource newDataSource)
   {
-    Preconditions.checkArgument(this.dataSource.equals(src));
-    return withDataSource(dst);
+    Preconditions.checkArgument(this.dataSource.equals(oldDataSource));
+    return withDataSource(newDataSource);
   }
 
   public abstract Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);

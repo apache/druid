@@ -120,16 +120,4 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       }
     };
   }
-
-  @Override
-  public QueryRunner<ScanResultValue> annotateDistributionTarget(QueryRunner<ScanResultValue> runner)
-  {
-    return (query, responseContext) -> {
-      ScanQuery scanQuery = (ScanQuery) query;
-      return runner.run(
-          scanQuery.updateDistributionTarget(),
-          responseContext
-      );
-    };
-  }
 }

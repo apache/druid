@@ -24,12 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.java.util.common.StringUtils;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -160,12 +159,10 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-
-    return ByteBuffer.allocate(1 + dimensionBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(dimensionBytes)
-                     .array();
+    return new CacheKeyBuilder(CACHE_TYPE_ID)
+        .appendString(dataSourceName)
+        .appendString(dimension)
+        .build();
   }
 
   @Override
@@ -178,6 +175,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   public String toString()
   {
     return "DefaultDimensionSpec{" +
+           "dataSource='" + dataSourceName + '\'' +
            "dimension='" + dimension + '\'' +
            ", outputName='" + outputName + '\'' +
            ", outputType='" + outputType + '\'' +
@@ -197,6 +195,9 @@ public class DefaultDimensionSpec implements DimensionSpec
 
     DefaultDimensionSpec that = (DefaultDimensionSpec) o;
 
+    if (dataSourceName != null ? !dataSourceName.equals(that.dataSourceName) : that.dataSourceName != null) {
+      return false;
+    }
     if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
       return false;
     }
@@ -214,6 +215,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   public int hashCode()
   {
     int result = dimension != null ? dimension.hashCode() : 0;
+    result = 31 * result + (dataSourceName != null ? dataSourceName.hashCode() : 0);
     result = 31 * result + (outputName != null ? outputName.hashCode() : 0);
     result = 31 * result + (outputType != null ? outputType.hashCode() : 0);
     return result;

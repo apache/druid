@@ -21,6 +21,7 @@ package io.druid.query.join;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 import java.util.List;
 import java.util.Objects;
@@ -34,6 +35,7 @@ public class AndPredicate implements JoinPredicate
       @JsonProperty("predicates") List<JoinPredicate> predicates
   )
   {
+    Preconditions.checkArgument(predicates != null && !predicates.isEmpty(), "predicates");
     this.predicates = predicates;
   }
 
@@ -44,9 +46,9 @@ public class AndPredicate implements JoinPredicate
   }
 
   @Override
-  public void accept(JoinPredicateVisitor visitor)
+  public JoinPredicate accept(JoinPredicateVisitor visitor)
   {
-    visitor.visit(this);
+    return visitor.visit(this);
   }
 
   @Override

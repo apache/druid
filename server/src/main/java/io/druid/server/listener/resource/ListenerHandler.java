@@ -35,5 +35,9 @@ public interface ListenerHandler
   Response handleGET(String id);
   Response handleGETAll();
   Response handleDELETE(String id);
+  Response handleUpdates(InputStream inputStream, ObjectMapper mapper);
+
   void use_AbstractListenerHandler_instead();
+
+
 }

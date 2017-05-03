@@ -54,5 +54,5 @@ public interface JoinPredicate
 
   PredicateType getType();
 
-  void accept(JoinPredicateVisitor visitor);
+  JoinPredicate accept(JoinPredicateVisitor visitor);
 }

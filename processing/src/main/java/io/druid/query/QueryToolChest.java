@@ -191,5 +191,14 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    *
    * @return The wrapped runner
    */
-  public abstract QueryRunner<ResultType> annotateDistributionTarget(QueryRunner<ResultType> runner);
+  public QueryRunner<ResultType> annotateDistributionTarget(QueryRunner<ResultType> runner)
+  {
+    return (query, responseContext) -> {
+      final BaseQuery<?> groupByQuery = (BaseQuery<?>) query;
+      return runner.run(
+          (Query<ResultType>) groupByQuery.updateDistributionTarget(),
+          responseContext
+      );
+    };
+  }
 }

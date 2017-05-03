@@ -435,16 +435,4 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     }
     return queryIntervals;
   }
-
-  @Override
-  public QueryRunner<Result<SelectResultValue>> annotateDistributionTarget(QueryRunner<Result<SelectResultValue>> runner)
-  {
-    return (query, responseContext) -> {
-      final SelectQuery selectQuery = (SelectQuery) query;
-      return runner.run(
-          selectQuery.updateDistributionTarget(),
-          responseContext
-      );
-    };
-  }
 }

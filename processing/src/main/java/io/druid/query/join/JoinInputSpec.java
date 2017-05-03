@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @Type(name = "dataSource", value = DataInput.class),
+    @Type(name = "dataSource", value = DataSourceJoinInputSpec.class),
     @Type(name = "joinSource", value = JoinSpec.class)
 })
 public interface JoinInputSpec

@@ -70,7 +70,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
         return baseRunner.run(query, responseContext);
       }
     } else {
-      return baseRunner.run(query, responseContext);
+      // Multi-source query types are not supported yet
+      throw new UnsupportedOperationException();
     }
   }
 }

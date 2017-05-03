@@ -505,18 +505,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     };
   }
 
-  @Override
-  public QueryRunner<Result<TopNResultValue>> annotateDistributionTarget(QueryRunner<Result<TopNResultValue>> runner)
-  {
-    return (query, responseContext) -> {
-      final TopNQuery topNQuery = (TopNQuery) query;
-      return runner.run(
-          topNQuery.updateDistributionTarget(),
-          responseContext
-      );
-    };
-  }
-
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
   {
     private final QueryRunner<Result<TopNResultValue>> runner;

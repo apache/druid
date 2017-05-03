@@ -48,5 +48,10 @@
       <property name="format" value="com\.google\.common\.io\.Closer"/>
       <property name="illegalPattern" value="true"/>
     </module>
+    <module name="Regexp">
+      <!-- Prohibit IntelliJ-style commented code lines from being committed -->
+      <property name="format" value="^// {2}"/>
+      <property name="illegalPattern" value="true"/>
+    </module>
   </module>
 </module>

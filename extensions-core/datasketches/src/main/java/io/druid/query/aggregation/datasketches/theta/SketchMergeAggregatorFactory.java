@@ -161,11 +161,19 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     if (shouldFinalize != that.shouldFinalize) {
       return false;
     }
-    if (errorBoundsStdDev != that.errorBoundsStdDev) {
+    
+    if (errorBoundsStdDev == null ^ that.errorBoundsStdDev == null) {
+      // one of the two stddevs (not both) are null
       return false;
     }
-    return isInputThetaSketch == that.isInputThetaSketch;
 
+    if (errorBoundsStdDev != null && that.errorBoundsStdDev != null && 
+        errorBoundsStdDev.intValue() != that.errorBoundsStdDev.intValue()) {
+      // neither stddevs are null, Integer values don't match
+      return false;
+    }
+    
+    return isInputThetaSketch == that.isInputThetaSketch;
   }
 
   @Override

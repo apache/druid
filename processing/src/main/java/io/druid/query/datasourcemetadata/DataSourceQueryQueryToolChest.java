@@ -84,20 +84,6 @@ public class DataSourceQueryQueryToolChest
   }
 
   @Override
-  public QueryRunner<Result<DataSourceMetadataResultValue>> annotateDistributionTarget(
-      QueryRunner<Result<DataSourceMetadataResultValue>> runner
-  )
-  {
-    return (query, responseContext) -> {
-      final DataSourceMetadataQuery dataSourceMetadataQuery = (DataSourceMetadataQuery) query;
-      return runner.run(
-          dataSourceMetadataQuery.updateDistributionTarget(),
-          responseContext
-      );
-    };
-  }
-
-  @Override
   public QueryRunner<Result<DataSourceMetadataResultValue>> mergeResults(
       final QueryRunner<Result<DataSourceMetadataResultValue>> runner
   )

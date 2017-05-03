@@ -58,7 +58,15 @@ public abstract class BinaryPredicate implements JoinPredicate
     }
 
     BinaryPredicate that = (BinaryPredicate) o;
-    return getType().equals(that.getType());
+    if (!getType().equals(that.getType())) {
+      return false;
+    }
+
+    if (!left.equals(that.left)) {
+      return false;
+    }
+
+    return right.equals(that.right);
   }
 
   @Override

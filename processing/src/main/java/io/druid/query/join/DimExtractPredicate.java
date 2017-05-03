@@ -21,6 +21,7 @@ package io.druid.query.join;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.query.dimension.DimensionSpec;
 
 import java.util.Objects;
@@ -34,7 +35,7 @@ public class DimExtractPredicate implements JoinPredicate
       @JsonProperty("dimension") DimensionSpec dimension
   )
   {
-    this.dimension = dimension;
+    this.dimension = Preconditions.checkNotNull(dimension);
   }
 
   @JsonProperty
@@ -44,9 +45,9 @@ public class DimExtractPredicate implements JoinPredicate
   }
 
   @Override
-  public void accept(JoinPredicateVisitor visitor)
+  public JoinPredicate accept(JoinPredicateVisitor visitor)
   {
-    visitor.visit(this);
+    return visitor.visit(this);
   }
 
   @Override

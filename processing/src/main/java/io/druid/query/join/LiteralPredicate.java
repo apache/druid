@@ -41,9 +41,9 @@ public class LiteralPredicate implements JoinPredicate
   }
 
   @Override
-  public void accept(JoinPredicateVisitor visitor)
+  public JoinPredicate accept(JoinPredicateVisitor visitor)
   {
-    visitor.visit(this);
+    return visitor.visit(this);
   }
 
   @Override
@@ -64,7 +64,11 @@ public class LiteralPredicate implements JoinPredicate
     }
 
     LiteralPredicate that = (LiteralPredicate) o;
-    return literal.equals(that.literal);
+    if (literal == null ? that.literal != null : !literal.equals(that.literal)) {
+      return false;
+    }
+
+    return true;
   }
 
   @Override

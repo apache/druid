@@ -27,6 +27,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.LookupExtractor;
+import io.druid.query.lookup.LookupExtractorFactoryContainer;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.lookup.MapLookupExtractorFactory;
 import junitparams.JUnitParamsRunner;
@@ -50,13 +51,28 @@ public class LookupDimensionSpecTest
   private static final LookupReferencesManager LOOKUP_REF_MANAGER = EasyMock.createMock(LookupReferencesManager.class);
 
   static {
-    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(new MapLookupExtractorFactory(STRING_MAP, false)
+    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(
+        new LookupExtractorFactoryContainer(
+            "v0",
+            new MapLookupExtractorFactory(STRING_MAP, false)
+        )
     ).anyTimes();
     EasyMock.replay(LOOKUP_REF_MANAGER);
   }
 
   private final DimensionSpec lookupDimSpec = new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null,
                                                                       true
+  );
+  private final DimensionSpec lookupDimSpecWithDataSource = new LookupDimensionSpec(
+      "dataSourceName",
+      "dimName",
+      "outputName",
+      MAP_LOOKUP_EXTRACTOR,
+      true,
+      null,
+      null,
+      null,
+      true
   );
 
 
@@ -79,7 +95,8 @@ public class LookupDimensionSpecTest
         new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, null, true),
         new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null, true),
         new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true),
-        new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", LOOKUP_REF_MANAGER, true)
+        new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", LOOKUP_REF_MANAGER, true),
+        new LookupDimensionSpec("dataSource", "dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, null, true)
     };
   }
 
@@ -188,6 +205,20 @@ public class LookupDimensionSpecTest
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", LOOKUP_REF_MANAGER, true),
             false
+        },
+        new Object[]{
+            new LookupDimensionSpec(
+                "dataSourceName",
+                "dimName",
+                "outputName",
+                MAP_LOOKUP_EXTRACTOR,
+                true,
+                null,
+                null,
+                null,
+                true
+            ),
+            true
         }
     };
   }
@@ -196,7 +227,14 @@ public class LookupDimensionSpecTest
   @Parameters
   public void testGetCacheKey(DimensionSpec dimensionSpec, boolean expectedResult)
   {
-    Assert.assertEquals(expectedResult, Arrays.equals(lookupDimSpec.getCacheKey(), dimensionSpec.getCacheKey()));
+    if (dimensionSpec.getDataSourceName() != null) {
+      Assert.assertEquals(
+          expectedResult,
+          Arrays.equals(lookupDimSpecWithDataSource.getCacheKey(), dimensionSpec.getCacheKey())
+      );
+    } else {
+      Assert.assertEquals(expectedResult, Arrays.equals(lookupDimSpec.getCacheKey(), dimensionSpec.getCacheKey()));
+    }
   }
 
   @Test

@@ -28,8 +28,8 @@ public interface JoinSpecVisitor
     return joinSpec;
   }
 
-  default DataInput visit(DataInput dataInput)
+  default DataSourceJoinInputSpec visit(DataSourceJoinInputSpec dataSourceJoinInputSpec)
   {
-    return dataInput;
+    return dataSourceJoinInputSpec;
   }
 }

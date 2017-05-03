@@ -85,7 +85,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
     final JoinSpecVisitor visitor = new JoinSpecVisitor()
     {
       @Override
-      public DataInput visit(DataInput dataInput)
+      public DataSourceJoinInputSpec visit(DataSourceJoinInputSpec dataInput)
       {
         found.add(new DataSourceWithSegmentSpec(dataInput.getDataSource(), dataInput.getQuerySegmentSpec()));
         return dataInput;
@@ -190,10 +190,10 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
       }
 
       @Override
-      public DataInput visit(DataInput dataInput)
+      public DataSourceJoinInputSpec visit(DataSourceJoinInputSpec dataInput)
       {
         if (dataInput.getDataSource().getConcatenatedName().equals(concatenatedDataSourceName)) {
-          return new DataInput(dataInput.getDataSource(), spec);
+          return new DataSourceJoinInputSpec(dataInput.getDataSource(), spec);
         } else {
           return dataInput;
         }
@@ -212,7 +212,7 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
   }
 
   @Override
-  public Query<Row> replaceDataSourceWith(DataSource src, DataSource dst)
+  public Query<Row> replaceDataSource(DataSource oldDataSource, DataSource newDataSource)
   {
     final JoinSpecVisitor visitor = new JoinSpecVisitor()
     {
@@ -225,10 +225,10 @@ public class JoinQuery extends MultiSourceBaseQuery<Row>
       }
 
       @Override
-      public DataInput visit(DataInput dataInput)
+      public DataSourceJoinInputSpec visit(DataSourceJoinInputSpec dataInput)
       {
-        if (dataInput.getDataSource().equals(src)) {
-          return new DataInput(dst, dataInput.getQuerySegmentSpec());
+        if (dataInput.getDataSource().equals(oldDataSource)) {
+          return new DataSourceJoinInputSpec(newDataSource, dataInput.getQuerySegmentSpec());
         } else {
           return dataInput;
         }

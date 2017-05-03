@@ -29,14 +29,14 @@ import org.joda.time.Duration;
 
 import java.util.Objects;
 
-public class DataInput implements JoinInputSpec
+public class DataSourceJoinInputSpec implements JoinInputSpec
 {
   private final DataSource dataSource;
   private final QuerySegmentSpec querySegmentSpec;
   private volatile Duration duration;
 
   @JsonCreator
-  public DataInput(
+  public DataSourceJoinInputSpec(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec
   )
@@ -45,7 +45,7 @@ public class DataInput implements JoinInputSpec
     this.querySegmentSpec = Objects.requireNonNull(querySegmentSpec);
   }
 
-  public DataInput(
+  public DataSourceJoinInputSpec(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
       Duration duration
@@ -92,7 +92,7 @@ public class DataInput implements JoinInputSpec
       return false;
     }
 
-    DataInput that = (DataInput) o;
+    DataSourceJoinInputSpec that = (DataSourceJoinInputSpec) o;
     if (!dataSource.equals(that.dataSource)) {
       return false;
     }
@@ -107,7 +107,7 @@ public class DataInput implements JoinInputSpec
   }
 
   @Override
-  public DataInput accept(JoinSpecVisitor visitor)
+  public DataSourceJoinInputSpec accept(JoinSpecVisitor visitor)
   {
     return visitor.visit(this);
   }

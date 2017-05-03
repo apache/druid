@@ -261,18 +261,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     );
   }
 
-  @Override
-  public QueryRunner<SegmentAnalysis> annotateDistributionTarget(QueryRunner<SegmentAnalysis> runner)
-  {
-    return (query, responseContext) -> {
-      final SegmentMetadataQuery segmentMetadataQuery = (SegmentMetadataQuery) query;
-      return runner.run(
-          segmentMetadataQuery.updateDistributionTarget(),
-          responseContext
-      );
-    };
-  }
-
   @VisibleForTesting
   public static SegmentAnalysis mergeAnalyses(
       final SegmentAnalysis arg1,

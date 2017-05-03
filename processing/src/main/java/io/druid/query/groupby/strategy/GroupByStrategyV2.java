@@ -162,10 +162,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
   /**
    * Count the maximum length of consecutive groupBy subqueries.
    *
-   * @param query
-   * @param foundNum
-   * @param <T>
-   * @return
+   * @param query    a query
+   * @param foundNum number of merge buffers found so far
+   *
+   * @return required number of merge buffers
    */
   private static <T> int countRequiredMergeBufferNum(Query<T> query, int foundNum)
   {
@@ -186,27 +186,24 @@ public class GroupByStrategyV2 implements GroupByStrategy
       return foundNum;
     }
 
-    int maxFoundFromChildren = -1;
+    int maxFoundFromChildren = -1; // keep the maximum number of consecutive groupBys found so far
     for (DataSourceWithSegmentSpec eachSpec : query.getDataSources()) {
       final DataSource dataSource = eachSpec.getDataSource();
 
       if (dataSource instanceof QueryDataSource) {
         QueryDataSource queryDataSource = (QueryDataSource) dataSource;
         if (queryDataSource.getQuery() instanceof GroupByQuery) {
-          final int tmp = countGroupByLayers(queryDataSource.getQuery(), foundNum + 1);
-          maxFoundFromChildren = tmp > maxFoundFromChildren ? tmp : maxFoundFromChildren;
+          final int foundFromChild = countGroupByLayers(queryDataSource.getQuery(), foundNum + 1);
+          maxFoundFromChildren = Math.max(foundFromChild, maxFoundFromChildren);
         } else {
-          final int tmp = countGroupByLayers(queryDataSource.getQuery(), 0);
-          maxFoundFromChildren = tmp > maxFoundFromChildren ? tmp : maxFoundFromChildren;
+          // Reset foundNum because a non-groupBy is found
+          final int foundFromChild = countGroupByLayers(queryDataSource.getQuery(), 0);
+          maxFoundFromChildren = Math.max(foundFromChild, maxFoundFromChildren);
         }
       }
     }
 
-    if (maxFoundFromChildren > -1) {
-      return maxFoundFromChildren > foundNum ? maxFoundFromChildren : foundNum;
-    } else {
-      return foundNum;
-    }
+    return Math.max(maxFoundFromChildren, foundNum);
   }
 
   @Override

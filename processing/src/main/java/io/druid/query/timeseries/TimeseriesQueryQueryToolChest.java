@@ -247,18 +247,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public QueryRunner<Result<TimeseriesResultValue>> annotateDistributionTarget(QueryRunner<Result<TimeseriesResultValue>> runner)
-  {
-    return (query, responseContext) -> {
-      final TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
-      return runner.run(
-          timeseriesQuery.updateDistributionTarget(),
-          responseContext
-      );
-    };
-  }
-
-  @Override
   public Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makePreComputeManipulatorFn(
       final TimeseriesQuery query, final MetricManipulationFn fn
   )

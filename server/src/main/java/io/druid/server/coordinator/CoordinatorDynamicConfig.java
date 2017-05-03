@@ -18,10 +18,11 @@
  */
 package io.druid.server.coordinator;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
-
+import io.druid.common.config.JacksonConfigManager;
 import io.druid.java.util.common.IAE;
 
 import java.util.Collection;
@@ -45,20 +46,70 @@ public class CoordinatorDynamicConfig
 
   @JsonCreator
   public CoordinatorDynamicConfig(
-      @JsonProperty("millisToWaitBeforeDeleting") long millisToWaitBeforeDeleting,
-      @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
-      @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
-      @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
-      @JsonProperty("replicantLifetime") int replicantLifetime,
-      @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
-      @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
-      @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
+      @JacksonInject JacksonConfigManager configManager,
+      @JsonProperty("millisToWaitBeforeDeleting") Long millisToWaitBeforeDeleting,
+      @JsonProperty("mergeBytesLimit") Long mergeBytesLimit,
+      @JsonProperty("mergeSegmentsLimit") Integer mergeSegmentsLimit,
+      @JsonProperty("maxSegmentsToMove") Integer maxSegmentsToMove,
+      @JsonProperty("replicantLifetime") Integer replicantLifetime,
+      @JsonProperty("replicationThrottleLimit") Integer replicationThrottleLimit,
+      @JsonProperty("balancerComputeThreads") Integer balancerComputeThreads,
+      @JsonProperty("emitBalancingStats") Boolean emitBalancingStats,
 
       // Type is Object here so that we can support both string and list as
       // coordinator console can not send array of strings in the update request.
       // See https://github.com/druid-io/druid/issues/3055
       @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
-      @JsonProperty("killAllDataSources") boolean killAllDataSources
+      @JsonProperty("killAllDataSources") Boolean killAllDataSources
+  )
+  {
+    CoordinatorDynamicConfig current = configManager.watch(
+        CoordinatorDynamicConfig.CONFIG_KEY,
+        CoordinatorDynamicConfig.class
+    ).get();
+    if (current == null) {
+      current = new Builder().build();
+    }
+
+    this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting == null
+                                      ? current.getMillisToWaitBeforeDeleting()
+                                      : millisToWaitBeforeDeleting;
+    this.mergeBytesLimit = mergeBytesLimit == null ? current.getMergeBytesLimit() : mergeBytesLimit;
+    this.mergeSegmentsLimit = mergeSegmentsLimit == null ? current.getMergeSegmentsLimit() : mergeSegmentsLimit;
+    this.maxSegmentsToMove = maxSegmentsToMove == null ? current.getMaxSegmentsToMove() : maxSegmentsToMove;
+    this.replicantLifetime = replicantLifetime == null ? current.getReplicantLifetime() : replicantLifetime;
+    this.replicationThrottleLimit = replicationThrottleLimit == null
+                                    ? current.getReplicationThrottleLimit()
+                                    : replicationThrottleLimit;
+    this.balancerComputeThreads = Math.max(
+        balancerComputeThreads == null
+        ? current.getBalancerComputeThreads()
+        : balancerComputeThreads, 1
+    );
+    this.emitBalancingStats = emitBalancingStats == null ? current.emitBalancingStats() : emitBalancingStats;
+
+
+    this.killAllDataSources = killAllDataSources == null ? current.isKillAllDataSources() : killAllDataSources;
+    this.killDataSourceWhitelist = killDataSourceWhitelist == null
+                                   ? current.getKillDataSourceWhitelist()
+                                   : parseKillDataSourceWhitelist(killDataSourceWhitelist);
+
+    if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
+      throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
+    }
+  }
+
+  public CoordinatorDynamicConfig(
+      long millisToWaitBeforeDeleting,
+      long mergeBytesLimit,
+      int mergeSegmentsLimit,
+      int maxSegmentsToMove,
+      int replicantLifetime,
+      int replicationThrottleLimit,
+      int balancerComputeThreads,
+      boolean emitBalancingStats,
+      Object killDataSourceWhitelist,
+      boolean killAllDataSources
   )
   {
     this.maxSegmentsToMove = maxSegmentsToMove;
@@ -69,26 +120,30 @@ public class CoordinatorDynamicConfig
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.emitBalancingStats = emitBalancingStats;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
-
     this.killAllDataSources = killAllDataSources;
-
-    if (killDataSourceWhitelist instanceof String) {
-      String[] tmp = ((String) killDataSourceWhitelist).split(",");
-      this.killDataSourceWhitelist = new HashSet<>();
-      for (int i = 0; i < tmp.length; i++) {
-        String trimmed = tmp[i].trim();
-        if (!trimmed.isEmpty()) {
-          this.killDataSourceWhitelist.add(trimmed);
-        }
-      }
-    } else if (killDataSourceWhitelist instanceof Collection){
-      this.killDataSourceWhitelist = ImmutableSet.copyOf(((Collection) killDataSourceWhitelist));
-    } else {
-      this.killDataSourceWhitelist = ImmutableSet.of();
-    }
+    this.killDataSourceWhitelist = parseKillDataSourceWhitelist(killDataSourceWhitelist);
 
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
+    }
+  }
+
+  private Set<String> parseKillDataSourceWhitelist(Object killDataSourceWhitelist)
+  {
+    if (killDataSourceWhitelist instanceof String) {
+      String[] tmp = ((String) killDataSourceWhitelist).split(",");
+      Set<String> result = new HashSet<>();
+      for (int i = 0; i < tmp.length; i++) {
+        String trimmed = tmp[i].trim();
+        if (!trimmed.isEmpty()) {
+          result.add(trimmed);
+        }
+      }
+      return result;
+    } else if (killDataSourceWhitelist instanceof Collection) {
+      return ImmutableSet.copyOf(((Collection) killDataSourceWhitelist));
+    } else {
+      return ImmutableSet.of();
     }
   }
 

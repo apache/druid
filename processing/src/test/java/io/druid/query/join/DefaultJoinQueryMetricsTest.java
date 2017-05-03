@@ -64,8 +64,8 @@ public class DefaultJoinQueryMetricsTest
                 )
             )
         ),
-        new DataInput(new TableDataSource("src1"), QueryRunnerTestHelper.firstToThird),
-        new DataInput(new TableDataSource("src2"), QueryRunnerTestHelper.firstToThird)
+        new DataSourceJoinInputSpec(new TableDataSource("src1"), QueryRunnerTestHelper.firstToThird),
+        new DataSourceJoinInputSpec(new TableDataSource("src2"), QueryRunnerTestHelper.firstToThird)
     );
 
     final JoinSpec joinSpec = new JoinSpec(
@@ -75,7 +75,7 @@ public class DefaultJoinQueryMetricsTest
             new DimExtractPredicate(new DefaultDimensionSpec("src3", "dim4", "dim4"))
         ),
         leftChildSpec,
-        new DataInput(new TableDataSource("src3"), QueryRunnerTestHelper.firstToThird)
+        new DataSourceJoinInputSpec(new TableDataSource("src3"), QueryRunnerTestHelper.firstToThird)
     );
 
     JoinQuery query = JoinQuery.builder()
@@ -161,8 +161,8 @@ public class DefaultJoinQueryMetricsTest
                 )
             )
         ),
-        new DataInput(new TableDataSource("src1"), QueryRunnerTestHelper.firstToThird),
-        new DataInput(new TableDataSource("src2"), QueryRunnerTestHelper.firstToThird)
+        new DataSourceJoinInputSpec(new TableDataSource("src1"), QueryRunnerTestHelper.firstToThird),
+        new DataSourceJoinInputSpec(new TableDataSource("src2"), QueryRunnerTestHelper.firstToThird)
     );
 
     final JoinSpec joinSpec = new JoinSpec(
@@ -172,7 +172,7 @@ public class DefaultJoinQueryMetricsTest
             new DimExtractPredicate(new DefaultDimensionSpec("src3", "dim4", "dim4"))
         ),
         leftChildSpec,
-        new DataInput(new TableDataSource("src3"), QueryRunnerTestHelper.firstToThird)
+        new DataSourceJoinInputSpec(new TableDataSource("src3"), QueryRunnerTestHelper.firstToThird)
     );
 
     JoinQuery query = JoinQuery.builder().setJoinSpec(joinSpec)

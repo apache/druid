@@ -45,6 +45,19 @@ public class DefaultDimensionSpecTest
   }
 
   @Test
+  public void testEqualsSerdeWithDataSource() throws IOException
+  {
+    final String name = "foo";
+    final DimensionSpec spec = new DefaultDimensionSpec("source1", name, name);
+    final String json = mapper.writeValueAsString(spec);
+    final DimensionSpec other = mapper.readValue(json, DimensionSpec.class);
+    Assert.assertEquals("source1", other.getDataSourceName());
+    Assert.assertEquals(spec.toString(), other.toString());
+    Assert.assertEquals(spec, other);
+    Assert.assertEquals(spec.hashCode(), other.hashCode());
+  }
+
+  @Test
   public void testEqualsSerdeWithType() throws IOException
   {
     final String name = "foo";

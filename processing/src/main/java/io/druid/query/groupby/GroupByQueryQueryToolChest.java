@@ -370,18 +370,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   @Override
-  public QueryRunner<Row> annotateDistributionTarget(QueryRunner<Row> runner)
-  {
-    return (query, responseContext) -> {
-      final GroupByQuery groupByQuery = (GroupByQuery) query;
-      return runner.run(
-          groupByQuery.updateDistributionTarget(),
-          responseContext
-      );
-    };
-  }
-
-  @Override
   public CacheStrategy<Row, Object, GroupByQuery> getCacheStrategy(final GroupByQuery query)
   {
     return new CacheStrategy<Row, Object, GroupByQuery>()

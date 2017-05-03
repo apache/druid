@@ -20,6 +20,7 @@
 package io.druid.query.join;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.DefaultQueryMetrics;
@@ -78,9 +79,10 @@ public class DefaultJoinQueryMetrics extends DefaultQueryMetrics<JoinQuery> impl
   public void distributionTarget(JoinQuery query)
   {
     final DataSourceWithSegmentSpec distributionTarget = query.getDistributionTarget();
+    Preconditions.checkNotNull(distributionTarget, "distributionTarget");
     builder.setDimension(
         "distributionTarget",
-        distributionTarget == null ? "" : DataSourceUtil.getMetricName(distributionTarget.getDataSource())
+        DataSourceUtil.getMetricName(distributionTarget.getDataSource())
     );
   }
 
@@ -88,9 +90,10 @@ public class DefaultJoinQueryMetrics extends DefaultQueryMetrics<JoinQuery> impl
   public void distributionTargetDuration(JoinQuery query)
   {
     final DataSourceWithSegmentSpec distributionTarget = query.getDistributionTarget();
+    Preconditions.checkNotNull(distributionTarget, "distributionTarget");
     builder.setDimension(
         "distributionTargetDuration",
-        distributionTarget == null ? "" : query.getDuration(distributionTarget.getDataSource()).toString()
+        query.getDuration(distributionTarget.getDataSource()).toString()
     );
   }
 }

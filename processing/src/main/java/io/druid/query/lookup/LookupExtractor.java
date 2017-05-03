@@ -22,6 +22,7 @@ package io.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.java.util.common.Cacheable;
 import io.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
@@ -35,7 +36,7 @@ import java.util.Map;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "map", value = MapLookupExtractor.class)
 })
-public abstract class LookupExtractor
+public abstract class LookupExtractor implements Cacheable
 {
   /**
    * Apply a particular lookup methodology to the input string
@@ -100,14 +101,6 @@ public abstract class LookupExtractor
     }
     return map;
   }
-
-  /**
-   * Create a cache key for use in results caching
-   *
-   * @return A byte array that can be used to uniquely identify if results of a prior lookup can use the cached values
-   */
-
-  public abstract byte[] getCacheKey();
 
   // make this abstract again once @drcrallen fix the metmax lookup implementation.
   public boolean isOneToOne()

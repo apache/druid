@@ -30,17 +30,13 @@ public class LookupCoordinatorManagerConfigTest
   {
     final Duration funnyDuration = Duration.standardDays(100);
     final LookupCoordinatorManagerConfig config = new LookupCoordinatorManagerConfig();
-    config.setDeleteAllTimeout(funnyDuration);
-    config.setHostDeleteTimeout(funnyDuration);
-    config.setHostUpdateTimeout(funnyDuration);
-    config.setUpdateAllTimeout(funnyDuration);
+    config.setHostTimeout(funnyDuration);
+    config.setAllHostTimeout(funnyDuration);
     config.setPeriod(funnyDuration.getMillis());
     config.setThreadPoolSize(1200);
 
-    Assert.assertEquals(funnyDuration, config.getDeleteAllTimeout());
-    Assert.assertEquals(funnyDuration, config.getHostDeleteTimeout());
-    Assert.assertEquals(funnyDuration, config.getHostUpdateTimeout());
-    Assert.assertEquals(funnyDuration, config.getUpdateAllTimeout());
+    Assert.assertEquals(funnyDuration, config.getHostTimeout());
+    Assert.assertEquals(funnyDuration, config.getAllHostTimeout());
     Assert.assertEquals(funnyDuration.getMillis(), config.getPeriod());
     Assert.assertEquals(1200, config.getThreadPoolSize());
   }
@@ -49,11 +45,9 @@ public class LookupCoordinatorManagerConfigTest
   public void testSimpleConfigDefaults()
   {
     final LookupCoordinatorManagerConfig config = new LookupCoordinatorManagerConfig();
-    Assert.assertEquals(LookupCoordinatorManagerConfig.DEFAULT_DELETE_ALL_TIMEOUT, config.getDeleteAllTimeout());
-    Assert.assertEquals(LookupCoordinatorManagerConfig.DEFAULT_HOST_DELETE_TIMEOUT, config.getHostDeleteTimeout());
-    Assert.assertEquals(LookupCoordinatorManagerConfig.DEFAULT_HOST_UPDATE_TIMEOUT, config.getHostUpdateTimeout());
-    Assert.assertEquals(LookupCoordinatorManagerConfig.DEFAULT_UPDATE_ALL_TIMEOUT, config.getUpdateAllTimeout());
+    Assert.assertEquals(LookupCoordinatorManagerConfig.DEFAULT_HOST_TIMEOUT, config.getHostTimeout());
+    Assert.assertEquals(LookupCoordinatorManagerConfig.DEFAULT_ALL_HOST_TIMEOUT, config.getAllHostTimeout());
     Assert.assertEquals(10, config.getThreadPoolSize());
-    Assert.assertEquals(30_000, config.getPeriod());
+    Assert.assertEquals(120_000, config.getPeriod());
   }
 }
