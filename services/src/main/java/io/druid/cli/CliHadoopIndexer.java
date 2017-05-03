@@ -55,8 +55,8 @@ public class CliHadoopIndexer implements Runnable
   private String argumentSpec;
 
   @Option(name = {"-c", "--coordinate", "hadoopDependencies"},
-          description = "extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
-  private List<String> coordinates;
+          description = "comma separated list of extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
+  private String coordinates;
 
   @Option(name = "--no-default-hadoop",
           description = "don't pull down the default hadoop version",
@@ -73,7 +73,7 @@ public class CliHadoopIndexer implements Runnable
     try {
       final List<String> allCoordinates = Lists.newArrayList();
       if (coordinates != null) {
-        allCoordinates.addAll(coordinates);
+        allCoordinates.addAll(Arrays.asList(coordinates.replaceAll("\\s+", "").split(",")));
       }
       if (!noDefaultHadoop) {
         allCoordinates.addAll(DEFAULT_HADOOP_COORDINATES);
