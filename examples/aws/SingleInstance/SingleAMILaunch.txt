@@ -1,0 +1,22 @@
+
+Launching the Single Instance AMI
+===================================
+
+From AWS Console select the AMI with AMI ID:ami-0ab6d763
+Launch the instance with "InstanceType" : "m1.xlarge"
+The security group which is used while launching the instance should have following ports settings:
+
+			{ "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+			{ "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0" },
+			{ "IpProtocol" : "tcp", "FromPort" : "8081", "ToPort" : "8081", "CidrIp" : "0.0.0.0/0" },
+			{ "IpProtocol" : "tcp", "FromPort" : "8082", "ToPort" : "8082", "CidrIp" : "0.0.0.0/0" }
+
+CODE AND SCRIPTS
+=================
+
+The code and scripts can be find in the launched instance.
+There is an index.html file located in /home/ubuntu/index.html
+There is a main class "SkilledAnalystsDemoMain.java" which adds a servlet "DemoServlet.java" to the jetty servlet context.
+There is a InitBoot.sh file present in /var/lib/cloud/scripts/per-boot/  location to perform one time initialisation changes while launching the instance.  
+
+The code should be compiled against 0.3.27.2 version

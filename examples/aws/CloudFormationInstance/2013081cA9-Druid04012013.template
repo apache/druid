@@ -1,0 +1,239 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "This template will setup Druid with 1 master and 3 compute nodes. This template created Amazon EC2 Ubuntu 12.04 instances. You will be billed for the AWS resources used if you create a stack from this template. Also, you are solely responsible for complying with the license terms for the software downloaded and installed by this template. By creating a stack from this template, you are agreeing to such terms.",
+  
+  "Parameters" : {
+    "KeyPairName" : {
+      "Description" : "Name of an existing Amazon EC2 key pair for ssh and rdp access",
+      "Type" : "String"
+    },
+    "InstanceType" : {
+      "Description" : "Amazon EC2 instance type",
+      "Type" : "String",
+      "Default" : "m1.xlarge",
+      "AllowedValues" : [ "m1.xlarge"]
+    }
+  },
+
+  "Resources" : {
+  
+	"MyAsGroupWithNotification" : {
+	"Type" : "AWS::AutoScaling::AutoScalingGroup",
+	"Properties" : {
+	  "AvailabilityZones" : { "Fn::GetAZs" : ""},
+	  "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
+      "MinSize" : "0",
+      "MaxSize" : "2",
+      "DesiredCapacity" : "1",
+      "NotificationConfiguration" : {
+         "TopicARN" : "arn:aws:sns:us-east-1:262408983187:Stack-Creation",
+         "NotificationTypes" : [
+            "autoscaling:EC2_INSTANCE_LAUNCH",
+            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+            "autoscaling:EC2_INSTANCE_TERMINATE",
+            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+         ]
+      }
+   }
+	},
+	"LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "KeyName" : { "Ref" : "KeyPairName" },
+		"ImageId" : "ami-30badf59",
+        "SecurityGroups" : [ { "Ref" : "DruidPublicSecurity" },{ "Ref" : "DruidPrivateSecurity" } ],
+        "InstanceType" : "m1.xlarge"
+		}
+	},
+	"DruidMaster" : {
+		"Type" : "AWS::EC2::Instance",
+		"Properties" : {
+			"ImageId" : "ami-30badf59",
+			"InstanceType" : "m1.xlarge",
+			"KeyName" : { "Ref" : "KeyPairName" },
+			"SecurityGroups" : [ { "Ref" : "DruidPublicSecurity" },{ "Ref" : "DruidPrivateSecurity" } ],
+			"Tags" : [ {
+				"Key" : "Name",
+				"Value" : "Druid Master"
+			} ],
+			"UserData": {
+				"Fn::Base64": {
+					"Fn::Join": [
+						"",
+						[
+							"#!/bin/bash -v\n",
+							"# Helper function\n",
+							"dnsName=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\n",
+							"sudo sed -i \"s/ec2-184-73-139-90.compute-1.amazonaws.com/${dnsName}/g\" /etc/mysql/my.cnf\n",
+							"sudo service mysql restart\n",
+							"cd /usr/share/zookeeper/bin\n",
+							"sudo ./zkServer.sh start\n",
+							"sudo sed -i \"s/ec2-184-73-139-90.compute-1.amazonaws.com/${dnsName}/g\" /home/ubuntu/index.html\n",
+							"cd /home/ubuntu/druid/druid-services\n",
+							"sudo sed -i \"s/ec2-184-73-139-90.compute-1.amazonaws.com/${dnsName}/g\" /home/ubuntu/druid/druid-services/master/runtime.properties\n",
+							"sudo sed -i \"s/ec2-184-73-139-90.compute-1.amazonaws.com/${dnsName}/g\" /home/ubuntu/druid/druid-services/broker/runtime.properties\n",
+							"nohup java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -cp master:druid-services-0.3.27.2-selfcontained.jar com.metamx.druid.http.MasterMain > nohup_masterLog 2>&1 &\n",
+							"nohup java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -cp broker:DruidSkilledAnalystsBroker.jar com.skilledanalysts.druid.demo.SkilledAnalystsDemoMain > nohup_skilledAnalystsDemoLog 2>&1 &\n"
+						]
+					]
+				}
+			}
+		}
+	},
+	"DruidCN1" : {
+		"Type" : "AWS::EC2::Instance",
+		"DependsOn" : "DruidMaster",
+		"Properties" : {
+			"ImageId" : "ami-30badf59",
+			"InstanceType" : "m1.xlarge",
+			"KeyName" : { "Ref" : "KeyPairName" },
+			"SecurityGroups" : [ { "Ref" : "DruidPublicSecurity" },{ "Ref" : "DruidPrivateSecurity" } ],
+			"Tags" : [ {
+				"Key" : "Name",
+				"Value" : "Druid Compute Node 1"
+			} ],
+			"UserData": {
+				"Fn::Base64": {
+					"Fn::Join": [
+						"",
+						[
+							"#!/bin/bash -v\n",
+							"# Helper function\n",
+							"dnsName=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\n",
+							"sudo sed -i \"s/druid.host=ec2-50-19-184-93.compute-1.amazonaws.com/druid.host=${dnsName}/g\" /home/ubuntu/druid/druid-services/compute/runtime.properties\n",
+							"sudo sed -i \"s/ec2-50-19-184-93.compute-1.amazonaws.com/",{ 
+								"Fn::GetAtt" : [ "DruidMaster", "PublicDnsName" ] 
+							},"/g\" /home/ubuntu/druid/druid-services/compute/runtime.properties\n",
+							"cd /home/ubuntu/druid/druid-services\n",
+							"sudo nohup java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -cp compute:druid-services-0.3.27.2-selfcontained.jar com.metamx.druid.http.ComputeMain > nohup_computeLog 2>&1 &\n"
+						]
+					]
+				}
+			}
+		}
+	},
+	"DruidCN2" : {
+		"Type" : "AWS::EC2::Instance",
+		"DependsOn" : "DruidMaster",
+		"Properties" : {
+			"ImageId" : "ami-30badf59",
+			"InstanceType" : "m1.xlarge",
+			"KeyName" : { "Ref" : "KeyPairName" },
+			"SecurityGroups" : [ { "Ref" : "DruidPublicSecurity" },{ "Ref" : "DruidPrivateSecurity" } ],
+			"Tags" : [ {
+				"Key" : "Name",
+				"Value" : "Druid Compute Node 2"
+			} ],
+			"UserData": {
+				"Fn::Base64": {
+					"Fn::Join": [
+						"",
+						[
+							"#!/bin/bash -v\n",
+							"# Helper function\n",
+							"dnsName=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\n",
+							"sudo sed -i \"s/druid.host=ec2-50-19-184-93.compute-1.amazonaws.com/druid.host=${dnsName}/g\" /home/ubuntu/druid/druid-services/compute/runtime.properties\n",
+							"sudo sed -i \"s/ec2-50-19-184-93.compute-1.amazonaws.com/",{ 
+								"Fn::GetAtt" : [ "DruidMaster", "PublicDnsName" ] 
+							},"/g\" /home/ubuntu/druid/druid-services/compute/runtime.properties\n",
+							"cd /home/ubuntu/druid/druid-services\n",
+							"sudo nohup java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -cp compute:druid-services-0.3.27.2-selfcontained.jar com.metamx.druid.http.ComputeMain > nohup_computeLog 2>&1 &\n"
+						]
+					]
+				}
+			}
+		}
+	},
+	"DruidCN3" : {
+		"Type" : "AWS::EC2::Instance",
+		"DependsOn" : "DruidMaster",
+		"Properties" : {
+			"ImageId" : "ami-30badf59",
+			"InstanceType" : "m1.xlarge",
+			"KeyName" : { "Ref" : "KeyPairName" },
+			"SecurityGroups" : [ { "Ref" : "DruidPublicSecurity" },{ "Ref" : "DruidPrivateSecurity" } ],
+			"Tags" : [ {
+				"Key" : "Name",
+				"Value" : "Druid Compute Node 3"
+			} ],
+			"UserData": {
+				"Fn::Base64": {
+					"Fn::Join": [
+						"",
+						[
+							"#!/bin/bash -v\n",
+							"# Helper function\n",
+							"dnsName=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\n",
+							"sudo sed -i \"s/druid.host=ec2-50-19-184-93.compute-1.amazonaws.com/druid.host=${dnsName}/g\" /home/ubuntu/druid/druid-services/compute/runtime.properties\n",
+							"sudo sed -i \"s/ec2-50-19-184-93.compute-1.amazonaws.com/",{ 
+								"Fn::GetAtt" : [ "DruidMaster", "PublicDnsName" ] 
+							},"/g\" /home/ubuntu/druid/druid-services/compute/runtime.properties\n",
+							"cd /home/ubuntu/druid/druid-services\n",
+							"sudo nohup java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -cp compute:druid-services-0.3.27.2-selfcontained.jar com.metamx.druid.http.ComputeMain > nohup_computeLog 2>&1 &\n"
+						]
+					]
+				}
+			}
+		}
+	},
+	
+	"DruidPublicSecurity" : {
+		"Type" : "AWS::EC2::SecurityGroup",
+		"Properties" : {
+			"GroupDescription" : "EC2 Instance access for public",
+			"SecurityGroupIngress" : [ 
+				{ "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+				{ "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0" },
+				{ "IpProtocol" : "tcp", "FromPort" : "8081", "ToPort" : "8081", "CidrIp" : "0.0.0.0/0" },
+				{ "IpProtocol" : "tcp", "FromPort" : "8082", "ToPort" : "8082", "CidrIp" : "0.0.0.0/0" }
+			]
+		}
+	},
+	"DruidPrivateSecurity" : {
+		"Type" : "AWS::EC2::SecurityGroup",
+		"Properties" : {
+			"GroupDescription" : "EC2 Instance access for internal"
+		}
+	},
+	"DruidPrivateSecurityIngress1" : {
+		"Type" : "AWS::EC2::SecurityGroupIngress",
+		"Properties" : {
+			"GroupName" : { "Ref" : "DruidPrivateSecurity" },
+			"IpProtocol" : "tcp",
+			"ToPort" : "2181",
+			"FromPort" : "2181",
+			"SourceSecurityGroupName" : { "Ref" : "DruidPrivateSecurity" }
+		}
+	},
+	"DruidPrivateSecurityIngress2" : {
+		"Type" : "AWS::EC2::SecurityGroupIngress",
+		"Properties" : {
+			"GroupName" : { "Ref" : "DruidPrivateSecurity" },
+			"IpProtocol" : "tcp",
+			"ToPort" : "3306",
+			"FromPort" : "3306",
+			"SourceSecurityGroupName" : { "Ref" : "DruidPrivateSecurity" }
+		}
+	}
+  },
+
+  "Outputs" : {
+    "DruidMaster" : {
+      "Value" : { "Fn::GetAtt" : [ "DruidMaster", "PublicDnsName" ] }, 
+      "Description" : "DNS Name of the newly created EC2 DruidMaster instance"
+    },
+	"DruidCN1" : {
+      "Value" : { "Fn::GetAtt" : [ "DruidCN1", "PublicDnsName" ] }, 
+      "Description" : "DNS Name of the newly created EC2 Druid compute node 1 instance"
+    },
+	"DruidCN2" : {
+      "Value" : { "Fn::GetAtt" : [ "DruidCN2", "PublicDnsName" ] }, 
+      "Description" : "DNS Name of the newly created EC2 Druid compute node 2 instance"
+    },
+	"DruidCN3" : {
+      "Value" : { "Fn::GetAtt" : [ "DruidCN3", "PublicDnsName" ] }, 
+      "Description" : "DNS Name of the newly created EC2 Druid compute node 3 instance"
+    }
+  }
+}
