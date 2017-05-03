@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.MonitorSchedulerConfig;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -35,6 +34,7 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 
 import java.util.List;
 import java.util.Map;
@@ -52,7 +52,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   private final KafkaIndexTaskClientFactory kafkaIndexTaskClientFactory;
   private final ObjectMapper mapper;
   private final ServiceEmitter emitter;
-  private final MonitorSchedulerConfig monitorSchedulerConfig;
+  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
 
   @JsonCreator
   public KafkaSupervisorSpec(
@@ -66,7 +66,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
       @JacksonInject KafkaIndexTaskClientFactory kafkaIndexTaskClientFactory,
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
-      @JacksonInject MonitorSchedulerConfig monitorSchedulerConfig
+      @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig
       )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -136,7 +136,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     return dataSchema.getDataSource();
   }
 
-  public MonitorSchedulerConfig getMonitorSchedulerConfig()
+  public DruidMonitorSchedulerConfig getMonitorSchedulerConfig()
   {
     return monitorSchedulerConfig;
   }
