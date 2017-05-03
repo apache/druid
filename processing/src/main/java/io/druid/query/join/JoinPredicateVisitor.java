@@ -43,7 +43,7 @@ public interface JoinPredicateVisitor
     return predicate;
   }
 
-  default JoinPredicate visit(DimExtractPredicate predicate)
+  default JoinPredicate visit(DimensionPredicate predicate)
   {
     return predicate;
   }

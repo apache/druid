@@ -45,17 +45,17 @@ public class JoinQueryTest
         new AndPredicate(
             ImmutableList.of(
                 new EqualPredicate(
-                    new DimExtractPredicate(new DefaultDimensionSpec("src1", "dim1", "dim1")),
-                    new DimExtractPredicate(new DefaultDimensionSpec("src2", "dim1", "dim1"))
+                    new DimensionPredicate(new DefaultDimensionSpec("src1", "dim1", "dim1")),
+                    new DimensionPredicate(new DefaultDimensionSpec("src2", "dim1", "dim1"))
                 ),
                 new EqualPredicate(
                     new AddPredicate(
-                        new DimExtractPredicate(new DefaultDimensionSpec("src2", "dim2", "dim2")),
+                        new DimensionPredicate(new DefaultDimensionSpec("src2", "dim2", "dim2")),
                         new LiteralPredicate("10")
                     ),
                     new AddPredicate(
-                        new DimExtractPredicate(new DefaultDimensionSpec("src1", "dim2", "dim2")),
-                        new DimExtractPredicate(new DefaultDimensionSpec("src1", "dim3", "dim3"))
+                        new DimensionPredicate(new DefaultDimensionSpec("src1", "dim2", "dim2")),
+                        new DimensionPredicate(new DefaultDimensionSpec("src1", "dim3", "dim3"))
                     )
                 )
             )
@@ -67,8 +67,8 @@ public class JoinQueryTest
     final JoinSpec joinSpec = new JoinSpec(
         JoinType.INNER,
         new EqualPredicate(
-            new DimExtractPredicate(new DefaultDimensionSpec("j1", "dim4", "dim4")),
-            new DimExtractPredicate(new DefaultDimensionSpec("src3", "dim4", "dim4"))
+            new DimensionPredicate(new DefaultDimensionSpec("j1", "dim4", "dim4")),
+            new DimensionPredicate(new DefaultDimensionSpec("src3", "dim4", "dim4"))
         ),
         leftChildSpec,
         new DataSourceJoinInputSpec(new TableDataSource("src3"), QueryRunnerTestHelper.firstToThird)

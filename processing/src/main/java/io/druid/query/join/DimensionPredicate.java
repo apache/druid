@@ -26,12 +26,12 @@ import io.druid.query.dimension.DimensionSpec;
 
 import java.util.Objects;
 
-public class DimExtractPredicate implements JoinPredicate
+public class DimensionPredicate implements JoinPredicate
 {
   private final DimensionSpec dimension;
 
   @JsonCreator
-  public DimExtractPredicate(
+  public DimensionPredicate(
       @JsonProperty("dimension") DimensionSpec dimension
   )
   {
@@ -67,7 +67,7 @@ public class DimExtractPredicate implements JoinPredicate
       return false;
     }
 
-    DimExtractPredicate that = (DimExtractPredicate) o;
+    DimensionPredicate that = (DimensionPredicate) o;
     return dimension.equals(that.dimension);
   }
 

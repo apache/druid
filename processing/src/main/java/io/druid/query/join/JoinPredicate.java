@@ -30,7 +30,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
     @Type(name = "or", value = OrPredicate.class),
     @Type(name = "not", value = NotPredicate.class),
     @Type(name = "equal", value = EqualPredicate.class),
-    @Type(name = "dimension", value = DimExtractPredicate.class),
+    @Type(name = "dimension", value = DimensionPredicate.class),
     @Type(name = "add", value = AddPredicate.class),
     @Type(name = "subtract", value = SubtractPredicate.class),
     @Type(name = "multiply", value = MultiplyPredicate.class),
