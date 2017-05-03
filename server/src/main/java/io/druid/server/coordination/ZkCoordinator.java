@@ -256,8 +256,14 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       File file = segmentsToLoad[i];
       log.info("Loading segment cache file [%d/%d][%s].", i, segmentsToLoad.length, file);
       try {
-        DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-        if (serverManager.isSegmentCached(segment)) {
+        final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+
+        if (!segment.getIdentifier().equals(file.getName())) {
+          log.makeAlert("Ignoring cache file for dataSource[%s].", segment.getDataSource())
+             .addData("cacheFile", file.getPath())
+             .addData("segmentIdentifier", segment.getIdentifier())
+             .emit();
+        } else if (serverManager.isSegmentCached(segment)) {
           cachedSegments.add(segment);
         } else {
           log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
