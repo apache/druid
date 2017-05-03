@@ -215,14 +215,11 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
+    if (maxCacheCapacityBytes == 0 && maxFetchCapacityBytes == 0) {
+      return super.connect(firehoseParser, temporaryDirectory);
+    }
+
     final List<ObjectType> objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
-//    if (baseDir == null) {
-//      baseDir = Files.createTempDir();
-//      baseDir.deleteOnExit();
-//      cache(objects);
-//    } else {
-//      nextFetchIndex = cacheFiles.size();
-//    }
 
     Preconditions.checkState(temporaryDirectory.exists(), "temporaryDirectory[%s] does not exist", temporaryDirectory);
     Preconditions.checkState(
