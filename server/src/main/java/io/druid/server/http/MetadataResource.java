@@ -20,10 +20,13 @@
 package io.druid.server.http;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -52,6 +55,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,76 +92,93 @@ public class MetadataResource
       @Context final HttpServletRequest req
   )
   {
-    final Set<String> dataSourceNamesPreAuth;
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+
+    // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
+    final Optional<AuthorizationInfo> authorizationInfoOptional =
+        authConfig.isEnabled() ? Optional.of(
+            Preconditions.checkNotNull(
+                (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
+                "Security is enabled but no authorization info found in the request"
+            )) :
+        Optional.<AuthorizationInfo>absent();
+
     if (includeDisabled != null) {
-      dataSourceNamesPreAuth = Sets.newTreeSet(metadataSegmentManager.getAllDatasourceNames());
-    } else {
-      dataSourceNamesPreAuth = Sets.newTreeSet(
-          Iterables.transform(
-              metadataSegmentManager.getInventory(),
-              new Function<DruidDataSource, String>()
+      final Collection<String> allDatasourceNames;
+      if (authorizationInfoOptional.isPresent()) {
+        final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
+        allDatasourceNames = Collections2.filter(
+            metadataSegmentManager.getAllDatasourceNames(),
+            new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
               {
-                @Override
-                public String apply(DruidDataSource input)
-                {
-                  return input.getName();
+                Resource resource = new Resource(input, ResourceType.DATASOURCE);
+                Action action = Action.READ;
+                Pair<Resource, Action> key = new Pair<>(resource, action);
+                if (resourceAccessMap.containsKey(key)) {
+                  return resourceAccessMap.get(key).isAllowed();
+                } else {
+                  Access access = authorizationInfoOptional.get().isAuthorized(key.lhs, key.rhs);
+                  resourceAccessMap.put(key, access);
+                  return access.isAllowed();
                 }
               }
-          )
-      );
+            }
+        );
+      } else {
+        allDatasourceNames = metadataSegmentManager.getAllDatasourceNames();
+      }
+      return builder.entity(allDatasourceNames).build();
     }
-
-    final Set<String> dataSourceNamesPostAuth;
-
-    if (authConfig.isEnabled()) {
-      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
+    final Collection<DruidDataSource> druidDataSources;
+    if (authorizationInfoOptional.isPresent()) {
       final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
-      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-      dataSourceNamesPostAuth = ImmutableSet.copyOf(
-          Sets.filter(
-              dataSourceNamesPreAuth,
-              new Predicate<String>()
-              {
-                @Override
-                public boolean apply(String input)
-                {
-                  Resource resource = new Resource(input, ResourceType.DATASOURCE);
-                  Action action = Action.READ;
-                  Pair<Resource, Action> key = new Pair<>(resource, action);
-                  if (resourceAccessMap.containsKey(key)) {
-                    return resourceAccessMap.get(key).isAllowed();
-                  } else {
-                    Access access = authorizationInfo.isAuthorized(key.lhs, key.rhs);
-                    resourceAccessMap.put(key, access);
-                    return access.isAllowed();
-                  }
-                }
+      druidDataSources = Collections2.filter(
+          metadataSegmentManager.getInventory(),
+          new Predicate<DruidDataSource>()
+          {
+            @Override
+            public boolean apply(DruidDataSource input)
+            {
+              Resource resource = new Resource(input.getName(), ResourceType.DATASOURCE);
+              Action action = Action.READ;
+              Pair<Resource, Action> key = new Pair<>(resource, action);
+              if (resourceAccessMap.containsKey(key)) {
+                return resourceAccessMap.get(key).isAllowed();
+              } else {
+                Access access = authorizationInfoOptional.get().isAuthorized(key.lhs, key.rhs);
+                resourceAccessMap.put(key, access);
+                return access.isAllowed();
               }
-          )
+            }
+          }
       );
     } else {
-      dataSourceNamesPostAuth = dataSourceNamesPreAuth;
+      druidDataSources = metadataSegmentManager.getInventory();
+    }
+    if (full != null) {
+      return builder.entity(druidDataSources).build();
     }
 
-    // Cannot do both includeDisabled and full, let includeDisabled take priority
-    // Always use dataSourceNamesPostAuth to determine the set of returned dataSources
-    if (full != null && includeDisabled == null) {
-      return Response.ok().entity(
-          Collections2.filter(
-              metadataSegmentManager.getInventory(),
-              new Predicate<DruidDataSource>()
+    List<String> dataSourceNames = Lists.newArrayList(
+        Iterables.transform(
+            druidDataSources,
+            new Function<DruidDataSource, String>()
+            {
+              @Override
+              public String apply(DruidDataSource dataSource)
               {
-                @Override
-                public boolean apply(DruidDataSource input)
-                {
-                  return dataSourceNamesPostAuth.contains(input.getName());
-                }
+                return dataSource.getName();
               }
-          )
-      ).build();
-    } else {
-      return Response.ok().entity(dataSourceNamesPostAuth).build();
-    }
+            }
+        )
+    );
+
+    Collections.sort(dataSourceNames);
+
+    return builder.entity(dataSourceNames).build();
   }
 
   @GET
