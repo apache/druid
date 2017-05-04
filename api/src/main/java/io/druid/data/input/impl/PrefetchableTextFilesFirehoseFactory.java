@@ -183,7 +183,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   }
 
   /**
-   * Downloads an object. It retires downloading {@link #maxFetchRetry} times and throws that exception.
+   * Downloads an object. It retries downloading {@link #maxFetchRetry} times and throws that exception.
    *
    * @param object  an object to be downloaded
    * @param outFile a file which the object data is stored

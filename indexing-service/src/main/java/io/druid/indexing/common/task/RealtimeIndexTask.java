@@ -414,8 +414,6 @@ public class RealtimeIndexTask extends AbstractTask
               plumber.finishJob();
             }
           }
-
-          FileUtils.forceDelete(firehoseTempDir);
         }
         catch (InterruptedException e) {
           log.debug(e, "Interrupted while finishing the job");
@@ -428,6 +426,7 @@ public class RealtimeIndexTask extends AbstractTask
           if (firehose != null) {
             CloseQuietly.close(firehose);
           }
+          FileUtils.forceDelete(firehoseTempDir);
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
       }
