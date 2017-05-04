@@ -131,10 +131,27 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   }
 
   @Test
+  public void testWithoutCacheAndFetch() throws IOException
+  {
+    final TestPrefetchableTextFilesFirehoseFactory factory =
+        TestPrefetchableTextFilesFirehoseFactory.with(testDir, 0, 0);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
+      Assert.assertEquals(0, factory.getCacheFiles().size());
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+
+    assertResult(rows);
+  }
+
+  @Test
   public void testWithoutCache() throws IOException
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =
-        TestPrefetchableTextFilesFirehoseFactory.withoutCache(testDir);
+        TestPrefetchableTextFilesFirehoseFactory.with(testDir, 0, 2048);
 
     final List<Row> rows = new ArrayList<>();
     try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
@@ -151,7 +168,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   public void testWithZeroFetchCapacity() throws IOException
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =
-        TestPrefetchableTextFilesFirehoseFactory.withZeroFetchCapacity(testDir);
+        TestPrefetchableTextFilesFirehoseFactory.with(testDir, 2048, 0);
 
     final List<Row> rows = new ArrayList<>();
     try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
@@ -253,27 +270,13 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     private final File baseDir;
     private int openExceptionCount;
 
-    static TestPrefetchableTextFilesFirehoseFactory withoutCache(File baseDir)
+    static TestPrefetchableTextFilesFirehoseFactory with(File baseDir, long cacheCapacity, long fetchCapacity)
     {
       return new TestPrefetchableTextFilesFirehoseFactory(
           baseDir,
           1024,
-          0,
-          2048,
-          1000,
-          3,
-          0,
-          0
-      );
-    }
-
-    static TestPrefetchableTextFilesFirehoseFactory withZeroFetchCapacity(File baseDir)
-    {
-      return new TestPrefetchableTextFilesFirehoseFactory(
-          baseDir,
-          1024,
-          2048,
-          0,
+          cacheCapacity,
+          fetchCapacity,
           1000,
           3,
           0,

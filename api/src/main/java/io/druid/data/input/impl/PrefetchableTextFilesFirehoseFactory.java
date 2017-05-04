@@ -109,8 +109,6 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
 
   private volatile int nextFetchIndex;
 
-  private Future<Void> fetchFuture;
-
   private boolean needCache = true;
 
   public PrefetchableTextFilesFirehoseFactory(
@@ -241,10 +239,11 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
         {
-          final Iterator<File> cacheFileIterator = cacheFiles.iterator();
-          long remainingCachedBytes = cacheFiles.stream()
+          private final Iterator<File> cacheFileIterator = cacheFiles.iterator();
+          private long remainingCachedBytes = cacheFiles.stream()
                                                 .mapToLong(File::length)
                                                 .sum();
+          private Future<Void> fetchFuture;
 
           {
             fetchIfNeeded(remainingCachedBytes);
