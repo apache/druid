@@ -22,9 +22,9 @@ package io.druid.segment.incremental;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Closer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -213,6 +213,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     return numEntries.get();
+  }
+
+  @Override
+  public int getLastRowIndex()
+  {
+    return indexIncrement.get() - 1;
   }
 
   private void factorizeAggs(

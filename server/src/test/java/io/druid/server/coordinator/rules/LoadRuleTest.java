@@ -107,6 +107,7 @@ public class LoadRuleTest
   public void tearDown() throws Exception
   {
     EasyMock.verify(mockPeon);
+    emitter.close();
   }
 
   @Test
@@ -211,8 +212,8 @@ public class LoadRuleTest
         segment
     );
 
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 1);
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get(DruidServer.DEFAULT_TIER).get() == 2);
+    Assert.assertTrue(stats.getPerTierStats().get(LoadRule.ASSIGNED_COUNT).get("hot").get() == 1);
+    Assert.assertTrue(stats.getPerTierStats().get(LoadRule.ASSIGNED_COUNT).get(DruidServer.DEFAULT_TIER).get() == 2);
     exec.shutdown();
   }
 
@@ -413,7 +414,7 @@ public class LoadRuleTest
         segment
     );
 
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 1);
+    Assert.assertTrue(stats.getPerTierStats().get(LoadRule.ASSIGNED_COUNT).get("hot").get() == 1);
     exec.shutdown();
   }
 

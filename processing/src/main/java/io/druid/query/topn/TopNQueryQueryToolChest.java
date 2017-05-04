@@ -32,11 +32,11 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
-import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -535,7 +535,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         return runner.run(query, responseContext);
       }
 
-      final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
+      final boolean isBySegment = QueryContexts.isBySegment(query);
 
       return Sequences.map(
           runner.run(query.withThreshold(minTopNThreshold), responseContext),

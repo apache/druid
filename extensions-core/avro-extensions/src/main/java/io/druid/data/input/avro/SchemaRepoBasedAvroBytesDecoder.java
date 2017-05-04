@@ -52,7 +52,7 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
   {
     this.subjectAndIdConverter = subjectAndIdConverter;
     this.schemaRepository = schemaRepository;
-    typedRepository = new TypedSchemaRepository<ID, Schema, SUBJECT>(
+    this.typedRepository = new TypedSchemaRepository<>(
         schemaRepository,
         subjectAndIdConverter.getIdConverter(),
         new AvroSchemaConverter(false),
@@ -77,9 +77,8 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
   {
     Pair<SUBJECT, ID> subjectAndId = subjectAndIdConverter.getSubjectAndId(bytes);
     Schema schema = typedRepository.getSchema(subjectAndId.lhs, subjectAndId.rhs);
-    DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(schema);
-    ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes));
-    try {
+    DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
+    try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
     catch (EOFException eof) {

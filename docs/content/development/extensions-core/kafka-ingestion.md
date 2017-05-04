@@ -17,9 +17,9 @@ currently designated as an *experimental feature* and is subject to the usual
 [experimental caveats](../experimental.html).
 
 <div class="note info">
-The Kafka indexing service uses the Java consumer that was introduced in Kafka 0.9. As there were protocol changes
-made in this version, Kafka 0.9 consumers are not compatible with older brokers. Ensure that your Kafka brokers are
-version 0.9 or better before using this service.
+The Kafka indexing service uses the Java consumer that was introduced in Kafka 0.10.x. As there were protocol changes
+made in this version, Kafka 0.10.x consumers might not be compatible with older brokers. Ensure that your Kafka brokers are
+version 0.10.x or better before using this service. Refer <a href="https://kafka.apache.org/documentation/#upgrade">Kafka upgrade guide</a> if you are using older version of kafka brokers.
 </div>
 
 ## Submitting a Supervisor Spec

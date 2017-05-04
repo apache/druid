@@ -112,7 +112,8 @@ public class TimeBoundaryQueryRunnerFactory
       final Sequence<Result<DateTime>> resultSequence = QueryRunnerHelper.makeCursorBasedQuery(
           adapter,
           legacyQuery.getQuerySegmentSpec().getIntervals(),
-          Filters.toFilter(legacyQuery.getDimensionsFilter()), VirtualColumns.EMPTY,
+          Filters.toFilter(legacyQuery.getFilter()),
+          VirtualColumns.EMPTY,
           descending,
           Granularities.ALL,
           this.skipToFirstMatching
@@ -154,7 +155,7 @@ public class TimeBoundaryQueryRunnerFactory
               final DateTime minTime;
               final DateTime maxTime;
 
-              if (legacyQuery.getDimensionsFilter() != null) {
+              if (legacyQuery.getFilter() != null) {
                 minTime = getTimeBoundary(adapter, legacyQuery, false);
                 if (minTime == null) {
                   maxTime = null;

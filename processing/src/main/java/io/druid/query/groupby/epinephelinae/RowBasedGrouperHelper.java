@@ -39,7 +39,10 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.query.BaseQuery;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.dimension.ColumnSelectorStrategy;
+import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -51,6 +54,7 @@ import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
@@ -72,7 +76,7 @@ public class RowBasedGrouperHelper
    * been applied to the input rows yet, for example, in a nested query, if an extraction function is being
    * applied in the outer query to a field of the inner query. This method must apply those transformations.
    */
-  public static Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> createGrouperAccumulatorPair(
+  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
       final GroupByQuery query,
       final boolean isInputRaw,
       final Map<String, ValueType> rawInputRowSignature,
@@ -140,27 +144,26 @@ public class RowBasedGrouperHelper
         isInputRaw,
         includeTimestamp,
         columnSelectorFactory,
-        rawInputRowSignature,
         valueTypes
     );
 
-    final Accumulator<Grouper<RowBasedKey>, Row> accumulator = new Accumulator<Grouper<RowBasedKey>, Row>()
+    final Accumulator<AggregateResult, Row> accumulator = new Accumulator<AggregateResult, Row>()
     {
       @Override
-      public Grouper<RowBasedKey> accumulate(
-          final Grouper<RowBasedKey> theGrouper,
+      public AggregateResult accumulate(
+          final AggregateResult priorResult,
           final Row row
       )
       {
         BaseQuery.checkInterrupted();
 
-        if (theGrouper == null) {
-          // Pass-through null returns without doing more work.
-          return null;
+        if (priorResult != null && !priorResult.isOk()) {
+          // Pass-through error returns without doing more work.
+          return priorResult;
         }
 
-        if (!theGrouper.isInitialized()) {
-          theGrouper.init();
+        if (!grouper.isInitialized()) {
+          grouper.init();
         }
 
         columnSelectorRow.set(row);
@@ -168,14 +171,10 @@ public class RowBasedGrouperHelper
         final Comparable[] key = new Comparable[keySize];
         valueExtractFn.apply(row, key);
 
-        final boolean didAggregate = theGrouper.aggregate(new RowBasedKey(key));
-        if (!didAggregate) {
-          // null return means grouping resources were exhausted.
-          return null;
-        }
+        final AggregateResult aggregateResult = grouper.aggregate(new RowBasedKey(key));
         columnSelectorRow.set(null);
 
-        return theGrouper;
+        return aggregateResult;
       }
     };
 
@@ -234,7 +233,6 @@ public class RowBasedGrouperHelper
       final boolean isInputRaw,
       final boolean includeTimestamp,
       final ColumnSelectorFactory columnSelectorFactory,
-      final Map<String, ValueType> rawInputRowSignature,
       final List<ValueType> valueTypes
   )
   {
@@ -247,8 +245,7 @@ public class RowBasedGrouperHelper
     if (isInputRaw) {
       final Supplier<Comparable>[] inputRawSuppliers = getValueSuppliersForDimensions(
           columnSelectorFactory,
-          query.getDimensions(),
-          rawInputRowSignature
+          query.getDimensions()
       );
 
       if (includeTimestamp) {
@@ -346,7 +343,7 @@ public class RowBasedGrouperHelper
               Object dimVal = entry.getKey().getKey()[i];
               theMap.put(
                   query.getDimensions().get(i - dimStart).getOutputName(),
-                  dimVal instanceof String ? Strings.emptyToNull((String)dimVal) : dimVal
+                  dimVal instanceof String ? Strings.emptyToNull((String) dimVal) : dimVal
               );
             }
 
@@ -421,65 +418,111 @@ public class RowBasedGrouperHelper
     }
   }
 
+  private static final InputRawSupplierColumnSelectorStrategyFactory STRATEGY_FACTORY =
+      new InputRawSupplierColumnSelectorStrategyFactory();
+
+  private interface InputRawSupplierColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
+  {
+    Supplier<Comparable> makeInputRawSupplier(ValueSelectorType selector);
+  }
+
+  private static class StringInputRawSupplierColumnSelectorStrategy
+      implements InputRawSupplierColumnSelectorStrategy<DimensionSelector>
+  {
+    @Override
+    public Supplier<Comparable> makeInputRawSupplier(DimensionSelector selector)
+    {
+      return new Supplier<Comparable>()
+      {
+        @Override
+        public Comparable get()
+        {
+          final String value;
+          IndexedInts index = selector.getRow();
+          value = index.size() == 0
+                  ? ""
+                  : selector.lookupName(index.get(0));
+          return Strings.nullToEmpty(value);
+        }
+      };
+    }
+  }
+
+  private static class LongInputRawSupplierColumnSelectorStrategy
+      implements InputRawSupplierColumnSelectorStrategy<LongColumnSelector>
+  {
+    @Override
+    public Supplier<Comparable> makeInputRawSupplier(LongColumnSelector selector)
+    {
+      return new Supplier<Comparable>()
+      {
+        @Override
+        public Comparable get()
+        {
+          return selector.get();
+        }
+      };
+    }
+  }
+
+  private static class FloatInputRawSupplierColumnSelectorStrategy
+      implements InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>
+  {
+    @Override
+    public Supplier<Comparable> makeInputRawSupplier(FloatColumnSelector selector)
+    {
+      return new Supplier<Comparable>()
+      {
+        @Override
+        public Comparable get()
+        {
+          return selector.get();
+        }
+      };
+    }
+  }
+
+  private static class InputRawSupplierColumnSelectorStrategyFactory
+    implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
+  {
+    @Override
+    public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
+        ColumnCapabilities capabilities, ColumnValueSelector selector
+    )
+    {
+      ValueType type = capabilities.getType();
+      switch(type) {
+        case STRING:
+          return new StringInputRawSupplierColumnSelectorStrategy();
+        case LONG:
+          return new LongInputRawSupplierColumnSelectorStrategy();
+        case FLOAT:
+          return new FloatInputRawSupplierColumnSelectorStrategy();
+        default:
+          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+      }
+    }
+  }
+
   @SuppressWarnings("unchecked")
   private static Supplier<Comparable>[] getValueSuppliersForDimensions(
       final ColumnSelectorFactory columnSelectorFactory,
-      final List<DimensionSpec> dimensions,
-      final Map<String, ValueType> rawInputRowSignature
+      final List<DimensionSpec> dimensions
   )
   {
     final Supplier[] inputRawSuppliers = new Supplier[dimensions.size()];
-    for (int i = 0; i < dimensions.size(); i++) {
-      final ColumnValueSelector selector = DimensionHandlerUtils.getColumnValueSelectorFromDimensionSpec(
-          dimensions.get(i),
-          columnSelectorFactory
-      );
-      ValueType type = rawInputRowSignature.get(dimensions.get(i).getDimension());
-      if (type == null) {
-        // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
-        // their types aren't known, so default to String handling.
-        type = ValueType.STRING;
-      }
-      switch (type) {
-        case STRING:
-          inputRawSuppliers[i] = new Supplier<Comparable>()
-          {
-            @Override
-            public Comparable get()
-            {
-              final String value;
-              IndexedInts index = ((DimensionSelector) selector).getRow();
-              value = index.size() == 0
-                      ? ""
-                      : ((DimensionSelector) selector).lookupName(index.get(0));
-              return Strings.nullToEmpty(value);
-            }
-          };
-          break;
-        case LONG:
-          inputRawSuppliers[i] = new Supplier<Comparable>()
-          {
-            @Override
-            public Comparable get()
-            {
-              return ((LongColumnSelector) selector).get();
-            }
-          };
-          break;
-        case FLOAT:
-          inputRawSuppliers[i] = new Supplier<Comparable>()
-          {
-            @Override
-            public Comparable get()
-            {
-              return ((FloatColumnSelector) selector).get();
-            }
-          };
-          break;
-        default:
-          throw new IAE("invalid type: [%s]", type);
-      }
+    final ColumnSelectorPlus[] selectorPluses = DimensionHandlerUtils.createColumnSelectorPluses(
+        STRATEGY_FACTORY,
+        dimensions,
+        columnSelectorFactory
+    );
+
+    for (int i = 0; i < selectorPluses.length; i++) {
+      final ColumnSelectorPlus<InputRawSupplierColumnSelectorStrategy> selectorPlus = selectorPluses[i];
+      final InputRawSupplierColumnSelectorStrategy strategy = selectorPlus.getColumnSelectorStrategy();
+      inputRawSuppliers[i] = strategy.makeInputRawSupplier(selectorPlus.getSelector());
     }
+
     return inputRawSuppliers;
   }
 
@@ -636,7 +679,7 @@ public class RowBasedGrouperHelper
       }
 
       return 0;
-    };
+    }
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedKey>
@@ -935,6 +978,7 @@ public class RowBasedGrouperHelper
        *
        * @param key RowBasedKey containing the grouping key values for a row.
        * @param idx Index of the grouping key column within that this SerdeHelper handles
+       *
        * @return true if the value was added to the key, false otherwise
        */
       boolean putToKeyBuffer(RowBasedKey key, int idx);
@@ -945,11 +989,11 @@ public class RowBasedGrouperHelper
        *
        * The value to be read resides in the buffer at position (`initialOffset` + the SerdeHelper's keyBufferPosition).
        *
-       * @param buffer ByteBuffer containing an array of grouping keys for a row
+       * @param buffer        ByteBuffer containing an array of grouping keys for a row
        * @param initialOffset Offset where non-timestamp grouping key columns start, needed because timestamp is not
        *                      always included in the buffer.
-       * @param dimValIdx Index within dimValues to store the value read from the buffer
-       * @param dimValues Output array containing grouping key values for a row
+       * @param dimValIdx     Index within dimValues to store the value read from the buffer
+       * @param dimValues     Output array containing grouping key values for a row
        */
       void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues);
 
@@ -957,10 +1001,11 @@ public class RowBasedGrouperHelper
        * Compare the values at lhsBuffer[lhsPosition] and rhsBuffer[rhsPosition] using the natural ordering
        * for this SerdeHelper's value type.
        *
-       * @param lhsBuffer ByteBuffer containing an array of grouping keys for a row
-       * @param rhsBuffer ByteBuffer containing an array of grouping keys for a row
+       * @param lhsBuffer   ByteBuffer containing an array of grouping keys for a row
+       * @param rhsBuffer   ByteBuffer containing an array of grouping keys for a row
        * @param lhsPosition Position of value within lhsBuffer
        * @param rhsPosition Position of value within rhsBuffer
+       *
        * @return Negative number if lhs < rhs, positive if lhs > rhs, 0 if lhs == rhs
        */
       int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);

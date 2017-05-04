@@ -367,30 +367,18 @@ public class Druids
       );
     }
 
-    public TimeseriesQueryBuilder copy(TimeseriesQuery query)
+    public static TimeseriesQueryBuilder copy(TimeseriesQuery query)
     {
       return new TimeseriesQueryBuilder()
           .dataSource(query.getDataSource())
-          .intervals(query.getIntervals())
-          .filters(query.getDimensionsFilter())
+          .intervals(query.getQuerySegmentSpec())
           .descending(query.isDescending())
+          .virtualColumns(query.getVirtualColumns())
+          .filters(query.getDimensionsFilter())
           .granularity(query.getGranularity())
           .aggregators(query.getAggregatorSpecs())
           .postAggregators(query.getPostAggregatorSpecs())
           .context(query.getContext());
-    }
-
-    public TimeseriesQueryBuilder copy(TimeseriesQueryBuilder builder)
-    {
-      return new TimeseriesQueryBuilder()
-          .dataSource(builder.dataSource)
-          .intervals(builder.querySegmentSpec)
-          .filters(builder.dimFilter)
-          .descending(builder.descending)
-          .granularity(builder.granularity)
-          .aggregators(builder.aggregatorSpecs)
-          .postAggregators(builder.postAggregatorSpecs)
-          .context(builder.context);
     }
 
     public DataSource getDataSource()
@@ -579,6 +567,7 @@ public class Druids
       querySegmentSpec = null;
       dimensions = null;
       querySpec = null;
+      sortSpec = null;
       context = null;
     }
 
@@ -597,30 +586,18 @@ public class Druids
       );
     }
 
-    public SearchQueryBuilder copy(SearchQuery query)
+    public static SearchQueryBuilder copy(SearchQuery query)
     {
       return new SearchQueryBuilder()
           .dataSource(query.getDataSource())
-          .intervals(query.getQuerySegmentSpec())
           .filters(query.getDimensionsFilter())
           .granularity(query.getGranularity())
           .limit(query.getLimit())
+          .intervals(query.getQuerySegmentSpec())
           .dimensions(query.getDimensions())
           .query(query.getQuery())
+          .sortSpec(query.getSort())
           .context(query.getContext());
-    }
-
-    public SearchQueryBuilder copy(SearchQueryBuilder builder)
-    {
-      return new SearchQueryBuilder()
-          .dataSource(builder.dataSource)
-          .intervals(builder.querySegmentSpec)
-          .filters(builder.dimFilter)
-          .granularity(builder.granularity)
-          .limit(builder.limit)
-          .dimensions(builder.dimensions)
-          .query(builder.querySpec)
-          .context(builder.context);
     }
 
     public SearchQueryBuilder dataSource(String d)
@@ -819,14 +796,14 @@ public class Druids
       );
     }
 
-    public TimeBoundaryQueryBuilder copy(TimeBoundaryQueryBuilder builder)
+    public static TimeBoundaryQueryBuilder copy(TimeBoundaryQuery query)
     {
       return new TimeBoundaryQueryBuilder()
-          .dataSource(builder.dataSource)
-          .intervals(builder.querySegmentSpec)
-          .bound(builder.bound)
-          .filters(builder.dimFilter)
-          .context(builder.context);
+          .dataSource(query.getDataSource())
+          .intervals(query.getQuerySegmentSpec())
+          .bound(query.getBound())
+          .filters(query.getFilter())
+          .context(query.getContext());
     }
 
     public TimeBoundaryQueryBuilder dataSource(String ds)
@@ -993,8 +970,8 @@ public class Druids
       toInclude = null;
       analysisTypes = null;
       merge = null;
-      context = null;
       lenientAggregatorMerge = null;
+      context = null;
     }
 
     public SegmentMetadataQuery build()
@@ -1011,20 +988,16 @@ public class Druids
       );
     }
 
-    public SegmentMetadataQueryBuilder copy(SegmentMetadataQueryBuilder builder)
+    public static SegmentMetadataQueryBuilder copy(SegmentMetadataQuery query)
     {
-      final SegmentMetadataQuery.AnalysisType[] analysisTypesArray =
-          analysisTypes != null
-          ? analysisTypes.toArray(new SegmentMetadataQuery.AnalysisType[analysisTypes.size()])
-          : null;
       return new SegmentMetadataQueryBuilder()
-          .dataSource(builder.dataSource)
-          .intervals(builder.querySegmentSpec)
-          .toInclude(toInclude)
-          .analysisTypes(analysisTypesArray)
-          .merge(merge)
-          .lenientAggregatorMerge(lenientAggregatorMerge)
-          .context(builder.context);
+          .dataSource(query.getDataSource())
+          .intervals(query.getQuerySegmentSpec())
+          .toInclude(query.getToInclude())
+          .analysisTypes(query.getAnalysisTypes())
+          .merge(query.isMerge())
+          .lenientAggregatorMerge(query.isLenientAggregatorMerge())
+          .context(query.getContext());
     }
 
     public SegmentMetadataQueryBuilder dataSource(String ds)
@@ -1072,6 +1045,12 @@ public class Druids
                              ? EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class)
                              : EnumSet.copyOf(Arrays.asList(analysisTypes));
       }
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder analysisTypes(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+    {
+      this.analysisTypes = analysisTypes;
       return this;
     }
 
@@ -1131,11 +1110,13 @@ public class Druids
     {
       dataSource = null;
       querySegmentSpec = null;
+      descending = false;
       context = null;
       dimFilter = null;
       granularity = Granularities.ALL;
       dimensions = Lists.newArrayList();
       metrics = Lists.newArrayList();
+      virtualColumns = null;
       pagingSpec = null;
     }
 
@@ -1155,12 +1136,19 @@ public class Druids
       );
     }
 
-    public SelectQueryBuilder copy(SelectQueryBuilder builder)
+    public static SelectQueryBuilder copy(SelectQuery query)
     {
       return new SelectQueryBuilder()
-          .dataSource(builder.dataSource)
-          .intervals(builder.querySegmentSpec)
-          .context(builder.context);
+          .dataSource(query.getDataSource())
+          .intervals(query.getQuerySegmentSpec())
+          .descending(query.isDescending())
+          .filters(query.getFilter())
+          .granularity(query.getGranularity())
+          .dimensionSpecs(query.getDimensions())
+          .metrics(query.getMetrics())
+          .virtualColumns(query.getVirtualColumns())
+          .pagingSpec(query.getPagingSpec())
+          .context(query.getContext());
     }
 
     public SelectQueryBuilder dataSource(String ds)
@@ -1317,12 +1305,12 @@ public class Druids
       );
     }
 
-    public DataSourceMetadataQueryBuilder copy(DataSourceMetadataQueryBuilder builder)
+    public static DataSourceMetadataQueryBuilder copy(DataSourceMetadataQuery query)
     {
       return new DataSourceMetadataQueryBuilder()
-          .dataSource(builder.dataSource)
-          .intervals(builder.querySegmentSpec)
-          .context(builder.context);
+          .dataSource(query.getDataSource())
+          .intervals(query.getQuerySegmentSpec())
+          .context(query.getContext());
     }
 
     public DataSourceMetadataQueryBuilder dataSource(String ds)

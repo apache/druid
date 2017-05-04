@@ -125,60 +125,24 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public Query<ScanResultValue> withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
-    return new ScanQuery(
-        getDataSource(),
-        querySegmentSpec,
-        resultFormat,
-        batchSize,
-        limit,
-        dimFilter,
-        columns,
-        getContext()
-    );
+    return ScanQueryBuilder.copy(this).intervals(querySegmentSpec).build();
   }
 
   @Override
   public Query<ScanResultValue> withDataSource(DataSource dataSource)
   {
-    return new ScanQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        resultFormat,
-        batchSize,
-        limit,
-        dimFilter,
-        columns,
-        getContext()
-    );
+    return ScanQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   @Override
   public Query<ScanResultValue> withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new ScanQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        resultFormat,
-        batchSize,
-        limit,
-        dimFilter,
-        columns,
-        computeOverridenContext(contextOverrides)
-    );
+    return ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
 
   public ScanQuery withDimFilter(DimFilter dimFilter)
   {
-    return new ScanQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        resultFormat,
-        batchSize,
-        limit,
-        dimFilter,
-        columns,
-        getContext()
-    );
+    return ScanQueryBuilder.copy(this).filters(dimFilter).build();
   }
 
   @Override
@@ -290,12 +254,17 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       );
     }
 
-    public ScanQueryBuilder copy(ScanQueryBuilder builder)
+    public static ScanQueryBuilder copy(ScanQuery query)
     {
       return new ScanQueryBuilder()
-          .dataSource(builder.dataSource)
-          .intervals(builder.querySegmentSpec)
-          .context(builder.context);
+          .dataSource(query.getDataSource())
+          .intervals(query.getQuerySegmentSpec())
+          .resultFormat(query.getResultFormat())
+          .batchSize(query.getBatchSize())
+          .limit(query.getLimit())
+          .filters(query.getFilter())
+          .columns(query.getColumns())
+          .context(query.getContext());
     }
 
     public ScanQueryBuilder dataSource(String ds)

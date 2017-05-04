@@ -17,11 +17,24 @@
  * under the License.
  */
 
-package io.druid.query;
+package io.druid.server.coordinator.rules;
 
-public class QueryContextKeys
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.Period;
+
+public class Rules
 {
-  public static final String PRIORITY = "priority";
-  public static final String TIMEOUT = "timeout";
-  public static final String CHUNK_PERIOD = "chunkPeriod";
+  public static boolean eligibleForLoad(Interval src, Interval target)
+  {
+    return src.contains(target);
+  }
+
+  public static boolean eligibleForLoad(Period period, Interval interval, DateTime referenceTimestamp)
+  {
+    final Interval currInterval = new Interval(period, referenceTimestamp);
+    return currInterval.overlaps(interval) && interval.getStartMillis() >= currInterval.getStartMillis();
+  }
+
+  private Rules() {}
 }

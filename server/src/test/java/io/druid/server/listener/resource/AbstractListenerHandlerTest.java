@@ -61,6 +61,12 @@ public class AbstractListenerHandlerTest
   final AbstractListenerHandler<SomeBeanClass> abstractListenerHandler =
       new AbstractListenerHandler<SomeBeanClass>(SomeBeanClass.TYPE_REFERENCE)
       {
+        @Override
+        public Response handleUpdates(InputStream inputStream, ObjectMapper mapper)
+        {
+          return null;
+        }
+
         @Nullable
         @Override
         public Object post(@NotNull Map<String, SomeBeanClass> inputObject) throws Exception

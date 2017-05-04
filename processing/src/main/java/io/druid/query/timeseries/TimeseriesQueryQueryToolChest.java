@@ -22,6 +22,7 @@ package io.druid.query.timeseries;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -88,6 +89,21 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
     return new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(queryRunner)
     {
+      @Override
+      public Sequence<Result<TimeseriesResultValue>> doRun(
+          QueryRunner<Result<TimeseriesResultValue>> baseRunner,
+          Query<Result<TimeseriesResultValue>> query,
+          Map<String, Object> context
+      )
+      {
+        return super.doRun(
+            baseRunner,
+            // Don't do post aggs until makePostComputeManipulatorFn() is called
+            ((TimeseriesQuery) query).withPostAggregatorSpecs(ImmutableList.<PostAggregator>of()),
+            context
+        );
+      }
+
       @Override
       protected Ordering<Result<TimeseriesResultValue>> makeOrdering(Query<Result<TimeseriesResultValue>> query)
       {
@@ -257,7 +273,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
         final TimeseriesResultValue holder = result.getValue();
         final Map<String, Object> values = Maps.newHashMap(holder.getBaseObject());
-        if (calculatePostAggs) {
+        if (calculatePostAggs && !query.getPostAggregatorSpecs().isEmpty()) {
           // put non finalized aggregators for calculating dependent post Aggregators
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
             values.put(agg.getName(), holder.getMetric(agg.getName()));

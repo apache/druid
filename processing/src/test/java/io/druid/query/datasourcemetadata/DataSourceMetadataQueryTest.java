@@ -33,6 +33,7 @@ import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Druids;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -101,7 +102,7 @@ public class DataSourceMetadataQueryTest
         ), Query.class
     );
 
-    Assert.assertEquals(1, serdeQuery.getContextValue("priority"));
+    Assert.assertEquals(1, serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
     Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
     Assert.assertEquals("true", serdeQuery.getContextValue("populateCache"));
     Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));

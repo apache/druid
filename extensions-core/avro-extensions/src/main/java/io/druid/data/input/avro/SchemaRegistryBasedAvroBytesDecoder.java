@@ -47,7 +47,8 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   }
 
   //For UT only
-  @VisibleForTesting SchemaRegistryBasedAvroBytesDecoder(SchemaRegistryClient registry)
+  @VisibleForTesting
+  SchemaRegistryBasedAvroBytesDecoder(SchemaRegistryClient registry)
   {
     this.registry = registry;
   }
@@ -63,7 +64,8 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       Schema schema = registry.getByID(id);
       DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
       return reader.read(null, DecoderFactory.get().binaryDecoder(bytes.array(), offset, length, null));
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new ParseException(e, "Fail to decode avro message!");
     }
   }
@@ -81,7 +83,6 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     SchemaRegistryBasedAvroBytesDecoder that = (SchemaRegistryBasedAvroBytesDecoder) o;
 
     return registry != null ? registry.equals(that.registry) : that.registry == null;
-
   }
 
   @Override

@@ -75,14 +75,14 @@ public class BufferGrouperUsingSketchMergeAggregatorFactoryTest
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
 
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
       }
 
       updateSketch.update(3);
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
 
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
       }
 
       Object[] holders = Lists.newArrayList(grouper.iterator(true)).get(0).getValues();
