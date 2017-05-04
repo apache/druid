@@ -399,7 +399,6 @@ public class JobHelper
                 progressable
             )) {
               size.set(zipAndCopyDir(mergedBase, outputStream, progressable));
-              outputStream.flush();
             }
             catch (IOException | RuntimeException exception) {
               log.error(exception, "Exception in retry loop");
