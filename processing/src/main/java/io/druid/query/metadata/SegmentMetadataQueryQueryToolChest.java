@@ -59,6 +59,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -188,7 +189,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       public byte[] computeCacheKey(SegmentMetadataQuery query)
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();
-        byte[] analysisTypesBytes = query.getAnalysisTypesCacheKey();
+        byte[] analysisTypesBytes = getAnalysisTypesCacheKey(query);
         return ByteBuffer.allocate(1 + includerBytes.length + analysisTypesBytes.length)
                          .put(SEGMENT_METADATA_CACHE_PREFIX)
                          .put(includerBytes)
@@ -403,5 +404,40 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         analysis.getQueryGranularity(),
         analysis.isRollup()
     );
+  }
+
+  public EnumSet<SegmentMetadataQuery.AnalysisType> getAnalysisTypes(SegmentMetadataQuery query)
+  {
+    if (query.getAnalysisTypes() == null) {
+      return config != null ? config.getDefaultAnalysisType() : SegmentMetadataQueryConfig.DEFAULT_ANALYSIS_TYPES;
+    } else {
+      return query.getAnalysisTypes();
+    }
+  }
+
+  public SegmentAnalyzer getSegmentAnalyzer(SegmentMetadataQuery query)
+  {
+    return new SegmentAnalyzer(getAnalysisTypes(query));
+  }
+
+  private byte[] getAnalysisTypesCacheKey(SegmentMetadataQuery query)
+  {
+    int size = 1;
+    final EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes = getAnalysisTypes(query);
+
+    final List<byte[]> typeBytesList = Lists.newArrayListWithExpectedSize(analysisTypes.size());
+    for (SegmentMetadataQuery.AnalysisType analysisType : analysisTypes) {
+      final byte[] bytes = analysisType.getCacheKey();
+      typeBytesList.add(bytes);
+      size += bytes.length;
+    }
+
+    final ByteBuffer bytes = ByteBuffer.allocate(size);
+    bytes.put(SegmentMetadataQuery.ANALYSIS_TYPES_CACHE_PREFIX);
+    for (byte[] typeBytes : typeBytesList) {
+      bytes.put(typeBytes);
+    }
+
+    return bytes.array();
   }
 }

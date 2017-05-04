@@ -1100,4 +1100,40 @@ public class SegmentMetadataQueryTest
 
     Assert.assertFalse(Arrays.equals(oneColumnQueryCacheKey, twoColumnQueryCacheKey));
   }
+
+  @Test
+  public void testAnanlysisTypesBeingSet()
+  {
+
+    SegmentMetadataQuery query1 = Druids.newSegmentMetadataQueryBuilder()
+                                                .dataSource("testing")
+                                                .toInclude(new ListColumnIncluderator(Arrays.asList("foo")))
+                                                .build();
+
+    SegmentMetadataQuery query2 = Druids.newSegmentMetadataQueryBuilder()
+                                        .dataSource("testing")
+                                        .toInclude(new ListColumnIncluderator(Arrays.asList("foo")))
+                                        .analysisTypes(SegmentMetadataQuery.AnalysisType.MINMAX)
+                                        .build();
+
+    SegmentMetadataQueryConfig emptyCfg = new SegmentMetadataQueryConfig();
+    SegmentMetadataQueryConfig analysisCfg = new SegmentMetadataQueryConfig();
+    analysisCfg.setDefaultAnalysisType(EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY));
+
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysis1 = new SegmentMetadataQueryQueryToolChest(emptyCfg).getAnalysisTypes(query1);
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysis2 = new SegmentMetadataQueryQueryToolChest(emptyCfg).getAnalysisTypes(query2);
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg1 = new SegmentMetadataQueryQueryToolChest(analysisCfg).getAnalysisTypes(query1);
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg2 = new SegmentMetadataQueryQueryToolChest(analysisCfg).getAnalysisTypes(query2);
+
+    EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis1 = SegmentMetadataQueryConfig.DEFAULT_ANALYSIS_TYPES;
+    EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis2 = EnumSet.of(SegmentMetadataQuery.AnalysisType.MINMAX);
+    EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysisWCfg1 = EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY);
+    EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysisWCfg2 = EnumSet.of(SegmentMetadataQuery.AnalysisType.MINMAX);
+
+    Assert.assertEquals(analysis1, expectedAnalysis1);
+    Assert.assertEquals(analysis2, expectedAnalysis2);
+    Assert.assertEquals(analysisWCfg1, expectedAnalysisWCfg1);
+    Assert.assertEquals(analysisWCfg2, expectedAnalysisWCfg2);
+  }
+
 }
