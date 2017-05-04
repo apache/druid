@@ -66,7 +66,6 @@ import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
-import io.druid.indexing.overlord.autoscaling.TwoCloudWorkerProvisioningStrategy;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelper;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
@@ -250,8 +249,6 @@ public class CliOverlord extends ServerRunnable
             );
             biddy.addBinding("simple").to(SimpleWorkerProvisioningStrategy.class);
             biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerProvisioningStrategy.class);
-            biddy.addBinding("twoCloudPendingTaskBased").to(TwoCloudWorkerProvisioningStrategy.class);
-
           }
 
           private void configureOverlordHelpers(Binder binder)

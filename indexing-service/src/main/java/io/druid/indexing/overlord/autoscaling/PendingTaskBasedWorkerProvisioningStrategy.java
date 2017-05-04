@@ -56,8 +56,9 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerProvisioningStrategy
 {
+  public static final String DEFAULT_DUMMY_WORKER_IP = "-2";
+
   private static final EmittingLogger log = new EmittingLogger(PendingTaskBasedWorkerProvisioningStrategy.class);
-  static final String DEFAULT_DUMMY_WORKER_IP = "-2";
 
   private final PendingTaskBasedWorkerProvisioningConfig config;
   private final Supplier<BaseWorkerBehaviorConfig> workerConfigRef;
@@ -106,7 +107,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     return new PendingProvisioner(runner);
   }
 
-  Provisioner makeProvisioner(TasksAndWorkers runner, ScalingStats scalingStats)
+  public Provisioner makeProvisioner(TasksAndWorkers runner, ScalingStats scalingStats)
   {
     return new PendingProvisioner(runner, scalingStats);
   }

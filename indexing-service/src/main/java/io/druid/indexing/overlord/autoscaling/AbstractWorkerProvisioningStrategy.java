@@ -40,7 +40,7 @@ public abstract class AbstractWorkerProvisioningStrategy implements Provisioning
   private final ProvisioningSchedulerConfig provisioningSchedulerConfig;
   private final Supplier<ScheduledExecutorService> execFactory;
 
-  AbstractWorkerProvisioningStrategy(
+  protected AbstractWorkerProvisioningStrategy(
       ProvisioningSchedulerConfig provisioningSchedulerConfig,
       Supplier<ScheduledExecutorService> execFactory
   )
@@ -49,7 +49,7 @@ public abstract class AbstractWorkerProvisioningStrategy implements Provisioning
     this.execFactory = execFactory;
   }
 
-  ProvisioningSchedulerConfig getProvisioningSchedulerConfig()
+  protected ProvisioningSchedulerConfig getProvisioningSchedulerConfig()
   {
     return provisioningSchedulerConfig;
   }
@@ -133,5 +133,5 @@ public abstract class AbstractWorkerProvisioningStrategy implements Provisioning
     }
   }
 
-  abstract Provisioner makeProvisioner(TasksAndWorkers runner);
+  public abstract Provisioner makeProvisioner(TasksAndWorkers runner);
 }

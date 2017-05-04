@@ -24,8 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = WorkerBehaviorConfig.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "oneCloud", value = WorkerBehaviorConfig.class),
-    @JsonSubTypes.Type(name = "twoCloud", value = TwoCloudConfig.class),
+    @JsonSubTypes.Type(name = "default", value = WorkerBehaviorConfig.class)
 })
 public interface BaseWorkerBehaviorConfig
 {

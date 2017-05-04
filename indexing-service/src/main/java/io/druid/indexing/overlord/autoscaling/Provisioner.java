@@ -19,7 +19,7 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
-interface Provisioner
+public interface Provisioner
 {
   boolean doTerminate();
 
