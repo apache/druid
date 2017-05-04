@@ -277,7 +277,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           1024,
           cacheCapacity,
           fetchCapacity,
-          1000,
+          5000,
           3,
           0,
           0
@@ -291,7 +291,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           1024,
           2048,
           2048,
-          1000,
+          5000,
           3,
           0,
           0
@@ -305,7 +305,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           1024,
           2048,
           2048,
-          1000,
+          5000,
           3,
           count,
           0
