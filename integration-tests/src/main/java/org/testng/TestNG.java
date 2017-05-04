@@ -2211,7 +2211,7 @@ public class TestNG
   private URLClassLoader m_serviceLoaderClassLoader;
   private List<ITestNGListener> m_serviceLoaderListeners = Lists.newArrayList();
 
-  /*
+  /**
    * Used to test ServiceClassLoader
    */
   public void setServiceLoaderClassLoader(URLClassLoader ucl)
@@ -2219,7 +2219,7 @@ public class TestNG
     m_serviceLoaderClassLoader = ucl;
   }
 
-  /*
+  /**
    * Used to test ServiceClassLoader
    */
   private void addServiceLoaderListener(ITestNGListener l)
@@ -2227,7 +2227,7 @@ public class TestNG
     m_serviceLoaderListeners.add(l);
   }
 
-  /*
+  /**
    * Used to test ServiceClassLoader
    */
   public List<ITestNGListener> getServiceLoaderListeners()

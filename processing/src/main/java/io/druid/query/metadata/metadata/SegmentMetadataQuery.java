@@ -45,7 +45,8 @@ import java.util.Objects;
 
 public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 {
-  /* The SegmentMetadataQuery cache key may contain UTF-8 column name strings.
+  /**
+   * The SegmentMetadataQuery cache key may contain UTF-8 column name strings.
    * Prepend 0xFF before the analysisTypes as a separator to avoid
    * any potential confusion with string values.
    */
