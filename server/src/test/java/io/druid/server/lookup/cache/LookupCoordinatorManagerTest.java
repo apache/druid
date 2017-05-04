@@ -1135,7 +1135,7 @@ public class LookupCoordinatorManagerTest
         lookupsCommunicator
     );
 
-    Assert.assertNull(manager.knownOldState.get());
+    Assert.assertTrue(manager.knownOldState.get().isEmpty());
 
     manager.start();
 
@@ -1335,6 +1335,7 @@ public class LookupCoordinatorManagerTest
         configManager,
         lookupCoordinatorManagerConfig
     );
+    manager.start();
     Assert.assertEquals(fakeChildren, manager.discoverTiers());
     EasyMock.verify(discoverer);
   }
@@ -1371,12 +1372,10 @@ public class LookupCoordinatorManagerTest
         configManager,
         lookupCoordinatorManagerConfig
     );
-    try {
-      manager.discoverTiers();
-    }
-    finally {
-      EasyMock.verify(discoverer);
-    }
+
+    manager.start();
+    manager.discoverTiers();
+    EasyMock.verify(discoverer);
   }
 
   //tests that lookups stored in db from 0.10.0 are converted and restored.
