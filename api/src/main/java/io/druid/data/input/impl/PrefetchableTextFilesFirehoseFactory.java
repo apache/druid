@@ -19,12 +19,12 @@
 
 package io.druid.data.input.impl;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CountingOutputStream;
 import io.druid.data.input.Firehose;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
@@ -88,17 +88,10 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   // scan yet, so we must download the whole file at once. It's still possible for the size of cached/fetched data to
   // not exceed these variables by estimating the after-fetch size, but it makes us consider the case when any files
   // cannot be fetched due to their large size, which makes the implementation complicated.
-  private long maxCacheCapacityBytes;
+  private final long maxCacheCapacityBytes;
   private final long maxFetchCapacityBytes;
 
   private final long prefetchTriggerBytes;
-
-  private final List<FetchedFile> cacheFiles;
-  private final LinkedBlockingQueue<FetchedFile> fetchFiles;
-
-  // Number of bytes currently fetched files.
-  // This is updated when fetch a file is successfully fetched or a fetched file is deleted.
-  private final AtomicLong fetchedBytes = new AtomicLong(0);
 
   // timeout for fetching an object from the remote site
   private final long fetchTimeout;
@@ -106,7 +99,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   // maximum retry for fetching an object from the remote site
   private final int maxFetchRetry;
 
-  private volatile int nextFetchIndex;
+  private final List<FetchedFile> cacheFiles = new ArrayList<>();
 
   private boolean needCache = true;
 
@@ -129,84 +122,6 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
                                 : prefetchTriggerBytes;
     this.fetchTimeout = fetchTimeout == null ? DEFAULT_FETCH_TIMEOUT : fetchTimeout;
     this.maxFetchRetry = maxFetchRetry == null ? DEFAULT_MAX_FETCH_RETRY : maxFetchRetry;
-
-    cacheFiles = new ArrayList<>();
-    fetchFiles = new LinkedBlockingQueue<>();
-  }
-
-  @VisibleForTesting
-  List<FetchedFile> getCacheFiles()
-  {
-    return cacheFiles;
-  }
-
-  /**
-   * Cache objects in a local disk up to {@link #maxCacheCapacityBytes}.
-   */
-  private void cache(final List<ObjectType> objects, File baseDir)
-  {
-    double totalFetchedBytes = 0;
-    try {
-      for (int i = 0; i < objects.size() && totalFetchedBytes < maxCacheCapacityBytes; i++) {
-        final ObjectType object = objects.get(i);
-        LOG.info("Caching object[%s]", object);
-        final File outFile = File.createTempFile(CACHE_FILE_PREFIX, null, baseDir);
-        totalFetchedBytes += download(object, outFile, 0);
-        cacheFiles.add(new FetchedFile(object, outFile));
-        nextFetchIndex++;
-      }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  /**
-   * Fetch objects to a local disk up to {@link #maxFetchCapacityBytes}.  This method is not thread safe and must be
-   * called by a single thread.  Note that even {@link #maxFetchCapacityBytes} is 0, at least 1 file is always fetched.
-   * This is for simplifying design, and should be improved when our client implementations for cloud storages like S3
-   * support range scan.
-   */
-  private void fetch(final List<ObjectType> objects, File baseDir) throws Exception
-  {
-    for (int i = nextFetchIndex; i < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; i++) {
-      final ObjectType object = objects.get(i);
-      LOG.info("Fetching object[%s]", object);
-      final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, baseDir);
-      fetchedBytes.addAndGet(download(object, outFile, 0));
-      fetchFiles.put(new FetchedFile(object, outFile));
-      nextFetchIndex++;
-    }
-  }
-
-  /**
-   * Downloads an object. It retries downloading {@link #maxFetchRetry} times and throws that exception.
-   *
-   * @param object  an object to be downloaded
-   * @param outFile a file which the object data is stored
-   * @param retry   current retry count
-   *
-   * @return number of downloaded bytes
-   *
-   * @throws IOException
-   */
-  private long download(ObjectType object, File outFile, int retry) throws IOException
-  {
-    try (final InputStream is = openObjectStream(object);
-         final CountingOutputStream cos = new CountingOutputStream(new FileOutputStream(outFile))) {
-      IOUtils.copy(is, cos);
-      return cos.getCount();
-    }
-    catch (IOException e) {
-      if (retry < maxFetchRetry) {
-        LOG.error(e, "Failed to download object[%s], retrying (%d of %d)", object, retry + 1, maxFetchRetry);
-        outFile.delete();
-        return download(object, outFile, retry + 1);
-      } else {
-        LOG.error(e, "Failed to download object[%s], retries exhausted, aborting", object);
-        throw e;
-      }
-    }
   }
 
   @Override
@@ -225,27 +140,107 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
         temporaryDirectory
     );
 
-    if (needCache) {
-      cache(objects, temporaryDirectory);
-      needCache = false;
-    } else {
-      nextFetchIndex = cacheFiles.size();
-    }
-
     // fetchExecutor is responsible for background data fetching
     final ExecutorService fetchExecutor = Executors.newSingleThreadExecutor();
 
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
         {
-          private final Iterator<FetchedFile> cacheFileIterator = cacheFiles.iterator();
-          private long remainingCachedBytes = cacheFiles.stream()
-                                                .mapToLong(FetchedFile::length)
-                                                .sum();
+          private final LinkedBlockingQueue<FetchedFile> fetchFiles = new LinkedBlockingQueue<>();
+
+          // Number of bytes currently fetched files.
+          // This is updated when a file is successfully fetched or a fetched file is deleted.
+          private final AtomicLong fetchedBytes = new AtomicLong(0);
+
+          private final Iterator<FetchedFile> cacheFileIterator;
+
+          private long remainingCachedBytes;
           private Future<Void> fetchFuture;
+          private volatile int nextFetchIndex;
 
           {
+            if (needCache) {
+              cache(objects, temporaryDirectory);
+              needCache = false;
+            } else {
+              nextFetchIndex = cacheFiles.size();
+            }
+            cacheFileIterator = cacheFiles.iterator();
+            remainingCachedBytes = cacheFiles.stream()
+                                             .mapToLong(FetchedFile::length)
+                                             .sum();
             fetchIfNeeded(remainingCachedBytes);
+          }
+
+          /**
+           * Cache objects in a local disk up to {@link PrefetchableTextFilesFirehoseFactory#maxCacheCapacityBytes}.
+           */
+          private void cache(final List<ObjectType> objects, File baseDir)
+          {
+            double totalFetchedBytes = 0;
+            try {
+              for (int i = 0; i < objects.size() && totalFetchedBytes < maxCacheCapacityBytes; i++) {
+                final ObjectType object = objects.get(i);
+                LOG.info("Caching object[%s]", object);
+                final File outFile = File.createTempFile(CACHE_FILE_PREFIX, null, baseDir);
+                totalFetchedBytes += download(object, outFile, 0);
+                cacheFiles.add(new FetchedFile(object, outFile));
+                nextFetchIndex++;
+              }
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+          }
+
+          /**
+           * Fetch objects to a local disk up to {@link PrefetchableTextFilesFirehoseFactory#maxFetchCapacityBytes}.
+           * This method is not thread safe and must be called by a single thread.  Note that even
+           * {@link PrefetchableTextFilesFirehoseFactory#maxFetchCapacityBytes} is 0, at least 1 file is always fetched.
+           * This is for simplifying design, and should be improved when our client implementations for cloud storages
+           * like S3 support range scan.
+           */
+          private void fetch(final List<ObjectType> objects, File baseDir) throws Exception
+          {
+            for (int i = nextFetchIndex; i < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; i++) {
+              final ObjectType object = objects.get(i);
+              LOG.info("Fetching object[%s], fetchedBytes[%d]", object, fetchedBytes.get());
+              final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, baseDir);
+              fetchedBytes.addAndGet(download(object, outFile, 0));
+              fetchFiles.put(new FetchedFile(object, outFile));
+              nextFetchIndex++;
+            }
+          }
+
+          /**
+           * Downloads an object. It retries downloading {@link PrefetchableTextFilesFirehoseFactory#maxFetchRetry}
+           * times and throws that exception.
+           *
+           * @param object  an object to be downloaded
+           * @param outFile a file which the object data is stored
+           * @param retry   current retry count
+           *
+           * @return number of downloaded bytes
+           *
+           * @throws IOException
+           */
+          private long download(ObjectType object, File outFile, int retry) throws IOException
+          {
+            try (final InputStream is = openObjectStream(object);
+                 final CountingOutputStream cos = new CountingOutputStream(new FileOutputStream(outFile))) {
+              IOUtils.copy(is, cos);
+              return cos.getCount();
+            }
+            catch (IOException e) {
+              if (!Thread.currentThread().isInterrupted() && retry < maxFetchRetry) {
+                LOG.error(e, "Failed to download object[%s], retrying (%d of %d)", object, retry + 1, maxFetchRetry);
+                outFile.delete();
+                return download(object, outFile, retry + 1);
+              } else {
+                LOG.error(e, "Failed to download object[%s], retries exhausted, aborting", object);
+                throw e;
+              }
+            }
           }
 
           @Override
@@ -282,6 +277,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
             if (fetchFuture != null && fetchFuture.isDone()) {
               try {
                 fetchFuture.get();
+                fetchFuture = null;
               }
               catch (InterruptedException | ExecutionException e) {
                 Throwables.propagate(e);
@@ -341,7 +337,16 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           }
         },
         firehoseParser,
-        fetchExecutor::shutdown
+        () -> {
+          fetchExecutor.shutdownNow();
+          try {
+            Preconditions.checkState(fetchExecutor.awaitTermination(fetchTimeout, TimeUnit.MILLISECONDS));
+          }
+          catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ISE("Failed to shutdown fetch executor during close");
+          }
+        }
     );
   }
 

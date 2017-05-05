@@ -138,7 +138,6 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
-      Assert.assertEquals(0, factory.getCacheFiles().size());
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -155,7 +154,6 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
-      Assert.assertEquals(0, factory.getCacheFiles().size());
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -266,6 +264,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
   static class TestPrefetchableTextFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<File>
   {
+    private static final long defaultTimeout = 5000;
     private final long sleepMillis;
     private final File baseDir;
     private int openExceptionCount;
@@ -277,7 +276,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           1024,
           cacheCapacity,
           fetchCapacity,
-          5000,
+          defaultTimeout,
           3,
           0,
           0
@@ -291,7 +290,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           1024,
           2048,
           2048,
-          5000,
+          defaultTimeout,
           3,
           0,
           0
@@ -305,7 +304,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           1024,
           2048,
           2048,
-          5000,
+          defaultTimeout,
           3,
           count,
           0
@@ -371,7 +370,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           Thread.sleep(sleepMillis);
         }
         catch (InterruptedException e) {
-          throw new IOException(e);
+          throw new RuntimeException(e);
         }
       }
       return FileUtils.openInputStream(object);
