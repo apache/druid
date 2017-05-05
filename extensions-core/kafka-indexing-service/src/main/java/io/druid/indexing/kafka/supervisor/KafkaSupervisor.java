@@ -1795,7 +1795,7 @@ public class KafkaSupervisor implements Supervisor
           );
         }
         catch (InterruptedException e) {
-          log.warn("Interrupted while computing Kafka lag");
+          // do nothing, probably we are shutting down
         }
         catch (Exception e) {
           log.warn(e, "Unable to compute Kafka lag");
