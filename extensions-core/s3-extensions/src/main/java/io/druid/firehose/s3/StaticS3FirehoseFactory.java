@@ -25,32 +25,38 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
+import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
  */
-public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
+public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<S3Object>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
   private final RestS3Service s3Client;
   private final List<URI> uris;
+  private final List<URI> directories;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
       @JacksonInject("s3Client") RestS3Service s3Client,
       @JsonProperty("uris") List<URI> uris,
+      @JsonProperty("directories") List<URI> directories,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
@@ -60,9 +66,22 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.s3Client = Preconditions.checkNotNull(s3Client, "null s3Client");
-    this.uris = uris;
+    this.uris = uris == null ? new ArrayList<>() : uris;
+    this.directories = directories == null ? new ArrayList<>() : directories;
 
-    for (final URI inputURI : uris) {
+    if (!this.uris.isEmpty() && !this.directories.isEmpty()) {
+      throw new IAE("uris and directories cannot be used together");
+    }
+
+    if (this.uris.isEmpty() && this.directories.isEmpty()) {
+      throw new IAE("uris or directories must be specified");
+    }
+
+    for (final URI inputURI : this.uris) {
+      Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
+    }
+
+    for (final URI inputURI : this.directories) {
       Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
     }
   }
@@ -73,26 +92,60 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     return uris;
   }
 
-  @Override
-  protected Collection<URI> initObjects()
+  @JsonProperty("directories")
+  public List<URI> getDirectories()
   {
-    return uris;
+    return directories;
   }
 
   @Override
-  protected InputStream openObjectStream(URI object) throws IOException
+  protected Collection<S3Object> initObjects() throws IOException
   {
-    final String s3Bucket = object.getAuthority();
-    final S3Object s3Object = new S3Object(
-        object.getPath().startsWith("/")
-        ? object.getPath().substring(1)
-        : object.getPath()
-    );
+    // Here, the returned s3 objects contain minimal information without data.
+    // Getting data is deferred until openObjectStream() is called for each object.
+    if (!uris.isEmpty()) {
+      return uris.stream()
+          .map(
+              uri -> {
+                final String s3Bucket = uri.getAuthority();
+                final S3Object s3Object = new S3Object(extractS3Key(uri));
+                s3Object.setBucketName(s3Bucket);
+                return s3Object;
+              }
+          )
+          .collect(Collectors.toList());
+    } else {
+      final List<S3Object> objects = new ArrayList<>();
+      for (URI uri : directories) {
+        final String bucket = uri.getAuthority();
+        final String prefix = extractS3Key(uri);
+        try {
+          final S3Object[] listed = s3Client.listObjects(bucket, prefix, null);
+          objects.addAll(Arrays.asList(listed));
+        }
+        catch (S3ServiceException e) {
+          throw new IOException(e);
+        }
+      }
+      return objects;
+    }
+  }
 
-    log.info("Reading from bucket[%s] object[%s] (%s)", s3Bucket, s3Object.getKey(), object);
+  private static String extractS3Key(URI uri)
+  {
+    return uri.getPath().startsWith("/")
+           ? uri.getPath().substring(1)
+           : uri.getPath();
+  }
+
+  @Override
+  protected InputStream openObjectStream(S3Object object) throws IOException
+  {
+    log.info("Reading from bucket[%s] object[%s] (%s)", object.getBucketName(), object.getKey(), object);
 
     try {
-      return s3Client.getObject(new S3Bucket(s3Bucket), s3Object.getKey()).getDataInputStream();
+      // Get data of the given object and open an input stream
+      return s3Client.getObject(object.getBucketName(), object.getKey()).getDataInputStream();
     }
     catch (ServiceException e) {
       throw new IOException(e);
@@ -100,9 +153,9 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected InputStream wrapObjectStream(URI object, InputStream stream) throws IOException
+  protected InputStream wrapObjectStream(S3Object object, InputStream stream) throws IOException
   {
-    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+    return object.getKey().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 
   @Override

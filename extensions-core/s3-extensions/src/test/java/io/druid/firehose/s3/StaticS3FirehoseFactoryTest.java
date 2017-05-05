@@ -67,7 +67,7 @@ public class StaticS3FirehoseFactoryTest
         @JsonProperty("uris") List<URI> uris
     )
     {
-      super(EasyMock.niceMock(RestS3Service.class), uris, null, null, null, null, null);
+      super(EasyMock.niceMock(RestS3Service.class), uris, null, null, null, null, null, null);
     }
   }
 }

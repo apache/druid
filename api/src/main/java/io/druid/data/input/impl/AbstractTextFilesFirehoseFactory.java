@@ -99,7 +99,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
    *
    * @return a collection of initialized objects.
    */
-  protected abstract Collection<ObjectType> initObjects();
+  protected abstract Collection<ObjectType> initObjects() throws IOException;
 
   /**
    * Open an input stream from the given object.  If the object is compressed, this method should return a byte stream
