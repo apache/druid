@@ -102,7 +102,6 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
   protected abstract Collection<ObjectType> initObjects();
 
   /**
-   * TODO
    * Open an input stream from the given object.  If the object is compressed, this method should return a byte stream
    * as it is compressed.  The object compression should be handled in {@link #wrapObjectStream(Object, InputStream)}.
    *
@@ -115,7 +114,6 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
   protected abstract InputStream openObjectStream(ObjectType object) throws IOException;
 
   /**
-   * TODO
    * Wrap the given input stream if needed.  The decompression logic should be applied to the given stream if the object
    * is compressed.
    *
