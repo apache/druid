@@ -70,7 +70,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
   }
 
   @Override
-  protected InputStream openStream(CloudFilesBlob object) throws IOException
+  protected InputStream openObjectStream(CloudFilesBlob object) throws IOException
   {
     final String region = object.getRegion();
     final String container = object.getContainer();
@@ -83,7 +83,12 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
         cloudFilesApi, region, container);
     final CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
 
-    final InputStream stream = byteSource.openStream();
+    return byteSource.openStream();
+  }
+
+  @Override
+  protected InputStream wrapObjectStream(CloudFilesBlob object, InputStream stream) throws IOException
+  {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 }

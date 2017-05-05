@@ -25,7 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CountingOutputStream;
 import io.druid.data.input.Firehose;
-import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
@@ -94,8 +93,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
 
   private final long prefetchTriggerBytes;
 
-  private final List<File> cacheFiles;
-  private final LinkedBlockingQueue<File> fetchFiles;
+  private final List<FetchedFile> cacheFiles;
+  private final LinkedBlockingQueue<FetchedFile> fetchFiles;
 
   // Number of bytes currently fetched files.
   // This is updated when fetch a file is successfully fetched or a fetched file is deleted.
@@ -136,7 +135,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   }
 
   @VisibleForTesting
-  List<File> getCacheFiles()
+  List<FetchedFile> getCacheFiles()
   {
     return cacheFiles;
   }
@@ -153,7 +152,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
         LOG.info("Caching object[%s]", object);
         final File outFile = File.createTempFile(CACHE_FILE_PREFIX, null, baseDir);
         totalFetchedBytes += download(object, outFile, 0);
-        cacheFiles.add(outFile);
+        cacheFiles.add(new FetchedFile(object, outFile));
         nextFetchIndex++;
       }
     }
@@ -175,7 +174,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
       LOG.info("Fetching object[%s]", object);
       final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, baseDir);
       fetchedBytes.addAndGet(download(object, outFile, 0));
-      fetchFiles.put(outFile);
+      fetchFiles.put(new FetchedFile(object, outFile));
       nextFetchIndex++;
     }
   }
@@ -193,7 +192,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
    */
   private long download(ObjectType object, File outFile, int retry) throws IOException
   {
-    try (final InputStream is = openStream(object);
+    try (final InputStream is = openObjectStream(object);
          final CountingOutputStream cos = new CountingOutputStream(new FileOutputStream(outFile))) {
       IOUtils.copy(is, cos);
       return cos.getCount();
@@ -239,9 +238,9 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
         {
-          private final Iterator<File> cacheFileIterator = cacheFiles.iterator();
+          private final Iterator<FetchedFile> cacheFileIterator = cacheFiles.iterator();
           private long remainingCachedBytes = cacheFiles.stream()
-                                                .mapToLong(File::length)
+                                                .mapToLong(FetchedFile::length)
                                                 .sum();
           private Future<Void> fetchFuture;
 
@@ -278,7 +277,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
             }
 
             // If fetch() fails, hasNext() always returns true because nextFetchIndex must be smaller than the number
-            // of objects which means next() is always called. The below block checks that fetch() threw an exception
+            // of objects, which means next() is always called. The below block checks that fetch() threw an exception
             // and propagates it if exists.
             if (fetchFuture != null && fetchFuture.isDone()) {
               try {
@@ -289,7 +288,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
               }
             }
 
-            final File fetchedFile;
+            final FetchedFile fetchedFile;
             final Closeable closeable;
             // Check cache first
             if (cacheFileIterator.hasNext()) {
@@ -324,10 +323,10 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
             }
 
             try {
-              InputStream stream = FileUtils.openInputStream(fetchedFile);
-              if (fetchedFile.getName().endsWith(".gz")) {
-                stream = CompressionUtils.gzipInputStream(stream);
-              }
+              final InputStream stream = wrapObjectStream(
+                  fetchedFile.object,
+                  FileUtils.openInputStream(fetchedFile.file)
+              );
 
               return new ResourceCloseableLineIterator(
                   new BufferedReader(
@@ -369,6 +368,28 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
       catch (IOException e) {
         throw Throwables.propagate(e);
       }
+    }
+  }
+
+  private class FetchedFile
+  {
+    private final ObjectType object;
+    private final File file;
+
+    public FetchedFile(ObjectType object, File file)
+    {
+      this.object = object;
+      this.file = file;
+    }
+
+    public long length()
+    {
+      return file.length();
+    }
+
+    public void delete()
+    {
+      file.delete();
     }
   }
 }

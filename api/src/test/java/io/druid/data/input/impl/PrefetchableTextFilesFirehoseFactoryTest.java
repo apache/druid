@@ -360,7 +360,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     }
 
     @Override
-    protected InputStream openStream(File object) throws IOException
+    protected InputStream openObjectStream(File object) throws IOException
     {
       if (openExceptionCount > 0) {
         openExceptionCount--;
@@ -375,6 +375,12 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         }
       }
       return FileUtils.openInputStream(object);
+    }
+
+    @Override
+    protected InputStream wrapObjectStream(File object, InputStream stream) throws IOException
+    {
+      return stream;
     }
   }
 }

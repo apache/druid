@@ -65,14 +65,19 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
   }
 
   @Override
-  protected InputStream openStream(GoogleBlob object) throws IOException
+  protected InputStream openObjectStream(GoogleBlob object) throws IOException
   {
     final String bucket = object.getBucket();
     final String path = object.getPath().startsWith("/")
                         ? object.getPath().substring(1)
                         : object.getPath();
 
-    final InputStream stream = new GoogleByteSource(storage, bucket, path).openStream();
+    return new GoogleByteSource(storage, bucket, path).openStream();
+  }
+
+  @Override
+  protected InputStream wrapObjectStream(GoogleBlob object, InputStream stream) throws IOException
+  {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 }

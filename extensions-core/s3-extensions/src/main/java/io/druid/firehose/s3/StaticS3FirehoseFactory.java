@@ -80,7 +80,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected InputStream openStream(URI object) throws IOException
+  protected InputStream openObjectStream(URI object) throws IOException
   {
     final String s3Bucket = object.getAuthority();
     final S3Object s3Object = new S3Object(
@@ -92,12 +92,17 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     log.info("Reading from bucket[%s] object[%s] (%s)", s3Bucket, s3Object.getKey(), object);
 
     try {
-      final InputStream stream = s3Client.getObject(new S3Bucket(s3Bucket), s3Object.getKey()).getDataInputStream();
-      return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+      return s3Client.getObject(new S3Bucket(s3Bucket), s3Object.getKey()).getDataInputStream();
     }
     catch (ServiceException e) {
       throw new IOException(e);
     }
+  }
+
+  @Override
+  protected InputStream wrapObjectStream(URI object, InputStream stream) throws IOException
+  {
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 
   @Override

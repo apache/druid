@@ -89,9 +89,14 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   }
 
   @Override
-  protected InputStream openStream(File object) throws IOException
+  protected InputStream openObjectStream(File object) throws IOException
   {
-    final InputStream stream = FileUtils.openInputStream(object);
+    return FileUtils.openInputStream(object);
+  }
+
+  @Override
+  protected InputStream wrapObjectStream(File object, InputStream stream) throws IOException
+  {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 }

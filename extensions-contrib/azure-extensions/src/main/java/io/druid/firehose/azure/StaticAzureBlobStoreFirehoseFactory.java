@@ -69,14 +69,15 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
   }
 
   @Override
-  protected InputStream openStream(AzureBlob object) throws IOException
+  protected InputStream openObjectStream(AzureBlob object) throws IOException
   {
-    final InputStream stream = makeByteSource(azureStorage, object).openStream();
-    if (object.getPath().endsWith(".gz")) {
-      return CompressionUtils.gzipInputStream(stream);
-    } else {
-      return stream;
-    }
+    return makeByteSource(azureStorage, object).openStream();
+  }
+
+  @Override
+  protected InputStream wrapObjectStream(AzureBlob object, InputStream stream) throws IOException
+  {
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 
   private static AzureByteSource makeByteSource(AzureStorage azureStorage, AzureBlob object)

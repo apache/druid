@@ -74,7 +74,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
             try {
               return IOUtils.lineIterator(
                   new BufferedReader(
-                      new InputStreamReader(openStream(object), Charsets.UTF_8)
+                      new InputStreamReader(wrapObjectStream(object, openObjectStream(object)), Charsets.UTF_8)
                   )
               );
             }
@@ -102,7 +102,9 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
   protected abstract Collection<ObjectType> initObjects();
 
   /**
-   * Open an input stream from the given object.
+   * TODO
+   * Open an input stream from the given object.  If the object is compressed, this method should return a byte stream
+   * as it is compressed.  The object compression should be handled in {@link #wrapObjectStream(Object, InputStream)}.
    *
    * @param object an object to be read
    *
@@ -110,5 +112,17 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
    *
    * @throws IOException
    */
-  protected abstract InputStream openStream(ObjectType object) throws IOException;
+  protected abstract InputStream openObjectStream(ObjectType object) throws IOException;
+
+  /**
+   * TODO
+   * Wrap the given input stream if needed.  The decompression logic should be applied to the given stream if the object
+   * is compressed.
+   *
+   * @param object an input object
+   * @param stream a stream for the object
+   * @return
+   * @throws IOException
+   */
+  protected abstract InputStream wrapObjectStream(ObjectType object, InputStream stream) throws IOException;
 }
