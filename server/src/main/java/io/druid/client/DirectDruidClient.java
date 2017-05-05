@@ -42,6 +42,7 @@ import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.common.utils.StringUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
@@ -60,6 +61,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -68,6 +70,7 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
 import java.io.Closeable;
@@ -84,14 +87,19 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
+  public static final String QUERY_START_TIME = "queryStartTime";
+  public static final String QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
+
   private static final Logger log = new Logger(DirectDruidClient.class);
 
   private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = Maps.newConcurrentMap();
@@ -174,10 +182,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private final AtomicLong byteCount = new AtomicLong(0);
         private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
+        private final AtomicReference<String> fail = new AtomicReference<>();
 
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response)
         {
+          checkQueryTimeout();
+          checkTotalBytesLimit(response.getContent().readableBytes());
+
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
           queryMetrics.reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
@@ -222,6 +234,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     @Override
                     public boolean hasMoreElements()
                     {
+                      if (fail.get() != null) {
+                        throw new RE(fail.get());
+                      }
+                      checkQueryTimeout();
+
                       // Done is always true until the last stream has be put in the queue.
                       // Then the stream should be spouting good InputStreams.
                       synchronized (done) {
@@ -232,8 +249,17 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     @Override
                     public InputStream nextElement()
                     {
+                      if (fail.get() != null) {
+                        throw new RE(fail.get());
+                      }
+
                       try {
-                        return queue.take();
+                        InputStream is = queue.poll(checkQueryTimeout(), TimeUnit.MILLISECONDS);
+                        if (is != null) {
+                          return is;
+                        } else {
+                          throw new RE("Query[%s] url[%s] timed out.", query.getId(), url);
+                        }
                       }
                       catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -250,8 +276,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             ClientResponse<InputStream> clientResponse, HttpChunk chunk
         )
         {
+          checkQueryTimeout();
+
           final ChannelBuffer channelBuffer = chunk.getContent();
           final int bytes = channelBuffer.readableBytes();
+
+          checkTotalBytesLimit(bytes);
+
           if (bytes > 0) {
             try {
               queue.put(new ChannelBufferInputStream(channelBuffer));
@@ -308,34 +339,100 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public void exceptionCaught(final ClientResponse<InputStream> clientResponse, final Throwable e)
         {
-          // Don't wait for lock in case the lock had something to do with the error
-          synchronized (done) {
-            done.set(true);
-            // Make a best effort to put a zero length buffer into the queue in case something is waiting on the take()
-            // If nothing is waiting on take(), this will be closed out anyways.
-            queue.offer(
-                new InputStream()
-                {
-                  @Override
-                  public int read() throws IOException
-                  {
-                    throw new IOException(e);
-                  }
-                }
-            );
+          String msg = StringUtils.safeFormat(
+              "Query[%s] url[%s] failed with exception msg [%s]",
+              query.getId(),
+              url,
+              e.getMessage()
+          );
+          setupResponseReadFailure(msg, e);
+        }
+
+        private void setupResponseReadFailure(String msg, Throwable th)
+        {
+          fail.set(msg);
+          queue.clear();
+          queue.offer(new InputStream()
+          {
+            @Override
+            public int read() throws IOException
+            {
+              if (th != null) {
+                throw new IOException(msg, th);
+              } else {
+                throw new IOException(msg);
+              }
+            }
+          });
+
+        }
+
+        // Returns remaining timeout or throws exception if timeout already elapsed.
+        private long checkQueryTimeout()
+        {
+          Object obj = context.get(QUERY_START_TIME);
+
+          if (obj != null) {
+            long timeLeft = QueryContexts.getTimeout(query) - (System.currentTimeMillis() - ((Long) obj).longValue());
+            if (timeLeft <= 0) {
+              String msg = StringUtils.safeFormat("Query[%s] url[%s] timed out.", query.getId(), url);
+              setupResponseReadFailure(msg, null);
+              throw new RE(msg);
+            } else {
+              return timeLeft;
+            }
+          } else {
+            return QueryContexts.getTimeout(query);
+          }
+        }
+
+        private void checkTotalBytesLimit(long bytes)
+        {
+          long limit = QueryContexts.getMaxScatterGatherBytes(query);
+
+          if (limit < Long.MAX_VALUE) {
+            synchronized (context) {
+              if(context.get(QUERY_TOTAL_BYTES_GATHERED) == null) {
+                context.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+              }
+            }
+
+            AtomicLong totalBytesGathered = (AtomicLong) context.get(QUERY_TOTAL_BYTES_GATHERED);
+
+            if (totalBytesGathered.addAndGet(bytes) > limit) {
+              String msg = StringUtils.safeFormat(
+                  "Query[%s] url[%s] max scatter-gather bytes limit reached.",
+                  query.getId(),
+                  url
+              );
+              setupResponseReadFailure(msg, null);
+              throw new RE(msg);
+            }
           }
         }
       };
+
+      long timeLeft = QueryContexts.getTimeout(query);
+      Object queryStartTimeObj = context.get(QUERY_START_TIME);
+      if (queryStartTimeObj != null) {
+        timeLeft = timeLeft - (System.currentTimeMillis() - ((Long) queryStartTimeObj).longValue());
+      }
+
+      if (timeLeft <= 0) {
+        throw new RE("Query[%s] url[%s] timed out.", query.getId(), url);
+      }
+
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
               new URL(url)
-          ).setContent(objectMapper.writeValueAsBytes(query))
+          ).setContent(objectMapper.writeValueAsBytes(QueryContexts.withTimeout(query, timeLeft)))
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
            ),
-          responseHandler
+          responseHandler,
+          Duration.millis(timeLeft)
       );
 
       queryWatcher.registerQuery(query, future);
@@ -368,8 +465,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                            ? SmileMediaTypes.APPLICATION_JACKSON_SMILE
                            : MediaType.APPLICATION_JSON
                        ),
-                      new StatusResponseHandler(Charsets.UTF_8)
-                  ).get();
+                      new StatusResponseHandler(Charsets.UTF_8),
+                      Duration.standardSeconds(1)
+                  ).get(1, TimeUnit.SECONDS);
+
                   if (res.getStatus().getCode() >= 500) {
                     throw new RE(
                         "Error cancelling query[%s]: queriable node returned status[%d] [%s].",
@@ -378,7 +477,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     );
                   }
                 }
-                catch (IOException | ExecutionException | InterruptedException e) {
+                catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
                   Throwables.propagate(e);
                 }
               }
@@ -396,7 +495,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public JsonParserIterator<T> make()
           {
-            return new JsonParserIterator<T>(typeRef, future, url);
+            return new JsonParserIterator<T>(typeRef, future, url, query);
           }
 
           @Override
@@ -428,13 +527,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     private ObjectCodec objectCodec;
     private final JavaType typeRef;
     private final Future<InputStream> future;
+    private final Query<T> query;
     private final String url;
 
-    public JsonParserIterator(JavaType typeRef, Future<InputStream> future, String url)
+    public JsonParserIterator(JavaType typeRef, Future<InputStream> future, String url, Query<T> query)
     {
       this.typeRef = typeRef;
       this.future = future;
       this.url = url;
+      this.query = query;
       jp = null;
     }
 
@@ -458,6 +559,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     public T next()
     {
       init();
+
       try {
         final T retVal = objectCodec.readValue(jp, typeRef);
         jp.nextToken();
@@ -478,7 +580,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     {
       if (jp == null) {
         try {
-          jp = objectMapper.getFactory().createParser(future.get());
+          InputStream is = future.get();
+          if (is == null) {
+            throw new QueryInterruptedException(
+                new ResourceLimitExceededException(
+                    "query[%s] url[%s] timed out or max bytes limit reached.",
+                    query.getId(),
+                    url
+                ),
+                host
+            );
+          } else {
+            jp = objectMapper.getFactory().createParser(is);
+          }
           final JsonToken nextToken = jp.nextToken();
           if (nextToken == JsonToken.START_OBJECT) {
             QueryInterruptedException cause = jp.getCodec().readValue(jp, QueryInterruptedException.class);
@@ -491,7 +605,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
         catch (IOException | InterruptedException | ExecutionException e) {
-          throw new RE(e, "Failure getting results from[%s] because of [%s]", url, e.getMessage());
+          throw new RE(
+              e,
+              "Failure getting results for query[%s] url[%s] because of [%s]",
+              query.getId(),
+              url,
+              e.getMessage()
+          );
         }
         catch (CancellationException e) {
           throw new QueryInterruptedException(e, host);

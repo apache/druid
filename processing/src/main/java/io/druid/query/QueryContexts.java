@@ -27,6 +27,7 @@ public class QueryContexts
 {
   public static final String PRIORITY_KEY = "priority";
   public static final String TIMEOUT_KEY = "timeout";
+  public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
 
@@ -98,6 +99,11 @@ public class QueryContexts
     return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");
   }
 
+  public static <T> long getMaxScatterGatherBytes(Query<T> query)
+  {
+    return parseLong(query, MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+  }
+
   public static <T> boolean hasTimeout(Query<T> query)
   {
     return getTimeout(query) != NO_TIMEOUT;
@@ -113,6 +119,11 @@ public class QueryContexts
     final long timeout = parseLong(query, TIMEOUT_KEY, defaultTimeout);
     Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%d]", timeout);
     return timeout;
+  }
+
+  public static <T> Query<T> withTimeout(Query<T> query, long timeout)
+  {
+    return query.withOverriddenContext(ImmutableMap.of(TIMEOUT_KEY, timeout));
   }
 
   public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)

@@ -51,6 +51,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -74,7 +75,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(futureResult)
@@ -84,7 +86,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(futureException)
@@ -93,7 +96,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(SettableFuture.create())
@@ -194,7 +198,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(cancelledFuture)
@@ -203,7 +208,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(cancellationFuture)
@@ -271,7 +277,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(interruptionFuture)
