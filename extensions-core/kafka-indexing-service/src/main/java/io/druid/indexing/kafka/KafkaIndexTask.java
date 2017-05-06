@@ -918,7 +918,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 true
             )
         );
-        driverHolders.get(0).startJob(toolbox.getObjectMapper());
+        nextOffsets.putAll(driverHolders.get(0).startJob(toolbox.getObjectMapper()));
         if (driverHolders.get(0).isComplete()) {
           persistAndPossiblyPublish(driverHolders.get(0));
         }
