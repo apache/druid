@@ -83,11 +83,14 @@ Since the CSV data cannot contain the column names (no header is allowed), these
     "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"],
     "dimensionsSpec" : {
       "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
-    }
+    },
+    "maxNumSkipHeadRows" : 5
   }
 ```
 
 The `columns` field must match the columns of your input data in the same order.
+Additionally, you can set the number of head rows to be skipped to `maxNumSkipHeadRows`. Note that this option is effective
+only for non-Hadoop index tasks.
 
 ### TSV
 
@@ -101,13 +104,16 @@ The `columns` field must match the columns of your input data in the same order.
     "delimiter":"|",
     "dimensionsSpec" : {
       "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
-    }
+    },
+    "maxNumSkipHeadRows" : 5
   }
 ```
 
 The `columns` field must match the columns of your input data in the same order. 
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
+Additionally, you can set the number of head rows to be skipped to `maxNumSkipHeadRows`. Note that this option is effective
+only for non-Hadoop index tasks.
 
 ### Regex
 

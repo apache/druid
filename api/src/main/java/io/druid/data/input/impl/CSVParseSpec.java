@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-
 import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.Parser;
 
@@ -35,13 +34,15 @@ public class CSVParseSpec extends ParseSpec
 {
   private final String listDelimiter;
   private final List<String> columns;
+  private final Integer maxNumSkipHeadRows;
 
   @JsonCreator
   public CSVParseSpec(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("listDelimiter") String listDelimiter,
-      @JsonProperty("columns") List<String> columns
+      @JsonProperty("columns") List<String> columns,
+      @JsonProperty("maxNumSkipHeadRows") Integer maxNumSkipHeadRows
   )
   {
     super(timestampSpec, dimensionsSpec);
@@ -53,6 +54,7 @@ public class CSVParseSpec extends ParseSpec
     }
 
     this.columns = columns;
+    this.maxNumSkipHeadRows = maxNumSkipHeadRows;
 
     verify(dimensionsSpec.getDimensionNames());
   }
@@ -69,6 +71,12 @@ public class CSVParseSpec extends ParseSpec
     return columns;
   }
 
+  @JsonProperty("maxNumSkipHeadRows")
+  public Integer getMaxNumSkipHeadRows()
+  {
+    return maxNumSkipHeadRows;
+  }
+
   @Override
   public void verify(List<String> usedCols)
   {
@@ -80,23 +88,28 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new CSVParser(Optional.fromNullable(listDelimiter), columns);
+    return new CSVParser(Optional.fromNullable(listDelimiter), columns, maxNumSkipHeadRows);
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns);
+    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, maxNumSkipHeadRows);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns);
+    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, maxNumSkipHeadRows);
   }
 
   public ParseSpec withColumns(List<String> cols)
   {
-    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols);
+    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, maxNumSkipHeadRows);
+  }
+
+  public ParseSpec withMaxNumSkipHeadRows(Integer maxNumSkipHeadRows)
+  {
+    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, columns, maxNumSkipHeadRows);
   }
 }

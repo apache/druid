@@ -33,7 +33,6 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.UOE;
@@ -41,7 +40,6 @@ import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.DelimitedParser;
 import io.druid.java.util.common.parsers.JSONParser;
 import io.druid.java.util.common.parsers.Parser;
-
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -264,7 +262,8 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public CSVFlatDataParser(
         @JsonProperty("columns") List<String> columns,
         @JsonProperty("keyColumn") final String keyColumn,
-        @JsonProperty("valueColumn") final String valueColumn
+        @JsonProperty("valueColumn") final String valueColumn,
+        @JsonProperty("maxNumSkipHeadRows") final Integer maxNumSkipHeadRows
     )
     {
       Preconditions.checkArgument(
@@ -293,7 +292,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
 
       this.parser = new DelegateParser(
-          new CSVParser(Optional.<String>absent(), columns),
+          new CSVParser(Optional.<String>absent(), columns, maxNumSkipHeadRows),
           this.keyColumn,
           this.valueColumn
       );
@@ -373,7 +372,8 @@ public class URIExtractionNamespace implements ExtractionNamespace
         @JsonProperty("delimiter") String delimiter,
         @JsonProperty("listDelimiter") String listDelimiter,
         @JsonProperty("keyColumn") final String keyColumn,
-        @JsonProperty("valueColumn") final String valueColumn
+        @JsonProperty("valueColumn") final String valueColumn,
+        @JsonProperty("maxNumSkipHeadRows") final Integer maxNumSkipHeadRows
     )
     {
       Preconditions.checkArgument(
@@ -382,7 +382,8 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
       final DelimitedParser delegate = new DelimitedParser(
           Optional.fromNullable(Strings.emptyToNull(delimiter)),
-          Optional.fromNullable(Strings.emptyToNull(listDelimiter))
+          Optional.fromNullable(Strings.emptyToNull(listDelimiter)),
+          maxNumSkipHeadRows
       );
       Preconditions.checkArgument(
           !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),
