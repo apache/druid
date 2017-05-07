@@ -19,7 +19,6 @@
 
 package io.druid.data.input.impl;
 
-import com.google.common.collect.Iterators;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.utils.Runnables;
