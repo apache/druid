@@ -46,8 +46,7 @@ public class FileIteratingFirehose implements Firehose
       StringInputRowParser parser
   )
   {
-    // Skip empty files
-    this.lineIterators = Iterators.filter(lineIterators, iterator -> iterator != null && iterator.hasNext());
+    this.lineIterators = lineIterators;
     this.parser = parser;
     final ParseSpec parseSpec = parser.getParseSpec();
     if (parseSpec instanceof CSVParseSpec) {

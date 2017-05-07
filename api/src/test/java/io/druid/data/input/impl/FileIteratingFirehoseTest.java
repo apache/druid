@@ -102,7 +102,6 @@ public class FileIteratingFirehoseTest
     final List<LineIterator> lineIterators = inputs.stream()
                                                    .map(s -> new LineIterator(new StringReader(s)))
                                                    .collect(Collectors.toList());
-    lineIterators.add(null); // test skip null iterator
 
     final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser);
     final List<String> results = Lists.newArrayList();
