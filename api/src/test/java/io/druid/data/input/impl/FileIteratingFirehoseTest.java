@@ -19,68 +19,98 @@
 
 package io.druid.data.input.impl;
 
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-
-import io.druid.java.util.common.Pair;
-import junit.framework.Assert;
-
 import org.apache.commons.io.LineIterator;
+import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+import java.io.IOException;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class FileIteratingFirehoseTest
 {
-  private static final List<Pair<String[], ImmutableList<String>>> fixtures = ImmutableList.of(
-      Pair.of(new String[]{"2000,foo"}, ImmutableList.of("foo")),
-      Pair.of(new String[]{"2000,foo\n2000,bar\n"}, ImmutableList.of("foo", "bar")),
-      Pair.of(new String[]{"2000,foo\n2000,bar\n", "2000,baz"}, ImmutableList.of("foo", "bar", "baz")),
-      Pair.of(new String[]{"2000,foo\n2000,bar\n", "", "2000,baz"}, ImmutableList.of("foo", "bar", "baz")),
-      Pair.of(new String[]{"2000,foo\n2000,bar\n", "", "2000,baz", ""}, ImmutableList.of("foo", "bar", "baz")),
-      Pair.of(new String[]{""}, ImmutableList.<String>of()),
-      Pair.of(new String[]{}, ImmutableList.<String>of())
-  );
+  @Parameters(name = "{0}, {1}")
+  public static Collection<Object[]> constructorFeeder() throws IOException
+  {
+    final List<List<String>> inputTexts = ImmutableList.of(
+        ImmutableList.of("2000,foo"),
+        ImmutableList.of("2000,foo\n2000,bar\n"),
+        ImmutableList.of("2000,foo\n2000,bar\n", "2000,baz"),
+        ImmutableList.of("2000,foo\n2000,bar\n", "", "2000,baz"),
+        ImmutableList.of("2000,foo\n2000,bar\n", "", "2000,baz", ""),
+        ImmutableList.of("2000,foo\n2000,bar\n2000,baz", "", "2000,baz", "2000,foo\n2000,bar\n3000,baz"),
+        ImmutableList.of(""),
+        ImmutableList.of()
+    );
+
+    final List<Object[]> args = new ArrayList<>();
+    for (int numSkipHeadRows = 0; numSkipHeadRows < 3; numSkipHeadRows++) {
+      for (List<String> texts : inputTexts) {
+        args.add(new Object[] {texts, numSkipHeadRows});
+      }
+    }
+
+    return args;
+  }
+
+  private final StringInputRowParser parser;
+  private final List<String> inputs;
+  private final List<String> expectedResults;
+
+  public FileIteratingFirehoseTest(List<String> texts, int numSkipHeadRows)
+  {
+    parser = new StringInputRowParser(
+        new CSVParseSpec(
+            new TimestampSpec("ts", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
+            ",",
+            ImmutableList.of("ts", "x"),
+            numSkipHeadRows
+        ),
+        null
+    );
+
+    this.inputs = texts;
+    this.expectedResults = inputs.stream()
+                                 .map(input -> input.split("\n"))
+                                 .filter(lines -> numSkipHeadRows < lines.length)
+                                 .flatMap(lines -> {
+                                   final List<String> skippedLines = Arrays.asList(lines)
+                                                                           .subList(numSkipHeadRows, lines.length);
+                                   return skippedLines.stream()
+                                                      .filter(line -> line.length() > 0)
+                                                      .map(line -> line.split(",")[1])
+                                                      .collect(Collectors.toList()).stream();
+                                 })
+                                 .collect(Collectors.toList());
+  }
 
   @Test
   public void testFirehose() throws Exception
   {
-    for (Pair<String[], ImmutableList<String>> fixture : fixtures) {
-      final List<LineIterator> lineIterators = Lists.transform(
-          Arrays.asList(fixture.lhs),
-          new Function<String, LineIterator>()
-          {
-            @Override
-            public LineIterator apply(String s)
-            {
-              return new LineIterator(new StringReader(s));
-            }
-          }
-      );
+    final List<LineIterator> lineIterators = inputs.stream()
+                                                   .map(s -> new LineIterator(new StringReader(s)))
+                                                   .collect(Collectors.toList());
+    lineIterators.add(null); // test skip null iterator
 
-      final StringInputRowParser parser = new StringInputRowParser(
-          new CSVParseSpec(
-              new TimestampSpec("ts", "auto", null),
-              new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
-              ",",
-              ImmutableList.of("ts", "x"),
-              0
-          ),
-          null
-      );
+    final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser);
+    final List<String> results = Lists.newArrayList();
 
-      final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser);
-      final List<String> results = Lists.newArrayList();
-
-      while (firehose.hasMore()) {
-        results.add(Joiner.on("|").join(firehose.nextRow().getDimension("x")));
-      }
-
-      Assert.assertEquals(fixture.rhs, results);
+    while (firehose.hasMore()) {
+      results.add(Joiner.on("|").join(firehose.nextRow().getDimension("x")));
     }
+
+    Assert.assertEquals(expectedResults, results);
   }
 }

@@ -39,10 +39,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.CSVParseSpec;
-import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.data.input.impl.ParseSpec;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
@@ -361,15 +358,7 @@ public class HadoopDruidIndexerConfig
 
   public InputRowParser getParser()
   {
-    final InputRowParser parser = schema.getDataSchema().getParser();
-    final ParseSpec parseSpec = parser.getParseSpec();
-    if (parseSpec instanceof CSVParseSpec) {
-      return parser.withParseSpec(((CSVParseSpec) parseSpec).withMaxNumSkipHeadRows(0));
-    } else if (parseSpec instanceof DelimitedParseSpec) {
-      return parser.withParseSpec(((DelimitedParseSpec) parseSpec).withMaxNumSkipHeadRows(0));
-    } else {
-      return parser;
-    }
+    return schema.getDataSchema().getParser();
   }
 
   public HadoopyShardSpec getShardSpec(Bucket bucket)

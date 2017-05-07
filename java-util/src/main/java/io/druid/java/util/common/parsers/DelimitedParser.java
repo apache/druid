@@ -34,12 +34,10 @@ import java.util.Map;
 
 public class DelimitedParser implements Parser<String, Object>
 {
-  private static final int DEFAULT_NUM_SKIP_HEAD_ROWS = 0;
   private static final String DEFAULT_DELIMITER = "\t";
 
   private final String delimiter;
   private final String listDelimiter;
-  private final int maxNumSkipHeadRows;
 
   private final Splitter splitter;
   private final Splitter listSplitter;
@@ -47,13 +45,10 @@ public class DelimitedParser implements Parser<String, Object>
 
   private ArrayList<String> fieldNames = null;
 
-  private int numSkippedRows;
-
-  public DelimitedParser(final Optional<String> delimiter, Optional<String> listDelimiter, Integer maxNumSkipHeadRows)
+  public DelimitedParser(final Optional<String> delimiter, Optional<String> listDelimiter)
   {
     this.delimiter = delimiter.isPresent() ? delimiter.get() : DEFAULT_DELIMITER;
     this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
-    this.maxNumSkipHeadRows = maxNumSkipHeadRows == null ? DEFAULT_NUM_SKIP_HEAD_ROWS : maxNumSkipHeadRows;
 
     Preconditions.checkState(
         !this.delimiter.equals(this.listDelimiter),
@@ -85,11 +80,10 @@ public class DelimitedParser implements Parser<String, Object>
   public DelimitedParser(
       final Optional<String> delimiter,
       final Optional<String> listDelimiter,
-      final Iterable<String> fieldNames,
-      final Integer maxNumSkipHeadRows
+      final Iterable<String> fieldNames
   )
   {
-    this(delimiter, listDelimiter, maxNumSkipHeadRows);
+    this(delimiter, listDelimiter);
 
     setFieldNames(fieldNames);
   }
@@ -97,12 +91,11 @@ public class DelimitedParser implements Parser<String, Object>
   public DelimitedParser(
       final Optional<String> delimiter,
       final Optional<String> listDelimiter,
-      final String header,
-      final Integer maxNumSkipHeadRows
+      final String header
   )
 
   {
-    this(delimiter, listDelimiter, maxNumSkipHeadRows);
+    this(delimiter, listDelimiter);
 
     setFieldNames(header);
   }
@@ -143,10 +136,6 @@ public class DelimitedParser implements Parser<String, Object>
   @Override
   public Map<String, Object> parse(final String input)
   {
-    if (numSkippedRows++ < maxNumSkipHeadRows) {
-      return null;
-    }
-
     try {
       Iterable<String> values = splitter.split(input);
 

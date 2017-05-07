@@ -19,7 +19,7 @@
 
 package io.druid.data.input.impl;
 
-import com.google.common.base.Throwables;
+import com.google.common.collect.Iterators;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.utils.Runnables;
@@ -27,13 +27,17 @@ import org.apache.commons.io.LineIterator;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  */
 public class FileIteratingFirehose implements Firehose
 {
+  private static final int DEFAULT_NUM_SKIP_HEAD_ROWS = 0;
+
   private final Iterator<LineIterator> lineIterators;
   private final StringInputRowParser parser;
+  private final int maxNumSkipHeadRows;
 
   private LineIterator lineIterator = null;
 
@@ -42,15 +46,29 @@ public class FileIteratingFirehose implements Firehose
       StringInputRowParser parser
   )
   {
-    this.lineIterators = lineIterators;
+    // Skip empty files
+    this.lineIterators = Iterators.filter(lineIterators, iterator -> iterator != null && iterator.hasNext());
     this.parser = parser;
+    final ParseSpec parseSpec = parser.getParseSpec();
+    if (parseSpec instanceof CSVParseSpec) {
+      final Integer maxNumSkipHeadRows = ((CSVParseSpec) parseSpec).getMaxNumSkipHeadRows();
+      this.maxNumSkipHeadRows = maxNumSkipHeadRows == null ? DEFAULT_NUM_SKIP_HEAD_ROWS : maxNumSkipHeadRows;
+    } else if (parseSpec instanceof DelimitedParseSpec) {
+      final Integer maxNumSkipHeadRows = ((DelimitedParseSpec) parseSpec).getMaxNumSkipHeadRows();
+      this.maxNumSkipHeadRows = maxNumSkipHeadRows == null ? DEFAULT_NUM_SKIP_HEAD_ROWS : maxNumSkipHeadRows;
+    } else {
+      maxNumSkipHeadRows = DEFAULT_NUM_SKIP_HEAD_ROWS;
+    }
   }
 
   @Override
   public boolean hasMore()
   {
     while ((lineIterator == null || !lineIterator.hasNext()) && lineIterators.hasNext()) {
-      lineIterator = lineIterators.next();
+      lineIterator = getNextLineIterator();
+      for (int i = 0; i < maxNumSkipHeadRows && lineIterator.hasNext(); i++) {
+        lineIterator.next();
+      }
     }
 
     return lineIterator != null && lineIterator.hasNext();
@@ -59,21 +77,20 @@ public class FileIteratingFirehose implements Firehose
   @Override
   public InputRow nextRow()
   {
-    try {
-      if (lineIterator == null || !lineIterator.hasNext()) {
-        // Close old streams, maybe.
-        if (lineIterator != null) {
-          lineIterator.close();
-        }
-
-        lineIterator = lineIterators.next();
-      }
-
-      return parser.parse(lineIterator.next());
+    if (!hasMore()) {
+      throw new NoSuchElementException();
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
+
+    return parser.parse(lineIterator.next());
+  }
+
+  private LineIterator getNextLineIterator()
+  {
+    if (lineIterator != null) {
+      lineIterator.close();
     }
+
+    return lineIterators.next();
   }
 
   @Override

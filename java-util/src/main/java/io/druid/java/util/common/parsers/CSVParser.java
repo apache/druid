@@ -33,24 +33,18 @@ import java.util.Map;
 
 public class CSVParser implements Parser<String, Object>
 {
-  private static final int DEFAULT_NUM_SKIP_HEAD_ROWS = 0;
-
   private final String listDelimiter;
   private final Splitter listSplitter;
   private final Function<String, Object> valueFunction;
-  private final int maxNumSkipHeadRows;
 
   private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
 
   private ArrayList<String> fieldNames = null;
 
-  private int numSkippedRows;
-
-  public CSVParser(final Optional<String> listDelimiter, Integer maxNumSkipHeadRows)
+  public CSVParser(final Optional<String> listDelimiter)
   {
     this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
     this.listSplitter = Splitter.on(this.listDelimiter);
-    this.maxNumSkipHeadRows = maxNumSkipHeadRows == null ? DEFAULT_NUM_SKIP_HEAD_ROWS : maxNumSkipHeadRows;
     this.valueFunction = new Function<String, Object>()
     {
       @Override
@@ -70,16 +64,16 @@ public class CSVParser implements Parser<String, Object>
     };
   }
 
-  public CSVParser(final Optional<String> listDelimiter, final Iterable<String> fieldNames, Integer maxNumSkipHeadRows)
+  public CSVParser(final Optional<String> listDelimiter, final Iterable<String> fieldNames)
   {
-    this(listDelimiter, maxNumSkipHeadRows);
+    this(listDelimiter);
 
     setFieldNames(fieldNames);
   }
 
-  public CSVParser(final Optional<String> listDelimiter, final String header, Integer maxNumSkipHeadRows)
+  public CSVParser(final Optional<String> listDelimiter, final String header)
   {
-    this(listDelimiter, maxNumSkipHeadRows);
+    this(listDelimiter);
 
     setFieldNames(header);
   }
@@ -115,10 +109,6 @@ public class CSVParser implements Parser<String, Object>
   @Override
   public Map<String, Object> parse(final String input)
   {
-    if (numSkippedRows++ < maxNumSkipHeadRows) {
-      return null;
-    }
-
     try {
       String[] values = parser.parseLine(input);
 

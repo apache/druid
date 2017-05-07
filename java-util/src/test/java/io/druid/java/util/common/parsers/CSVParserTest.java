@@ -36,7 +36,7 @@ public class CSVParserTest
     final Parser<String, Object> csvParser;
     boolean parseable = true;
     try {
-      csvParser = new CSVParser(Optional.<String>fromNullable(null), csv, 0);
+      csvParser = new CSVParser(Optional.<String>fromNullable(null), csv);
     }
     catch (Exception e) {
       parseable = false;
@@ -53,7 +53,7 @@ public class CSVParserTest
     final Parser<String, Object> csvParser;
     boolean parseable = true;
     try {
-      csvParser = new CSVParser(Optional.<String>fromNullable(null), csv, 0);
+      csvParser = new CSVParser(Optional.<String>fromNullable(null), csv);
     }
     catch (Exception e) {
       parseable = false;
@@ -67,7 +67,7 @@ public class CSVParserTest
   public void testCSVParserWithHeader()
   {
     String header = "time,value1,value2";
-    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null), header, 0);
+    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null), header);
     String body = "hello,world,foo";
     final Map<String, Object> jsonMap = csvParser.parse(body);
     Assert.assertEquals(
@@ -80,31 +80,9 @@ public class CSVParserTest
   @Test
   public void testCSVParserWithoutHeader()
   {
-    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null), 0);
+    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null));
     String body = "hello,world,foo";
     final Map<String, Object> jsonMap = csvParser.parse(body);
-    Assert.assertEquals(
-        "jsonMap",
-        ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),
-        jsonMap
-    );
-  }
-
-  @Test
-  public void testCSVParserSkipHeadRows()
-  {
-    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null), 2);
-    String[] texts = new String[] {
-        "1st,header,line",
-        "2nd,header,line",
-        "hello,world,foo"
-    };
-    int i;
-    for (i = 0; i < 2; i++) {
-      Assert.assertNull(csvParser.parse(texts[i]));
-    }
-
-    final Map<String, Object> jsonMap = csvParser.parse(texts[i]);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),

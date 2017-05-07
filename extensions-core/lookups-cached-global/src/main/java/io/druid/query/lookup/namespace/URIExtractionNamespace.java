@@ -262,8 +262,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public CSVFlatDataParser(
         @JsonProperty("columns") List<String> columns,
         @JsonProperty("keyColumn") final String keyColumn,
-        @JsonProperty("valueColumn") final String valueColumn,
-        @JsonProperty("maxNumSkipHeadRows") final Integer maxNumSkipHeadRows
+        @JsonProperty("valueColumn") final String valueColumn
     )
     {
       Preconditions.checkArgument(
@@ -292,7 +291,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
 
       this.parser = new DelegateParser(
-          new CSVParser(Optional.<String>absent(), columns, maxNumSkipHeadRows),
+          new CSVParser(Optional.<String>absent(), columns),
           this.keyColumn,
           this.valueColumn
       );
@@ -372,8 +371,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
         @JsonProperty("delimiter") String delimiter,
         @JsonProperty("listDelimiter") String listDelimiter,
         @JsonProperty("keyColumn") final String keyColumn,
-        @JsonProperty("valueColumn") final String valueColumn,
-        @JsonProperty("maxNumSkipHeadRows") final Integer maxNumSkipHeadRows
+        @JsonProperty("valueColumn") final String valueColumn
     )
     {
       Preconditions.checkArgument(
@@ -382,8 +380,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
       final DelimitedParser delegate = new DelimitedParser(
           Optional.fromNullable(Strings.emptyToNull(delimiter)),
-          Optional.fromNullable(Strings.emptyToNull(listDelimiter)),
-          maxNumSkipHeadRows
+          Optional.fromNullable(Strings.emptyToNull(listDelimiter))
       );
       Preconditions.checkArgument(
           !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),

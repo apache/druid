@@ -88,7 +88,7 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new CSVParser(Optional.fromNullable(listDelimiter), columns, maxNumSkipHeadRows);
+    return new CSVParser(Optional.fromNullable(listDelimiter), columns);
   }
 
   @Override
@@ -106,10 +106,5 @@ public class CSVParseSpec extends ParseSpec
   public ParseSpec withColumns(List<String> cols)
   {
     return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, maxNumSkipHeadRows);
-  }
-
-  public ParseSpec withMaxNumSkipHeadRows(Integer maxNumSkipHeadRows)
-  {
-    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, columns, maxNumSkipHeadRows);
   }
 }

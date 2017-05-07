@@ -201,7 +201,6 @@ Only ONE file which matches the search will be used. For most implementations, t
 |`columns`|The list of columns in the csv file|yes|`null`|
 |`keyColumn`|The name of the column containing the key|no|The first column|
 |`valueColumn`|The name of the column containing the value|no|The second column|
-|`maxNumSkipHeadRows`|The number of head rows to be skipped|no|0|
 
 *example input*
 
@@ -218,8 +217,7 @@ truck,something3,buck
   "format": "csv",
   "columns": ["value","somethingElse","key"],
   "keyColumn": "key",
-  "valueColumn": "value",
-  "maxNumSkipHeadRows": 5
+  "valueColumn": "value"
 }
 ```
 
@@ -232,7 +230,6 @@ truck,something3,buck
 |`valueColumn`|The name of the column containing the value|no|The second column|
 |`delimiter`|The delimiter in the file|no|tab (`\t`)|
 |`listDelimiter`|The list delimiter in the file|no| (`\u0001`)|
-|`maxNumSkipHeadRows`|The number of head rows to be skipped|no|0|
 
 
 *example input*
@@ -251,8 +248,7 @@ truck|something,3|buck
   "columns": ["value","somethingElse","key"],
   "keyColumn": "key",
   "valueColumn": "value",
-  "delimiter": "|",
-  "maxNumSkipHeadRows": 5
+  "delimiter": "|"
 }
 ```
 

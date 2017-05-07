@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-
 import io.druid.java.util.common.parsers.DelimitedParser;
 import io.druid.java.util.common.parsers.Parser;
 
@@ -99,8 +98,7 @@ public class DelimitedParseSpec extends ParseSpec
   {
     Parser<String, Object> retVal = new DelimitedParser(
         Optional.fromNullable(delimiter),
-        Optional.fromNullable(listDelimiter),
-        maxNumSkipHeadRows
+        Optional.fromNullable(listDelimiter)
     );
     retVal.setFieldNames(columns);
     return retVal;
@@ -150,18 +148,6 @@ public class DelimitedParseSpec extends ParseSpec
         delimiter,
         listDelimiter,
         cols,
-        maxNumSkipHeadRows
-    );
-  }
-
-  public ParseSpec withMaxNumSkipHeadRows(Integer maxNumSkipHeadRows)
-  {
-    return new DelimitedParseSpec(
-        getTimestampSpec(),
-        getDimensionsSpec(),
-        delimiter,
-        listDelimiter,
-        columns,
         maxNumSkipHeadRows
     );
   }

@@ -84,8 +84,7 @@ public class URIExtractionNamespaceTest
             "col1",
             "col2",
             "col3"
-        ), "col2", "col3",
-        null
+        ), "col2", "col3"
     );
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
   }
@@ -98,8 +97,7 @@ public class URIExtractionNamespaceTest
             "col1",
             "col2",
             "col3"
-        ), "col2", "col3ADFSDF",
-        null
+        ), "col2", "col3ADFSDF"
     );
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
   }
@@ -112,8 +110,7 @@ public class URIExtractionNamespaceTest
             "col1",
             "col2",
             "col3"
-        ), "col2", "col3",
-        null
+        ), "col2", "col3"
     );
     Map<String, String> map = parser.getParser().parse("A");
   }
@@ -125,8 +122,7 @@ public class URIExtractionNamespaceTest
         ImmutableList.of("col1", "col2", "col3"),
         "|",
         null, "col2",
-        "col3",
-        null
+        "col3"
     );
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A|B|C"));
   }
@@ -138,8 +134,7 @@ public class URIExtractionNamespaceTest
         ImmutableList.of("col1", "col2", "col3"),
         "\\u0001",
         "\\u0002", "col2",
-        "col3",
-        null
+        "col3"
     );
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A\\u0001B\\u0001C"));
   }
@@ -151,8 +146,7 @@ public class URIExtractionNamespaceTest
         ImmutableList.of("col1", "col2", "col3fdsfds"),
         ",",
         null, "col2",
-        "col3",
-        null
+        "col3"
     );
     Map<String, String> map = parser.getParser().parse("A,B,C");
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
@@ -166,8 +160,7 @@ public class URIExtractionNamespaceTest
         ImmutableList.of("col1", "col2", "col3"),
         ",",
         null, "col2",
-        "col3",
-        null
+        "col3"
     );
     Map<String, String> map = parser.getParser().parse("A");
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
@@ -308,12 +301,11 @@ public class URIExtractionNamespaceTest
                 "col1",
                 "col2",
                 "col3"
-            ), "col2", "col3",
-            null
+            ), "col2", "col3"
         ),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
         new URIExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
-        new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B", null)
+        new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
     )) {
       final String str = mapper.writeValueAsString(parser);
       final URIExtractionNamespace.FlatDataParser parser2 = mapper.readValue(
@@ -334,12 +326,11 @@ public class URIExtractionNamespaceTest
                 "col1",
                 "col2",
                 "col3"
-            ), "col2", "col3",
-            null
+            ), "col2", "col3"
         ),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
         new URIExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
-        new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B", null)
+        new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
     )) {
       Assert.assertFalse(parser.toString().contains("@"));
     }
