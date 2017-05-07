@@ -292,13 +292,13 @@ public class IndexTask extends AbstractTask
         }
 
         @Override
-        public ShardSpec getShardSpec(Interval interval, long timestamp, InputRow row)
+        public ShardSpec getShardSpec(Interval interval, InputRow row)
         {
           final List<ShardSpec> shardSpecs = intervalToShardSpecs.get(interval);
           if (shardSpecs == null || shardSpecs.isEmpty()) {
             throw new ISE("Failed to get shardSpec for interval[%s]", interval);
           }
-          return shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(timestamp, row);
+          return shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(row.getTimestampFromEpoch(), row);
         }
 
         @Override
@@ -325,7 +325,7 @@ public class IndexTask extends AbstractTask
         }
 
         @Override
-        public ShardSpec getShardSpec(Interval interval, long timestamp, InputRow row)
+        public ShardSpec getShardSpec(Interval interval, InputRow row)
         {
           return shardSpecMap.get(interval);
         }
@@ -375,7 +375,7 @@ public class IndexTask extends AbstractTask
           throw new ISE("Could not find interval for timestamp [%s]", timestamp);
         }
 
-        ShardSpec shardSpec = shardSpecs.getShardSpec(interval.get(), timestamp.getMillis(), row);
+        ShardSpec shardSpec = shardSpecs.getShardSpec(interval.get(), row);
         if (shardSpec == null) {
           throw new ISE("Could not find ShardSpec for sequenceName [%s]", sequenceName);
         }
@@ -417,8 +417,12 @@ public class IndexTask extends AbstractTask
             }
 
             final Interval interval = optInterval.get();
-            final String sequenceName = Appenderators.getSequenceName(interval, version, shardSpecs.getShardSpec(interval, inputRow.getTimestampFromEpoch(), inputRow));
-            final Pair<SegmentIdentifier, List<SegmentIdentifier>> pair = driver.add(inputRow, sequenceName, committerSupplier, publisher, shardSpecs.isExtendable());
+            final String sequenceName = Appenderators.getSequenceName(
+                interval, version, shardSpecs.getShardSpec(interval, inputRow)
+            );
+            final Pair<SegmentIdentifier, List<SegmentIdentifier>> pair = driver.add(
+                inputRow, sequenceName, committerSupplier, publisher, shardSpecs.isExtendable()
+            );
             final SegmentIdentifier identifier = pair.lhs;
             final List<SegmentIdentifier> publishedSegments = pair.rhs;
 
@@ -524,14 +528,13 @@ public class IndexTask extends AbstractTask
     boolean isExtendable();
 
     /**
-     * Return a shardSpec for the given interval, timestamp and input row.
+     * Return a shardSpec for the given interval and input row.
      *
      * @param interval  interval for shardSpec
-     * @param timestamp timestamp of input row
      * @param row       input row
      * @return a shardSpec
      */
-    ShardSpec getShardSpec(Interval interval, long timestamp, InputRow row);
+    ShardSpec getShardSpec(Interval interval, InputRow row);
 
     /**
      * Update the shardSpec of the given interval.  When the type of shardSpecs is extendable, this method must update

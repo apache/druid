@@ -236,6 +236,8 @@ public class FiniteAppenderatorDriver implements Closeable
 
             sequenceToSegmentId.computeIfAbsent(moveOutSequence, key -> new ArrayList<>()).add(moveOutSegmentId);
           });
+          // Some of the published segments may be already moved out from activeSegments due to the maxRowsPerSegment limit.
+          // So, here the absent segments are simply ignored.
           sequenceToSegmentId.forEach((key, val) -> moveSegmentOut(key, val, true));
           movedOutSegments.addAll(
               published.getSegments().stream()

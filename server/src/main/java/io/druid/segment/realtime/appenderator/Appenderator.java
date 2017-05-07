@@ -52,6 +52,12 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    */
   Object startJob();
 
+  /**
+   * Returns the size of data currently stored in local storage.  The persistedBytes is changed when
+   * {@link #persistAll(Committer)} and {@link #drop(SegmentIdentifier)} is called.
+   *
+   * @return the size of persisted data in bytes
+   */
   long getPersistedBytes();
 
   /**
