@@ -50,13 +50,13 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
 
   private final RestS3Service s3Client;
   private final List<URI> uris;
-  private final List<URI> directories;
+  private final List<URI> prefixes;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
       @JacksonInject("s3Client") RestS3Service s3Client,
       @JsonProperty("uris") List<URI> uris,
-      @JsonProperty("directories") List<URI> directories,
+      @JsonProperty("prefixes") List<URI> prefixes,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
@@ -67,13 +67,13 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.s3Client = Preconditions.checkNotNull(s3Client, "null s3Client");
     this.uris = uris == null ? new ArrayList<>() : uris;
-    this.directories = directories == null ? new ArrayList<>() : directories;
+    this.prefixes = prefixes == null ? new ArrayList<>() : prefixes;
 
-    if (!this.uris.isEmpty() && !this.directories.isEmpty()) {
+    if (!this.uris.isEmpty() && !this.prefixes.isEmpty()) {
       throw new IAE("uris and directories cannot be used together");
     }
 
-    if (this.uris.isEmpty() && this.directories.isEmpty()) {
+    if (this.uris.isEmpty() && this.prefixes.isEmpty()) {
       throw new IAE("uris or directories must be specified");
     }
 
@@ -81,7 +81,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
       Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
     }
 
-    for (final URI inputURI : this.directories) {
+    for (final URI inputURI : this.prefixes) {
       Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
     }
   }
@@ -92,10 +92,10 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     return uris;
   }
 
-  @JsonProperty("directories")
-  public List<URI> getDirectories()
+  @JsonProperty("prefixes")
+  public List<URI> getPrefixes()
   {
-    return directories;
+    return prefixes;
   }
 
   @Override
@@ -116,7 +116,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
           .collect(Collectors.toList());
     } else {
       final List<S3Object> objects = new ArrayList<>();
-      for (URI uri : directories) {
+      for (URI uri : prefixes) {
         final String bucket = uri.getAuthority();
         final String prefix = extractS3Key(uri);
         try {
