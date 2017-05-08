@@ -3,8 +3,10 @@ language: java
 jdk:
   - oraclejdk8
 
-script:
-  - mvn clean test -B -Pparallel-test -Dmaven.fork.count=2
+env:
+  - MAVEN_OPTS="-Xmx3000m"
+
+install: mvn clean test -B -Pparallel-test -Dmaven.fork.count=2
 
 sudo: false
 
