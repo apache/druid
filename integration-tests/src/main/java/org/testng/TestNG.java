@@ -384,7 +384,6 @@ public class TestNG
         while (t.getCause() != null) {
           t = t.getCause();
         }
-//        t.printStackTrace();
         if (t instanceof TestNGException) {
           throw (TestNGException) t;
         } else {
@@ -421,7 +420,6 @@ public class TestNG
       Utils.log("TestNG", 2, "Trying to open jar file:" + jarFile);
 
       JarFile jf = new JarFile(jarFile);
-//      System.out.println("   result: " + jf);
       Enumeration<JarEntry> entries = jf.entries();
       List<String> classes = Lists.newArrayList();
       boolean foundTestngXml = false;
@@ -1055,10 +1053,6 @@ public class TestNG
       }
       Iterable<ITestNGListener> loader =
           (Iterable<ITestNGListener>) loadMethod.invoke(c, parameters.toArray());
-//      Object loader = c.
-//      ServiceLoader<ITestNGListener> loader = m_serviceLoaderClassLoader != null
-//      ? ServiceLoader.load(ITestNGListener.class, m_serviceLoaderClassLoader)
-//          : ServiceLoader.load(ITestNGListener.class);
       for (ITestNGListener l : loader) {
         Utils.log("[TestNG]", 2, "Adding ServiceLoader listener:" + l);
         addListener(l);
@@ -1551,11 +1545,6 @@ public class TestNG
     if (cla.testNames != null) {
       setTestNames(Arrays.asList(cla.testNames.split(",")));
     }
-
-//    List<String> testNgXml = (List<String>) cmdLineArgs.get(CommandLineArgs.SUITE_DEF);
-//    if (null != testNgXml) {
-//      setTestSuites(testNgXml);
-//    }
 
     // Note: can't use a Boolean field here because we are allowing a boolean
     // parameter with an arity of 1 ("-usedefaultlisteners false")
@@ -2222,7 +2211,7 @@ public class TestNG
   private URLClassLoader m_serviceLoaderClassLoader;
   private List<ITestNGListener> m_serviceLoaderListeners = Lists.newArrayList();
 
-  /*
+  /**
    * Used to test ServiceClassLoader
    */
   public void setServiceLoaderClassLoader(URLClassLoader ucl)
@@ -2230,7 +2219,7 @@ public class TestNG
     m_serviceLoaderClassLoader = ucl;
   }
 
-  /*
+  /**
    * Used to test ServiceClassLoader
    */
   private void addServiceLoaderListener(ITestNGListener l)
@@ -2238,7 +2227,7 @@ public class TestNG
     m_serviceLoaderListeners.add(l);
   }
 
-  /*
+  /**
    * Used to test ServiceClassLoader
    */
   public List<ITestNGListener> getServiceLoaderListeners()

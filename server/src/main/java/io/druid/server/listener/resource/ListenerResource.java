@@ -98,6 +98,27 @@ public abstract class ListenerResource
     }
   }
 
+  @POST
+  @Path("/updates")
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  public Response serviceAnnouncementHandleUpdates(
+      final InputStream inputStream,
+      final @Context HttpServletRequest req // used only to get request content-type
+  )
+  {
+    final String reqContentType = req.getContentType();
+    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType);
+    final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
+    try {
+      return handler.handleUpdates(inputStream, mapper);
+    }
+    catch (Exception e) {
+      LOG.error(e, "Exception in handling updates request");
+      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response getAll()

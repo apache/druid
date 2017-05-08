@@ -1064,10 +1064,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
          .emit();
       // wait for being killed by supervisor
       try {
-        Thread.sleep(Long.MAX_VALUE);
+        pause(-1);
       }
       catch (InterruptedException e) {
-        throw new RuntimeException("Got interrupted while waiting to be killed");
+        throw new RuntimeException("Got interrupted while pausing task");
       }
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();

@@ -19,15 +19,65 @@
 
 package io.druid.query.lookup;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
-//TODO merge this code to the same definition when pr/1576 is merged
+import java.util.Objects;
+
 class LookupBean
 {
+  private final LookupExtractorFactoryContainer container;
+  private final String name;
+
+  //to support rollback from 0.10.1 to 0.9.0 if necessary
+  @Deprecated
+  private final LookupExtractorFactory factory;
+
+
+  @JsonCreator
+  public LookupBean(
+      @JsonProperty("name") String name,
+      //kept for backward compatibility with druid ver <= 0.10.0 persisted snapshots
+      @Deprecated @JsonProperty("factory") LookupExtractorFactory factory,
+      @JsonProperty("container") LookupExtractorFactoryContainer container
+  )
+  {
+    Preconditions.checkArgument(factory != null || container != null, "either one of factory or container must exist");
+
+    this.name = name;
+    this.container = container != null ? container : new LookupExtractorFactoryContainer(null, factory);
+    this.factory = factory != null ? factory : container.getLookupExtractorFactory();
+  }
+
   @JsonProperty
-  LookupExtractorFactory factory;
+  public String getName()
+  {
+    return name;
+  }
+
   @JsonProperty
-  String name;
+  public LookupExtractorFactoryContainer getContainer()
+  {
+    return container;
+  }
+
+  @Deprecated
+  @JsonProperty
+  public LookupExtractorFactory getFactory()
+  {
+    return factory;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LookupBean{" +
+           "container=" + container +
+           ", name='" + name + '\'' +
+           ", factory=" + factory +
+           '}';
+  }
 
   @Override
   public boolean equals(Object o)
@@ -35,16 +85,18 @@ class LookupBean
     if (this == o) {
       return true;
     }
-    if (!(o instanceof LookupBean)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     LookupBean that = (LookupBean) o;
+    return Objects.equals(container, that.container) &&
+           Objects.equals(name, that.name) &&
+           Objects.equals(factory, that.factory);
+  }
 
-    if (!factory.equals(that.factory)) {
-      return false;
-    }
-    return name.equals(that.name);
-
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(container, name, factory);
   }
 }

@@ -86,7 +86,7 @@ public class IntervalLoadRule extends LoadRule
   @Override
   public boolean appliesTo(Interval theInterval, DateTime referenceTimestamp)
   {
-    return interval.contains(theInterval);
+    return Rules.eligibleForLoad(interval, theInterval);
   }
 
   @Override
