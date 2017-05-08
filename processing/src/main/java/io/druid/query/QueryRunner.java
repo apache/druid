@@ -31,8 +31,7 @@ import java.util.Map;
 public interface QueryRunner<T>
 {
   /**
-   * @deprecated use and override {@link #run(QueryPlus, Map)} instead. This method could be removed in the next minor
-   * or major version of Druid.
+   * @deprecated use and override {@link #run(QueryPlus, Map)} instead. This method is going to be removed in Druid 0.11
    */
   @Deprecated
   default Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
