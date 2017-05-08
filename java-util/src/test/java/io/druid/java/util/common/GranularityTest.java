@@ -422,7 +422,7 @@ public class GranularityTest {
         }
     }
 
-    private class PathDate
+    private static class PathDate
     {
         public final String path;
         public final DateTime date;

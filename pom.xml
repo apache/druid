@@ -1000,6 +1000,7 @@
                         <showWarnings>true</showWarnings>
                         <compilerArgs>
                             <arg>-XepDisableWarningsInGeneratedCode</arg>
+                            <arg>-Xep:ClassCanBeStatic:ERROR</arg>
                             <arg>-Xep:ArgumentParameterSwap</arg>
                             <arg>-Xep:AssistedInjectAndInjectOnSameConstructor</arg>
                             <arg>-Xep:AutoFactoryAtInject</arg>

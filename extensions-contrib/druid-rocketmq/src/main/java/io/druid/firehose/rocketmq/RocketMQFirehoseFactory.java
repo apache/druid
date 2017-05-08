@@ -308,7 +308,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   /**
    * Pull request.
    */
-  final class DruidPullRequest
+  static final class DruidPullRequest
   {
     private final MessageQueue messageQueue;
     private final String tag;

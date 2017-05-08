@@ -1789,7 +1789,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
-  private class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
+  private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
 
     private TaskLocation location;
@@ -1807,7 +1807,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
-  private class TestableKafkaSupervisor extends KafkaSupervisor
+  private static class TestableKafkaSupervisor extends KafkaSupervisor
   {
     public TestableKafkaSupervisor(
         TaskStorage taskStorage,

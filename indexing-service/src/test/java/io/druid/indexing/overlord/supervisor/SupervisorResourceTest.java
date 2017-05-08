@@ -307,7 +307,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
   }
 
-  private class TestSupervisorSpec implements SupervisorSpec
+  private static class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;
     private final Supervisor supervisor;

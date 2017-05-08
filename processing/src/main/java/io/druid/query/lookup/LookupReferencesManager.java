@@ -346,7 +346,7 @@ public class LookupReferencesManager
     void handle(Map<String, LookupExtractorFactoryContainer> lookupMap);
   }
 
-  private class LoadNotice implements Notice
+  private static class LoadNotice implements Notice
   {
     private final String lookupName;
     private final LookupExtractorFactoryContainer lookupExtractorFactoryContainer;
@@ -399,7 +399,7 @@ public class LookupReferencesManager
     }
   }
 
-  private class DropNotice implements Notice
+  private static class DropNotice implements Notice
   {
     private final String lookupName;
 
@@ -435,7 +435,7 @@ public class LookupReferencesManager
     }
   }
 
-  private class LookupUpdateState
+  private static class LookupUpdateState
   {
     private final ImmutableMap<String, LookupExtractorFactoryContainer> lookupMap;
     private final ImmutableList<Notice> pendingNotices;

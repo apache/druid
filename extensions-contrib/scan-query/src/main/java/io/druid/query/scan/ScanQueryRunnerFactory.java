@@ -100,7 +100,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     return toolChest;
   }
 
-  private class ScanQueryRunner implements QueryRunner<ScanResultValue>
+  private static class ScanQueryRunner implements QueryRunner<ScanResultValue>
   {
     private final ScanQueryEngine engine;
     private final Segment segment;
