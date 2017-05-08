@@ -998,11 +998,11 @@
                         <compilerId>javac-with-errorprone</compilerId>
                         <forceJavacCompilerUse>true</forceJavacCompilerUse>
                         <fork>true</fork>
-                        <meminitial>2048m</meminitial>
+                        <meminitial>1024m</meminitial>
                         <maxmem>2048m</maxmem>
                         <source>1.8</source>
                         <target>1.8</target>
-                        <showWarnings>true</showWarnings>
+                        <showWarnings>false</showWarnings>
                         <compilerArgs>
                             <arg>-XepDisableWarningsInGeneratedCode</arg>
                             <arg>-Xep:ClassCanBeStatic:ERROR</arg>
