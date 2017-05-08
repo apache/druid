@@ -75,7 +75,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
     final FileSystem fs = betaInput.getFileSystem(job.getConfiguration());
     final Granularity segmentGranularity = config.getGranularitySpec().getSegmentGranularity();
 
-    Map<Long, Long> inputModifiedTimes = new TreeMap<>(Ordering.natural());
+    Map<Long, Long> inputModifiedTimes = new TreeMap<>(Ordering.natural().reverse());
 
     for (FileStatus status : FSSpideringIterator.spiderIterable(fs, betaInput)) {
       final DateTime key = segmentGranularity.toDate(status.getPath().toString());
