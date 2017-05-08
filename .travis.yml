@@ -4,7 +4,7 @@ jdk:
   - oraclejdk8
 
 script:
-  - mvn test -B -Pparallel-test -Dmaven.fork.count=2 && mvn clean -Pstrict compile test-compile -B
+  - mvn clean test -B -Pparallel-test -Dmaven.fork.count=2
 
 sudo: false
 
