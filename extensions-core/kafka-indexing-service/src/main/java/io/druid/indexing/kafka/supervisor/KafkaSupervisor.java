@@ -1794,6 +1794,9 @@ public class KafkaSupervisor implements Supervisor
               ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", lag)
           );
         }
+        catch (InterruptedException e) {
+          // do nothing, probably we are shutting down
+        }
         catch (Exception e) {
           log.warn(e, "Unable to compute Kafka lag");
         }
