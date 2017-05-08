@@ -129,6 +129,8 @@
         <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
+        <!-- distribution packaging -->
+        <module>distribution</module>
     </modules>
 
     <dependencyManagement>
@@ -1052,17 +1054,6 @@
     </build>
 
     <profiles>
-        <profile>
-            <id>java8</id>
-            <activation>
-                <jdk>1.8</jdk>
-            </activation>
-            <modules>
-                <!-- distribution packaging -->
-                <module>distribution</module>
-            </modules>
-        </profile>
-
         <profile>
             <id>parallel-test</id>
             <activation>
