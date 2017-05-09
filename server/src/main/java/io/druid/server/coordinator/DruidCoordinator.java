@@ -385,7 +385,7 @@ public class DruidCoordinator
       if (dataSource == null) {
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentName);
       }
-      final DataSegment segmentToMove = dataSource.getSegment(segment.getIdentifier());
+      final DataSegment segmentToLoad = dataSource.getSegment(segment.getIdentifier());
       final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
         throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", toServer.getName());
@@ -397,12 +397,12 @@ public class DruidCoordinator
       }
 
       final ServerHolder toHolder = new ServerHolder(toServer, loadPeon);
-      if (toHolder.getAvailableSize() < segmentToMove.getSize()) {
+      if (toHolder.getAvailableSize() < segmentToLoad.getSize()) {
         throw new IAE(
             "Not enough capacity on server [%s] for segment [%s]. Required: %,d, available: %,d.",
             toServer.getName(),
-            segmentToMove,
-            segmentToMove.getSize(),
+            segmentToLoad,
+            segmentToLoad.getSize(),
             toHolder.getAvailableSize()
         );
       }
@@ -415,7 +415,7 @@ public class DruidCoordinator
       );
 
       loadPeon.loadSegment(
-          segmentToMove,
+          segmentToLoad,
           new LoadPeonCallback()
           {
             @Override
@@ -424,8 +424,8 @@ public class DruidCoordinator
               try {
                 if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
                     curator.checkExists().forPath(toLoadQueueSegPath) == null &&
-                    !dropPeon.getSegmentsToDrop().contains(segmentToMove)) {
-                  dropPeon.dropSegment(segmentToMove, callback);
+                    !dropPeon.getSegmentsToDrop().contains(segment)) {
+                  dropPeon.dropSegment(segment, callback);
                 } else if (callback != null) {
                   callback.execute();
                 }
