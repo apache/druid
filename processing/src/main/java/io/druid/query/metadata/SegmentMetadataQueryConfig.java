@@ -41,7 +41,7 @@ public class SegmentMetadataQueryConfig
   private Period defaultHistory = ISO_FORMATTER.parsePeriod(DEFAULT_PERIOD_STRING);
 
   @JsonProperty
-  private EnumSet<SegmentMetadataQuery.AnalysisType> defaultAnalysisType = DEFAULT_ANALYSIS_TYPES;
+  private EnumSet<SegmentMetadataQuery.AnalysisType> defaultAnalysisTypes = DEFAULT_ANALYSIS_TYPES;
 
   public SegmentMetadataQueryConfig(String period)
   {
@@ -62,10 +62,10 @@ public class SegmentMetadataQueryConfig
     this.defaultHistory = ISO_FORMATTER.parsePeriod(period);
   }
 
-  public EnumSet<SegmentMetadataQuery.AnalysisType> getDefaultAnalysisType() { return defaultAnalysisType; }
+  public EnumSet<SegmentMetadataQuery.AnalysisType> getDefaultAnalysisTypes() { return defaultAnalysisTypes; }
 
-  public void setDefaultAnalysisType(EnumSet<SegmentMetadataQuery.AnalysisType> defaultAnalysisType)
+  public void setDefaultAnalysisTypes(EnumSet<SegmentMetadataQuery.AnalysisType> defaultAnalysisTypes)
   {
-    this.defaultAnalysisType = defaultAnalysisType;
+    this.defaultAnalysisTypes = defaultAnalysisTypes;
   }
 }

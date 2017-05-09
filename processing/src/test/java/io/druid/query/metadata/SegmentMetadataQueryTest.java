@@ -1118,7 +1118,7 @@ public class SegmentMetadataQueryTest
 
     SegmentMetadataQueryConfig emptyCfg = new SegmentMetadataQueryConfig();
     SegmentMetadataQueryConfig analysisCfg = new SegmentMetadataQueryConfig();
-    analysisCfg.setDefaultAnalysisType(EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY));
+    analysisCfg.setDefaultAnalysisTypes(EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY));
 
     EnumSet<SegmentMetadataQuery.AnalysisType> analysis1 = new SegmentMetadataQueryQueryToolChest(emptyCfg).getAnalysisTypes(query1);
     EnumSet<SegmentMetadataQuery.AnalysisType> analysis2 = new SegmentMetadataQueryQueryToolChest(emptyCfg).getAnalysisTypes(query2);

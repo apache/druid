@@ -106,7 +106,10 @@ The grammar is as follows:
 
 This is a list of properties that determines the amount of information returned about the columns, i.e. analyses to be performed on the columns.
 
-By default, the "cardinality", "size", "interval", and "minmax" types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
+By default, the "cardinality", "interval", and "minmax" types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
+
+The default analysis types can be set in the broker configuration via:
+  `druid.query.segmentMetadata.defaultAnalysisTypes`
 
 Types of column analyses are described below:
 
