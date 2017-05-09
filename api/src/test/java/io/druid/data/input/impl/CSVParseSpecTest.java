@@ -42,7 +42,7 @@ public class CSVParseSpecTest
         ),
         ",",
         Arrays.asList("a"),
-        null
+        0
     );
   }
 
@@ -62,7 +62,7 @@ public class CSVParseSpecTest
         ),
         ",",
         Arrays.asList("a"),
-        null
+        0
     );
   }
 }

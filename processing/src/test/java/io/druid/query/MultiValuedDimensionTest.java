@@ -131,7 +131,7 @@ public class MultiValuedDimensionTest
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags")), null, null),
             "\t",
             ImmutableList.of("timestamp", "product", "tags"),
-            null
+            0
         ),
         "UTF-8"
     );

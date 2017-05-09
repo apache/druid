@@ -41,7 +41,7 @@ public class DelimitedParseSpecTest
         "\u0001",
         "\u0002",
         Arrays.asList("abc"),
-        null
+        0
     );
     final DelimitedParseSpec serde = jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
@@ -73,7 +73,7 @@ public class DelimitedParseSpecTest
         ",",
         " ",
         Arrays.asList("a"),
-        null
+        0
     );
   }
 
@@ -94,7 +94,7 @@ public class DelimitedParseSpecTest
         ",",
         null,
         Arrays.asList("a"),
-        null
+        0
     );
   }
 
@@ -115,7 +115,7 @@ public class DelimitedParseSpecTest
         null,
         // pass null columns not allowed
         null,
-        null
+        0
     );
   }
 }

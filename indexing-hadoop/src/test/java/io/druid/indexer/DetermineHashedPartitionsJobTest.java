@@ -130,7 +130,7 @@ public class DetermineHashedPartitionsJobTest
                             "placementish",
                             "index"
                         ),
-                        null
+                        0
                     ),
                     null
                 ),

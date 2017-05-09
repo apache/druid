@@ -459,7 +459,7 @@ public class IndexTaskTest
                         ),
                         null,
                         Arrays.asList("ts", "dim", "val"),
-                        null
+                        0
                     ),
                     null
                 ),
