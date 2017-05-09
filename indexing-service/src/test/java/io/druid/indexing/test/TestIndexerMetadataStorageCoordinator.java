@@ -88,6 +88,20 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public List<DataSourceMetadata> getCheckPointsForSequence(String sequenceName) throws IOException
+  {
+    return ImmutableList.of();
+  }
+
+  @Override
+  public boolean addNewCheckPointForSequence(
+      String sequenceName, DataSourceMetadata dataSourceMetadata
+  ) throws IOException
+  {
+    return false;
+  }
+
+  @Override
   public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
   {
     Set<DataSegment> added = Sets.newHashSet();

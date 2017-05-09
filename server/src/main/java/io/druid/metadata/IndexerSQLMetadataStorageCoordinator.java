@@ -19,6 +19,7 @@
 
 package io.druid.metadata;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -108,6 +109,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     connector.createDataSourceTable();
     connector.createPendingSegmentsTable();
     connector.createSegmentTable();
+    connector.createTaskCheckPointsTable();
   }
 
   @Override
@@ -963,5 +965,80 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     log.info("Found %,d segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
     return matchingSegments;
+  }
+
+  @Override
+  public List<DataSourceMetadata> getCheckPointsForSequence(String sequenceName) throws IOException
+  {
+    final byte[] payload = connector.lookup(
+        dbTables.getTaskCheckPointsTable(),
+        "sequence_name",
+        "payload",
+        sequenceName
+    );
+    if (payload == null) {
+      return ImmutableList.of();
+    } else {
+      return jsonMapper.readValue(payload, new TypeReference<List<DataSourceMetadata>>()
+      {
+      });
+    }
+  }
+
+  @Override
+  public boolean addNewCheckPointForSequence(
+      final String sequenceName, DataSourceMetadata dataSourceMetadata
+  ) throws IOException
+  {
+    List<DataSourceMetadata> existingCheckPoints = getCheckPointsForSequence(sequenceName);
+    final boolean createNew;
+    if (existingCheckPoints.size() == 0) {
+      createNew = true;
+      existingCheckPoints = new ArrayList<>();
+    } else {
+      createNew = false;
+      if(existingCheckPoints.get(existingCheckPoints.size() - 1).equals(dataSourceMetadata)) {
+        // this can happen when the last check point for a sequence is equal to the end offsets for the task group
+        return true;
+      }
+    }
+
+    final List<DataSourceMetadata> checkPoints = new ArrayList<>(existingCheckPoints);
+    checkPoints.add(dataSourceMetadata);
+
+    return connector.retryWithHandle(new HandleCallback<Boolean>()
+    {
+      @Override
+      public Boolean withHandle(Handle handle) throws Exception
+      {
+        if (createNew) {
+          return handle.createStatement(
+              String.format(
+                  "INSERT INTO %s (sequence_name, payload) "
+                  + "VALUES (:sequence_name, :payload)",
+                  dbTables.getTaskCheckPointsTable()
+              )
+          )
+                       .bind("sequence_name", sequenceName)
+                       .bind("payload", jsonMapper.writerWithType(new TypeReference<List<DataSourceMetadata>>()
+                       {
+                       }).writeValueAsBytes(checkPoints))
+                       .execute() == 1;
+        } else {
+          return handle.createStatement(
+              String.format(
+                  "UPDATE %s SET payload = :payload "
+                  + "WHERE sequence_name= :sequence_name",
+                  dbTables.getTaskCheckPointsTable()
+              )
+          )
+                       .bind("sequence_name", sequenceName)
+                       .bind("payload", jsonMapper.writerWithType(new TypeReference<List<DataSourceMetadata>>()
+                       {
+                       }).writeValueAsBytes(checkPoints))
+                       .execute() == 1;
+        }
+      }
+    });
   }
 }

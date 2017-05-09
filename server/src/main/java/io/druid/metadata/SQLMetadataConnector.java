@@ -393,6 +393,24 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
+  public void createTaskCheckPointsTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  sequence_name VARCHAR(255) NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  PRIMARY KEY (sequence_name)\n"
+                + ")",
+                tableName, getPayloadType()
+            ),
+            String.format("CREATE INDEX idx_%1$s_sequence_name ON %1$s(sequence_name)", tableName)
+        )
+    );
+  }
+
   @Override
   public Void insertOrUpdate(
       final String tableName,
@@ -500,6 +518,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createSupervisorsTable(tablesConfigSupplier.get().getSupervisorTable());
+    }
+  }
+
+  @Override
+  public void createTaskCheckPointsTable()
+  {
+    if (config.get().isCreateTables()) {
+      createTaskCheckPointsTable(tablesConfigSupplier.get().getTaskCheckPointsTable());
     }
   }
 

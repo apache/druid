@@ -684,6 +684,7 @@ public class AppenderatorImpl implements Appenderator
 
   private void shutdownExecutors()
   {
+    log.info("Shutting down persist and push executor");
     persistExecutor.shutdownNow();
     pushExecutor.shutdownNow();
   }

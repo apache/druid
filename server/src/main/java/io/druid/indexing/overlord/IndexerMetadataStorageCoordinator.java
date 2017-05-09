@@ -150,4 +150,8 @@ public interface IndexerMetadataStorageCoordinator
    * @return DataSegments which include ONLY data within the requested interval and are not flagged as used. Data segments NOT returned here may include data in the interval
    */
   List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval);
+
+  List<DataSourceMetadata> getCheckPointsForSequence(String sequenceName) throws IOException;
+
+  boolean addNewCheckPointForSequence(String sequenceName, DataSourceMetadata dataSourceMetadata) throws IOException;
 }

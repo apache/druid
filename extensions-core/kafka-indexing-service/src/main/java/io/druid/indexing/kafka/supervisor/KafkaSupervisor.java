@@ -20,6 +20,7 @@
 package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -31,6 +32,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -452,6 +454,18 @@ public class KafkaSupervisor implements Supervisor
     notices.add(new ResetNotice(dataSourceMetadata));
   }
 
+  @Override
+  public void checkPoint(
+      String sequenceName,
+      DataSourceMetadata previousCheckPoint,
+      DataSourceMetadata currentCheckPoint
+  )
+  {
+    Preconditions.checkNotNull(sequenceName, "Cannot check point without a sequence name");
+    log.info("Check-pointing [%s]", currentCheckPoint);
+    notices.add(new CheckpointNotice(sequenceName, previousCheckPoint, currentCheckPoint));
+  }
+
   public void possiblyRegisterListener()
   {
     // getTaskRunner() sometimes fails if the task queue is still being initialized so retry later until we succeed
@@ -491,7 +505,7 @@ public class KafkaSupervisor implements Supervisor
 
   private interface Notice
   {
-    void handle() throws ExecutionException, InterruptedException, TimeoutException;
+    void handle() throws ExecutionException, InterruptedException, TimeoutException, IOException;
   }
 
   private class RunNotice implements Notice
@@ -548,6 +562,65 @@ public class KafkaSupervisor implements Supervisor
     {
       log.makeAlert("Resetting dataSource [%s]", dataSource).emit();
       resetInternal(dataSourceMetadata);
+    }
+  }
+
+  private class CheckpointNotice implements Notice
+  {
+    final String sequenceName;
+    final DataSourceMetadata previousCheckPoint;
+    final DataSourceMetadata currentCheckPoint;
+
+    CheckpointNotice(String sequenceName, DataSourceMetadata previousCheckPoint, DataSourceMetadata currentCheckPoint)
+    {
+      this.sequenceName = sequenceName;
+      this.previousCheckPoint = previousCheckPoint;
+      this.currentCheckPoint = currentCheckPoint;
+    }
+
+    @Override
+    public void handle() throws ExecutionException, InterruptedException, TimeoutException, IOException
+    {
+      // go to database and check for consistency
+      // if already received request for this sequence name and dataSourceMetadata combination
+      // then return without doing anything
+
+      // checkPoints will never be null, it can be an empty list
+      List<DataSourceMetadata> checkPoints = indexerMetadataStorageCoordinator.getCheckPointsForSequence(sequenceName);
+
+      // check validity of previousCheckPoint if it is not null
+      if (previousCheckPoint != null) {
+        int index = checkPoints.size() - 1;
+        while (index >= 0) {
+          DataSourceMetadata dataSourceMetadata = checkPoints.get(index);
+          if (dataSourceMetadata.equals(previousCheckPoint)) {
+            break;
+          }
+          index--;
+        }
+        if (index < 0) {
+          throw new ISE("No previous checkpoint [%s] found in metadata store", previousCheckPoint);
+        } else if (index < checkPoints.size() - 1) {
+          // if the found check point is not the latest one
+          // already check pointed by replica
+          Preconditions.checkState(index == checkPoints.size() - 2, "checkpoint consistency failure");
+          log.info("Already check pointed with dataSourceMetadata [%s]", checkPoints.get(checkPoints.size() - 2));
+          return;
+        }
+      } else {
+        // There cannot be more than one check point in metadata store when previous check point is null
+        // as when the task starts they are sent existing check points
+        Preconditions.checkState(
+            checkPoints.size() <= 1,
+            "Got check point request with null as previous check point, however found more than one checkpoints in metadata store"
+        );
+        if (checkPoints.size() == 1) {
+          log.info("Already check pointed with dataSourceMetadata [%s]", checkPoints.get(0));
+          return;
+        }
+      }
+      Map<Integer, Long> checkPoint = checkPointInternal(sequenceName, currentCheckPoint);
+      log.info("Handled Check point notice, new check point is [%s]", checkPoint);
     }
   }
 
@@ -643,6 +716,21 @@ public class KafkaSupervisor implements Supervisor
       partitionGroups.remove(getTaskGroupIdForPartition(partition));
       taskGroups.remove(getTaskGroupIdForPartition(partition));
     }
+  }
+
+  private Map<Integer, Long> checkPointInternal(String sequenceName, DataSourceMetadata dataSourceMetadata)
+      throws ExecutionException, InterruptedException
+  {
+    if (!(dataSourceMetadata instanceof KafkaDataSourceMetadata)) {
+      throw new IAE("Expected KafkaDataSourceMetadata but found instance of [%s]", dataSourceMetadata.getClass());
+    }
+    // Find task group corresponding to the dataSourceMetadata
+    final int taskGroupId = ((KafkaDataSourceMetadata) dataSourceMetadata).getKafkaPartitions()
+                                                                          .getPartitionOffsetMap()
+                                                                          .keySet()
+                                                                          .iterator()
+                                                                          .next();
+    return checkPointTasks(sequenceName, taskGroupId, false).get();
   }
 
   @VisibleForTesting
@@ -1048,7 +1136,7 @@ public class KafkaSupervisor implements Supervisor
       if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
         log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
         futureGroupIds.add(groupId);
-        futures.add(signalTasksToFinish(groupId));
+        futures.add(checkPointTasks(generateSequenceName(groupId), groupId, true));
       }
     }
 
@@ -1084,40 +1172,46 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private ListenableFuture<Map<Integer, Long>> signalTasksToFinish(final int groupId)
+  private ListenableFuture<Map<Integer, Long>> checkPointTasks(
+      final String sequenceName,
+      final int groupId,
+      final boolean finalize
+  )
   {
     final TaskGroup taskGroup = taskGroups.get(groupId);
 
-    // 1) Check if any task completed (in which case we're done) and kill unassigned tasks
-    Iterator<Map.Entry<String, TaskData>> i = taskGroup.tasks.entrySet().iterator();
-    while (i.hasNext()) {
-      Map.Entry<String, TaskData> taskEntry = i.next();
-      String taskId = taskEntry.getKey();
-      TaskData task = taskEntry.getValue();
+    if (finalize) {
+      // 1) Check if any task completed (in which case we're done) and kill unassigned tasks
+      Iterator<Map.Entry<String, TaskData>> i = taskGroup.tasks.entrySet().iterator();
+      while (i.hasNext()) {
+        Map.Entry<String, TaskData> taskEntry = i.next();
+        String taskId = taskEntry.getKey();
+        TaskData task = taskEntry.getValue();
 
-      if (task.status.isSuccess()) {
-        // If any task in this group has already completed, stop the rest of the tasks in the group and return.
-        // This will cause us to create a new set of tasks next cycle that will start from the offsets in
-        // metadata store (which will have advanced if we succeeded in publishing and will remain the same if publishing
-        // failed and we need to re-ingest)
-        return Futures.transform(
-            stopTasksInGroup(taskGroup), new Function<Object, Map<Integer, Long>>()
-            {
-              @Nullable
-              @Override
-              public Map<Integer, Long> apply(@Nullable Object input)
+        if (task.status.isSuccess()) {
+          // If any task in this group has already completed, stop the rest of the tasks in the group and return.
+          // This will cause us to create a new set of tasks next cycle that will start from the offsets in
+          // metadata store (which will have advanced if we succeeded in publishing and will remain the same if publishing
+          // failed and we need to re-ingest)
+          return Futures.transform(
+              stopTasksInGroup(taskGroup), new Function<Object, Map<Integer, Long>>()
               {
-                return null;
+                @Nullable
+                @Override
+                public Map<Integer, Long> apply(@Nullable Object input)
+                {
+                  return null;
+                }
               }
-            }
-        );
-      }
+          );
+        }
 
-      if (task.status.isRunnable()) {
-        if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
-          log.info("Killing task [%s] which hasn't been assigned to a worker", taskId);
-          killTask(taskId);
-          i.remove();
+        if (task.status.isRunnable()) {
+          if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
+            log.info("Killing task [%s] which hasn't been assigned to a worker", taskId);
+            killTask(taskId);
+            i.remove();
+          }
         }
       }
     }
@@ -1167,12 +1261,36 @@ public class KafkaSupervisor implements Supervisor
               return null;
             }
 
-            log.info("Setting endOffsets for tasks in taskGroup [%d] to %s and resuming", groupId, endOffsets);
-            for (final String taskId : setEndOffsetTaskIds) {
-              setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, true));
-            }
-
             try {
+              final KafkaDataSourceMetadata newCheckPoint = new KafkaDataSourceMetadata(new KafkaPartitions(
+                  ioConfig.getTopic(),
+                  endOffsets
+              ));
+              if (endOffsets.equals(taskGroup.partitionOffsets)) {
+                log.warn(
+                    "Not adding check point [%s] for sequence [%s] as its offsets are same as the start offsets [%s] for the task group [%d]",
+                    newCheckPoint,
+                    sequenceName,
+                    taskGroup.partitionOffsets,
+                    groupId
+                );
+              } else {
+                if (!indexerMetadataStorageCoordinator.addNewCheckPointForSequence(sequenceName, newCheckPoint)) {
+                  String errorMessage = String.format(
+                      "Failed to add new check point [%s] for sequence [%s]",
+                      newCheckPoint,
+                      sequenceName
+                  );
+                  log.error(errorMessage);
+                  throw new ISE(errorMessage);
+                }
+              }
+
+              log.info("Setting endOffsets for tasks in taskGroup [%d] to %s and resuming", groupId, endOffsets);
+              for (final String taskId : setEndOffsetTaskIds) {
+                setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, true, finalize));
+              }
+
               List<Boolean> results = Futures.successfulAsList(setEndOffsetFutures)
                                              .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
               for (int i = 0; i < results.size(); i++) {
@@ -1185,6 +1303,7 @@ public class KafkaSupervisor implements Supervisor
               }
             }
             catch (Exception e) {
+              log.error("Something bad happened [%s]", e.getMessage());
               Throwables.propagate(e);
             }
 
@@ -1258,8 +1377,9 @@ public class KafkaSupervisor implements Supervisor
             log.warn("All tasks in group [%d] failed to publish, killing all tasks for these partitions", groupId);
           } else {
             log.makeAlert(
-                "No task in [%s] succeeded before the completion timeout elapsed [%s]!",
+                "No task [%s] in group id [%s] succeeded before the completion timeout elapsed [%s]!",
                 group.taskIds(),
+                groupId,
                 ioConfig.getCompletionTimeout()
             ).emit();
           }
@@ -1267,14 +1387,16 @@ public class KafkaSupervisor implements Supervisor
           // reset partitions offsets for this task group so that they will be re-read from metadata storage
           partitionGroups.remove(groupId);
 
+          log.warn("Killing all tasks in pending group [%s]", group.taskIds());
           // stop all the tasks in this pending completion group
-          futures.add(stopTasksInGroup(group));
+          killTasksInGroup(group);
 
           // set a flag so the other pending completion groups for this set of partitions will also stop
           stopTasksInTaskGroup = true;
 
+          log.warn("Killing all tasks in current group [%s]", taskGroups.get(groupId) == null ? ImmutableSet.<String>of() : taskGroups.get(groupId).taskIds());
           // stop all the tasks in the currently reading task group and remove the bad task group
-          futures.add(stopTasksInGroup(taskGroups.remove(groupId)));
+          killTasksInGroup(taskGroups.remove(groupId));
 
           toRemove.add(group);
         }
@@ -1404,6 +1526,36 @@ public class KafkaSupervisor implements Supervisor
         minimumMessageTime
     );
 
+    // get check points for this sequence_name from metadata store and send them in context
+    List<DataSourceMetadata> checkPoints;
+    try {
+      checkPoints = indexerMetadataStorageCoordinator.getCheckPointsForSequence(sequenceName);
+      log.info("Retrieved check points [%s] for sequence [%s]", checkPoints, sequenceName);
+    }
+    catch (Exception e) {
+      log.makeAlert("Unable to get checkpoints from MetadataStore, not creating new tasks")
+         .addData("sequence_name", sequenceName)
+         .addData("exception", e.getMessage())
+         .emit();
+      return;
+    }
+    final Map<String, Object> context = new HashMap<>();
+    if(spec.getContext() != null) {
+      context.putAll(spec.getContext());
+    }
+    try {
+      context.put("check_points", sortingMapper.writerWithType(new TypeReference<List<DataSourceMetadata>>()
+      {
+      }).writeValueAsString(checkPoints));
+    }
+    catch (JsonProcessingException e) {
+      log.makeAlert("Unable to serialize check points, not creating new tasks")
+         .addData("sequence_name", sequenceName)
+         .addData("exception", e.getMessage())
+         .emit();
+      return;
+    }
+
     for (int i = 0; i < replicas; i++) {
       String taskId = Joiner.on("_").join(sequenceName, getRandomId());
       KafkaIndexTask indexTask = new KafkaIndexTask(
@@ -1412,7 +1564,7 @@ public class KafkaSupervisor implements Supervisor
           spec.getDataSchema(),
           taskTuningConfig,
           kafkaIOConfig,
-          spec.getContext(),
+          context,
           null
       );
 
@@ -1579,6 +1731,14 @@ public class KafkaSupervisor implements Supervisor
       taskQueue.get().shutdown(id);
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
+    }
+  }
+
+  private void killTasksInGroup(TaskGroup taskGroup) {
+    if (taskGroup != null) {
+      for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
+        killTask(entry.getKey());
+      }
     }
   }
 

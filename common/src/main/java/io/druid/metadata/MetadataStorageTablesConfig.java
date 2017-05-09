@@ -31,7 +31,7 @@ public class MetadataStorageTablesConfig
 {
   public static MetadataStorageTablesConfig fromBase(String base)
   {
-    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null);
+    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null, null);
   }
 
   public static final String TASK_ENTRY_TYPE = "task";
@@ -75,6 +75,9 @@ public class MetadataStorageTablesConfig
   @JsonProperty("supervisors")
   private final String supervisorTable;
 
+  @JsonProperty("taskCheckPoints")
+  private final String taskCheckPointsTable;
+
   @JsonCreator
   public MetadataStorageTablesConfig(
       @JsonProperty("base") String base,
@@ -87,7 +90,8 @@ public class MetadataStorageTablesConfig
       @JsonProperty("taskLog") String taskLogTable,
       @JsonProperty("taskLock") String taskLockTable,
       @JsonProperty("audit") String auditTable,
-      @JsonProperty("supervisors") String supervisorTable
+      @JsonProperty("supervisors") String supervisorTable,
+      @JsonProperty("taskCheckPoints") String taskCheckPointsTable
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
@@ -105,6 +109,7 @@ public class MetadataStorageTablesConfig
     lockTables.put(TASK_ENTRY_TYPE, this.taskLockTable);
     this.auditTable = makeTableName(auditTable, "audit");
     this.supervisorTable = makeTableName(supervisorTable, "supervisors");
+    this.taskCheckPointsTable = makeTableName(taskCheckPointsTable, "taskCheckPoints");
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)
@@ -192,5 +197,10 @@ public class MetadataStorageTablesConfig
   public String getTaskLockTable()
   {
     return taskLockTable;
+  }
+
+  public String getTaskCheckPointsTable()
+  {
+    return taskCheckPointsTable;
   }
 }

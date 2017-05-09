@@ -52,6 +52,12 @@ public class NoopSupervisorSpec implements SupervisorSpec
 
       @Override
       public void reset(DataSourceMetadata dataSourceMetadata) {}
+
+      @Override
+      public void checkPoint(String sequenceName, DataSourceMetadata prev, DataSourceMetadata curr)
+      {
+
+      }
     };
   }
 
