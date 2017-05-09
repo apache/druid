@@ -35,7 +35,7 @@ public class DelimitedParseSpec extends ParseSpec
   private final String delimiter;
   private final String listDelimiter;
   private final List<String> columns;
-  private final Integer maxNumSkipHeadRows;
+  private final int skipHeaderRows;
 
   @JsonCreator
   public DelimitedParseSpec(
@@ -44,7 +44,7 @@ public class DelimitedParseSpec extends ParseSpec
       @JsonProperty("delimiter") String delimiter,
       @JsonProperty("listDelimiter") String listDelimiter,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("maxNumSkipHeadRows") Integer maxNumSkipHeadRows
+      @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
     super(timestampSpec, dimensionsSpec);
@@ -52,7 +52,7 @@ public class DelimitedParseSpec extends ParseSpec
     this.delimiter = delimiter;
     this.listDelimiter = listDelimiter;
     this.columns = Preconditions.checkNotNull(columns, "columns");
-    this.maxNumSkipHeadRows = maxNumSkipHeadRows;
+    this.skipHeaderRows = skipHeaderRows;
 
     for (String column : this.columns) {
       Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
@@ -79,10 +79,10 @@ public class DelimitedParseSpec extends ParseSpec
     return columns;
   }
 
-  @JsonProperty("maxNumSkipHeadRows")
-  public Integer getMaxNumSkipHeadRows()
+  @JsonProperty("skipHeaderRows")
+  public Integer getSkipHeaderRows()
   {
-    return maxNumSkipHeadRows;
+    return skipHeaderRows;
   }
 
   @Override
@@ -107,13 +107,13 @@ public class DelimitedParseSpec extends ParseSpec
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new DelimitedParseSpec(spec, getDimensionsSpec(), delimiter, listDelimiter, columns, maxNumSkipHeadRows);
+    return new DelimitedParseSpec(spec, getDimensionsSpec(), delimiter, listDelimiter, columns, skipHeaderRows);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new DelimitedParseSpec(getTimestampSpec(), spec, delimiter, listDelimiter, columns, maxNumSkipHeadRows);
+    return new DelimitedParseSpec(getTimestampSpec(), spec, delimiter, listDelimiter, columns, skipHeaderRows);
   }
 
   public ParseSpec withDelimiter(String delim)
@@ -124,7 +124,7 @@ public class DelimitedParseSpec extends ParseSpec
         delim,
         listDelimiter,
         columns,
-        maxNumSkipHeadRows
+        skipHeaderRows
     );
   }
 
@@ -136,7 +136,7 @@ public class DelimitedParseSpec extends ParseSpec
         delimiter,
         delim,
         columns,
-        maxNumSkipHeadRows
+        skipHeaderRows
     );
   }
 
@@ -148,7 +148,7 @@ public class DelimitedParseSpec extends ParseSpec
         delimiter,
         listDelimiter,
         cols,
-        maxNumSkipHeadRows
+        skipHeaderRows
     );
   }
 }

@@ -34,7 +34,7 @@ public class CSVParseSpec extends ParseSpec
 {
   private final String listDelimiter;
   private final List<String> columns;
-  private final Integer maxNumSkipHeadRows;
+  private final int skipHeaderRows;
 
   @JsonCreator
   public CSVParseSpec(
@@ -42,7 +42,7 @@ public class CSVParseSpec extends ParseSpec
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("listDelimiter") String listDelimiter,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("maxNumSkipHeadRows") Integer maxNumSkipHeadRows
+      @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
     super(timestampSpec, dimensionsSpec);
@@ -54,7 +54,7 @@ public class CSVParseSpec extends ParseSpec
     }
 
     this.columns = columns;
-    this.maxNumSkipHeadRows = maxNumSkipHeadRows;
+    this.skipHeaderRows = skipHeaderRows;
 
     verify(dimensionsSpec.getDimensionNames());
   }
@@ -71,10 +71,10 @@ public class CSVParseSpec extends ParseSpec
     return columns;
   }
 
-  @JsonProperty("maxNumSkipHeadRows")
-  public Integer getMaxNumSkipHeadRows()
+  @JsonProperty("skipHeaderRows")
+  public Integer getSkipHeaderRows()
   {
-    return maxNumSkipHeadRows;
+    return skipHeaderRows;
   }
 
   @Override
@@ -94,17 +94,17 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, maxNumSkipHeadRows);
+    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, skipHeaderRows);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, maxNumSkipHeadRows);
+    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, skipHeaderRows);
   }
 
   public ParseSpec withColumns(List<String> cols)
   {
-    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, maxNumSkipHeadRows);
+    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, skipHeaderRows);
   }
 }

@@ -32,11 +32,9 @@ import java.util.NoSuchElementException;
  */
 public class FileIteratingFirehose implements Firehose
 {
-  private static final int DEFAULT_NUM_SKIP_HEAD_ROWS = 0;
-
   private final Iterator<LineIterator> lineIterators;
   private final StringInputRowParser parser;
-  private final int maxNumSkipHeadRows;
+  private final int skipHeadRows;
 
   private LineIterator lineIterator = null;
 
@@ -49,13 +47,11 @@ public class FileIteratingFirehose implements Firehose
     this.parser = parser;
     final ParseSpec parseSpec = parser.getParseSpec();
     if (parseSpec instanceof CSVParseSpec) {
-      final Integer maxNumSkipHeadRows = ((CSVParseSpec) parseSpec).getMaxNumSkipHeadRows();
-      this.maxNumSkipHeadRows = maxNumSkipHeadRows == null ? DEFAULT_NUM_SKIP_HEAD_ROWS : maxNumSkipHeadRows;
+      this.skipHeadRows = ((CSVParseSpec) parseSpec).getSkipHeaderRows();
     } else if (parseSpec instanceof DelimitedParseSpec) {
-      final Integer maxNumSkipHeadRows = ((DelimitedParseSpec) parseSpec).getMaxNumSkipHeadRows();
-      this.maxNumSkipHeadRows = maxNumSkipHeadRows == null ? DEFAULT_NUM_SKIP_HEAD_ROWS : maxNumSkipHeadRows;
+      this.skipHeadRows = ((DelimitedParseSpec) parseSpec).getSkipHeaderRows();
     } else {
-      maxNumSkipHeadRows = DEFAULT_NUM_SKIP_HEAD_ROWS;
+      skipHeadRows = 0;
     }
   }
 
@@ -64,7 +60,7 @@ public class FileIteratingFirehose implements Firehose
   {
     while ((lineIterator == null || !lineIterator.hasNext()) && lineIterators.hasNext()) {
       lineIterator = getNextLineIterator();
-      for (int i = 0; i < maxNumSkipHeadRows && lineIterator.hasNext(); i++) {
+      for (int i = 0; i < skipHeadRows && lineIterator.hasNext(); i++) {
         lineIterator.next();
       }
     }
