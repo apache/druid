@@ -376,7 +376,6 @@ public class DruidCoordinator
     }
     String segmentName = segment.getIdentifier();
     try {
-
       if (fromServer.getMetadata().equals(toServer.getMetadata())) {
         throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentName, fromServer.getName());
       }
@@ -385,6 +384,7 @@ public class DruidCoordinator
       if (dataSource == null) {
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentName);
       }
+
       final DataSegment segmentToLoad = dataSource.getSegment(segment.getIdentifier());
       final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
