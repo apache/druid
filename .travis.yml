@@ -4,8 +4,8 @@ jdk:
   - oraclejdk8
 
 script:
-  - mvn test -B -Pparallel-test -Dmaven.fork.count=2
   - mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B
+  - mvn test -B -Pparallel-test -Dmaven.fork.count=2
 
 install: true
 
