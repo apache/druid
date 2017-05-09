@@ -80,9 +80,36 @@ public class CSVParserTest
   @Test
   public void testCSVParserWithoutHeader()
   {
-    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null));
+    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null), false, 0);
     String body = "hello,world,foo";
     final Map<String, Object> jsonMap = csvParser.parse(body);
+    Assert.assertEquals(
+        "jsonMap",
+        ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),
+        jsonMap
+    );
+  }
+
+  @Test
+  public void testCSVParserWithSkipHeaderRows()
+  {
+    final int skipHeaderRows = 2;
+    final Parser<String, Object> csvParser = new CSVParser(
+        Optional.absent(),
+        false,
+        skipHeaderRows
+    );
+    csvParser.startFileFromBeginning();
+    final String[] body = new String[] {
+        "header,line,1",
+        "header,line,2",
+        "hello,world,foo"
+    };
+    int index;
+    for (index = 0; index < skipHeaderRows; index++) {
+      Assert.assertNull(csvParser.parse(body[index]));
+    }
+    final Map<String, Object> jsonMap = csvParser.parse(body[index]);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),

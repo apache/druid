@@ -84,9 +84,42 @@ public class DelimitedParserTest
   @Test
   public void testTSVParserWithoutHeader()
   {
-    final Parser<String, Object> delimitedParser = new DelimitedParser(Optional.of("\t"), Optional.<String>absent());
+    final Parser<String, Object> delimitedParser = new DelimitedParser(
+        Optional.of("\t"),
+        Optional.<String>absent(),
+        false,
+        0
+    );
     String body = "hello\tworld\tfoo";
     final Map<String, Object> jsonMap = delimitedParser.parse(body);
+    Assert.assertEquals(
+        "jsonMap",
+        ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),
+        jsonMap
+    );
+  }
+
+  @Test
+  public void testTSVParserWithSkipHeaderRows()
+  {
+    final int skipHeaderRows = 2;
+    final Parser<String, Object> delimitedParser = new DelimitedParser(
+        Optional.of("\t"),
+        Optional.absent(),
+        false,
+        skipHeaderRows
+    );
+    delimitedParser.startFileFromBeginning();
+    final String[] body = new String[] {
+        "header\tline\t1",
+        "header\tline\t2",
+        "hello\tworld\tfoo"
+    };
+    int index;
+    for (index = 0; index < skipHeaderRows; index++) {
+      Assert.assertNull(delimitedParser.parse(body[index]));
+    }
+    final Map<String, Object> jsonMap = delimitedParser.parse(body[index]);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),

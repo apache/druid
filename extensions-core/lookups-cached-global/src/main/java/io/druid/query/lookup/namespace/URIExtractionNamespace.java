@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -262,7 +263,9 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public CSVFlatDataParser(
         @JsonProperty("columns") List<String> columns,
         @JsonProperty("keyColumn") final String keyColumn,
-        @JsonProperty("valueColumn") final String valueColumn
+        @JsonProperty("valueColumn") final String valueColumn,
+        @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
+        @JsonProperty("skipHeaderRows") int skipHeaderRows
     )
     {
       Preconditions.checkArgument(
@@ -291,10 +294,20 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
 
       this.parser = new DelegateParser(
-          new CSVParser(Optional.<String>absent(), columns),
+          new CSVParser(Optional.absent(), columns, hasHeaderRow, skipHeaderRows),
           this.keyColumn,
           this.valueColumn
       );
+    }
+
+    @VisibleForTesting
+    CSVFlatDataParser(
+        List<String> columns,
+        String keyColumn,
+        String valueColumn
+    )
+    {
+      this(columns, keyColumn, valueColumn, false, 0);
     }
 
     @JsonProperty
@@ -371,7 +384,9 @@ public class URIExtractionNamespace implements ExtractionNamespace
         @JsonProperty("delimiter") String delimiter,
         @JsonProperty("listDelimiter") String listDelimiter,
         @JsonProperty("keyColumn") final String keyColumn,
-        @JsonProperty("valueColumn") final String valueColumn
+        @JsonProperty("valueColumn") final String valueColumn,
+        @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
+        @JsonProperty("skipHeaderRows") int skipHeaderRows
     )
     {
       Preconditions.checkArgument(
@@ -380,7 +395,9 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
       final DelimitedParser delegate = new DelimitedParser(
           Optional.fromNullable(Strings.emptyToNull(delimiter)),
-          Optional.fromNullable(Strings.emptyToNull(listDelimiter))
+          Optional.fromNullable(Strings.emptyToNull(listDelimiter)),
+          hasHeaderRow,
+          skipHeaderRows
       );
       Preconditions.checkArgument(
           !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),
@@ -406,6 +423,18 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
 
       this.parser = new DelegateParser(delegate, this.keyColumn, this.valueColumn);
+    }
+
+    @VisibleForTesting
+    TSVFlatDataParser(
+        List<String> columns,
+        String delimiter,
+        String listDelimiter,
+        String keyColumn,
+        String valueColumn
+    )
+    {
+      this(columns, delimiter, listDelimiter, keyColumn, valueColumn, false, 0);
     }
 
     @JsonProperty

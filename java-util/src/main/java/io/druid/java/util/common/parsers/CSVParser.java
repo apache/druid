@@ -19,6 +19,7 @@
 
 package io.druid.java.util.common.parsers;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
@@ -60,54 +61,59 @@ public class CSVParser implements Parser<String, Object>
   private final String listDelimiter;
   private final Splitter listSplitter;
   private final Function<String, Object> valueFunction;
-
   private final boolean hasHeaderRow;
+  private final int maxSkipHeaderRows;
 
   private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
 
   private ArrayList<String> fieldNames = null;
   private boolean hasParsedHeader = false;
-
-  public CSVParser(final Optional<String> listDelimiter)
-  {
-    this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
-    this.listSplitter = Splitter.on(this.listDelimiter);
-    this.valueFunction = getValueFunction(this.listDelimiter, this.listSplitter);
-
-    this.hasHeaderRow = false;
-  }
-
-  public CSVParser(final Optional<String> listDelimiter, final Iterable<String> fieldNames)
-  {
-    this(listDelimiter);
-
-    setFieldNames(fieldNames);
-  }
-
-  public CSVParser(final Optional<String> listDelimiter, final String header)
-  {
-    this(listDelimiter);
-
-    setFieldNames(header);
-  }
+  private int skippedHeaderRows;
+  private boolean supportSkipHeaderRows;
 
   public CSVParser(
       final Optional<String> listDelimiter,
-      final Iterable<String> fieldNames,
-      final boolean hasHeaderRow
+      final boolean hasHeaderRow,
+      final int maxSkipHeaderRows
   )
   {
     this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
     this.listSplitter = Splitter.on(this.listDelimiter);
     this.valueFunction = getValueFunction(this.listDelimiter, this.listSplitter);
+
     this.hasHeaderRow = hasHeaderRow;
+    this.maxSkipHeaderRows = maxSkipHeaderRows;
+  }
+
+  public CSVParser(
+      final Optional<String> listDelimiter,
+      final Iterable<String> fieldNames,
+      final boolean hasHeaderRow,
+      final int maxSkipHeaderRows
+  )
+  {
+    this(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
 
     setFieldNames(fieldNames);
+  }
+
+  @VisibleForTesting
+  CSVParser(final Optional<String> listDelimiter, final String header)
+  {
+    this(listDelimiter, false, 0);
+
+    setFieldNames(header);
   }
 
   public String getListDelimiter()
   {
     return listDelimiter;
+  }
+
+  @Override
+  public void startFileFromBeginning()
+  {
+    supportSkipHeaderRows = true;
   }
 
   @Override
@@ -138,6 +144,11 @@ public class CSVParser implements Parser<String, Object>
   @Override
   public Map<String, Object> parse(final String input)
   {
+    if (!supportSkipHeaderRows && (hasHeaderRow || maxSkipHeaderRows > 0)) {
+      throw new UnsupportedOperationException("hasHeaderRow or maxSkipHeaderRows is not supported. "
+                                              + "Please check the indexTask supports these options.");
+    }
+
     try {
       String[] values = parser.parseLine(input);
 
@@ -146,6 +157,11 @@ public class CSVParser implements Parser<String, Object>
           setFieldNames(Arrays.asList(values));
         }
         hasParsedHeader = true;
+        return null;
+      }
+
+      if (skippedHeaderRows < maxSkipHeaderRows) {
+        skippedHeaderRows++;
         return null;
       }
 
@@ -164,5 +180,6 @@ public class CSVParser implements Parser<String, Object>
   public void reset()
   {
     hasParsedHeader = false;
+    skippedHeaderRows = 0;
   }
 }

@@ -272,7 +272,7 @@ public class IndexTask extends AbstractTask
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
-        // If a header is present in the data (and with proper configurations), a null InputRow will get created
+        // The null inputRow means the caller must skip this row.
         if (inputRow == null) {
           continue;
         }

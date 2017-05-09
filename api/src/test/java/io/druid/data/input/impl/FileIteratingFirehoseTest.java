@@ -22,6 +22,7 @@ package io.druid.data.input.impl;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import io.druid.data.input.InputRow;
 import org.apache.commons.io.LineIterator;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @RunWith(Parameterized.class)
 public class FileIteratingFirehoseTest
@@ -68,7 +70,7 @@ public class FileIteratingFirehoseTest
   private final List<String> inputs;
   private final List<String> expectedResults;
 
-  public FileIteratingFirehoseTest(List<String> texts, int numSkipHeadRows)
+  public FileIteratingFirehoseTest(List<String> texts, int numSkipHeaderRows)
   {
     parser = new StringInputRowParser(
         new CSVParseSpec(
@@ -77,7 +79,7 @@ public class FileIteratingFirehoseTest
             ",",
             ImmutableList.of("ts", "x"),
             false,
-            numSkipHeadRows
+            numSkipHeaderRows
         ),
         null
     );
@@ -85,14 +87,15 @@ public class FileIteratingFirehoseTest
     this.inputs = texts;
     this.expectedResults = inputs.stream()
                                  .map(input -> input.split("\n"))
-                                 .filter(lines -> numSkipHeadRows < lines.length)
                                  .flatMap(lines -> {
-                                   final List<String> skippedLines = Arrays.asList(lines)
-                                                                           .subList(numSkipHeadRows, lines.length);
-                                   return skippedLines.stream()
-                                                      .filter(line -> line.length() > 0)
-                                                      .map(line -> line.split(",")[1])
-                                                      .collect(Collectors.toList()).stream();
+                                   final List<String> filteredLines = Arrays.asList(lines).stream()
+                                                                            .filter(line -> line.length() > 0)
+                                                                            .map(line -> line.split(",")[1])
+                                                                            .collect(Collectors.toList());
+
+                                   final int numRealSkippedRows = Math.min(filteredLines.size(), numSkipHeaderRows);
+                                   IntStream.range(0, numRealSkippedRows).forEach(i -> filteredLines.set(i, null));
+                                   return filteredLines.stream();
                                  })
                                  .collect(Collectors.toList());
   }
@@ -104,13 +107,19 @@ public class FileIteratingFirehoseTest
                                                    .map(s -> new LineIterator(new StringReader(s)))
                                                    .collect(Collectors.toList());
 
-    final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser);
-    final List<String> results = Lists.newArrayList();
+    try (final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser)) {
+      final List<String> results = Lists.newArrayList();
 
-    while (firehose.hasMore()) {
-      results.add(Joiner.on("|").join(firehose.nextRow().getDimension("x")));
+      while (firehose.hasMore()) {
+        final InputRow inputRow = firehose.nextRow();
+        if (inputRow == null) {
+          results.add(null);
+        } else {
+          results.add(Joiner.on("|").join(inputRow.getDimension("x")));
+        }
+      }
+
+      Assert.assertEquals(expectedResults, results);
     }
-
-    Assert.assertEquals(expectedResults, results);
   }
 }

@@ -27,6 +27,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.common.parsers.Parser;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -56,6 +57,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     this.parseSpec = parseSpec;
     this.mapParser = new MapInputRowParser(parseSpec);
     this.parser = parseSpec.makeParser();
+    parser.startFileFromBeginning();
 
     if (encoding != null) {
       this.charset = Charset.forName(encoding);
@@ -128,17 +130,20 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     parser.reset();
   }
 
-  public InputRow parse(String input)
+  @Nullable
+  public InputRow parse(@Nullable String input)
   {
     return parseMap(parseString(input));
   }
 
-  private Map<String, Object> parseString(String inputString)
+  @Nullable
+  private Map<String, Object> parseString(@Nullable String inputString)
   {
     return parser.parse(inputString);
   }
 
-  private InputRow parseMap(Map<String, Object> theMap)
+  @Nullable
+  private InputRow parseMap(@Nullable Map<String, Object> theMap)
   {
     // If a header is present in the data (and with proper configurations), a null is returned
     if (theMap == null) {

@@ -116,7 +116,8 @@ public class DelimitedParseSpec extends ParseSpec
         Optional.fromNullable(delimiter),
         Optional.fromNullable(listDelimiter),
         columns,
-        hasHeaderRow
+        hasHeaderRow,
+        skipHeaderRows
     );
   }
 

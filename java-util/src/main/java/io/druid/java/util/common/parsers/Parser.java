@@ -19,6 +19,7 @@
 
 package io.druid.java.util.common.parsers;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -28,16 +29,25 @@ import java.util.Map;
 public interface Parser<K, V>
 {
   /**
-   * Parse a String into a Map.
+   * Initialize this parser for centralized batch processing of files like IndexTask.
+   */
+  default void startFileFromBeginning()
+  {
+
+  }
+
+  /**
+   * Parse a String into a Map.  The result can be null which means the given input string will be ignored.
    *
    * @throws ParseException if the String cannot be parsed
    */
-  public Map<K, V> parse(String input);
+  @Nullable
+  Map<K, V> parse(String input);
 
   /**
    * Resets state within a parser. This may or may not get called at the start of reading of every file.
    */
-  public default void reset()
+  default void reset()
   {
     // do nothing
   }
@@ -48,12 +58,12 @@ public interface Parser<K, V>
    * parser) and those parsers have their own way of setting field names.
    */
   @Deprecated
-  public void setFieldNames(Iterable<String> fieldNames);
+  void setFieldNames(Iterable<String> fieldNames);
 
   /**
    * Returns the fieldNames that we expect to see in parsed Maps, if known, or null otherwise. Deprecated; Parsers
    * should not, in general, be expected to know what fields they will return.
    */
   @Deprecated
-  public List<String> getFieldNames();
+  List<String> getFieldNames();
 }

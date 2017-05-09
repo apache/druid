@@ -34,7 +34,6 @@ public class FileIteratingFirehose implements Firehose
 {
   private final Iterator<LineIterator> lineIterators;
   private final StringInputRowParser parser;
-  private final int skipHeadRows;
 
   private LineIterator lineIterator = null;
 
@@ -45,14 +44,6 @@ public class FileIteratingFirehose implements Firehose
   {
     this.lineIterators = lineIterators;
     this.parser = parser;
-    final ParseSpec parseSpec = parser.getParseSpec();
-    if (parseSpec instanceof CSVParseSpec) {
-      this.skipHeadRows = ((CSVParseSpec) parseSpec).getSkipHeaderRows();
-    } else if (parseSpec instanceof DelimitedParseSpec) {
-      this.skipHeadRows = ((DelimitedParseSpec) parseSpec).getSkipHeaderRows();
-    } else {
-      skipHeadRows = 0;
-    }
   }
 
   @Override
@@ -60,9 +51,6 @@ public class FileIteratingFirehose implements Firehose
   {
     while ((lineIterator == null || !lineIterator.hasNext()) && lineIterators.hasNext()) {
       lineIterator = getNextLineIterator();
-      for (int i = 0; i < skipHeadRows && lineIterator.hasNext(); i++) {
-        lineIterator.next();
-      }
     }
 
     return lineIterator != null && lineIterator.hasNext();
