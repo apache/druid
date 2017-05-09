@@ -76,6 +76,7 @@ public class FileIteratingFirehoseTest
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
             ",",
             ImmutableList.of("ts", "x"),
+            false,
             numSkipHeadRows
         ),
         null

@@ -72,8 +72,6 @@ If you have nested JSON, [Druid can automatically flatten it for you](flatten-js
 
 ### CSV
 
-Since the CSV data cannot contain the column names (no header is allowed), these must be added before that data can be processed:
-
 ```json
   "parseSpec":{
     "format" : "csv",
@@ -88,14 +86,21 @@ Since the CSV data cannot contain the column names (no header is allowed), these
   }
 ```
 
-The `columns` field must match the columns of your input data in the same order.
+#### CSV Index Tasks
+
+If your file does not have a header as the first line of the file, you must set the `columns` field and ensure that the order of the fields matches the columns of your input data in the same order.
+If your file does have a header, you can set a field called `hasHeaderRow` to true, and do not include the `columns` key.
 Additionally, you can set the number of head rows to be skipped to `skipHeaderRows`. Note that this option is effective
 only for non-Hadoop batch index tasks.
 
-### TSV
+#### Other CSV Ingestion Tasks
+
+The `columns` field must be included and and ensure that the order of the fields matches the columns of your input data in the same order.
+
+### TSV (Delimited)
 
 ```json
-  "parseSpec":{
+  "parseSpec": {
     "format" : "tsv",
     "timestampSpec" : {
       "column" : "timestamp"
@@ -109,11 +114,18 @@ only for non-Hadoop batch index tasks.
   }
 ```
 
-The `columns` field must match the columns of your input data in the same order. 
+#### TSV (Delimited) Index Tasks
+
+If your file does not have a header as the first line of the file, you must set the `columns` field and ensure that the order of the fields matches the columns of your input data in the same order.
+If your file does have a header, you can set a field called `hasHeaderRow` to true, and do not include the `columns` key.
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 Additionally, you can set the number of head rows to be skipped to `skipHeaderRows`. Note that this option is effective
 only for non-Hadoop batch index tasks.
+
+#### Other TSV (Delimited) Ingestion Tasks
+
+The `columns` field must be included and and ensure that the order of the fields matches the columns of your input data in the same order.
 
 ### Regex
 

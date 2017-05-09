@@ -97,6 +97,7 @@ public class MapVirtualColumnTest
             "\t",
             ",",
             Arrays.asList("ts", "dim", "keys", "values"),
+            false,
             0
         )
         , "utf8"

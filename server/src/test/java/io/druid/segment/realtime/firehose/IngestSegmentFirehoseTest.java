@@ -109,6 +109,7 @@ public class IngestSegmentFirehoseTest
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
             null,
             ImmutableList.of("timestamp", "host", "visited"),
+            false,
             0
         ),
         Charsets.UTF_8.toString()

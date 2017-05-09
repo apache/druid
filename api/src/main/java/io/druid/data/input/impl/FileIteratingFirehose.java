@@ -84,7 +84,9 @@ public class FileIteratingFirehose implements Firehose
       lineIterator.close();
     }
 
-    return lineIterators.next();
+    final LineIterator iterator = lineIterators.next();
+    parser.reset();
+    return iterator;
   }
 
   @Override

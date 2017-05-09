@@ -35,6 +35,14 @@ public interface Parser<K, V>
   public Map<K, V> parse(String input);
 
   /**
+   * Resets state within a parser. This may or may not get called at the start of reading of every file.
+   */
+  public default void reset()
+  {
+    // do nothing
+  }
+
+  /**
    * Set the fieldNames that you expect to see in parsed Maps. Deprecated; Parsers should not, in general, be
    * expected to know what fields they will return. Some individual types of parsers do need to know (like a TSV
    * parser) and those parsers have their own way of setting field names.

@@ -238,7 +238,7 @@ public class JSONPathParser implements Parser<String, Object>
 
   /**
    * Specifies a field to be added to the parsed object Map, using JsonPath notation.
-   *
+   * <p>
    * See <a href="https://github.com/jayway/JsonPath">https://github.com/jayway/JsonPath</a> for more information.
    */
   public static class FieldSpec
@@ -281,5 +281,4 @@ public class JSONPathParser implements Parser<String, Object>
       return expr;
     }
   }
-
 }

@@ -33,24 +33,17 @@ import java.util.Map;
 
 public class CSVParser implements Parser<String, Object>
 {
-  private final String listDelimiter;
-  private final Splitter listSplitter;
-  private final Function<String, Object> valueFunction;
-
-  private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
-
-  private ArrayList<String> fieldNames = null;
-
-  public CSVParser(final Optional<String> listDelimiter)
+  private static final Function<String, Object> getValueFunction(
+      final String listDelimiter,
+      final Splitter listSplitter
+  )
   {
-    this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
-    this.listSplitter = Splitter.on(this.listDelimiter);
-    this.valueFunction = new Function<String, Object>()
+    return new Function<String, Object>()
     {
       @Override
       public Object apply(String input)
       {
-        if (input.contains(CSVParser.this.listDelimiter)) {
+        if (input.contains(listDelimiter)) {
           return Lists.newArrayList(
               Iterables.transform(
                   listSplitter.split(input),
@@ -62,6 +55,26 @@ public class CSVParser implements Parser<String, Object>
         }
       }
     };
+  }
+
+  private final String listDelimiter;
+  private final Splitter listSplitter;
+  private final Function<String, Object> valueFunction;
+
+  private final boolean hasHeaderRow;
+
+  private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
+
+  private ArrayList<String> fieldNames = null;
+  private boolean hasParsedHeader = false;
+
+  public CSVParser(final Optional<String> listDelimiter)
+  {
+    this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
+    this.listSplitter = Splitter.on(this.listDelimiter);
+    this.valueFunction = getValueFunction(this.listDelimiter, this.listSplitter);
+
+    this.hasHeaderRow = false;
   }
 
   public CSVParser(final Optional<String> listDelimiter, final Iterable<String> fieldNames)
@@ -78,6 +91,20 @@ public class CSVParser implements Parser<String, Object>
     setFieldNames(header);
   }
 
+  public CSVParser(
+      final Optional<String> listDelimiter,
+      final Iterable<String> fieldNames,
+      final boolean hasHeaderRow
+  )
+  {
+    this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
+    this.listSplitter = Splitter.on(this.listDelimiter);
+    this.valueFunction = getValueFunction(this.listDelimiter, this.listSplitter);
+    this.hasHeaderRow = hasHeaderRow;
+
+    setFieldNames(fieldNames);
+  }
+
   public String getListDelimiter()
   {
     return listDelimiter;
@@ -92,8 +119,10 @@ public class CSVParser implements Parser<String, Object>
   @Override
   public void setFieldNames(final Iterable<String> fieldNames)
   {
-    ParserUtils.validateFields(fieldNames);
-    this.fieldNames = Lists.newArrayList(fieldNames);
+    if (fieldNames != null) {
+      ParserUtils.validateFields(fieldNames);
+      this.fieldNames = Lists.newArrayList(fieldNames);
+    }
   }
 
   public void setFieldNames(final String header)
@@ -112,6 +141,14 @@ public class CSVParser implements Parser<String, Object>
     try {
       String[] values = parser.parseLine(input);
 
+      if (hasHeaderRow && !hasParsedHeader) {
+        if (fieldNames == null) {
+          setFieldNames(Arrays.asList(values));
+        }
+        hasParsedHeader = true;
+        return null;
+      }
+
       if (fieldNames == null) {
         setFieldNames(ParserUtils.generateFieldNames(values.length));
       }
@@ -121,5 +158,11 @@ public class CSVParser implements Parser<String, Object>
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    hasParsedHeader = false;
   }
 }

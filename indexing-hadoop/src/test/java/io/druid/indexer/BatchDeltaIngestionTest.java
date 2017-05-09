@@ -347,6 +347,7 @@ public class BatchDeltaIngestionTest
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "host2", "visited_num"),
+                            false,
                             0
                         ),
                         null

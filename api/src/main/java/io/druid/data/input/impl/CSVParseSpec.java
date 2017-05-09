@@ -34,6 +34,7 @@ public class CSVParseSpec extends ParseSpec
 {
   private final String listDelimiter;
   private final List<String> columns;
+  private final boolean hasHeaderRow;
   private final int skipHeaderRows;
 
   @JsonCreator
@@ -42,21 +43,29 @@ public class CSVParseSpec extends ParseSpec
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("listDelimiter") String listDelimiter,
       @JsonProperty("columns") List<String> columns,
+      @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
     super(timestampSpec, dimensionsSpec);
 
     this.listDelimiter = listDelimiter;
-    Preconditions.checkNotNull(columns, "columns");
-    for (String column : columns) {
-      Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
-    }
-
     this.columns = columns;
+    this.hasHeaderRow = hasHeaderRow;
     this.skipHeaderRows = skipHeaderRows;
 
-    verify(dimensionsSpec.getDimensionNames());
+    if (columns != null) {
+      for (String column : columns) {
+        Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
+      }
+      verify(dimensionsSpec.getDimensionNames());
+    } else {
+      Preconditions.checkArgument(
+          hasHeaderRow,
+          "If columns field is not set, the first row of your data must have your header"
+          + " and hasHeaderRow must be set to true."
+      );
+    }
   }
 
   @JsonProperty
@@ -69,6 +78,12 @@ public class CSVParseSpec extends ParseSpec
   public List<String> getColumns()
   {
     return columns;
+  }
+
+  @JsonProperty
+  public boolean isHasHeaderRow()
+  {
+    return hasHeaderRow;
   }
 
   @JsonProperty("skipHeaderRows")
@@ -88,23 +103,23 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new CSVParser(Optional.fromNullable(listDelimiter), columns);
+    return new CSVParser(Optional.fromNullable(listDelimiter), columns, hasHeaderRow);
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, skipHeaderRows);
+    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, skipHeaderRows);
+    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
   public ParseSpec withColumns(List<String> cols)
   {
-    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, skipHeaderRows);
+    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, hasHeaderRow, skipHeaderRows);
   }
 }

@@ -165,6 +165,7 @@ public class HadoopConverterJobTest
                             "\t",
                             "\u0001",
                             Arrays.asList(TestIndex.COLUMNS),
+                            false,
                             0
                         ),
                         null

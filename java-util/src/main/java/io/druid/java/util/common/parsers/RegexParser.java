@@ -117,7 +117,6 @@ public class RegexParser implements Parser<String, Object>
   }
 
   @Override
-
   public List<String> getFieldNames()
   {
     return fieldNames;
