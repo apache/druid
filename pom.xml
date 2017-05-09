@@ -1014,6 +1014,9 @@
                         <configuration>
                             <compilerId>javac-with-errorprone</compilerId>
                             <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                            <fork>true</fork>
+                            <meminitial>1024m</meminitial>
+                            <maxmem>2048m</maxmem>
                             <source>1.8</source>
                             <target>1.8</target>
                             <showWarnings>false</showWarnings>
