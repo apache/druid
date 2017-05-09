@@ -97,7 +97,7 @@ public class SchemaEvolutionTest
     );
   }
 
-  public static <T, QueryType extends Query<T>> List<T> runQuery(
+  public static <T , QueryType extends Query<T>> List<T> runQuery(
       final QueryType query,
       final QueryRunnerFactory<T, QueryType> factory,
       final List<QueryableIndex> indexes

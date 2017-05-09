@@ -424,9 +424,10 @@ public class ServerManagerTest
                                     .granularity(granularity)
                                     .limit(10000)
                                     .query("wow")
+                                    .updateDistributionTarget()
                                     .build();
     final QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(
-        query,
+        query.updateDistributionTarget(),
         intervals
     );
     return serverManagerExec.submit(
@@ -574,9 +575,9 @@ public class ServerManagerTest
     }
 
     @Override
-    public QueryMetrics<Query<?>> makeMetrics(QueryType query)
+    public QueryMetrics<QueryType> makeMetrics(QueryType query)
     {
-      return new DefaultQueryMetrics<>(new DefaultObjectMapper());
+      return (QueryMetrics<QueryType>) new DefaultQueryMetrics<>(new DefaultObjectMapper());
     }
 
     @Override
@@ -591,6 +592,12 @@ public class ServerManagerTest
       return new TypeReference<T>()
       {
       };
+    }
+
+    @Override
+    public QueryRunner<T> annotateDistributionTarget(QueryRunner<T> runner)
+    {
+      return runner;
     }
   }
 

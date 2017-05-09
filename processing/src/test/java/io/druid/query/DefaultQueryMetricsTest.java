@@ -50,7 +50,7 @@ public class DefaultQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>(new DefaultObjectMapper());
+    DefaultQueryMetrics<BaseQuery<?>> queryMetrics = new DefaultQueryMetrics<>(new DefaultObjectMapper());
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
         .granularity(Granularities.ALL)
@@ -81,7 +81,7 @@ public class DefaultQueryMetricsTest
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
     Assert.assertEquals("true", actualEvent.get("hasFilters"));
-    Assert.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
+    Assert.assertEquals(query.getTotalDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
     Assert.assertEquals("query/time", actualEvent.get("metric"));
     Assert.assertEquals(0L, actualEvent.get("value"));
@@ -92,7 +92,7 @@ public class DefaultQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>(new DefaultObjectMapper());
+    DefaultQueryMetrics<BaseQuery<?>> queryMetrics = new DefaultQueryMetrics<>(new DefaultObjectMapper());
     testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 

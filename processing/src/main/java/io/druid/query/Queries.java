@@ -23,9 +23,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,5 +84,37 @@ public class Queries
     }
 
     return postAggs;
+  }
+
+  /**
+   * Make string representations of data sources and intervals of a given query.
+   * The lhs of the result pair is the list of data source names.
+   * The rhs of the result pair is the list of interval strings in ISO8601 interval format ({@link Interval#toString()}).
+   *
+   * @param query a query
+   * @return a pair of strings of data sources and intervals
+   */
+  public static <T> Pair<String, String> getDataSourceAndIntervalStrings(final Query<T> query)
+  {
+    final List<String> datasourceNames = new ArrayList<>();
+    final List<String> intervals = new ArrayList<>();
+
+    query.getDataSources().forEach(spec -> {
+      datasourceNames.addAll(spec.getDataSource().getNames());
+      spec.getQuerySegmentSpec().getIntervals().stream().map(Interval::toString).forEach(intervals::add);
+    });
+
+    return new Pair<>(datasourceNames.toString(), intervals.toString());
+  }
+
+  public static Duration getTotalDuration(QuerySegmentSpec spec)
+  {
+    Duration totalDuration = new Duration(0);
+    for (Interval interval : spec.getIntervals()) {
+      if (interval != null) {
+        totalDuration = totalDuration.plus(interval.toDuration());
+      }
+    }
+    return totalDuration;
   }
 }

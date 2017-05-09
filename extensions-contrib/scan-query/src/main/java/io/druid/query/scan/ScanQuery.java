@@ -25,7 +25,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.TableDataSource;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
@@ -35,6 +37,7 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -137,7 +140,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public Query<ScanResultValue> withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
+    return ScanQueryBuilder.copy(this).context(QueryContexts.computeOverriddenContext(getContext(), contextOverrides))
+                           .build();
   }
 
   public ScanQuery withDimFilter(DimFilter dimFilter)
@@ -279,6 +283,21 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       return this;
     }
 
+    public ScanQueryBuilder updateDistributionTarget()
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(
+          QueryContexts.DISTRIBUTION_TARGET_SOURCE,
+          new DataSourceWithSegmentSpec(
+              BaseQuery.getLeafDataSource(dataSource),
+              querySegmentSpec
+          )
+      );
+      return this;
+    }
+
     public ScanQueryBuilder intervals(QuerySegmentSpec q)
     {
       querySegmentSpec = q;
@@ -299,7 +318,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
     public ScanQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      if (context == null) {
+        context = new HashMap<>(c);
+      } else {
+        context.putAll(c);
+      }
       return this;
     }
 

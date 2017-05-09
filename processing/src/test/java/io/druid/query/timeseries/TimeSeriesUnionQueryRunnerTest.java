@@ -190,7 +190,7 @@ public class TimeSeriesUnionQueryRunnerTest
                   Map<String, Object> responseContext
               )
               {
-                if (query.getDataSource().equals(new TableDataSource("ds1"))) {
+                if (((TimeseriesQuery)query).getDataSource().equals(new TableDataSource("ds1"))) {
                   return Sequences.simple(descending ? Lists.reverse(ds1) : ds1);
                 } else {
                   return Sequences.simple(descending ? Lists.reverse(ds2) : ds2);

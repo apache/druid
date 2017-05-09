@@ -2357,10 +2357,11 @@ public class GroupByQueryRunnerTest
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final GroupByQuery groupByQuery = (GroupByQuery) query;
+            final Query query1 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final Query query2 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
@@ -2653,10 +2654,11 @@ public class GroupByQueryRunnerTest
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final GroupByQuery groupByQuery = (GroupByQuery) query;
+            final Query query1 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final Query query2 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
@@ -3441,10 +3443,11 @@ public class GroupByQueryRunnerTest
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final GroupByQuery groupByQuery = (GroupByQuery) query;
+            final Query query1 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final Query query2 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
@@ -3774,10 +3777,11 @@ public class GroupByQueryRunnerTest
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final GroupByQuery groupByQuery = (GroupByQuery) query;
+            final Query query1 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final Query query2 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
@@ -3883,10 +3887,11 @@ public class GroupByQueryRunnerTest
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final GroupByQuery groupByQuery = (GroupByQuery) query;
+            final Query query1 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final Query query2 = groupByQuery.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(

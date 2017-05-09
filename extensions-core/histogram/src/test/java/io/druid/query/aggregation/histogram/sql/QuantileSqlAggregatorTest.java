@@ -200,6 +200,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f),
                     new QuantilePostAggregator("a7", "a7:agg", 0.50f)
                 ))
+                .updateDistributionTarget()
                 .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
@@ -261,6 +262,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 ))
                 .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
+                .updateDistributionTarget()
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );

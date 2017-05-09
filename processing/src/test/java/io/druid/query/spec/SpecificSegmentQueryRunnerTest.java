@@ -89,6 +89,7 @@ public class SpecificSegmentQueryRunnerTest
 
           }
         },
+        "foo",
         new SpecificSegmentSpec(
             descriptor
         )
@@ -105,6 +106,7 @@ public class SpecificSegmentQueryRunnerTest
                                           new CountAggregatorFactory("rows")
                                       )
                                   )
+                                  .updateDistributionTarget()
                                   .build();
     Sequence results = queryRunner.run(query, responseContext);
     Sequences.toList(results, Lists.newArrayList());
@@ -167,6 +169,7 @@ public class SpecificSegmentQueryRunnerTest
             );
           }
         },
+        "foo",
         new SpecificSegmentSpec(
             descriptor
         )
@@ -182,6 +185,7 @@ public class SpecificSegmentQueryRunnerTest
                                           new CountAggregatorFactory("rows")
                                       )
                                   )
+                                  .updateDistributionTarget()
                                   .build();
     Sequence results = queryRunner.run(
         query,

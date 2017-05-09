@@ -171,16 +171,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         // Inject outer query context keys into subquery if they don't already exist in the subquery context.
         // Unlike withOverriddenContext's normal behavior, we want keys present in the subquery to win.
         final Map<String, Object> subqueryContext = Maps.newTreeMap();
-        if (query.getContext() != null) {
-          for (Map.Entry<String, Object> entry : query.getContext().entrySet()) {
-            if (entry.getValue() != null) {
-              subqueryContext.put(entry.getKey(), entry.getValue());
-            }
+        for (Map.Entry<String, Object> entry : query.getContext().entrySet()) {
+          if (entry.getValue() != null) {
+            subqueryContext.put(entry.getKey(), entry.getValue());
           }
         }
-        if (((QueryDataSource) dataSource).getQuery().getContext() != null) {
-          subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
-        }
+        subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
         subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
       }

@@ -42,10 +42,11 @@ import io.druid.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -258,7 +259,8 @@ public class RealtimePlumber implements Plumber
   public <T> QueryRunner<T> getQueryRunner(final Query<T> query)
   {
     // Calling getQueryRunnerForIntervals here works because there's only one segment per interval for RealtimePlumber.
-    return texasRanger.getQueryRunnerForIntervals(query, query.getIntervals());
+    final DataSourceWithSegmentSpec spec= query.getDistributionTarget();
+    return texasRanger.getQueryRunnerForIntervals(query, spec.getQuerySegmentSpec().getIntervals());
   }
 
   @Override

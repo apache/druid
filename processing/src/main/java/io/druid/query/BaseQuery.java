@@ -21,7 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.guava.Sequence;
@@ -43,7 +43,6 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     }
   }
 
-  public static final String QUERYID = "queryId";
   private final DataSource dataSource;
   private final boolean descending;
   private final Map<String, Object> context;
@@ -61,16 +60,21 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec can't be null");
 
     this.dataSource = dataSource;
-    this.context = context;
+    this.context = context == null ? Maps.newTreeMap() : context;
     this.querySegmentSpec = querySegmentSpec;
     this.descending = descending;
   }
 
   @JsonProperty
-  @Override
   public DataSource getDataSource()
   {
     return dataSource;
+  }
+
+  @Override
+  public List<DataSourceWithSegmentSpec> getDataSources()
+  {
+    return ImmutableList.of(new DataSourceWithSegmentSpec(dataSource, querySegmentSpec));
   }
 
   @JsonProperty
@@ -92,18 +96,18 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return run(querySegmentSpec.lookup(this, walker), context);
   }
 
-  public Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context)
-  {
-    return runner.run(this, context);
-  }
-
-  @Override
   public List<Interval> getIntervals()
   {
     return querySegmentSpec.getIntervals();
   }
 
   @Override
+  public Duration getDuration(DataSource dataSource)
+  {
+    Preconditions.checkArgument(this.dataSource.equals(dataSource));
+    return getDuration();
+  }
+
   public Duration getDuration()
   {
     if (duration == null) {
@@ -127,65 +131,10 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @Override
-  public <ContextType> ContextType getContextValue(String key)
-  {
-    return context == null ? null : (ContextType) context.get(key);
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
-  {
-    ContextType retVal = getContextValue(key);
-    return retVal == null ? defaultValue : retVal;
-  }
-
-  @Override
-  public boolean getContextBoolean(String key, boolean defaultValue)
-  {
-    return QueryContexts.parseBoolean(this, key, defaultValue);
-  }
-
-  /**
-   * @deprecated use {@link #computeOverriddenContext(Map, Map) computeOverriddenContext(getContext(), overrides))}
-   * instead. This method may be removed in the next minor or major version of Druid.
-   */
-  @Deprecated
-  protected Map<String, Object> computeOverridenContext(final Map<String, Object> overrides)
-  {
-    return computeOverriddenContext(getContext(), overrides);
-  }
-
-  protected static Map<String, Object> computeOverriddenContext(
-      final Map<String, Object> context,
-      final Map<String, Object> overrides
-  )
-  {
-    Map<String, Object> overridden = Maps.newTreeMap();
-    if (context != null) {
-      overridden.putAll(context);
-    }
-    overridden.putAll(overrides);
-
-    return overridden;
-  }
-
-  @Override
   public Ordering<T> getResultOrdering()
   {
     Ordering<T> retVal = Ordering.natural();
     return descending ? retVal.reverse() : retVal;
-  }
-
-  @Override
-  public String getId()
-  {
-    return (String) getContextValue(QUERYID);
-  }
-
-  @Override
-  public Query withId(String id)
-  {
-    return withOverriddenContext(ImmutableMap.of(QUERYID, id));
   }
 
   @Override
@@ -203,18 +152,16 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     if (descending != baseQuery.descending) {
       return false;
     }
-    if (context != null ? !context.equals(baseQuery.context) : baseQuery.context != null) {
+    if (!context.equals(baseQuery.context)) {
       return false;
     }
-    if (dataSource != null ? !dataSource.equals(baseQuery.dataSource) : baseQuery.dataSource != null) {
+    if (!dataSource.equals(baseQuery.dataSource)) {
       return false;
     }
     if (duration != null ? !duration.equals(baseQuery.duration) : baseQuery.duration != null) {
       return false;
     }
-    if (querySegmentSpec != null
-        ? !querySegmentSpec.equals(baseQuery.querySegmentSpec)
-        : baseQuery.querySegmentSpec != null) {
+    if (!querySegmentSpec.equals(baseQuery.querySegmentSpec)) {
       return false;
     }
 
@@ -224,11 +171,62 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public int hashCode()
   {
-    int result = dataSource != null ? dataSource.hashCode() : 0;
+    int result = dataSource.hashCode();
     result = 31 * result + (descending ? 1 : 0);
-    result = 31 * result + (context != null ? context.hashCode() : 0);
-    result = 31 * result + (querySegmentSpec != null ? querySegmentSpec.hashCode() : 0);
+    result = 31 * result + context.hashCode();
+    result = 31 * result + querySegmentSpec.hashCode();
     result = 31 * result + (duration != null ? duration.hashCode() : 0);
     return result;
+  }
+
+  public Query<T> updateDistributionTarget()
+  {
+    return distributeBy(new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(dataSource), querySegmentSpec));
+  }
+
+  @Override
+  public Query<T> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec)
+  {
+    Preconditions.checkArgument(this.dataSource.equals(dataSource));
+    final BaseQuery<T> result = (BaseQuery<T>) withQuerySegmentSpec(spec);
+    if (getDistributionTarget() != null && getDistributionTarget().getDataSource().equals(dataSource)) {
+      return result.updateDistributionTarget();
+    } else {
+      return result;
+    }
+  }
+
+  @Override
+  public Query<T> withQuerySegmentSpec(String concatenatedDataSourceName, QuerySegmentSpec spec)
+  {
+    Preconditions.checkArgument(this.dataSource.getConcatenatedName().equals(concatenatedDataSourceName));
+    return withQuerySegmentSpec(this.dataSource, spec);
+  }
+
+  @Override
+  public Query<T> replaceDataSource(DataSource oldDataSource, DataSource newDataSource)
+  {
+    Preconditions.checkArgument(this.dataSource.equals(oldDataSource));
+    return withDataSource(newDataSource);
+  }
+
+  public abstract Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
+  public abstract Query<T> withDataSource(DataSource dataSource);
+
+  public static <T extends Comparable<T>> DataSource getLeafDataSource(
+      BaseQuery<T> query
+  )
+  {
+    return getLeafDataSource(query.getDataSource());
+  }
+
+  public static DataSource getLeafDataSource(DataSource dataSource)
+  {
+    if (dataSource instanceof QueryDataSource) {
+      final QueryDataSource queryDataSource = (QueryDataSource) dataSource;
+      return getLeafDataSource((BaseQuery<?>) queryDataSource.getQuery());
+    } else {
+      return dataSource;
+    }
   }
 }

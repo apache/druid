@@ -28,6 +28,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -201,7 +202,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 
   public TopNQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new TopNQueryBuilder(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
+    return new TopNQueryBuilder(this).context(QueryContexts.computeOverriddenContext(getContext(), contextOverrides))
+                                     .build();
   }
 
   public TopNQuery withDimFilter(DimFilter dimFilter)

@@ -39,8 +39,10 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Queries;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -64,10 +66,12 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  */
@@ -469,7 +473,7 @@ public class GroupByQuery extends BaseQuery<Row>
       havingSpec = query.getHavingSpec();
       limitSpec = query.getLimitSpec();
       postProcessingFn = query.postProcessingFn;
-      context = query.getContext();
+      context = new TreeMap<>(query.getContext());
     }
 
     public Builder(Builder builder)
@@ -505,6 +509,18 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder setDataSource(Query query)
     {
       this.dataSource = new QueryDataSource(query);
+      return this;
+    }
+
+    public Builder updateDistributionTarget()
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(
+          QueryContexts.DISTRIBUTION_TARGET_SOURCE,
+          new DataSourceWithSegmentSpec(getLeafDataSource(dataSource), querySegmentSpec)
+      );
       return this;
     }
 
@@ -679,13 +695,17 @@ public class GroupByQuery extends BaseQuery<Row>
 
     public Builder setContext(Map<String, Object> context)
     {
-      this.context = context;
+      if (this.context == null) {
+        this.context = new HashMap<>(context);
+      } else {
+        this.context.putAll(context);
+      }
       return this;
     }
 
     public Builder overrideContext(Map<String, Object> contextOverride)
     {
-      this.context = computeOverriddenContext(context, contextOverride);
+      this.context = QueryContexts.computeOverriddenContext(context, contextOverride);
       return this;
     }
 

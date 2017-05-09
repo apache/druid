@@ -27,6 +27,8 @@ import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 public class ExtractionDimensionSpecTest
 {
   @Test
@@ -46,6 +48,46 @@ public class ExtractionDimensionSpecTest
 
     final ExtractionDimensionSpec extractionDimensionSpec = (ExtractionDimensionSpec) objectMapper.readValue(oldJson, DimensionSpec.class);
 
+    Assert.assertEquals("first3Letters", extractionDimensionSpec.getOutputName());
+    Assert.assertEquals("myDim", extractionDimensionSpec.getDimension());
+    Assert.assertNotNull(extractionDimensionSpec.getExtractionFn());
+    Assert.assertEquals(ValueType.STRING, extractionDimensionSpec.getOutputType());
+    Assert.assertTrue(extractionDimensionSpec.getExtractionFn() instanceof RegexDimExtractionFn);
+
+    Assert.assertEquals(
+        extractionDimensionSpec,
+        objectMapper.readValue(
+            objectMapper.writeValueAsBytes(extractionDimensionSpec),
+            DimensionSpec.class
+        )
+    );
+  }
+
+  @Test
+  public void testSerdeWithDataSourceName() throws IOException
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{\n"
+                        + "  \"type\" : \"extraction\",\n"
+                        + "  \"dataSource\" : \"source\",\n"
+                        + "  \"dimension\" : \"myDim\",\n"
+                        + "  \"outputName\" : \"first3Letters\",\n"
+                        + "  \"outputType\" : \"STRING\",\n"
+                        + "  \"extractionFn\" : {\n"
+                        + "    \"type\" : \"regex\",\n"
+                        + "    \"expr\" : \"(...).*\",\n"
+                        + "    \"index\" : 1,\n"
+                        + "    \"replaceMissingValue\" : false,\n"
+                        + "    \"replaceMissingValueWith\" : null\n"
+                        + "  }\n"
+                        + "}";
+
+    final ExtractionDimensionSpec extractionDimensionSpec = (ExtractionDimensionSpec) objectMapper.readValue(
+        json,
+        DimensionSpec.class
+    );
+
+    Assert.assertEquals("source", extractionDimensionSpec.getDataSourceName());
     Assert.assertEquals("first3Letters", extractionDimensionSpec.getOutputName());
     Assert.assertEquals("myDim", extractionDimensionSpec.getDimension());
     Assert.assertNotNull(extractionDimensionSpec.getExtractionFn());

@@ -24,9 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import io.druid.java.util.common.StringUtils;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupReferencesManager;
@@ -34,11 +33,13 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 
 public class LookupDimensionSpec implements DimensionSpec
 {
   private static final byte CACHE_TYPE_ID = 0x4;
+
+  @JsonProperty
+  private final String dataSourceName;
 
   @JsonProperty
   private final String dimension;
@@ -65,6 +66,7 @@ public class LookupDimensionSpec implements DimensionSpec
 
   @JsonCreator
   public LookupDimensionSpec(
+      @JsonProperty("dataSource") String dataSourceName,
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
       @JsonProperty("lookup") LookupExtractor lookup,
@@ -75,6 +77,7 @@ public class LookupDimensionSpec implements DimensionSpec
       @JsonProperty("optimize") Boolean optimize
   )
   {
+    this.dataSourceName = dataSourceName;
     this.retainMissingValue = retainMissingValue;
     this.optimize = optimize == null ? true : optimize;
     this.replaceMissingValueWith = Strings.emptyToNull(replaceMissingValueWith);
@@ -94,6 +97,37 @@ public class LookupDimensionSpec implements DimensionSpec
           "The system is not configured to allow for lookups, please read about configuring a lookup manager in the docs"
       );
     }
+  }
+
+  public LookupDimensionSpec(
+      String dimension,
+      String outputName,
+      LookupExtractor lookup,
+      boolean retainMissingValue,
+      String replaceMissingValueWith,
+      String name,
+      LookupReferencesManager lookupReferencesManager,
+      Boolean optimize
+  )
+  {
+    this(
+        null,
+        dimension,
+        outputName,
+        lookup,
+        retainMissingValue,
+        replaceMissingValueWith,
+        name,
+        lookupReferencesManager,
+        optimize
+    );
+  }
+
+  @Override
+  @JsonProperty("dataSource")
+  public String getDataSourceName()
+  {
+    return dataSourceName;
   }
 
   @Override
@@ -166,30 +200,18 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    byte[] dimExtractionFnBytes = Strings.isNullOrEmpty(name)
-                                  ? getLookup().getCacheKey()
-                                  : StringUtils.toUtf8(name);
-    byte[] outputNameBytes = StringUtils.toUtf8(outputName);
-    byte[] replaceWithBytes = StringUtils.toUtf8(Strings.nullToEmpty(replaceMissingValueWith));
-
-
-    return ByteBuffer.allocate(6
-                               + dimensionBytes.length
-                               + outputNameBytes.length
-                               + dimExtractionFnBytes.length
-                               + replaceWithBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(dimensionBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(outputNameBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(dimExtractionFnBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(replaceWithBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(retainMissingValue ? (byte) 1 : (byte) 0)
-                     .array();
+    final CacheKeyBuilder builder = new CacheKeyBuilder(CACHE_TYPE_ID)
+        .appendString(dataSourceName)
+        .appendString(dimension);
+    if (Strings.isNullOrEmpty(name)) {
+      builder.appendCacheable(getLookup());
+    } else {
+      builder.appendString(name);
+    }
+    return builder.appendString(outputName)
+                  .appendString(replaceMissingValueWith)
+                  .appendBoolean(retainMissingValue)
+                  .build();
   }
 
   @Override
@@ -216,6 +238,9 @@ public class LookupDimensionSpec implements DimensionSpec
     if (optimize != that.optimize) {
       return false;
     }
+    if (dataSourceName != null ? !dataSourceName.equals(that.dataSourceName) : that.dataSourceName != null) {
+      return false;
+    }
     if (!getDimension().equals(that.getDimension())) {
       return false;
     }
@@ -238,6 +263,7 @@ public class LookupDimensionSpec implements DimensionSpec
   public int hashCode()
   {
     int result = getDimension().hashCode();
+    result = 31 * result + (dataSourceName != null ? dataSourceName.hashCode() : 0);
     result = 31 * result + getOutputName().hashCode();
     result = 31 * result + (getLookup() != null ? getLookup().hashCode() : 0);
     result = 31 * result + (retainMissingValue ? 1 : 0);

@@ -29,6 +29,7 @@ import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Queries;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -142,7 +143,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public TimeseriesQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    Map<String, Object> newContext = QueryContexts.computeOverriddenContext(getContext(), contextOverrides);
     return Druids.TimeseriesQueryBuilder.copy(this).context(newContext).build();
   }
 

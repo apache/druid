@@ -30,7 +30,9 @@ import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.Result;
@@ -150,6 +152,9 @@ public class QueryMaker
       final SelectQuery baseQuery
   )
   {
+    final SelectQuery running = (SelectQuery) baseQuery.distributeBy(
+        new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(baseQuery), baseQuery.getQuerySegmentSpec())
+    );
     Preconditions.checkState(queryBuilder.getGrouping() == null, "grouping must be null");
 
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
@@ -178,7 +183,7 @@ public class QueryMaker
               @Override
               public Sequence<Object[]> next()
               {
-                final SelectQuery queryWithPagination = baseQuery.withPagingSpec(
+                final SelectQuery queryWithPagination = running.withPagingSpec(
                     new PagingSpec(
                         pagingIdentifiers.get(),
                         plannerContext.getPlannerConfig().getSelectThreshold(),
@@ -257,14 +262,17 @@ public class QueryMaker
       final TimeseriesQuery query
   )
   {
+    final TimeseriesQuery running = (TimeseriesQuery) query.distributeBy(
+        new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(query), query.getQuerySegmentSpec())
+    );
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
     final List<DimensionSpec> dimensions = queryBuilder.getGrouping().getDimensions();
     final String timeOutputName = dimensions.isEmpty() ? null : Iterables.getOnlyElement(dimensions).getOutputName();
 
-    Hook.QUERY_PLAN.run(query);
+    Hook.QUERY_PLAN.run(running);
 
     return Sequences.map(
-        query.run(walker, Maps.<String, Object>newHashMap()),
+        running.run(walker, Maps.<String, Object>newHashMap()),
         new Function<Result<TimeseriesResultValue>, Object[]>()
         {
           @Override
@@ -293,13 +301,16 @@ public class QueryMaker
       final TopNQuery query
   )
   {
+    final TopNQuery running = (TopNQuery) query.distributeBy(
+        new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(query), query.getQuerySegmentSpec())
+    );
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
 
-    Hook.QUERY_PLAN.run(query);
+    Hook.QUERY_PLAN.run(running);
 
     return Sequences.concat(
         Sequences.map(
-            query.run(walker, Maps.<String, Object>newHashMap()),
+            running.run(walker, Maps.<String, Object>newHashMap()),
             new Function<Result<TopNResultValue>, Sequence<Object[]>>()
             {
               @Override
@@ -331,11 +342,14 @@ public class QueryMaker
   )
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+    final GroupByQuery running = (GroupByQuery) query.distributeBy(
+        new DataSourceWithSegmentSpec(BaseQuery.getLeafDataSource(query), query.getQuerySegmentSpec())
+    );
 
-    Hook.QUERY_PLAN.run(query);
+    Hook.QUERY_PLAN.run(running);
 
     return Sequences.map(
-        query.run(walker, Maps.<String, Object>newHashMap()),
+        running.run(walker, Maps.<String, Object>newHashMap()),
         new Function<io.druid.data.input.Row, Object[]>()
         {
           @Override

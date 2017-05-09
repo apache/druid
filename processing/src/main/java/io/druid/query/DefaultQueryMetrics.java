@@ -22,7 +22,7 @@ package io.druid.query;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
@@ -45,18 +45,31 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void query(QueryType query)
   {
-    dataSource(query);
+    dataSourcesAndDurations(query);
     queryType(query);
-    interval(query);
+    intervals(query);
     hasFilters(query);
-    duration(query);
     queryId(query);
   }
 
   @Override
-  public void dataSource(QueryType query)
+  public void dataSourcesAndDurations(QueryType query)
   {
-    builder.setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()));
+    builder.setDimension(
+        DruidMetrics.DATASOURCE,
+        DataSourceUtil.getMetricName(getOnlyDataSourceWithSegmentSpec(query).getDataSource())
+    );
+    builder.setDimension("duration", query.getTotalDuration().toString());
+  }
+
+  @Override
+  public void intervals(QueryType query)
+  {
+    builder.setDimension(
+        DruidMetrics.INTERVAL,
+        getOnlyDataSourceWithSegmentSpec(query).getQuerySegmentSpec().getIntervals().stream()
+                                               .map(Interval::toString).toArray(String[]::new)
+    );
   }
 
   @Override
@@ -66,24 +79,9 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void interval(QueryType query)
-  {
-    builder.setDimension(
-        DruidMetrics.INTERVAL,
-        query.getIntervals().stream().map(Interval::toString).toArray(String[]::new)
-    );
-  }
-
-  @Override
   public void hasFilters(QueryType query)
   {
     builder.setDimension("hasFilters", String.valueOf(query.hasFilters()));
-  }
-
-  @Override
-  public void duration(QueryType query)
-  {
-    builder.setDimension("duration", query.getDuration().toString());
   }
 
   @Override
@@ -98,11 +96,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     try {
       builder.setDimension(
           "context",
-          jsonMapper.writeValueAsString(
-              query.getContext() == null
-              ? ImmutableMap.of()
-              : query.getContext()
-          )
+          jsonMapper.writeValueAsString(query.getContext())
       );
     }
     catch (JsonProcessingException e) {
@@ -222,5 +216,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
       emitter.emit(builder.build(metric.getKey(), metric.getValue()));
     }
     metrics.clear();
+  }
+
+  private static <QueryType extends Query<?>> DataSourceWithSegmentSpec getOnlyDataSourceWithSegmentSpec(
+      QueryType query
+  )
+  {
+    return Iterables.getOnlyElement(query.getDataSources());
   }
 }

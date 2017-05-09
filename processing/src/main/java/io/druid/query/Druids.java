@@ -62,6 +62,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -433,6 +434,21 @@ public class Druids
       return this;
     }
 
+    public TimeseriesQueryBuilder updateDistributionTarget()
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(
+          QueryContexts.DISTRIBUTION_TARGET_SOURCE,
+          new DataSourceWithSegmentSpec(
+              BaseQuery.getLeafDataSource(dataSource),
+              querySegmentSpec
+          )
+      );
+      return this;
+    }
+
     public TimeseriesQueryBuilder intervals(QuerySegmentSpec q)
     {
       querySegmentSpec = q;
@@ -517,7 +533,11 @@ public class Druids
 
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      if (context == null) {
+        context = new HashMap<>(c);
+      } else {
+        context.putAll(c);
+      }
       return this;
     }
   }
@@ -609,6 +629,21 @@ public class Druids
     public SearchQueryBuilder dataSource(DataSource d)
     {
       dataSource = d;
+      return this;
+    }
+
+    public SearchQueryBuilder updateDistributionTarget()
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(
+          QueryContexts.DISTRIBUTION_TARGET_SOURCE,
+          new DataSourceWithSegmentSpec(
+              BaseQuery.getLeafDataSource(dataSource),
+              querySegmentSpec
+          )
+      );
       return this;
     }
 
@@ -744,7 +779,11 @@ public class Druids
 
     public SearchQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      if (context == null) {
+        context = new HashMap<>(c);
+      } else {
+        context.putAll(c);
+      }
       return this;
     }
   }
@@ -818,6 +857,21 @@ public class Druids
       return this;
     }
 
+    public TimeBoundaryQueryBuilder updateDistributionTarget()
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(
+          QueryContexts.DISTRIBUTION_TARGET_SOURCE,
+          new DataSourceWithSegmentSpec(
+              BaseQuery.getLeafDataSource(dataSource),
+              querySegmentSpec
+          )
+      );
+      return this;
+    }
+
     public TimeBoundaryQueryBuilder intervals(QuerySegmentSpec q)
     {
       querySegmentSpec = q;
@@ -862,7 +916,11 @@ public class Druids
 
     public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      if (context == null) {
+        context = new HashMap<>(c);
+      } else {
+        context.putAll(c);
+      }
       return this;
     }
   }
@@ -1163,6 +1221,21 @@ public class Druids
       return this;
     }
 
+    public SelectQueryBuilder updateDistributionTarget()
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(
+          QueryContexts.DISTRIBUTION_TARGET_SOURCE,
+          new DataSourceWithSegmentSpec(
+              BaseQuery.getLeafDataSource(dataSource),
+              querySegmentSpec
+          )
+      );
+      return this;
+    }
+
     public SelectQueryBuilder intervals(QuerySegmentSpec q)
     {
       querySegmentSpec = q;
@@ -1189,7 +1262,11 @@ public class Druids
 
     public SelectQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      if (context == null) {
+        context = new HashMap<>(c);
+      } else {
+        context.putAll(c);
+      }
       return this;
     }
 

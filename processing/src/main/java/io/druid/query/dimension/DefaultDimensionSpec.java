@@ -24,12 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.java.util.common.StringUtils;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -64,17 +63,20 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   private static final byte CACHE_TYPE_ID = 0x0;
+  private final String dataSourceName;
   private final String dimension;
   private final String outputName;
   private final ValueType outputType;
 
   @JsonCreator
   public DefaultDimensionSpec(
+      @JsonProperty("dataSource") String dataSourceName,
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
       @JsonProperty("outputType") ValueType outputType
   )
   {
+    this.dataSourceName = dataSourceName;
     this.dimension = dimension;
     this.outputType = outputType == null ? ValueType.STRING : outputType;
 
@@ -83,11 +85,36 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   public DefaultDimensionSpec(
+      String dataSourceName,
       String dimension,
       String outputName
   )
   {
-    this(dimension, outputName, ValueType.STRING);
+    this(dataSourceName, dimension, outputName, ValueType.STRING);
+  }
+
+  public DefaultDimensionSpec(
+      String dimension,
+      String outputName,
+      ValueType outputType
+  )
+  {
+    this(null, dimension, outputName, outputType);
+  }
+
+  public DefaultDimensionSpec(
+      String dimension,
+      String outputName
+  )
+  {
+    this(null, dimension, outputName);
+  }
+
+  @Override
+  @JsonProperty("dataSource")
+  public String getDataSourceName()
+  {
+    return dataSourceName;
   }
 
   @Override
@@ -132,12 +159,10 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-
-    return ByteBuffer.allocate(1 + dimensionBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(dimensionBytes)
-                     .array();
+    return new CacheKeyBuilder(CACHE_TYPE_ID)
+        .appendString(dataSourceName)
+        .appendString(dimension)
+        .build();
   }
 
   @Override
@@ -150,6 +175,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   public String toString()
   {
     return "DefaultDimensionSpec{" +
+           "dataSource='" + dataSourceName + '\'' +
            "dimension='" + dimension + '\'' +
            ", outputName='" + outputName + '\'' +
            ", outputType='" + outputType + '\'' +
@@ -169,6 +195,9 @@ public class DefaultDimensionSpec implements DimensionSpec
 
     DefaultDimensionSpec that = (DefaultDimensionSpec) o;
 
+    if (dataSourceName != null ? !dataSourceName.equals(that.dataSourceName) : that.dataSourceName != null) {
+      return false;
+    }
     if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
       return false;
     }
@@ -186,6 +215,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   public int hashCode()
   {
     int result = dimension != null ? dimension.hashCode() : 0;
+    result = 31 * result + (dataSourceName != null ? dataSourceName.hashCode() : 0);
     result = 31 * result + (outputName != null ? outputName.hashCode() : 0);
     result = 31 * result + (outputType != null ? outputType.hashCode() : 0);
     return result;

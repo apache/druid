@@ -24,12 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @JsonTypeName("query")
 public class QueryDataSource implements DataSource
 {
   @JsonProperty
-  private final Query query;
+  private final Query<?> query;
 
   @JsonCreator
   public QueryDataSource(@JsonProperty("query") Query query)
@@ -40,11 +41,13 @@ public class QueryDataSource implements DataSource
   @Override
   public List<String> getNames()
   {
-    return query.getDataSource().getNames();
+    return query.getDataSources().stream()
+                .flatMap(spec -> spec.getDataSource().getNames().stream())
+                .collect(Collectors.toList());
   }
 
   @JsonProperty
-  public Query getQuery()
+  public Query<?> getQuery()
   {
     return query;
   }

@@ -132,7 +132,7 @@ public class LoggingRequestLoggerTest
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
     requestLogger.log(logLine);
     final Map<String, Object> map = readContextMap(baos.toByteArray());
-    Assert.assertEquals("datasource", map.get("dataSource"));
+    Assert.assertEquals("[datasource]", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
@@ -147,7 +147,7 @@ public class LoggingRequestLoggerTest
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, true);
     requestLogger.log(logLine);
     final Map<String, Object> map = readContextMap(baos.toByteArray());
-    Assert.assertEquals("datasource", map.get("dataSource"));
+    Assert.assertEquals("[datasource]", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));

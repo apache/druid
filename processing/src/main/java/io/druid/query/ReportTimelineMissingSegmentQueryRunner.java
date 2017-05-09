@@ -19,10 +19,10 @@
 
 package io.druid.query;
 
-import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,11 +30,11 @@ import java.util.Map;
  */
 public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T>
 {
-  private final SegmentDescriptor descriptor;
+  private final Map<String, List<SegmentDescriptor>> segmentDescMap;
 
-  public ReportTimelineMissingSegmentQueryRunner(SegmentDescriptor descriptor)
+  public ReportTimelineMissingSegmentQueryRunner(Map<String, List<SegmentDescriptor>> segmentDescMap)
   {
-    this.descriptor = descriptor;
+    this.segmentDescMap = segmentDescMap;
   }
 
   @Override
@@ -42,12 +42,12 @@ public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T
       Query<T> query, Map<String, Object> responseContext
   )
   {
-    List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
-    if (missingSegments == null) {
-      missingSegments = Lists.newArrayList();
-      responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
-    }
-    missingSegments.add(descriptor);
+    Map<String, List<SegmentDescriptor>> missingSegments =
+        (Map<String, List<SegmentDescriptor>>) responseContext.computeIfAbsent(
+            Result.MISSING_SEGMENTS_KEY, k -> new HashMap<>()
+        );
+    missingSegments.putAll(segmentDescMap);
+
     return Sequences.empty();
   }
 }

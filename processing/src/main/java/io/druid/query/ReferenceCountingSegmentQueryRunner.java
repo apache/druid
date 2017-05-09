@@ -25,6 +25,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.segment.ReferenceCountingSegment;
 
 import java.io.Closeable;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,17 +34,17 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunnerFactory<T, Query<T>> factory;
   private final ReferenceCountingSegment adapter;
-  private final SegmentDescriptor descriptor;
+  private final Map<String, List<SegmentDescriptor>> segmentDescMap;
 
   public ReferenceCountingSegmentQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
       ReferenceCountingSegment adapter,
-      SegmentDescriptor descriptor
+      Map<String, List<SegmentDescriptor>> segmentDescMap
   )
   {
     this.factory = factory;
     this.adapter = adapter;
-    this.descriptor = descriptor;
+    this.segmentDescMap = segmentDescMap;
   }
 
   @Override
@@ -62,7 +63,7 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
       }
     } else {
       // Segment was closed before we had a chance to increment the reference count
-      return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(query, responseContext);
+      return new ReportTimelineMissingSegmentQueryRunner<T>(segmentDescMap).run(query, responseContext);
     }
   }
 }

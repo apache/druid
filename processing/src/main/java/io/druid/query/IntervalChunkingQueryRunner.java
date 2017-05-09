@@ -72,9 +72,10 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
       return baseRunner.run(query, responseContext);
     }
 
+    final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
     List<Interval> chunkIntervals = Lists.newArrayList(
         FunctionalIterable
-            .create(query.getIntervals())
+            .create(spec.getQuerySegmentSpec().getIntervals())
             .transformCat(
                 new Function<Interval, Iterable<Interval>>()
                 {
@@ -113,7 +114,10 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                         ),
                         executor, queryWatcher
                     ).run(
-                        query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))),
+                        query.withQuerySegmentSpec(
+                            spec.getDataSource(),
+                            new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))
+                        ),
                         responseContext
                     );
                   }

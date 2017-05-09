@@ -266,6 +266,7 @@ public class AppenderatorTest
                                                )
                                            )
                                            .granularity(Granularities.DAY)
+                                           .updateDistributionTarget()
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
@@ -292,6 +293,7 @@ public class AppenderatorTest
                                                )
                                            )
                                            .granularity(Granularities.DAY)
+                                           .updateDistributionTarget()
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
@@ -322,6 +324,7 @@ public class AppenderatorTest
                                                )
                                            )
                                            .granularity(Granularities.DAY)
+                                           .updateDistributionTarget()
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
@@ -356,6 +359,7 @@ public class AppenderatorTest
                                                )
                                            )
                                            .granularity(Granularities.DAY)
+                                           .updateDistributionTarget()
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results4 = Lists.newArrayList();
@@ -412,6 +416,7 @@ public class AppenderatorTest
                                                    )
                                                )
                                            )
+                                           .updateDistributionTarget()
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
@@ -448,6 +453,7 @@ public class AppenderatorTest
                                                    )
                                                )
                                            )
+                                           .updateDistributionTarget()
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
@@ -489,6 +495,7 @@ public class AppenderatorTest
                                                    )
                                                )
                                            )
+                                           .updateDistributionTarget()
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();

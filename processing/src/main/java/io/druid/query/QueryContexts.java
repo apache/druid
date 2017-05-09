@@ -21,14 +21,19 @@ package io.druid.query;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
+
+import java.util.Map;
 
 public class QueryContexts
 {
+  public static final String QUERYID = "queryId";
   public static final String PRIORITY_KEY = "priority";
   public static final String TIMEOUT_KEY = "timeout";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
+  public static final String DISTRIBUTION_TARGET_SOURCE = "distributionTargetSource";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -170,5 +175,19 @@ public class QueryContexts
     } else {
       throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
     }
+  }
+
+  public static Map<String, Object> computeOverriddenContext(
+      final Map<String, Object> context,
+      final Map<String, Object> overrides
+  )
+  {
+    Preconditions.checkNotNull(context, "context");
+    Preconditions.checkNotNull(context, "overrides");
+    Map<String, Object> overridden = Maps.newTreeMap();
+    overridden.putAll(context);
+    overridden.putAll(overrides);
+
+    return overridden;
   }
 }

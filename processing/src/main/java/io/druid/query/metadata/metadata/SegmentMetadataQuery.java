@@ -29,6 +29,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.filter.DimFilter;
@@ -234,7 +235,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public Query<SegmentAnalysis> withOverriddenContext(Map<String, Object> contextOverride)
   {
-    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverride);
+    Map<String, Object> newContext = QueryContexts.computeOverriddenContext(getContext(), contextOverride);
     return Druids.SegmentMetadataQueryBuilder.copy(this).context(newContext).build();
   }
 

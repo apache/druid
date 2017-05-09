@@ -42,12 +42,20 @@ import java.util.Map;
  */
 public class GroupByQueryRunnerTestHelper
 {
-  public static <T> Iterable<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)
+  public static <T> Iterable<T> runQuery(
+      QueryRunnerFactory factory,
+      QueryRunner runner,
+      Query<T> query
+  )
   {
 
     QueryToolChest toolChest = factory.getToolchest();
     QueryRunner<T> theRunner = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)),
+        toolChest.mergeResults(
+            toolChest.annotateDistributionTarget(
+                toolChest.preMergeQueryDecoration(runner)
+            )
+        ),
         toolChest
     );
 

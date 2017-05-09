@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Preconditions;
 
 import java.util.List;
 
@@ -35,5 +36,19 @@ import java.util.List;
               })
 public interface DataSource
 {
-  public List<String> getNames();
+  default String getConcatenatedName()
+  {
+    final List<String> names = getNames();
+    Preconditions.checkState(!names.isEmpty());
+    return names.size() > 1 ? names.toString() : names.get(0);
+  }
+
+  default String getFirstName()
+  {
+    final List<String> names = getNames();
+    Preconditions.checkState(!names.isEmpty());
+    return names.get(0);
+  }
+
+  List<String> getNames();
 }

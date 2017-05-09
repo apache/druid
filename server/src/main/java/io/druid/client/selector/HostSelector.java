@@ -25,9 +25,9 @@ import io.druid.query.Query;
 
 /**
  */
-public interface HostSelector<T>
+public interface HostSelector
 {
-  public String getDefaultServiceName();
+  String getDefaultServiceName();
 
-  public Pair<String, ServerDiscoverySelector> select(Query<T> query);
+  <T> Pair<String, ServerDiscoverySelector> select(Query<T> query);
 }

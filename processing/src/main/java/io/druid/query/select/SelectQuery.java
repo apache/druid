@@ -28,6 +28,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -158,7 +159,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
 
   public SelectQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    Map<String, Object> newContext = QueryContexts.computeOverriddenContext(getContext(), contextOverrides);
     return Druids.SelectQueryBuilder.copy(this).context(newContext).build();
   }
 

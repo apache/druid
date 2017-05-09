@@ -21,11 +21,13 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.join.JoinQuery;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.select.SelectQuery;
@@ -34,7 +36,6 @@ import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
-import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
+    @JsonSubTypes.Type(name = Query.JOIN, value = JoinQuery.class),
     @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
 
 })
@@ -61,8 +63,9 @@ public interface Query<T>
   String SELECT = "select";
   String TOPN = "topN";
   String DATASOURCE_METADATA = "dataSourceMetadata";
+  String JOIN = "join";
 
-  DataSource getDataSource();
+  List<DataSourceWithSegmentSpec> getDataSources();
 
   boolean hasFilters();
 
@@ -72,31 +75,74 @@ public interface Query<T>
 
   Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
 
-  Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context);
+  default Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context)
+  {
+    return runner.run(this, context);
+  }
 
-  List<Interval> getIntervals();
+  Duration getDuration(DataSource dataSource);
 
-  Duration getDuration();
+  default Duration getDuration(DataSourceWithSegmentSpec dataSourceWithSegmentSpec)
+  {
+    return getDuration(dataSourceWithSegmentSpec.getDataSource());
+  }
+
+  default Duration getTotalDuration()
+  {
+    Duration totalDuration = new Duration(0);
+    for (DataSourceWithSegmentSpec spec : getDataSources()) {
+      totalDuration = totalDuration.plus(Queries.getTotalDuration(spec.getQuerySegmentSpec()));
+    }
+    return totalDuration;
+  }
 
   Map<String, Object> getContext();
 
-  <ContextType> ContextType getContextValue(String key);
+  default <ContextType> ContextType getContextValue(String key)
+  {
+    return (ContextType) getContext().get(key);
+  }
 
-  <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
+  default <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
+  {
+    ContextType retVal = getContextValue(key);
+    return retVal == null ? defaultValue : retVal;
+  }
 
-  boolean getContextBoolean(String key, boolean defaultValue);
+  default boolean getContextBoolean(String key, boolean defaultValue)
+  {
+    return QueryContexts.parseBoolean(this, key, defaultValue);
+  }
 
   boolean isDescending();
 
   Ordering<T> getResultOrdering();
 
+  default String getId()
+  {
+    return (String) getContextValue(QueryContexts.QUERYID);
+  }
+
+  default Query<T> withId(String id)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.QUERYID, id));
+  }
+
+  default DataSourceWithSegmentSpec getDistributionTarget()
+  {
+    return getContextValue(QueryContexts.DISTRIBUTION_TARGET_SOURCE);
+  }
+
+  default Query<T> distributeBy(DataSourceWithSegmentSpec spec)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.DISTRIBUTION_TARGET_SOURCE, spec));
+  }
+
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
-  Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
+  Query<T> withQuerySegmentSpec(DataSource dataSource, QuerySegmentSpec spec);
 
-  Query<T> withId(String id);
+  Query<T> withQuerySegmentSpec(String concatenatedDataSourceName, QuerySegmentSpec spec);
 
-  String getId();
-
-  Query<T> withDataSource(DataSource dataSource);
+  Query<T> replaceDataSource(DataSource oldDataSource, DataSource newDataSource);
 }

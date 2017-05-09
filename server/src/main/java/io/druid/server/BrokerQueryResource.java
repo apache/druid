@@ -28,8 +28,10 @@ import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.Query;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.GenericQueryMetricsFactory;
+import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.http.security.StateResourceFilter;
@@ -102,11 +104,16 @@ public class BrokerQueryResource extends QueryResource
     final ResponseContext context = createContext(req.getContentType(), pretty != null);
     try {
       Query<?> query = context.getObjectMapper().readValue(in, Query.class);
+
+      final DataSourceWithSegmentSpec spec = (DataSourceWithSegmentSpec) query.getContext().computeIfAbsent(
+          QueryContexts.DISTRIBUTION_TARGET_SOURCE,
+          key -> query.getDataSources().get(0)
+      );
       return context.ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,
-              query.getDataSource(),
-              query.getIntervals(),
+              spec.getDataSource(),
+              spec.getQuerySegmentSpec().getIntervals(),
               numCandidates
           )
       );

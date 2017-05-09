@@ -59,7 +59,7 @@ public class SelectQuerySpecTest
         + "\"metrics\":[\"index\"],"
         + "\"virtualColumns\":null,"
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3},"
-        + "\"context\":null}";
+        + "\"context\":{}}";
 
     String current =
         "{\"queryType\":\"select\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
@@ -68,12 +68,12 @@ public class SelectQuerySpecTest
         + "\"filter\":null,"
         + "\"granularity\":{\"type\":\"all\"},"
         + "\"dimensions\":"
-        + "[{\"type\":\"default\",\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
-        + "{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
+        + "[{\"type\":\"default\",\"dataSource\":null,\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
+        + "{\"type\":\"default\",\"dataSource\":null,\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
         + "\"metrics\":[\"index\"],"
         + "\"virtualColumns\":[],"
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":true},"
-        + "\"context\":null}";
+        + "\"context\":{}}";
 
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
@@ -104,25 +104,25 @@ public class SelectQuerySpecTest
         + "\"filter\":null,"
         + "\"granularity\":{\"type\":\"all\"},"
         + "\"dimensions\":"
-        + "[{\"type\":\"default\",\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
-        + "{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
+        + "[{\"type\":\"default\",\"dataSource\":null,\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
+        + "{\"type\":\"default\",\"dataSource\":null,\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
         + "\"metrics\":[\"index\"],"
         + "\"virtualColumns\":[],";
 
     String withNull =
         baseQueryJson
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":null},"
-        + "\"context\":null}";
+        + "\"context\":[}}";
 
     String withFalse =
         baseQueryJson
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":false},"
-        + "\"context\":null}";
+        + "\"context\":{}}";
 
     String withTrue =
         baseQueryJson
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":true},"
-        + "\"context\":null}";
+        + "\"context\":{}}";
 
     SelectQuery queryWithNull = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),

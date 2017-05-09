@@ -22,12 +22,10 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.java.util.common.StringUtils;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
-
-import java.nio.ByteBuffer;
 
 /**
  */
@@ -35,6 +33,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
 {
   private static final byte CACHE_TYPE_ID = 0x1;
 
+  private final String dataSourceName;
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final String outputName;
@@ -42,6 +41,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
 
   @JsonCreator
   public ExtractionDimensionSpec(
+      @JsonProperty("dataSource") String dataSourceName,
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
       @JsonProperty("outputType") ValueType outputType,
@@ -53,6 +53,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
     Preconditions.checkNotNull(dimension, "dimension must not be null");
     Preconditions.checkArgument(extractionFn != null || dimExtractionFn != null, "extractionFn must not be null");
 
+    this.dataSourceName = dataSourceName;
     this.dimension = dimension;
     this.extractionFn = extractionFn != null ? extractionFn : dimExtractionFn;
     this.outputType = outputType == null ? ValueType.STRING : outputType;
@@ -61,14 +62,26 @@ public class ExtractionDimensionSpec implements DimensionSpec
     this.outputName = outputName == null ? dimension : outputName;
   }
 
+  public ExtractionDimensionSpec(String dataSourceName, String dimension, String outputName, ExtractionFn extractionFn)
+  {
+    this(dataSourceName, dimension, outputName, null, extractionFn, null);
+  }
+
   public ExtractionDimensionSpec(String dimension, String outputName, ExtractionFn extractionFn)
   {
-    this(dimension, outputName, null, extractionFn, null);
+    this(null, dimension, outputName, null, extractionFn, null);
   }
 
   public ExtractionDimensionSpec(String dimension, String outputName, ValueType outputType, ExtractionFn extractionFn)
   {
-    this(dimension, outputName, outputType, extractionFn, null);
+    this(null, dimension, outputName, outputType, extractionFn, null);
+  }
+
+  @Override
+  @JsonProperty("dataSource")
+  public String getDataSourceName()
+  {
+    return dataSourceName;
   }
 
   @Override
@@ -114,14 +127,11 @@ public class ExtractionDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    byte[] dimExtractionFnBytes = extractionFn.getCacheKey();
-
-    return ByteBuffer.allocate(1 + dimensionBytes.length + dimExtractionFnBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(dimensionBytes)
-                     .put(dimExtractionFnBytes)
-                     .array();
+    return new CacheKeyBuilder(CACHE_TYPE_ID)
+        .appendString(dataSourceName)
+        .appendString(dimension)
+        .appendCacheable(extractionFn)
+        .build();
   }
 
   @Override
@@ -134,6 +144,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
   public String toString()
   {
     return "ExtractionDimensionSpec{" +
+           "dataSource='" + dataSourceName + '\'' +
            "dimension='" + dimension + '\'' +
            ", extractionFn=" + extractionFn +
            ", outputName='" + outputName + '\'' +
@@ -153,6 +164,9 @@ public class ExtractionDimensionSpec implements DimensionSpec
 
     ExtractionDimensionSpec that = (ExtractionDimensionSpec) o;
 
+    if (dataSourceName != null ? !dataSourceName.equals(that.dataSourceName) : that.dataSourceName != null) {
+      return false;
+    }
     if (extractionFn != null ? !extractionFn.equals(that.extractionFn) : that.extractionFn != null) {
       return false;
     }
@@ -173,6 +187,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
   public int hashCode()
   {
     int result = dimension != null ? dimension.hashCode() : 0;
+    result = 31 * result + (dataSourceName != null ? dataSourceName.hashCode() : 0);
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     result = 31 * result + (outputName != null ? outputName.hashCode() : 0);
     result = 31 * result + (outputType != null ? outputType.hashCode() : 0);

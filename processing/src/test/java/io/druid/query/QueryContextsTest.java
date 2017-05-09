@@ -78,7 +78,7 @@ public class QueryContextsTest
           getDataSource(),
           getQuerySegmentSpec(),
           isDescending(),
-          BaseQuery.computeOverriddenContext(getContext(), contextOverride)
+          QueryContexts.computeOverriddenContext(getContext(), contextOverride)
       );
     }
   }

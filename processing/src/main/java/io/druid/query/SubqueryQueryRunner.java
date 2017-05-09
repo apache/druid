@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.guava.Sequence;
 
 import java.util.Map;
@@ -26,7 +27,7 @@ import java.util.Map;
 /**
  * If there's a subquery, run it instead of the outer query
  */
-public class SubqueryQueryRunner<T> implements QueryRunner<T>
+public class SubqueryQueryRunner<T extends Comparable<T>> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;
 
@@ -38,7 +39,8 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
-    DataSource dataSource = query.getDataSource();
+    Preconditions.checkArgument(query instanceof BaseQuery);
+    final DataSource dataSource = ((BaseQuery<T>)query).getDataSource();
     if (dataSource instanceof QueryDataSource) {
       return run((Query<T>) ((QueryDataSource) dataSource).getQuery(), responseContext);
     } else {

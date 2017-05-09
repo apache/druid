@@ -213,7 +213,7 @@ public class TopNQueryQueryToolChestTest
         .intervals(QueryRunnerTestHelper.fullOnInterval)
         .aggregators(QueryRunnerTestHelper.commonAggregators);
 
-    TopNQuery query1 = builder.threshold(10).context(null).build();
+    TopNQuery query1 = builder.threshold(10).context(ImmutableMap.of()).build();
     MockQueryRunner mockRunner = new MockQueryRunner(runner);
     new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
         .run(query1, ImmutableMap.<String, Object>of());
