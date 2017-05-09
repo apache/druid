@@ -596,7 +596,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     Preconditions.checkArgument(path.startsWith("/"), "path must start with '/': %s", path);
 
     try {
-      return new URL(StringUtils.format("http://%s/druid/worker/v1%s", worker.getHost(), path));
+      return new URL(StringUtils.format("%s://%s/druid/worker/v1%s", worker.getScheme(), worker.getHost(), path));
     }
     catch (MalformedURLException e) {
       throw Throwables.propagate(e);

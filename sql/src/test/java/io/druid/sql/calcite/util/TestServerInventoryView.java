@@ -52,7 +52,7 @@ public class TestServerInventoryView implements TimelineServerView
   @Override
   public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
   {
-    final DruidServerMetadata dummyServer = new DruidServerMetadata("dummy", "dummy", 0, ServerType.HISTORICAL, "dummy", 0);
+    final DruidServerMetadata dummyServer = new DruidServerMetadata("dummy", "dummy", null, 0, ServerType.HISTORICAL, "dummy", 0);
 
     for (final DataSegment segment : segments) {
       exec.execute(

@@ -248,6 +248,7 @@ public class TestKafkaExtractionCluster
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
               }
             },
             // These injections fail under IntelliJ but are required for maven

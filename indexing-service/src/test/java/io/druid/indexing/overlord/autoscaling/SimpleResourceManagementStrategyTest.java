@@ -403,7 +403,7 @@ public class SimpleResourceManagementStrategyTest
     ).times(3);
     EasyMock.expect(runner.getWorkers()).andReturn(
         Collections.singletonList(
-            new TestZkWorker(NoopTask.create(), "h1", "i1", "0").toImmutable()
+            new TestZkWorker(NoopTask.create(), "http", "h1", "i1", "0").toImmutable()
         )
     ).times(3);
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
@@ -496,17 +496,18 @@ public class SimpleResourceManagementStrategyTest
         Task testTask
     )
     {
-      this(testTask, "host", "ip", "0");
+      this(testTask, "http", "host", "ip", "0");
     }
 
     public TestZkWorker(
         Task testTask,
+        String scheme,
         String host,
         String ip,
         String version
     )
     {
-      super(new Worker(host, ip, 3, version), null, new DefaultObjectMapper());
+      super(new Worker(scheme, host, ip, 3, version), null, new DefaultObjectMapper());
 
       this.testTask = testTask;
     }

@@ -37,6 +37,7 @@ Core extensions are maintained by Druid committers.
 |druid-stats|Statistics related module including variance and standard deviation.|[link](../development/extensions-core/stats.html)|
 |mysql-metadata-storage|MySQL metadata store.|[link](../development/extensions-core/mysql.html)|
 |postgresql-metadata-storage|PostgreSQL metadata store.|[link](../development/extensions-core/postgresql.html)|
+|simple-client-sslcontext|Simple SSLContext provider module to be used by internal HttpClient talking to other nodes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.html)|
 
 # Community Extensions
 
