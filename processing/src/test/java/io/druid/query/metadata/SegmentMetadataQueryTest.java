@@ -1092,10 +1092,10 @@ public class SegmentMetadataQueryTest
                                                 .toInclude(new ListColumnIncluderator(Arrays.asList("fo", "o")))
                                                 .build();
 
-    final byte[] oneColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(null).getCacheStrategy(oneColumnQuery)
+    final byte[] oneColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(oneColumnQuery)
                                                                                       .computeCacheKey(oneColumnQuery);
 
-    final byte[] twoColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(null).getCacheStrategy(twoColumnQuery)
+    final byte[] twoColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(twoColumnQuery)
                                                                                       .computeCacheKey(twoColumnQuery);
 
     Assert.assertFalse(Arrays.equals(oneColumnQueryCacheKey, twoColumnQueryCacheKey));
@@ -1125,7 +1125,7 @@ public class SegmentMetadataQueryTest
     EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg1 = new SegmentMetadataQueryQueryToolChest(analysisCfg).getAnalysisTypes(query1);
     EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg2 = new SegmentMetadataQueryQueryToolChest(analysisCfg).getAnalysisTypes(query2);
 
-    EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis1 = SegmentMetadataQueryConfig.DEFAULT_ANALYSIS_TYPES;
+    EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis1 = new SegmentMetadataQueryConfig().getDefaultAnalysisTypes();
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis2 = EnumSet.of(SegmentMetadataQuery.AnalysisType.MINMAX);
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysisWCfg1 = EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY);
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysisWCfg2 = EnumSet.of(SegmentMetadataQuery.AnalysisType.MINMAX);

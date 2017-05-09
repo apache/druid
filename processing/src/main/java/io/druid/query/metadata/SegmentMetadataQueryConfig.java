@@ -31,7 +31,7 @@ public class SegmentMetadataQueryConfig
 {
   private static final String DEFAULT_PERIOD_STRING = "P1W";
   private static final PeriodFormatter ISO_FORMATTER = ISOPeriodFormat.standard();
-  static final EnumSet<SegmentMetadataQuery.AnalysisType> DEFAULT_ANALYSIS_TYPES = EnumSet.of(
+  private static final EnumSet<SegmentMetadataQuery.AnalysisType> DEFAULT_ANALYSIS_TYPES = EnumSet.of(
       SegmentMetadataQuery.AnalysisType.CARDINALITY,
       SegmentMetadataQuery.AnalysisType.INTERVAL,
       SegmentMetadataQuery.AnalysisType.MINMAX
