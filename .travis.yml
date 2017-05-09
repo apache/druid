@@ -3,7 +3,11 @@ language: java
 jdk:
   - oraclejdk8
 
-install: mvn test -B -Pparallel-test -Dmaven.fork.count=2 && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B
+script:
+  - mvn test -B -Pparallel-test -Dmaven.fork.count=2
+  - mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B
+
+install: true
 
 sudo: false
 
