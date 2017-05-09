@@ -188,7 +188,6 @@ public class QueryResource implements QueryCountStatsProvider
     final String currThreadName = Thread.currentThread().getName();
     try {
       final Map<String, Object> responseContext = new MapMaker().makeMap();
-      responseContext.put(DirectDruidClient.QUERY_START_TIME, System.currentTimeMillis());
 
       query = context.getObjectMapper().readValue(in, Query.class);
       queryId = query.getId();
@@ -197,6 +196,13 @@ public class QueryResource implements QueryCountStatsProvider
         query = query.withId(queryId);
       }
       query = QueryContexts.withDefaultTimeout(query, config.getDefaultQueryTimeout());
+      query = QueryContexts.withMaxScatterGatherBytes(query, config.getMaxScatterGatherBytes());
+
+      responseContext.put(
+          DirectDruidClient.QUERY_FAIL_TIME,
+          System.currentTimeMillis() + QueryContexts.getTimeout(query)
+      );
+      responseContext.put(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
       toolChest = warehouse.getToolChest(query);
 
@@ -333,7 +339,7 @@ public class QueryResource implements QueryCountStatsProvider
           responseContext.remove(HDR_ETAG);
         }
 
-        responseContext.remove(DirectDruidClient.QUERY_START_TIME);
+        responseContext.remove(DirectDruidClient.QUERY_FAIL_TIME);
         responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331

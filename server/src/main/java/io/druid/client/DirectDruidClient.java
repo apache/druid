@@ -97,7 +97,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
-  public static final String QUERY_START_TIME = "queryStartTime";
+  public static final String QUERY_FAIL_TIME = "queryFailTime";
   public static final String QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
 
   private static final Logger log = new Logger(DirectDruidClient.class);
@@ -175,6 +175,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       final QueryMetrics<? super Query<T>> queryMetrics = toolChest.makeMetrics(query);
       queryMetrics.server(host);
+
+      long timeoutAt = ((Long) context.get(QUERY_FAIL_TIME)).longValue();
+      long maxScatterGatherBytes = QueryContexts.getMaxScatterGatherBytes(query);
+      AtomicLong totalBytesGathered = (AtomicLong) context.get(QUERY_TOTAL_BYTES_GATHERED);
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
       {
@@ -370,53 +374,31 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         // Returns remaining timeout or throws exception if timeout already elapsed.
         private long checkQueryTimeout()
         {
-          Object obj = context.get(QUERY_START_TIME);
-
-          if (obj != null) {
-            long timeLeft = QueryContexts.getTimeout(query) - (System.currentTimeMillis() - ((Long) obj).longValue());
-            if (timeLeft <= 0) {
-              String msg = StringUtils.safeFormat("Query[%s] url[%s] timed out.", query.getId(), url);
-              setupResponseReadFailure(msg, null);
-              throw new RE(msg);
-            } else {
-              return timeLeft;
-            }
+          long timeLeft = timeoutAt - System.currentTimeMillis();
+          if (timeLeft >= 0) {
+            String msg = StringUtils.safeFormat("Query[%s] url[%s] timed out.", query.getId(), url);
+            setupResponseReadFailure(msg, null);
+            throw new RE(msg);
           } else {
-            return QueryContexts.getTimeout(query);
+            return timeLeft;
           }
         }
 
         private void checkTotalBytesLimit(long bytes)
         {
-          long limit = QueryContexts.getMaxScatterGatherBytes(query);
-
-          if (limit < Long.MAX_VALUE) {
-            synchronized (context) {
-              if(context.get(QUERY_TOTAL_BYTES_GATHERED) == null) {
-                context.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
-              }
-            }
-
-            AtomicLong totalBytesGathered = (AtomicLong) context.get(QUERY_TOTAL_BYTES_GATHERED);
-
-            if (totalBytesGathered.addAndGet(bytes) > limit) {
-              String msg = StringUtils.safeFormat(
-                  "Query[%s] url[%s] max scatter-gather bytes limit reached.",
-                  query.getId(),
-                  url
-              );
-              setupResponseReadFailure(msg, null);
-              throw new RE(msg);
-            }
+          if (maxScatterGatherBytes < Long.MAX_VALUE && totalBytesGathered.addAndGet(bytes) > maxScatterGatherBytes) {
+            String msg = StringUtils.safeFormat(
+                "Query[%s] url[%s] max scatter-gather bytes limit reached.",
+                query.getId(),
+                url
+            );
+            setupResponseReadFailure(msg, null);
+            throw new RE(msg);
           }
         }
       };
 
-      long timeLeft = QueryContexts.getTimeout(query);
-      Object queryStartTimeObj = context.get(QUERY_START_TIME);
-      if (queryStartTimeObj != null) {
-        timeLeft = timeLeft - (System.currentTimeMillis() - ((Long) queryStartTimeObj).longValue());
-      }
+      long timeLeft = timeoutAt - System.currentTimeMillis();
 
       if (timeLeft <= 0) {
         throw new RE("Query[%s] url[%s] timed out.", query.getId(), url);
