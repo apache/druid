@@ -206,10 +206,17 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testMoveSegment() throws Exception
   {
     loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
-    EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
-    EasyMock.replay(loadQueuePeon);
     segment = EasyMock.createNiceMock(DataSegment.class);
+    EasyMock.expect(segment.getIdentifier()).andReturn("dummySegment");
+    EasyMock.expect(segment.getDataSource()).andReturn("dummyDataSource");
     EasyMock.replay(segment);
+    EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
+    DruidDataSource druidDataSource= EasyMock.createNiceMock(DruidDataSource.class);
+    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(segment);
+    EasyMock.replay(druidDataSource);
+    EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
+    EasyMock.replay(databaseSegmentManager);
+    EasyMock.replay(loadQueuePeon);
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
     EasyMock.replay(metadataRuleManager);
@@ -242,7 +249,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator.moveSegment(
         druidServer.toImmutableDruidServer(),
         druidServer2.toImmutableDruidServer(),
-        "dummySegment", null
+        segment, null
     );
     EasyMock.verify(druidServer);
     EasyMock.verify(druidServer2);
