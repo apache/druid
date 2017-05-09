@@ -6,7 +6,7 @@ jdk:
 env:
   - MAVEN_OPTS="-Xmx3000m"
 
-install: mvn clean test -B -Pparallel-test -Dmaven.fork.count=2
+install: mvn test -B -Pparallel-test -Dmaven.fork.count=2 && mvn clean -Pstrict compile test-compile -B
 
 sudo: false
 
