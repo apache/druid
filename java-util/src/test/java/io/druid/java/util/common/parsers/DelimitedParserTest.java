@@ -126,4 +126,22 @@ public class DelimitedParserTest
         jsonMap
     );
   }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testTSVParserWithoutStartFileFromBeginning()
+  {
+    final int skipHeaderRows = 2;
+    final Parser<String, Object> delimitedParser = new DelimitedParser(
+        Optional.of("\t"),
+        Optional.absent(),
+        false,
+        skipHeaderRows
+    );
+    final String[] body = new String[] {
+        "header\tline\t1",
+        "header\tline\t2",
+        "hello\tworld\tfoo"
+    };
+    delimitedParser.parse(body[0]);
+  }
 }

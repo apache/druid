@@ -116,4 +116,21 @@ public class CSVParserTest
         jsonMap
     );
   }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testCSVParserWithoutStartFileFromBeginning()
+  {
+    final int skipHeaderRows = 2;
+    final Parser<String, Object> csvParser = new CSVParser(
+        Optional.absent(),
+        false,
+        skipHeaderRows
+    );
+    final String[] body = new String[] {
+        "header\tline\t1",
+        "header\tline\t2",
+        "hello\tworld\tfoo"
+    };
+    csvParser.parse(body[0]);
+  }
 }
