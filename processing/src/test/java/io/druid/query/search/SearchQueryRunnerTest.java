@@ -30,6 +30,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -168,16 +169,16 @@ public class SearchQueryRunnerTest
         {
           @Override
           public Sequence<Result<SearchResultValue>> run(
-              Query<Result<SearchResultValue>> query, Map<String, Object> responseContext
+              QueryPlus<Result<SearchResultValue>> queryPlus, Map<String, Object> responseContext
           )
           {
-            final Query<Result<SearchResultValue>> query1 = searchQuery.withQuerySegmentSpec(
+            final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-01-12/2011-02-28")))
             );
-            final Query<Result<SearchResultValue>> query2 = searchQuery.withQuerySegmentSpec(
+            final QueryPlus<Result<SearchResultValue>> queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-03-01/2011-04-15")))
             );
-            return Sequences.concat(runner.run(query1, responseContext), runner.run(query2, responseContext));
+            return Sequences.concat(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext));
           }
         }
     );

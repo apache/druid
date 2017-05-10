@@ -49,10 +49,10 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
 
   @Override
   @SuppressWarnings("unchecked")
-  public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
-    if (QueryContexts.isBySegment(query)) {
-      final Sequence<T> baseSequence = base.run(query, responseContext);
+    if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+      final Sequence<T> baseSequence = base.run(queryPlus, responseContext);
       final List<T> results = Sequences.toList(baseSequence, Lists.<T>newArrayList());
       return Sequences.simple(
           Arrays.asList(
@@ -61,12 +61,12 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
                   new BySegmentResultValueClass<T>(
                       results,
                       segmentIdentifier,
-                      query.getIntervals().get(0)
+                      queryPlus.getQuery().getIntervals().get(0)
                   )
               )
           )
       );
     }
-    return base.run(query, responseContext);
+    return base.run(queryPlus, responseContext);
   }
 }
