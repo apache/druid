@@ -11,7 +11,7 @@ The installation of mysql is outside the scope of this document, but instruction
 This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `bin/zkServer.sh`. 
 
 ## XML App Def
-You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in [.idea/run](.idea/run) in the Druid source code.
+You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in [.idea/runConfigurations](.idea/runConfigurations) in the Druid source code.
 
 ### Historical.xml
 ```xml
