@@ -180,11 +180,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException
   {
-    final Integer priorIndex = facts.getPriorIndex(key);
+    final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
 
-    if (null != priorIndex) {
+    if (TimeAndDims.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       doAggregate(metrics, aggs, rowContainer, row, reportParseExceptions);
     } else {
@@ -196,11 +196,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
-      if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == null) {
+      if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
-      final Integer prev = facts.putIfAbsent(key, rowIndex);
-      if (null == prev) {
+      final int prev = facts.putIfAbsent(key, rowIndex);
+      if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
       } else {
         // We lost a race

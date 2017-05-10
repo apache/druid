@@ -43,6 +43,9 @@ import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import it.unimi.dsi.fastutil.ints.IntArrays;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
+import it.unimi.dsi.fastutil.objects.Object2IntSortedMap;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -55,34 +58,24 @@ import java.util.Map;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
-  public static final Function<Object, String> STRING_TRANSFORMER = new Function<Object, String>()
-  {
-    @Override
-    public String apply(final Object o)
-    {
-      if (o == null) {
-        return null;
-      }
-      if (o instanceof String) {
-        return (String) o;
-      }
-      return o.toString();
+  public static final Function<Object, String> STRING_TRANSFORMER = o -> {
+    if (o == null) {
+      return null;
     }
+    if (o instanceof String) {
+      return (String) o;
+    }
+    return o.toString();
   };
 
-  public static final Comparator<String> UNENCODED_COMPARATOR = new Comparator<String>()
-  {
-    @Override
-    public int compare(String o1, String o2)
-    {
-      if (o1 == null) {
-        return o2 == null ? 0 : -1;
-      }
-      if (o2 == null) {
-        return 1;
-      }
-      return o1.compareTo(o2);
+  public static final Comparator<String> UNENCODED_COMPARATOR = (o1, o2) -> {
+    if (o1 == null) {
+      return o2 == null ? 0 : -1;
     }
+    if (o2 == null) {
+      return 1;
+    }
+    return o1.compareTo(o2);
   };
 
   private static class DimensionDictionary
@@ -176,7 +169,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     public SortedDimensionDictionary(List<String> idToValue, int length)
     {
-      Map<String, Integer> sortedMap = Maps.newTreeMap();
+      Object2IntSortedMap<String> sortedMap = new Object2IntRBTreeMap<>();
       for (int id = 0; id < length; id++) {
         sortedMap.put(idToValue.get(id), id);
       }
@@ -184,7 +177,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       this.idToIndex = new int[length];
       this.indexToId = new int[length];
       int index = 0;
-      for (Integer id : sortedMap.values()) {
+      for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext();) {
+        int id = iterator.nextInt();
         idToIndex[id] = index;
         indexToId[index] = id;
         index++;

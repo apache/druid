@@ -241,8 +241,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
             {
               private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this);
               private final int maxRowIndex;
-              private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
-              private Iterable<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> cursorIterable;
+              private Iterator<IncrementalIndex.TimeAndDims> baseIter;
+              private Iterable<IncrementalIndex.TimeAndDims> cursorIterable;
               private boolean emptyRange;
               final DateTime time;
               int numAdvanced = -1;
@@ -278,8 +278,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 while (baseIter.hasNext()) {
                   BaseQuery.checkInterrupted();
 
-                  Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
-                  if (beyondMaxRowIndex(entry.getValue())) {
+                  IncrementalIndex.TimeAndDims entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getRowIndex())) {
                     continue;
                   }
 
@@ -306,8 +306,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     return;
                   }
 
-                  Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
-                  if (beyondMaxRowIndex(entry.getValue())) {
+                  IncrementalIndex.TimeAndDims entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getRowIndex())) {
                     continue;
                   }
 
@@ -358,8 +358,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 boolean foundMatched = false;
                 while (baseIter.hasNext()) {
-                  Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
-                  if (beyondMaxRowIndex(entry.getValue())) {
+                  IncrementalIndex.TimeAndDims entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getRowIndex())) {
                     numAdvanced++;
                     continue;
                   }
@@ -641,26 +641,26 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
   public static class EntryHolder
   {
-    Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry = null;
+    IncrementalIndex.TimeAndDims currEntry = null;
 
-    public Map.Entry<IncrementalIndex.TimeAndDims, Integer> get()
+    public IncrementalIndex.TimeAndDims get()
     {
       return currEntry;
     }
 
-    public void set(Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry)
+    public void set(IncrementalIndex.TimeAndDims currEntry)
     {
       this.currEntry = currEntry;
     }
 
     public IncrementalIndex.TimeAndDims getKey()
     {
-      return currEntry.getKey();
+      return currEntry;
     }
 
-    public Integer getValue()
+    public int getValue()
     {
-      return currEntry.getValue();
+      return currEntry.getRowIndex();
     }
   }
 
