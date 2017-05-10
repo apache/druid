@@ -56,13 +56,13 @@ shardSpecs are not specified, and, in this case, caching can be useful. Prefetch
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|This should be "static-azure-blobstore".|N/A|yes|
+|type|This should be `static-azure-blobstore`.|N/A|yes|
 |blobs|JSON array of [Azure blobs](https://msdn.microsoft.com/en-us/library/azure/ee691964.aspx).|N/A|yes|
-|maxCacheCapacityBytes|Maximum size of the cache space in bytes|1073741824|no|
-|maxFetchCapacityBytes|Maximum size of the fetch space in bytes|1073741824|no|
-|prefetchTriggerBytes|Threshold to trigger prefetching Azure objects|maxFetchCapacityBytes / 2|no|
-|fetchTimeout|Timeout for fetching an Azure object|60000|no|
-|maxFetchRetry|Maximum retry for fetching an Azure object|3|no|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache.|1073741824|no|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch.|1073741824|no|
+|prefetchTriggerBytes|Threshold to trigger prefetching Azure objects.|maxFetchCapacityBytes / 2|no|
+|fetchTimeout|Timeout for fetching an Azure object.|60000|no|
+|maxFetchRetry|Maximum retry for fetching an Azure object.|3|no|
 
 Azure Blobs:
 

@@ -46,13 +46,13 @@ shardSpecs are not specified, and, in this case, caching can be useful. Prefetch
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|This should be "static-google-blobstore".|N/A|yes|
+|type|This should be `static-google-blobstore`.|N/A|yes|
 |blobs|JSON array of Google Blobs.|N/A|yes|
-|maxCacheCapacityBytes|Maximum size of the cache space in bytes|1073741824|no|
-|maxFetchCapacityBytes|Maximum size of the fetch space in bytes|1073741824|no|
-|prefetchTriggerBytes|Threshold to trigger prefetching Google blobs|maxFetchCapacityBytes / 2|no|
-|fetchTimeout|Timeout for fetching a Google blob|60000|no|
-|maxFetchRetry|Maximum retry for fetching a Google blob|3|no|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache.|1073741824|no|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch.|1073741824|no|
+|prefetchTriggerBytes|Threshold to trigger prefetching Google Blobs.|maxFetchCapacityBytes / 2|no|
+|fetchTimeout|Timeout for fetching a Google Blob.|60000|no|
+|maxFetchRetry|Maximum retry for fetching a Google Blob.|3|no|
 
 Google Blobs:
 
