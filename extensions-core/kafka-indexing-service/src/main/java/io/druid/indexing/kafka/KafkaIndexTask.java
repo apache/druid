@@ -419,7 +419,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 finally {
                   driverHolder.close();
                   if (!driverHolders.remove(driverHolder)) {
-                    log.warn("Unable to remove driver [%d], it was not in the drivers list", driverHolder.getDriverIndex());
+                    log.warn(
+                        "Unable to remove driver [%d], it was not in the drivers list",
+                        driverHolder.getDriverIndex()
+                    );
                   } else {
                     try {
                       lockDriversList();
@@ -813,6 +816,18 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
       );
     }
+    final Object checkPointsObject = getContextValue("check_points");
+    List<DataSourceMetadata> checkPoints = ImmutableList.of();
+    if (checkPointsObject != null) {
+      checkPoints = toolbox.getObjectMapper().readValue(
+          (String) checkPointsObject,
+          new TypeReference<List<DataSourceMetadata>>()
+          {
+          }
+      );
+    }
+    log.info("Got check points: [%s]", checkPoints);
+
     if (persistedDrivers.size() > 0) {
       Collections.sort(persistedDrivers);
       log.info("Trying to restore drivers list [%s]", persistedDrivers);
@@ -853,65 +868,31 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         }
       }
     } else {
-      // create a new driver
-      driverHolders.add(
-          0,
-          DriverHolder.getNextDriverHolder(
-              this,
-              ioConfig.getStartPartitions().getPartitionOffsetMap(),
-              endOffsets,
-              ioConfig.getBaseSequenceName(),
-              fireDepartmentMetrics,
-              toolbox
-          )
-      );
-      // Start up, set up initial offsets.
-      nextOffsets.putAll(driverHolders.get(0).startJob(toolbox.getObjectMapper()));
-    }
-
-    final Object checkPointsObject = getContextValue("check_points");
-    List<DataSourceMetadata> checkPoints = ImmutableList.of();
-    if (checkPointsObject != null) {
-      checkPoints = toolbox.getObjectMapper().readValue(
-          (String) checkPointsObject,
-          new TypeReference<List<DataSourceMetadata>>()
-          {
-          }
-      );
-    }
-    log.info("Got check points: [%s]", checkPoints);
-    // Restore from check points only when there are no persisted drivers
-    if (persistedDrivers.size() == 0 && checkPoints.size() > 0) {
-      log.info("Trying to restore check points: [%s]", checkPoints);
-      // check consistency and create and start new drivers if necessary
-      Collections.reverse(checkPoints);
-      int checkPointIdx = checkPoints.size() - 1;
-
-      // There will be only driver that was created in earlier step
-      Preconditions.checkState(
-          driverHolders.size() == 1,
-          "Found more than one driver for new task [%s]",
-          driverHolders
-      );
-      driverHolders.get(0)
-                   .setEndOffsets((((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx)).getKafkaPartitions()
-                                                                                             .getPartitionOffsetMap()));
-
-      if (driverHolders.get(0).isComplete()) {
-        persistAndPossiblyPublish(driverHolders.get(0));
-      }
-      checkPointIdx--;
-
-      // create more drivers corresponding to the check points that this task does not know about
-      while (checkPointIdx >= 0) {
+      if (checkPoints.size() == 0) {
+        // create a new driver
         driverHolders.add(
             0,
             DriverHolder.getNextDriverHolder(
                 this,
-                (((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx + 1)).getKafkaPartitions()
+                ioConfig.getStartPartitions().getPartitionOffsetMap(),
+                endOffsets,
+                ioConfig.getBaseSequenceName(),
+                fireDepartmentMetrics,
+                toolbox
+            )
+        );
+        // Start up, set up initial offsets.
+        nextOffsets.putAll(driverHolders.get(0).startJob(toolbox.getObjectMapper()));
+      } else {
+        // create a driver corresponding to the latest checkpoint, assume previous checkpointed driver successfully
+        // published their segments
+        driverHolders.add(
+            0,
+            DriverHolder.getNextDriverHolder(
+                this,
+                (((KafkaDataSourceMetadata) checkPoints.get(checkPoints.size()-1)).getKafkaPartitions()
                                                                                .getPartitionOffsetMap()),
-                (((KafkaDataSourceMetadata) checkPoints.get(checkPointIdx)).getKafkaPartitions()
-                                                                           .getPartitionOffsetMap()),
+                endOffsets,
                 ioConfig.getBaseSequenceName(),
                 fireDepartmentMetrics,
                 toolbox,
@@ -919,10 +900,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             )
         );
         nextOffsets.putAll(driverHolders.get(0).startJob(toolbox.getObjectMapper()));
-        if (driverHolders.get(0).isComplete()) {
-          persistAndPossiblyPublish(driverHolders.get(0));
-        }
-        checkPointIdx--;
       }
     }
     // save latest state on disk
