@@ -50,10 +50,14 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
 {
   private static final Logger LOG = new Logger(AbstractTextFilesFirehoseFactory.class);
 
+  private List<ObjectType> objects;
+
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
-    final List<ObjectType> objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
+    if (objects == null) {
+      objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
+    }
     final Iterator<ObjectType> iterator = objects.iterator();
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()

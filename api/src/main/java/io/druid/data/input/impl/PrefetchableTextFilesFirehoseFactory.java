@@ -81,7 +81,6 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   private static final long DEFAULT_MAX_FETCH_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
   private static final long DEFAULT_FETCH_TIMEOUT = 60_000; // 60 secs
   private static final int DEFAULT_MAX_FETCH_RETRY = 3;
-  private static final String CACHE_FILE_PREFIX = "cache-";
   private static final String FETCH_FILE_PREFIX = "fetch-";
 
   // The below two variables are roughly the max size of total cached/fetched objects, but the actual cached/fetched
@@ -102,6 +101,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
 
   private final List<FetchedFile> cacheFiles = new ArrayList<>();
   private long totalCachedBytes;
+
+  private List<ObjectType> objects;
 
   private static ExecutorService createFetchExecutor()
   {
@@ -140,7 +141,9 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
       return super.connect(firehoseParser, temporaryDirectory);
     }
 
-    final List<ObjectType> objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
+    if (objects == null) {
+      objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
+    }
 
     Preconditions.checkState(temporaryDirectory.exists(), "temporaryDirectory[%s] does not exist", temporaryDirectory);
     Preconditions.checkState(
@@ -186,7 +189,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
                 && remainingBytes <= prefetchTriggerBytes) {
               fetchFuture = fetchExecutor.submit(
                   () -> {
-                    fetch(objects, temporaryDirectory);
+                    fetch();
                     return null;
                   }
               );
@@ -200,12 +203,12 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
            * This is for simplifying design, and should be improved when our client implementations for cloud storages
            * like S3 support range scan.
            */
-          private void fetch(final List<ObjectType> objects, File baseDir) throws Exception
+          private void fetch() throws Exception
           {
             for (int i = nextFetchIndex; i < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; i++) {
               final ObjectType object = objects.get(i);
               LOG.info("Fetching object[%s], fetchedBytes[%d]", object, fetchedBytes.get());
-              final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, baseDir);
+              final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
               fetchedBytes.addAndGet(download(object, outFile, 0));
               fetchFiles.put(new FetchedFile(object, outFile));
               nextFetchIndex++;

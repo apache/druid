@@ -51,11 +51,18 @@ Sample spec:
     ]
 }
 ```
+This firehose provides caching and prefetching features. In IndexTask, a firehose can be read twice if intervals or
+shardSpecs are not specified, and, in this case, caching can be useful. Prefetching is preferred when direct scan of objects is slow.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be "static-cloudfiles".|N/A|yes|
 |blobs|JSON array of Cloud Files blobs.|N/A|yes|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes|1073741824|no|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes|1073741824|no|
+|prefetchTriggerBytes|Threshold to trigger prefetching Cloud Files objects|maxFetchCapacityBytes / 2|no|
+|fetchTimeout|Timeout for fetching a Cloud Files object|60000|no|
+|maxFetchRetry|Maximum retry for fetching a Cloud Files object|3|no|
 
 Cloud Files Blobs:
 
