@@ -54,7 +54,8 @@ public class DetermineHashedPartitionsJobTest
   private int errorMargin;
 
   @Parameterized.Parameters(name = "File={0}, TargetPartitionSize={1}, Interval={2}, ErrorMargin={3}, NumTimeBuckets={4}, NumShards={5}")
-  public static Collection<?> data(){
+  public static Collection<?> data()
+  {
     int[] first = new int[1];
     Arrays.fill(first, 13);
     int[] second = new int[6];
@@ -67,7 +68,8 @@ public class DetermineHashedPartitionsJobTest
     return Arrays.asList(
         new Object[][]{
             {
-                DetermineHashedPartitionsJobTest.class.getClass().getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
+                DetermineHashedPartitionsJobTest.class.getClass()
+                                                      .getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
                 1L,
                 "2011-04-10T00:00:00.000Z/2011-04-11T00:00:00.000Z",
                 0,
@@ -75,7 +77,8 @@ public class DetermineHashedPartitionsJobTest
                 first
             },
             {
-                DetermineHashedPartitionsJobTest.class.getClass().getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
+                DetermineHashedPartitionsJobTest.class.getClass()
+                                                      .getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
                 100L,
                 "2011-04-10T00:00:00.000Z/2011-04-16T00:00:00.000Z",
                 0,
@@ -83,7 +86,8 @@ public class DetermineHashedPartitionsJobTest
                 second
             },
             {
-                DetermineHashedPartitionsJobTest.class.getClass().getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
+                DetermineHashedPartitionsJobTest.class.getClass()
+                                                      .getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
                 1L,
                 "2011-04-10T00:00:00.000Z/2011-04-16T00:00:00.000Z",
                 0,
@@ -116,7 +120,12 @@ public class DetermineHashedPartitionsJobTest
                     new DelimitedParseSpec(
                         new TimestampSpec("ts", null, null),
                         new DimensionsSpec(
-                            DimensionsSpec.getDefaultSchemas(ImmutableList.of("market", "quality", "placement", "placementish")),
+                            DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                "market",
+                                "quality",
+                                "placement",
+                                "placementish"
+                            )),
                             null,
                             null
                         ),
@@ -129,7 +138,8 @@ public class DetermineHashedPartitionsJobTest
                             "placement",
                             "placementish",
                             "index"
-                        )
+                        ),
+                        false
                     ),
                     null
                 ),
@@ -176,7 +186,8 @@ public class DetermineHashedPartitionsJobTest
   }
 
   @Test
-  public void testDetermineHashedPartitions(){
+  public void testDetermineHashedPartitions()
+  {
     DetermineHashedPartitionsJob determineHashedPartitionsJob = new DetermineHashedPartitionsJob(indexerConfig);
     determineHashedPartitionsJob.run();
     Map<Long, List<HadoopyShardSpec>> shardSpecs = indexerConfig.getSchema().getTuningConfig().getShardSpecs();
@@ -184,8 +195,8 @@ public class DetermineHashedPartitionsJobTest
         expectedNumTimeBuckets,
         shardSpecs.entrySet().size()
     );
-    int i=0;
-    for(Map.Entry<Long, List<HadoopyShardSpec>> entry : shardSpecs.entrySet()) {
+    int i = 0;
+    for (Map.Entry<Long, List<HadoopyShardSpec>> entry : shardSpecs.entrySet()) {
       Assert.assertEquals(
           expectedNumOfShards[i++],
           entry.getValue().size(),

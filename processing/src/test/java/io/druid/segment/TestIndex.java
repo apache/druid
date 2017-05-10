@@ -291,7 +291,8 @@ public class TestIndex
             new DimensionsSpec(DIMENSION_SCHEMAS, null, null),
             "\t",
             "\u0001",
-            Arrays.asList(COLUMNS)
+            Arrays.asList(COLUMNS),
+            false
         )
         , "utf8"
     );

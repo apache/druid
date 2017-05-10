@@ -45,7 +45,8 @@ public class ParseSpecTest
         ),
         ",",
         " ",
-        Arrays.asList("a", "b")
+        Arrays.asList("a", "b"),
+        false
     );
   }
 
@@ -65,7 +66,8 @@ public class ParseSpecTest
         ),
         ",",
         null,
-        Arrays.asList("a", "B")
+        Arrays.asList("a", "B"),
+        false
     );
   }
 
@@ -85,7 +87,8 @@ public class ParseSpecTest
         ),
         ",",
         null,
-        Arrays.asList("a", "B")
+        Arrays.asList("a", "B"),
+        false
     );
   }
 }

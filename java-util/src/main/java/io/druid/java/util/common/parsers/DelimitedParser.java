@@ -36,14 +36,40 @@ public class DelimitedParser implements Parser<String, Object>
 {
   private static final String DEFAULT_DELIMITER = "\t";
 
+  private static final Function<String, Object> getValueFunction(
+      final String listDelimiter,
+      final Splitter listSplitter
+  )
+  {
+    return new Function<String, Object>()
+    {
+      @Override
+      public Object apply(String input)
+      {
+        if (input.contains(listDelimiter)) {
+          return Lists.newArrayList(
+              Iterables.transform(
+                  listSplitter.split(input),
+                  ParserUtils.nullEmptyStringFunction
+              )
+          );
+        } else {
+          return ParserUtils.nullEmptyStringFunction.apply(input);
+        }
+      }
+    };
+  }
+
   private final String delimiter;
   private final String listDelimiter;
 
   private final Splitter splitter;
   private final Splitter listSplitter;
   private final Function<String, Object> valueFunction;
+  private final boolean hasHeaderRow;
 
   private ArrayList<String> fieldNames = null;
+  private boolean hasParsedHeader = false;
 
   public DelimitedParser(final Optional<String> delimiter, Optional<String> listDelimiter)
   {
@@ -58,23 +84,8 @@ public class DelimitedParser implements Parser<String, Object>
 
     this.splitter = Splitter.on(this.delimiter);
     this.listSplitter = Splitter.on(this.listDelimiter);
-    this.valueFunction = new Function<String, Object>()
-    {
-      @Override
-      public Object apply(String input)
-      {
-        if (input.contains(DelimitedParser.this.listDelimiter)) {
-          return Lists.newArrayList(
-              Iterables.transform(
-                  listSplitter.split(input),
-                  ParserUtils.nullEmptyStringFunction
-              )
-          );
-        } else {
-          return ParserUtils.nullEmptyStringFunction.apply(input);
-        }
-      }
-    };
+    this.valueFunction = getValueFunction(this.listDelimiter, this.listSplitter);
+    this.hasHeaderRow = false;
   }
 
   public DelimitedParser(
@@ -89,11 +100,34 @@ public class DelimitedParser implements Parser<String, Object>
   }
 
   public DelimitedParser(final Optional<String> delimiter, final Optional<String> listDelimiter, final String header)
-
   {
     this(delimiter, listDelimiter);
 
     setFieldNames(header);
+  }
+
+  public DelimitedParser(
+      final Optional<String> delimiter,
+      final Optional<String> listDelimiter,
+      final Iterable<String> fieldNames,
+      final boolean hasHeaderRow
+  )
+  {
+    this.delimiter = delimiter.isPresent() ? delimiter.get() : DEFAULT_DELIMITER;
+    this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
+
+    Preconditions.checkState(
+        !this.delimiter.equals(this.listDelimiter),
+        "Cannot have same delimiter and list delimiter of [%s]",
+        this.delimiter
+    );
+
+    this.splitter = Splitter.on(this.delimiter);
+    this.listSplitter = Splitter.on(this.listDelimiter);
+    this.valueFunction = getValueFunction(this.listDelimiter, this.listSplitter);
+    this.hasHeaderRow = hasHeaderRow;
+
+    setFieldNames(fieldNames);
   }
 
   public String getDelimiter()
@@ -115,8 +149,10 @@ public class DelimitedParser implements Parser<String, Object>
   @Override
   public void setFieldNames(final Iterable<String> fieldNames)
   {
-    ParserUtils.validateFields(fieldNames);
-    this.fieldNames = Lists.newArrayList(fieldNames);
+    if (fieldNames != null) {
+      ParserUtils.validateFields(fieldNames);
+      this.fieldNames = Lists.newArrayList(fieldNames);
+    }
   }
 
   public void setFieldNames(String header)
@@ -135,6 +171,14 @@ public class DelimitedParser implements Parser<String, Object>
     try {
       Iterable<String> values = splitter.split(input);
 
+      if (hasHeaderRow && !hasParsedHeader) {
+        if (fieldNames == null) {
+          setFieldNames(values);
+        }
+        hasParsedHeader = true;
+        return null;
+      }
+
       if (fieldNames == null) {
         setFieldNames(ParserUtils.generateFieldNames(Iterators.size(values.iterator())));
       }
@@ -144,5 +188,11 @@ public class DelimitedParser implements Parser<String, Object>
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    hasParsedHeader = false;
   }
 }

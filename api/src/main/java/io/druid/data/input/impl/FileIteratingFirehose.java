@@ -50,7 +50,13 @@ public class FileIteratingFirehose implements Firehose
   public boolean hasMore()
   {
     while ((lineIterator == null || !lineIterator.hasNext()) && lineIterators.hasNext()) {
+      // Close old streams, maybe.
+      if (lineIterator != null) {
+        lineIterator.close();
+      }
+
       lineIterator = lineIterators.next();
+      parser.reset();
     }
 
     return lineIterator != null && lineIterator.hasNext();
@@ -67,6 +73,7 @@ public class FileIteratingFirehose implements Firehose
         }
 
         lineIterator = lineIterators.next();
+        parser.reset();
       }
 
       return parser.parse(lineIterator.next());

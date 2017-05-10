@@ -64,4 +64,10 @@ public class ToLowerCaseParser implements Parser<String, Object>
   {
     return baseParser.getFieldNames();
   }
+
+  @Override
+  public void reset()
+  {
+    baseParser.reset();
+  }
 }
