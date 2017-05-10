@@ -45,7 +45,9 @@ import io.druid.segment.historical.HistoricalFloatColumnSelector;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  */
@@ -73,6 +75,86 @@ public class PooledTopNAlgorithm
   private static final
   Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
       new HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype();
+
+  private interface ScanAndAggregate
+  {
+    /**
+     * If this implementation of ScanAndAggregate is executable with the given parameters, run it and return true.
+     * Otherwise return false (scanning and aggregation is not done).
+     */
+    boolean scanAndAggregate(
+        final PooledTopNParams params,
+        final int[] positions,
+        final BufferAggregator[] theAggregators
+    );
+  }
+
+  private static final List<ScanAndAggregate> specializedScanAndAggregateImplementations = new ArrayList<>();
+  static {
+    // The order of the following `if` blocks matters, "more specialized" implementations go first
+    if (specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN) {
+      specializedScanAndAggregateImplementations.add((params, positions, theAggregators) -> {
+        if (theAggregators.length == 1) {
+          BufferAggregator aggregator = theAggregators[0];
+          final Cursor cursor = params.getCursor();
+          if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
+            if (params.getDimSelector() instanceof SingleValueHistoricalDimensionSelector &&
+                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
+              scanAndAggregateHistorical1SimpleDoubleAgg(
+                  params,
+                  positions,
+                  (SimpleDoubleBufferAggregator) aggregator,
+                  cursor,
+                  defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner
+              );
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+    }
+    if (specializeHistorical1SimpleDoubleAggPooledTopN) {
+      specializedScanAndAggregateImplementations.add((params, positions, theAggregators) -> {
+        if (theAggregators.length == 1) {
+          BufferAggregator aggregator = theAggregators[0];
+          final Cursor cursor = params.getCursor();
+          if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
+            if (params.getDimSelector() instanceof HistoricalDimensionSelector &&
+                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
+              scanAndAggregateHistorical1SimpleDoubleAgg(
+                  params,
+                  positions,
+                  (SimpleDoubleBufferAggregator) aggregator,
+                  cursor,
+                  defaultHistorical1SimpleDoubleAggScanner
+              );
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+    }
+    if (specializeGeneric1AggPooledTopN) {
+      specializedScanAndAggregateImplementations.add((params, positions, theAggregators) -> {
+        if (theAggregators.length == 1) {
+          scanAndAggregateGeneric1Agg(params, positions, theAggregators[0], params.getCursor());
+          return true;
+        }
+        return false;
+      });
+    }
+    if (specializeGeneric2AggPooledTopN) {
+      specializedScanAndAggregateImplementations.add((params, positions, theAggregators) -> {
+        if (theAggregators.length == 2) {
+          scanAndAggregateGeneric2Agg(params, positions, theAggregators, params.getCursor());
+          return true;
+        }
+        return false;
+      });
+    }
+  }
 
   private final TopNQuery query;
   private final StupidPool<ByteBuffer> bufferPool;
@@ -206,47 +288,11 @@ public class PooledTopNAlgorithm
       final int numProcessed
   )
   {
-    final Cursor cursor = params.getCursor();
-    if (theAggregators.length == 1) {
-      BufferAggregator aggregator = theAggregators[0];
-      if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
-        if (specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN &&
-            params.getDimSelector() instanceof SingleValueHistoricalDimensionSelector &&
-            ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
-          scanAndAggregateHistorical1SimpleDoubleAgg(
-              params,
-              positions,
-              (SimpleDoubleBufferAggregator) aggregator,
-              cursor,
-              defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner
-          );
-          BaseQuery.checkInterrupted();
-          return;
-        }
-        if (specializeHistorical1SimpleDoubleAggPooledTopN &&
-            params.getDimSelector() instanceof HistoricalDimensionSelector &&
-            ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
-          scanAndAggregateHistorical1SimpleDoubleAgg(
-              params,
-              positions,
-              (SimpleDoubleBufferAggregator) aggregator,
-              cursor,
-              defaultHistorical1SimpleDoubleAggScanner
-          );
-          BaseQuery.checkInterrupted();
-          return;
-        }
-      }
-      if (specializeGeneric1AggPooledTopN) {
-        scanAndAggregateGeneric1Agg(params, positions, aggregator, cursor);
+    for (ScanAndAggregate specializedScanAndAggregate : specializedScanAndAggregateImplementations) {
+      if (specializedScanAndAggregate.scanAndAggregate(params, positions, theAggregators)) {
         BaseQuery.checkInterrupted();
         return;
       }
-    }
-    if (specializeGeneric2AggPooledTopN && theAggregators.length == 2) {
-      scanAndAggregateGeneric2Agg(params, positions, theAggregators, cursor);
-      BaseQuery.checkInterrupted();
-      return;
     }
     scanAndAggregateDefault(params, positions, theAggregators);
     BaseQuery.checkInterrupted();
