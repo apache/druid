@@ -8,7 +8,7 @@ The Code Style is available in XML format at [druid_intellij_formatting.xml](dru
 The installation of mysql is outside the scope of this document, but instructions on setting up MySQL can be found at [docs/content/development/extensions-core/mysql.md](docs/content/development/extensions-core/mysql.md). This assumes you followed the example there and have a database named `druid` with proper permissions for a user named `druid` and a password of `diurd`.
 
 ##Zookeeper
-This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `bin/zkServer.sh`. 
+This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
 
 ## XML App Def
 You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in [.idea/runConfigurations](.idea/runConfigurations) in the Druid source code.
