@@ -104,7 +104,7 @@ public class PooledTopNAlgorithm
                   params,
                   positions,
                   (SimpleDoubleBufferAggregator) aggregator,
-                  cursor,
+                  (HistoricalCursor) cursor,
                   defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner
               );
               return true;
@@ -126,7 +126,7 @@ public class PooledTopNAlgorithm
                   params,
                   positions,
                   (SimpleDoubleBufferAggregator) aggregator,
-                  cursor,
+                  (HistoricalCursor) cursor,
                   defaultHistorical1SimpleDoubleAggScanner
               );
               return true;
@@ -302,17 +302,16 @@ public class PooledTopNAlgorithm
       PooledTopNParams params,
       int[] positions,
       SimpleDoubleBufferAggregator aggregator,
-      Cursor cursor,
+      HistoricalCursor cursor,
       Historical1AggPooledTopNScanner prototypeScanner
   )
   {
     String runtimeShape = StringRuntimeShape.of(aggregator);
-    HistoricalCursor historicalCursor = (HistoricalCursor) cursor;
     SpecializationState<Historical1AggPooledTopNScanner> specializationState =
         SpecializationService.getSpecializationState(
             prototypeScanner.getClass(),
             runtimeShape,
-            ImmutableMap.of(Offset.class, historicalCursor.getOffset().getClass())
+            ImmutableMap.of(Offset.class, cursor.getOffset().getClass())
         );
     Historical1AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(prototypeScanner);
 
@@ -321,7 +320,7 @@ public class PooledTopNAlgorithm
         aggregator.getSelector(),
         aggregator,
         params.getAggregatorSizes()[0],
-        historicalCursor,
+        cursor,
         positions,
         params.getResultsBuf()
     );
