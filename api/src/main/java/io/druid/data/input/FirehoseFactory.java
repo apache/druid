@@ -37,6 +37,22 @@ public interface FirehoseFactory<T extends InputRowParser>
    * If this method returns null, then any attempt to call hasMore(), nextRow(), commit() and close() on the return
    * value will throw a surprising NPE.   Throwing IOException on connection failure or runtime exception on
    * invalid configuration is preferred over returning null.
+   *
+   * @param parser             an input row parser
+   */
+  @Deprecated
+  default Firehose connect(T parser) throws IOException, ParseException
+  {
+    return connect(parser, null);
+  }
+
+  /**
+   * Initialization method that connects up the fire hose.  If this method returns successfully it should be safe to
+   * call hasMore() on the returned Firehose (which might subsequently block).
+   * <p/>
+   * If this method returns null, then any attempt to call hasMore(), nextRow(), commit() and close() on the return
+   * value will throw a surprising NPE.   Throwing IOException on connection failure or runtime exception on
+   * invalid configuration is preferred over returning null.
    * <p/>
    * Some fire hoses like {@link PrefetchableTextFilesFirehoseFactory} may use a temporary
    * directory to cache data in it.
@@ -45,5 +61,4 @@ public interface FirehoseFactory<T extends InputRowParser>
    * @param temporaryDirectory a directory where temporary files are stored
    */
   Firehose connect(T parser, File temporaryDirectory) throws IOException, ParseException;
-
 }

@@ -30,7 +30,6 @@ import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
 
-import java.io.File;
 import java.io.IOException;
 
 /**
@@ -100,9 +99,9 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
     return ioConfig.getFirehoseFactoryV2() != null;
   }
 
-  public Firehose connect(File temporaryDirectory) throws IOException
+  public Firehose connect() throws IOException
   {
-    return ioConfig.getFirehoseFactory().connect(dataSchema.getParser(), temporaryDirectory);
+    return ioConfig.getFirehoseFactory().connect(dataSchema.getParser(), null);
   }
 
   public FirehoseV2 connect(Object metaData) throws IOException

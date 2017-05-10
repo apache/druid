@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
@@ -51,11 +50,9 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Plumbers;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -226,13 +223,13 @@ public class RealtimeManager implements QuerySegmentWalker
       this.metrics = fireDepartment.getMetrics();
     }
 
-    public Firehose initFirehose(File firehoseTempDir)
+    public Firehose initFirehose()
     {
       synchronized (this) {
         if (firehose == null) {
           try {
             log.info("Calling the FireDepartment and getting a Firehose.");
-            firehose = fireDepartment.connect(firehoseTempDir);
+            firehose = fireDepartment.connect();
             log.info("Firehose acquired!");
           }
           catch (IOException e) {
@@ -291,7 +288,6 @@ public class RealtimeManager implements QuerySegmentWalker
     {
       plumber = initPlumber();
 
-      File firehoseV1TempDir = null;
       try {
         Object metadata = plumber.startJob();
 
@@ -299,14 +295,12 @@ public class RealtimeManager implements QuerySegmentWalker
           firehoseV2 = initFirehoseV2(metadata);
           runFirehoseV2(firehoseV2);
         } else {
-          firehoseV1TempDir = Files.createTempDir();
-          FileUtils.forceMkdir(firehoseV1TempDir);
-          firehose = initFirehose(firehoseV1TempDir);
+          firehose = initFirehose();
           runFirehose(firehose);
         }
 
       }
-      catch (IOException | RuntimeException e) {
+      catch (RuntimeException e) {
         log.makeAlert(
             e,
             "[%s] aborted realtime processing[%s]",
@@ -328,9 +322,6 @@ public class RealtimeManager implements QuerySegmentWalker
           plumber.finishJob();
           plumber = null;
           firehose = null;
-        }
-        if (firehoseV1TempDir != null) {
-          FileUtils.deleteQuietly(firehoseV1TempDir);
         }
       }
     }

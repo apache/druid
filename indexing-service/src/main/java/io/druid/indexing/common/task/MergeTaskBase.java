@@ -130,7 +130,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     final DataSegment mergedSegment = computeMergedSegment(getDataSource(), myLock.getVersion(), segments);
-    final File taskDir = toolbox.getTaskWorkDir();
+    final File mergeDir = toolbox.getMergeDir();
 
     try {
       final long startTime = System.currentTimeMillis();
@@ -155,7 +155,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       final Map<DataSegment, File> gettedSegments = toolbox.fetchSegments(segments);
 
       // merge files together
-      final File fileToUpload = merge(toolbox, gettedSegments, new File(taskDir, "merged"));
+      final File fileToUpload = merge(toolbox, gettedSegments, mergeDir);
 
       emitter.emit(builder.build("merger/numMerged", segments.size()));
       emitter.emit(builder.build("merger/mergeTime", System.currentTimeMillis() - startTime));

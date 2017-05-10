@@ -38,7 +38,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.io.Files;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
@@ -164,9 +163,6 @@ public class IndexTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
-    final File firehoseTempDir = Files.createTempDir();
-    FileUtils.forceMkdir(firehoseTempDir);
-
     final boolean determineIntervals = !ingestionSchema.getDataSchema()
                                                        .getGranularitySpec()
                                                        .bucketIntervals()
@@ -178,6 +174,10 @@ public class IndexTask extends AbstractTask
       // pass toolbox to Firehose
       ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
     }
+
+    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
+    // Firehose temporary directory is automatically removed when this IndexTask completes.
+    FileUtils.forceMkdir(firehoseTempDir);
 
     final Map<Interval, List<ShardSpec>> shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir);
 
@@ -201,15 +201,10 @@ public class IndexTask extends AbstractTask
       dataSchema = ingestionSchema.getDataSchema();
     }
 
-    try {
-      if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, version, firehoseFactory, firehoseTempDir)) {
-        return TaskStatus.success(getId());
-      } else {
-        return TaskStatus.failure(getId());
-      }
-    }
-    finally {
-      FileUtils.forceDelete(firehoseTempDir);
+    if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, version, firehoseFactory, firehoseTempDir)) {
+      return TaskStatus.success(getId());
+    } else {
+      return TaskStatus.failure(getId());
     }
   }
 
@@ -507,7 +502,7 @@ public class IndexTask extends AbstractTask
   {
     return Appenderators.createOffline(
         dataSchema,
-        ingestionSchema.getTuningConfig().withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist")),
+        ingestionSchema.getTuningConfig().withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),

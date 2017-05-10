@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CountingOutputStream;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.Firehose;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
@@ -100,8 +101,16 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   private final int maxFetchRetry;
 
   private final List<FetchedFile> cacheFiles = new ArrayList<>();
+  private long totalCachedBytes;
 
-  private boolean needCache = true;
+  private static ExecutorService createFetchExecutor()
+  {
+    return Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder()
+            .setNameFormat("firehose_fetch_%d")
+            .build()
+    );
+  }
 
   public PrefetchableTextFilesFirehoseFactory(
       Long maxCacheCapacityBytes,
@@ -141,7 +150,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
     );
 
     // fetchExecutor is responsible for background data fetching
-    final ExecutorService fetchExecutor = Executors.newSingleThreadExecutor();
+    final ExecutorService fetchExecutor = createFetchExecutor();
 
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
@@ -151,45 +160,36 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           // Number of bytes currently fetched files.
           // This is updated when a file is successfully fetched or a fetched file is deleted.
           private final AtomicLong fetchedBytes = new AtomicLong(0);
+          private final boolean cacheInitialized;
 
-          private final Iterator<FetchedFile> cacheFileIterator;
-
-          private long remainingCachedBytes;
           private Future<Void> fetchFuture;
+          private int cacheIterateIndex;
+
+          // nextFetchIndex indicates which object should be downloaded when fetch is triggered.
+          // This variable is only updated by the fetchExecutor thread, but read by the main thread (in hasNext())
+          // and the fetchExecutor thread (in fetch()). To guarantee that the main thread can read the most fresh value,
+          // this variable should be volatile.
           private volatile int nextFetchIndex;
 
           {
-            if (needCache) {
-              cache(objects, temporaryDirectory);
-              needCache = false;
-            } else {
+            cacheInitialized = totalCachedBytes > 0;
+
+            if (cacheInitialized) {
               nextFetchIndex = cacheFiles.size();
             }
-            cacheFileIterator = cacheFiles.iterator();
-            remainingCachedBytes = cacheFiles.stream()
-                                             .mapToLong(FetchedFile::length)
-                                             .sum();
-            fetchIfNeeded(remainingCachedBytes);
+            fetchIfNeeded(totalCachedBytes);
           }
 
-          /**
-           * Cache objects in a local disk up to {@link PrefetchableTextFilesFirehoseFactory#maxCacheCapacityBytes}.
-           */
-          private void cache(final List<ObjectType> objects, File baseDir)
+          private void fetchIfNeeded(long remainingBytes)
           {
-            double totalFetchedBytes = 0;
-            try {
-              for (int i = 0; i < objects.size() && totalFetchedBytes < maxCacheCapacityBytes; i++) {
-                final ObjectType object = objects.get(i);
-                LOG.info("Caching object[%s]", object);
-                final File outFile = File.createTempFile(CACHE_FILE_PREFIX, null, baseDir);
-                totalFetchedBytes += download(object, outFile, 0);
-                cacheFiles.add(new FetchedFile(object, outFile));
-                nextFetchIndex++;
-              }
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
+            if ((fetchFuture == null || fetchFuture.isDone())
+                && remainingBytes <= prefetchTriggerBytes) {
+              fetchFuture = fetchExecutor.submit(
+                  () -> {
+                    fetch(objects, temporaryDirectory);
+                    return null;
+                  }
+              );
             }
           }
 
@@ -214,17 +214,17 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
 
           /**
            * Downloads an object. It retries downloading {@link PrefetchableTextFilesFirehoseFactory#maxFetchRetry}
-           * times and throws that exception.
+           * times and throws an exception.
            *
-           * @param object  an object to be downloaded
-           * @param outFile a file which the object data is stored
-           * @param retry   current retry count
+           * @param object   an object to be downloaded
+           * @param outFile  a file which the object data is stored
+           * @param tryCount current retry count
            *
            * @return number of downloaded bytes
            *
            * @throws IOException
            */
-          private long download(ObjectType object, File outFile, int retry) throws IOException
+          private long download(ObjectType object, File outFile, int tryCount) throws IOException
           {
             try (final InputStream is = openObjectStream(object);
                  final CountingOutputStream cos = new CountingOutputStream(new FileOutputStream(outFile))) {
@@ -232,10 +232,11 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
               return cos.getCount();
             }
             catch (IOException e) {
-              if (!Thread.currentThread().isInterrupted() && retry < maxFetchRetry) {
-                LOG.error(e, "Failed to download object[%s], retrying (%d of %d)", object, retry + 1, maxFetchRetry);
+              final int nextTry = tryCount + 1;
+              if (!Thread.currentThread().isInterrupted() && nextTry < maxFetchRetry) {
+                LOG.error(e, "Failed to download object[%s], retrying (%d of %d)", object, nextTry, maxFetchRetry);
                 outFile.delete();
-                return download(object, outFile, retry + 1);
+                return download(object, outFile, nextTry);
               } else {
                 LOG.error(e, "Failed to download object[%s], retries exhausted, aborting", object);
                 throw e;
@@ -246,21 +247,21 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           @Override
           public boolean hasNext()
           {
-            return cacheFileIterator.hasNext()
+            return (cacheInitialized && cacheIterateIndex < cacheFiles.size())
                    || !fetchFiles.isEmpty()
                    || nextFetchIndex < objects.size();
           }
 
-          private void fetchIfNeeded(long remainingBytes)
+          private void checkFetchException()
           {
-            if ((fetchFuture == null || fetchFuture.isDone())
-                && remainingBytes <= prefetchTriggerBytes) {
-              fetchFuture = fetchExecutor.submit(
-                  () -> {
-                    fetch(objects, temporaryDirectory);
-                    return null;
-                  }
-              );
+            if (fetchFuture != null && fetchFuture.isDone()) {
+              try {
+                fetchFuture.get();
+                fetchFuture = null;
+              }
+              catch (InterruptedException | ExecutionException e) {
+                Throwables.propagate(e);
+              }
             }
           }
 
@@ -272,31 +273,21 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
             }
 
             // If fetch() fails, hasNext() always returns true because nextFetchIndex must be smaller than the number
-            // of objects, which means next() is always called. The below block checks that fetch() threw an exception
+            // of objects, which means next() is always called. The below method checks that fetch() threw an exception
             // and propagates it if exists.
-            if (fetchFuture != null && fetchFuture.isDone()) {
-              try {
-                fetchFuture.get();
-                fetchFuture = null;
-              }
-              catch (InterruptedException | ExecutionException e) {
-                Throwables.propagate(e);
-              }
-            }
+            checkFetchException();
 
             final FetchedFile fetchedFile;
             final Closeable closeable;
             // Check cache first
-            if (cacheFileIterator.hasNext()) {
-              fetchedFile = cacheFileIterator.next();
-              remainingCachedBytes -= fetchedFile.length();
-              fetchIfNeeded(remainingCachedBytes);
-              closeable = () -> {
-              };
+            if (cacheInitialized && cacheIterateIndex < cacheFiles.size()) {
+              fetchedFile = cacheFiles.get(cacheIterateIndex++);
+              closeable = getNoopCloseable();
             } else {
               if (!fetchFiles.isEmpty()) {
                 // If there are already fetched files, use them
                 fetchedFile = fetchFiles.poll();
+                closeable = cacheIfPossibleAndGetCloseable(fetchedFile, fetchedBytes);
                 fetchIfNeeded(fetchedBytes.get());
               } else {
                 // Otherwise, wait for fetching
@@ -304,18 +295,19 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
                   fetchIfNeeded(fetchedBytes.get());
                   fetchedFile = fetchFiles.poll(fetchTimeout, TimeUnit.MILLISECONDS);
                   if (fetchedFile == null) {
+                    // Check the latest fetch is failed
+                    checkFetchException();
+                    // Or throw a timeout exception
                     throw new RuntimeException(new TimeoutException());
                   }
+                  closeable = cacheIfPossibleAndGetCloseable(fetchedFile, fetchedBytes);
+                  // trigger fetch again for subsequent next() calls
+                  fetchIfNeeded(fetchedBytes.get());
                 }
                 catch (InterruptedException e) {
                   throw Throwables.propagate(e);
                 }
               }
-              closeable = () -> {
-                final long fileSize = fetchedFile.length();
-                fetchedFile.delete();
-                fetchedBytes.addAndGet(-fileSize);
-              };
             }
 
             try {
@@ -348,6 +340,50 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           }
         }
     );
+  }
+
+  private boolean cacheIfPossible(FetchedFile fetchedFile)
+  {
+    // maxCacheCapacityBytes is a rough limit, so if totalCachedBytes is larger than it, no more caching is
+    // allowed.
+    if (totalCachedBytes < maxCacheCapacityBytes) {
+      cacheFiles.add(fetchedFile);
+      totalCachedBytes += fetchedFile.length();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private Closeable cacheIfPossibleAndGetCloseable(FetchedFile fetchedFile, AtomicLong fetchedBytes)
+  {
+    final Closeable closeable;
+    if (cacheIfPossible(fetchedFile)) {
+      closeable = getNoopCloseable();
+      // If the fetchedFile is cached, make a room for fetching more data immediately.
+      // This is because cache space and fetch space are separated.
+      fetchedBytes.addAndGet(-fetchedFile.length());
+    } else {
+      closeable = getFetchedFileCleanupCloseable(fetchedFile, fetchedBytes);
+    }
+    return closeable;
+  }
+
+  private Closeable getNoopCloseable()
+  {
+    return () -> {};
+  }
+
+  private Closeable getFetchedFileCleanupCloseable(
+      final FetchedFile fetchedFile,
+      final AtomicLong fetchedBytes
+  )
+  {
+    return () -> {
+      final long fileSize = fetchedFile.length();
+      fetchedFile.delete();
+      fetchedBytes.addAndGet(-fileSize);
+    };
   }
 
   /**

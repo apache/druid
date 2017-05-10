@@ -26,7 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
@@ -285,7 +284,7 @@ public class RealtimeIndexTask extends AbstractTask
     DataSchema dataSchema = spec.getDataSchema();
     RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
     RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
-                                            .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+                                            .withBasePersistDirectory(toolbox.getPersistDir())
                                             .withVersioningPolicy(versioningPolicy);
 
     final FireDepartment fireDepartment = new FireDepartment(
@@ -326,7 +325,7 @@ public class RealtimeIndexTask extends AbstractTask
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     Supplier<Committer> committerSupplier = null;
-    final File firehoseTempDir = Files.createTempDir();
+    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
     try {
       plumber.startJob();
@@ -334,8 +333,10 @@ public class RealtimeIndexTask extends AbstractTask
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
 
-      // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
+      // Firehose temporary directory is automatically removed when this RealtimeIndexTask completes.
       FileUtils.forceMkdir(firehoseTempDir);
+
+      // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
       final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
 
@@ -426,7 +427,6 @@ public class RealtimeIndexTask extends AbstractTask
           if (firehose != null) {
             CloseQuietly.close(firehose);
           }
-          FileUtils.forceDelete(firehoseTempDir);
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
       }

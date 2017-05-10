@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 public class PrefetchableTextFilesFirehoseFactoryTest
@@ -214,7 +215,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   public void testMaxRetry() throws IOException
   {
     expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IOException.class));
+    expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
     expectedException.expectMessage("Exception for retry test");
 
     final TestPrefetchableTextFilesFirehoseFactory factory =
@@ -264,7 +265,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
   static class TestPrefetchableTextFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<File>
   {
-    private static final long defaultTimeout = 5000;
+    private static final long defaultTimeout = 1000;
     private final long sleepMillis;
     private final File baseDir;
     private int openExceptionCount;

@@ -27,8 +27,8 @@ import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
-import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
+import org.jets3t.service.StorageObjectsChunk;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<S3Object>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
+  private static final long MAX_LISTING_LENGTH = 1024;
 
   private final RestS3Service s3Client;
   private final List<URI> uris;
@@ -120,10 +121,21 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
         final String bucket = uri.getAuthority();
         final String prefix = extractS3Key(uri);
         try {
-          final S3Object[] listed = s3Client.listObjects(bucket, prefix, null);
-          objects.addAll(Arrays.asList(listed));
+          String lastKey = null;
+          StorageObjectsChunk objectsChunk;
+          do {
+            objectsChunk = s3Client.listObjectsChunked(
+                bucket,
+                prefix,
+                null,
+                MAX_LISTING_LENGTH,
+                lastKey
+            );
+            Arrays.stream(objectsChunk.getObjects()).forEach(storageObject -> objects.add((S3Object) storageObject));
+            lastKey = objectsChunk.getPriorLastKey();
+          } while (!objectsChunk.isListingComplete());
         }
-        catch (S3ServiceException e) {
+        catch (ServiceException  e) {
           throw new IOException(e);
         }
       }
