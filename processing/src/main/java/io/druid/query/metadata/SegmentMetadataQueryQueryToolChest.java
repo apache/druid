@@ -108,8 +108,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           Map<String, Object> context
       )
       {
-        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) queryPlus.getQuery();
-        updatedQuery.withAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
+        SegmentMetadataQuery castedQuery = (SegmentMetadataQuery) queryPlus.getQuery();
+        SegmentMetadataQuery updatedQuery =(SegmentMetadataQuery) (castedQuery.withAnalysisTypes(getFinalAnalysisTypes(castedQuery)));
         QueryPlus<SegmentAnalysis> updatedQueryPlus = queryPlus.withQuery(updatedQuery);
         return new MappedSequence<>(
             CombiningSequence.create(
@@ -124,8 +124,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Override
       protected Ordering<SegmentAnalysis> makeOrdering(Query<SegmentAnalysis> query)
       {
-        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) query;
-        updatedQuery.withAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
+        SegmentMetadataQuery castedQuery = (SegmentMetadataQuery) query;
+        SegmentMetadataQuery updatedQuery =(SegmentMetadataQuery) (castedQuery.withAnalysisTypes(getFinalAnalysisTypes(castedQuery)));
+
         if ((updatedQuery).isMerge()) {
           // Merge everything always
           return new Ordering<SegmentAnalysis>()
@@ -146,8 +147,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Override
       protected BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final Query<SegmentAnalysis> inQ)
       {
-        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) inQ;
-        updatedQuery.withAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
+        SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
+        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) query.withAnalysisTypes(getFinalAnalysisTypes(query));
         return new BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis>()
         {
           private final SegmentMetadataQuery query = updatedQuery;

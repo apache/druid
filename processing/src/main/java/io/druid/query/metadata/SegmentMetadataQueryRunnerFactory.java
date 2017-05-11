@@ -88,8 +88,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
       public Sequence<SegmentAnalysis> run(QueryPlus<SegmentAnalysis> inQ, Map<String, Object> responseContext)
       {
         SegmentMetadataQuery query = (SegmentMetadataQuery) inQ.getQuery();
-        query.withAnalysisTypes(toolChest.getFinalAnalysisTypes(query));
-        final SegmentAnalyzer analyzer = new SegmentAnalyzer(query.getAnalysisTypes());
+        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) query.withAnalysisTypes(toolChest.getFinalAnalysisTypes(query));
+        final SegmentAnalyzer analyzer = new SegmentAnalyzer(updatedQuery.getAnalysisTypes());
         final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(segment);
         final long numRows = analyzer.numRows(segment);
         long totalSize = 0;
@@ -100,7 +100,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
 
         Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
-        ColumnIncluderator includerator = query.getToInclude();
+        ColumnIncluderator includerator = updatedQuery.getToInclude();
         for (Map.Entry<String, ColumnAnalysis> entry : analyzedColumns.entrySet()) {
           final String columnName = entry.getKey();
           final ColumnAnalysis column = entry.getValue();
@@ -113,7 +113,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           }
         }
         List<Interval> retIntervals;
-        if (query.analyzingInterval()) {
+        if (updatedQuery.analyzingInterval()) {
           retIntervals = Collections.singletonList(segment.getDataInterval());
         } else {
           retIntervals = null;
@@ -121,7 +121,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
 
         final Map<String, AggregatorFactory> aggregators;
         Metadata metadata = null;
-        if (query.hasAggregators()) {
+        if (updatedQuery.hasAggregators()) {
           metadata = segment.asStorageAdapter().getMetadata();
           if (metadata != null && metadata.getAggregators() != null) {
             aggregators = Maps.newHashMap();
@@ -136,7 +136,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
 
         final TimestampSpec timestampSpec;
-        if (query.hasTimestampSpec()) {
+        if (updatedQuery.hasTimestampSpec()) {
           if (metadata == null) {
             metadata = segment.asStorageAdapter().getMetadata();
           }
@@ -146,7 +146,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
 
         final Granularity queryGranularity;
-        if (query.hasQueryGranularity()) {
+        if (updatedQuery.hasQueryGranularity()) {
           if (metadata == null) {
             metadata = segment.asStorageAdapter().getMetadata();
           }
@@ -156,7 +156,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
 
         Boolean rollup = null;
-        if (query.hasRollup()) {
+        if (updatedQuery.hasRollup()) {
           if (metadata == null) {
             metadata = segment.asStorageAdapter().getMetadata();
           }
