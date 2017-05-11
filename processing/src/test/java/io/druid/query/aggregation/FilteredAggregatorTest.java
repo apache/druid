@@ -172,6 +172,7 @@ public class FilteredAggregatorTest
                 @Override
                 public void inspectRuntimeShape(RuntimeShapeInspector inspector)
                 {
+                  // nothing to inspect
                 }
               }
           );

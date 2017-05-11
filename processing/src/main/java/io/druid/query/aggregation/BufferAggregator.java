@@ -125,6 +125,7 @@ public interface BufferAggregator extends HotLoopCallee
    */
   default void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 
   /*

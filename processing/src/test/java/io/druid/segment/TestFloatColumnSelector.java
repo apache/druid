@@ -29,5 +29,6 @@ public abstract class TestFloatColumnSelector implements FloatColumnSelector
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

@@ -76,5 +76,6 @@ public class ZeroIndexedInts implements IndexedInts
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

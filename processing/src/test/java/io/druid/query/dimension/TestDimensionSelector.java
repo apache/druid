@@ -97,5 +97,6 @@ class TestDimensionSelector implements DimensionSelector
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

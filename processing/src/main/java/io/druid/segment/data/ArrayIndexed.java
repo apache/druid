@@ -73,5 +73,6 @@ public class ArrayIndexed<T> implements Indexed<T>
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

@@ -115,5 +115,6 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

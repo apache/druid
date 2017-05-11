@@ -92,5 +92,6 @@ public class RangeIndexedInts implements IndexedInts
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

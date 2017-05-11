@@ -67,5 +67,6 @@ public class EmptyIndexedInts implements IndexedInts
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

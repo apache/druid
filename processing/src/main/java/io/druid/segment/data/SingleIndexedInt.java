@@ -69,5 +69,6 @@ public final class SingleIndexedInt implements IndexedInts
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

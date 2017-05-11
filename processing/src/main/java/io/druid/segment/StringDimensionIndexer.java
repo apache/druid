@@ -330,6 +330,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
+        // nothing to inspect
       }
     };
   }

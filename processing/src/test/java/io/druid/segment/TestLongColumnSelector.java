@@ -29,5 +29,6 @@ public abstract class TestLongColumnSelector implements LongColumnSelector
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

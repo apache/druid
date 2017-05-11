@@ -51,5 +51,6 @@ public final class ZeroFloatColumnSelector implements HistoricalFloatColumnSelec
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

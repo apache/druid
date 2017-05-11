@@ -162,6 +162,7 @@ public class CardinalityAggregatorTest
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
+          // nothing to inspect
         }
       };
     }
@@ -214,6 +215,7 @@ public class CardinalityAggregatorTest
     @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
+      // nothing to inspect
     }
   }
 
