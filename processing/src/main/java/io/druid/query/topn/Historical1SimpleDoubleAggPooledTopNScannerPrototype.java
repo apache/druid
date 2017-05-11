@@ -30,8 +30,8 @@ import sun.reflect.MagicAccessorBridge;
 import java.nio.ByteBuffer;
 
 /**
- * Needs to extend {@link MagicAccessorBridge} because prototype specialization (including replacement of {@link Offset}
- * occurrences with a subclass) may appear to access a private class.
+ * Needs to extend {@link MagicAccessorBridge} because prototype specialization (with {@link Offset} occurrences
+ * replaced with a subclass) may appear to access a private class.
  */
 public class Historical1SimpleDoubleAggPooledTopNScannerPrototype extends MagicAccessorBridge
     implements Historical1AggPooledTopNScanner<
