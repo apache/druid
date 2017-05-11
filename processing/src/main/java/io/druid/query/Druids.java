@@ -962,7 +962,6 @@ public class Druids
     private Boolean merge;
     private Boolean lenientAggregatorMerge;
     private Map<String, Object> context;
-    private Boolean usingDefaultInterval;
 
     public SegmentMetadataQueryBuilder()
     {
@@ -973,7 +972,6 @@ public class Druids
       merge = null;
       lenientAggregatorMerge = null;
       context = null;
-      usingDefaultInterval = null;
     }
 
     public SegmentMetadataQuery build()
@@ -985,7 +983,7 @@ public class Druids
           merge,
           context,
           analysisTypes,
-          usingDefaultInterval,
+          false,
           lenientAggregatorMerge
       );
     }
@@ -999,7 +997,6 @@ public class Druids
           .analysisTypes(query.getAnalysisTypes())
           .merge(query.isMerge())
           .lenientAggregatorMerge(query.isLenientAggregatorMerge())
-          .usingDefaultIntervals(query.isUsingDefaultInterval())
           .context(query.getContext());
     }
 
@@ -1056,13 +1053,6 @@ public class Druids
       this.analysisTypes = analysisTypes;
       return this;
     }
-
-    public SegmentMetadataQueryBuilder usingDefaultIntervals(Boolean usingDefaultInterval)
-    {
-      this.usingDefaultInterval = usingDefaultInterval;
-      return this;
-    }
-
 
     public SegmentMetadataQueryBuilder merge(boolean merge)
     {

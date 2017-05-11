@@ -32,8 +32,10 @@ import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
@@ -100,7 +102,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("merge") Boolean merge,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("analysisTypes") EnumSet<AnalysisType> analysisTypes,
-      @JsonProperty("usingDefaultInterval") Boolean useDefaultInterval,
+      @Ignore @JsonProperty("usingDefaultInterval") Boolean useDefaultInterval,
       @JsonProperty("lenientAggregatorMerge") Boolean lenientAggregatorMerge
   )
   {
@@ -115,7 +117,13 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     if (querySegmentSpec == null) {
       this.usingDefaultInterval = true;
     } else {
-      this.usingDefaultInterval = useDefaultInterval == null ? false : useDefaultInterval;
+      if (querySegmentSpec.getIntervals().size() == 1 && querySegmentSpec.getIntervals()
+                                                                         .get(0)
+                                                                         .equals(DEFAULT_INTERVAL)) {
+        this.usingDefaultInterval = true;
+      } else {
+        this.usingDefaultInterval = false;
+      }
     }
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
@@ -248,10 +256,14 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return Druids.SegmentMetadataQueryBuilder.copy(this).toInclude(includerator).build();
   }
 
-  public Query<SegmentAnalysis> withAnalysisTypes(EnumSet<AnalysisType> analysisTypes)
+  public SegmentMetadataQuery withFinalizedAnalysisTypes(SegmentMetadataQueryConfig config)
   {
-    return Druids.SegmentMetadataQueryBuilder.copy(this).analysisTypes(analysisTypes).build();
+    return Druids.SegmentMetadataQueryBuilder
+        .copy(this)
+        .analysisTypes(com.google.common.base.Objects.firstNonNull(analysisTypes, config.getDefaultAnalysisTypes()))
+        .build();
   }
+
   @Override
   public String toString()
   {

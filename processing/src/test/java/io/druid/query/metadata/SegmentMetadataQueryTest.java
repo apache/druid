@@ -1120,10 +1120,10 @@ public class SegmentMetadataQueryTest
     SegmentMetadataQueryConfig analysisCfg = new SegmentMetadataQueryConfig();
     analysisCfg.setDefaultAnalysisTypes(EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY));
 
-    EnumSet<SegmentMetadataQuery.AnalysisType> analysis1 = new SegmentMetadataQueryQueryToolChest(emptyCfg).getFinalAnalysisTypes(query1);
-    EnumSet<SegmentMetadataQuery.AnalysisType> analysis2 = new SegmentMetadataQueryQueryToolChest(emptyCfg).getFinalAnalysisTypes(query2);
-    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg1 = new SegmentMetadataQueryQueryToolChest(analysisCfg).getFinalAnalysisTypes(query1);
-    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg2 = new SegmentMetadataQueryQueryToolChest(analysisCfg).getFinalAnalysisTypes(query2);
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysis1 = query1.withFinalizedAnalysisTypes(emptyCfg).getAnalysisTypes();
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysis2 = query2.withFinalizedAnalysisTypes(emptyCfg).getAnalysisTypes();
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg1 = query1.withFinalizedAnalysisTypes(analysisCfg).getAnalysisTypes();
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg2 = query2.withFinalizedAnalysisTypes(analysisCfg).getAnalysisTypes();
 
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis1 = new SegmentMetadataQueryConfig().getDefaultAnalysisTypes();
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis2 = EnumSet.of(SegmentMetadataQuery.AnalysisType.MINMAX);
