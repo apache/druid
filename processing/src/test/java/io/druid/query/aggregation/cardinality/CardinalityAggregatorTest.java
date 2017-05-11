@@ -162,7 +162,7 @@ public class CardinalityAggregatorTest
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          // nothing to inspect
+          // Don't care about runtime shape in tests
         }
       };
     }
@@ -215,7 +215,7 @@ public class CardinalityAggregatorTest
     @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
-      // nothing to inspect
+      // Don't care about runtime shape in tests
     }
   }
 
