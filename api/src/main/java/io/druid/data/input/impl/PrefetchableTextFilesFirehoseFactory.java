@@ -158,6 +158,11 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
         {
+          // When prefetching is enabled, fetchFiles and nextFetchIndex are updated by the fetchExecutor thread, but
+          // read by both the main thread (in hasNext()) and the fetchExecutor thread (in fetch()). To guarantee that
+          // fetchFiles and nextFetchIndex are updated atomically, this lock must be held before updating
+          // them.
+          private final Object fetchLock = new Object();
           private final LinkedBlockingQueue<FetchedFile> fetchFiles = new LinkedBlockingQueue<>();
 
           // Number of bytes currently fetched files.
@@ -168,11 +173,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
 
           private Future<Void> fetchFuture;
           private int cacheIterateIndex;
-
           // nextFetchIndex indicates which object should be downloaded when fetch is triggered.
-          // When prefetching is enabled, this variable is updated by the fetchExecutor thread, but read by the main
-          // thread (in hasNext()) and the fetchExecutor thread (in fetch()). To guarantee that fetchFiles and
-          // nextFetchIndex are updated atomically, a lock for fetchFiles must be held before updating this variable.
           private int nextFetchIndex;
 
           {
@@ -214,7 +215,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
               LOG.info("Fetching object[%s], fetchedBytes[%d]", object, fetchedBytes.get());
               final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
               fetchedBytes.addAndGet(download(object, outFile, 0));
-              synchronized (fetchFiles) {
+              synchronized (fetchLock) {
                 fetchFiles.put(new FetchedFile(object, outFile));
                 nextFetchIndex++;
               }
@@ -256,7 +257,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           @Override
           public boolean hasNext()
           {
-            synchronized (fetchFiles) {
+            synchronized (fetchLock) {
               return (cacheInitialized && cacheIterateIndex < cacheFiles.size())
                      || !fetchFiles.isEmpty()
                      || nextFetchIndex < objects.size();
