@@ -17,30 +17,11 @@
  * under the License.
  */
 
-package io.druid.segment.data;
-
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+package sun.reflect;
 
 /**
- * The "mutable" version of a ReadableOffset.  Introduces "increment()" and "withinBounds()" methods, which are
- * very similar to "next()" and "hasNext()" on the Iterator interface except increment() does not return a value.
+ * Public bridge is needed, because MagicAccessorImpl is a package-private class.
  */
-public abstract class Offset implements ReadableOffset, Cloneable
+public class MagicAccessorBridge extends MagicAccessorImpl
 {
-  @CalledFromHotLoop
-  public abstract void increment();
-
-  @CalledFromHotLoop
-  public abstract boolean withinBounds();
-
-  @Override
-  public Offset clone()
-  {
-    try {
-      return (Offset) super.clone();
-    }
-    catch (CloneNotSupportedException e) {
-      throw new RuntimeException(e);
-    }
-  }
 }

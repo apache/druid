@@ -823,7 +823,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private abstract static class TimestampCheckingOffset implements Offset
+  private abstract static class TimestampCheckingOffset extends Offset
   {
     protected final Offset baseOffset;
     protected final GenericColumn timestamps;
@@ -950,7 +950,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static class NoFilterOffset implements Offset
+  private static class NoFilterOffset extends Offset
   {
     private final int rowCount;
     private final boolean descending;

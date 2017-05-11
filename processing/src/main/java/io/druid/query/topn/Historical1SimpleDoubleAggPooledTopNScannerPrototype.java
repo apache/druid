@@ -25,10 +25,15 @@ import io.druid.segment.data.Offset;
 import io.druid.segment.historical.HistoricalCursor;
 import io.druid.segment.historical.HistoricalDimensionSelector;
 import io.druid.segment.historical.HistoricalFloatColumnSelector;
+import sun.reflect.MagicAccessorBridge;
 
 import java.nio.ByteBuffer;
 
-public class Historical1SimpleDoubleAggPooledTopNScannerPrototype
+/**
+ * Needs to extend {@link MagicAccessorBridge} because prototype specialization (including replacement of {@link Offset}
+ * occurrences with a subclass) may appear to access a private class.
+ */
+public class Historical1SimpleDoubleAggPooledTopNScannerPrototype extends MagicAccessorBridge
     implements Historical1AggPooledTopNScanner<
         HistoricalDimensionSelector,
         HistoricalFloatColumnSelector,

@@ -54,17 +54,43 @@ import java.util.List;
 public class PooledTopNAlgorithm
     extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
 {
-  /** Non-final fields for testing, see TopNQueryRunnerTest */
-  @VisibleForTesting
-  static boolean specializeGeneric1AggPooledTopN =
+  private static boolean specializeGeneric1AggPooledTopN =
       !Boolean.getBoolean("dontSpecializeGeneric1AggPooledTopN");
-  @VisibleForTesting
-  static boolean specializeGeneric2AggPooledTopN =
+  private static boolean specializeGeneric2AggPooledTopN =
       !Boolean.getBoolean("dontSpecializeGeneric2AggPooledTopN");
-  private static final boolean specializeHistorical1SimpleDoubleAggPooledTopN =
+  private static boolean specializeHistorical1SimpleDoubleAggPooledTopN =
       !Boolean.getBoolean("dontSpecializeHistorical1SimpleDoubleAggPooledTopN");
-  private static final boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN =
+  private static boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN =
       !Boolean.getBoolean("dontSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN");
+
+  /** See TopNQueryRunnerTest */
+  @VisibleForTesting
+  static void setSpecializeGeneric1AggPooledTopN(boolean value)
+  {
+    PooledTopNAlgorithm.specializeGeneric1AggPooledTopN = value;
+    computeSpecializedScanAndAggregateImplementations();
+  }
+
+  @VisibleForTesting
+  static void setSpecializeGeneric2AggPooledTopN(boolean value)
+  {
+    PooledTopNAlgorithm.specializeGeneric2AggPooledTopN = value;
+    computeSpecializedScanAndAggregateImplementations();
+  }
+
+  @VisibleForTesting
+  static void setSpecializeHistorical1SimpleDoubleAggPooledTopN(boolean value)
+  {
+    PooledTopNAlgorithm.specializeHistorical1SimpleDoubleAggPooledTopN = value;
+    computeSpecializedScanAndAggregateImplementations();
+  }
+
+  @VisibleForTesting
+  static void setSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN(boolean value)
+  {
+    PooledTopNAlgorithm.specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN = value;
+    computeSpecializedScanAndAggregateImplementations();
+  }
 
   private static final Generic1AggPooledTopNScanner defaultGeneric1AggScanner =
       new Generic1AggPooledTopNScannerPrototype();
@@ -91,6 +117,12 @@ public class PooledTopNAlgorithm
 
   private static final List<ScanAndAggregate> specializedScanAndAggregateImplementations = new ArrayList<>();
   static {
+    computeSpecializedScanAndAggregateImplementations();
+  }
+
+  private static void computeSpecializedScanAndAggregateImplementations()
+  {
+    specializedScanAndAggregateImplementations.clear();
     // The order of the following `if` blocks matters, "more specialized" implementations go first
     if (specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN) {
       specializedScanAndAggregateImplementations.add((params, positions, theAggregators) -> {

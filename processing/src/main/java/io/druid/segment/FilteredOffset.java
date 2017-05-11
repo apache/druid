@@ -32,7 +32,7 @@ import io.druid.segment.historical.HistoricalCursor;
 import io.druid.segment.historical.OffsetHolder;
 import org.roaringbitmap.IntIterator;
 
-final class FilteredOffset implements Offset
+final class FilteredOffset extends Offset
 {
   private Offset baseOffset;
   private final ValueMatcher filterMatcher;
@@ -112,14 +112,9 @@ final class FilteredOffset implements Offset
   @Override
   public Offset clone()
   {
-    try {
-      FilteredOffset offset = (FilteredOffset) super.clone();
-      offset.baseOffset = offset.baseOffset.clone();
-      return offset;
-    }
-    catch (CloneNotSupportedException e) {
-      throw new RuntimeException(e);
-    }
+    FilteredOffset offset = (FilteredOffset) super.clone();
+    offset.baseOffset = offset.baseOffset.clone();
+    return offset;
   }
 
   @Override

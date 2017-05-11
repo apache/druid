@@ -23,7 +23,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 /**
  */
-public class ArrayBasedOffset implements Offset
+public class ArrayBasedOffset extends Offset
 {
   private final int[] ints;
   private int currIndex;
