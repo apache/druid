@@ -114,6 +114,8 @@ public class CSVParser implements Parser<String, Object>
   public void startFileFromBeginning()
   {
     supportSkipHeaderRows = true;
+    hasParsedHeader = false;
+    skippedHeaderRows = 0;
   }
 
   @Override
@@ -152,16 +154,16 @@ public class CSVParser implements Parser<String, Object>
     try {
       String[] values = parser.parseLine(input);
 
+      if (skippedHeaderRows < maxSkipHeaderRows) {
+        skippedHeaderRows++;
+        return null;
+      }
+
       if (hasHeaderRow && !hasParsedHeader) {
         if (fieldNames == null) {
           setFieldNames(Arrays.asList(values));
         }
         hasParsedHeader = true;
-        return null;
-      }
-
-      if (skippedHeaderRows < maxSkipHeaderRows) {
-        skippedHeaderRows++;
         return null;
       }
 
@@ -174,12 +176,5 @@ public class CSVParser implements Parser<String, Object>
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    hasParsedHeader = false;
-    skippedHeaderRows = 0;
   }
 }

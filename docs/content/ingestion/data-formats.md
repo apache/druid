@@ -91,8 +91,12 @@ If your input files contain a header, the `columns` field is optional and you do
 Instead, you can set the `hasHeaderRow` field to true, which makes Druid automatically extract the column information from the header.
 Otherwise, you must set the `columns` field and ensure that field must match the columns of your input data in the same order.
 
-Also, you can skip some header rows by setting `skipHeaderRows` in your parseSpec. Note that `hasHeaderRow` and `skipHeaderRows` are effective
-only for non-Hadoop batch index tasks.
+Also, you can skip some header rows by setting `skipHeaderRows` in your parseSpec. If both `skipHeaderRows` and `hasHeaderRow` options are set,
+`skipHeaderRows` is fist applied. For example, if you set `skipHeaderRows` to 2 and `hasHeaderRow` to true, Druid will
+skip the first two lines and then extract column information from the third line.
+
+Note that `hasHeaderRow` and `skipHeaderRows` are effective only for non-Hadoop batch index tasks. Other types of index
+tasks will fail with an exception.
 
 #### Other CSV Ingestion Tasks
 
@@ -122,8 +126,12 @@ If your input files contain a header, the `columns` field is optional and you do
 Instead, you can set the `hasHeaderRow` field to true, which makes Druid automatically extract the column information from the header.
 Otherwise, you must set the `columns` field and ensure that field must match the columns of your input data in the same order.
 
-Also, you can skip some header rows by setting `skipHeaderRows` in your parseSpec. Note that `hasHeaderRow` and `skipHeaderRows` are effective
-only for non-Hadoop batch index tasks.
+Also, you can skip some header rows by setting `skipHeaderRows` in your parseSpec. If both `skipHeaderRows` and `hasHeaderRow` options are set,
+`skipHeaderRows` is fist applied. For example, if you set `skipHeaderRows` to 2 and `hasHeaderRow` to true, Druid will
+skip the first two lines and then extract column information from the third line.
+
+Note that `hasHeaderRow` and `skipHeaderRows` are effective only for non-Hadoop batch index tasks. Other types of index
+tasks will fail with an exception.
 
 #### Other TSV (Delimited) Ingestion Tasks
 

@@ -96,7 +96,7 @@ public class DelimitedParseSpec extends ParseSpec
   }
 
   @JsonProperty("skipHeaderRows")
-  public Integer getSkipHeaderRows()
+  public int getSkipHeaderRows()
   {
     return skipHeaderRows;
   }

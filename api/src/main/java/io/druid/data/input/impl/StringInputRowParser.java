@@ -57,7 +57,6 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     this.parseSpec = parseSpec;
     this.mapParser = new MapInputRowParser(parseSpec);
     this.parser = parseSpec.makeParser();
-    parser.startFileFromBeginning();
 
     if (encoding != null) {
       this.charset = Charset.forName(encoding);
@@ -125,9 +124,9 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     return theMap;
   }
 
-  public void reset()
+  public void startFileFromBeginning()
   {
-    parser.reset();
+    parser.startFileFromBeginning();
   }
 
   @Nullable

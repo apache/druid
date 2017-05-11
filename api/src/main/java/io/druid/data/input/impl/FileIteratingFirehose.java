@@ -73,7 +73,7 @@ public class FileIteratingFirehose implements Firehose
     }
 
     final LineIterator iterator = lineIterators.next();
-    parser.reset();
+    parser.startFileFromBeginning();
     return iterator;
   }
 

@@ -29,7 +29,8 @@ import java.util.Map;
 public interface Parser<K, V>
 {
   /**
-   * Initialize this parser for centralized batch processing of files like IndexTask.
+   * This method may or may not get called at the start of reading of every file depending on the type of IndexTasks.
+   * The parser state should be reset if exists.
    */
   default void startFileFromBeginning()
   {
@@ -43,14 +44,6 @@ public interface Parser<K, V>
    */
   @Nullable
   Map<K, V> parse(String input);
-
-  /**
-   * Resets state within a parser. This may or may not get called at the start of reading of every file.
-   */
-  default void reset()
-  {
-    // do nothing
-  }
 
   /**
    * Set the fieldNames that you expect to see in parsed Maps. Deprecated; Parsers should not, in general, be

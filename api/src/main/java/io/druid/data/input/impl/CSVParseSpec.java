@@ -87,7 +87,7 @@ public class CSVParseSpec extends ParseSpec
   }
 
   @JsonProperty("skipHeaderRows")
-  public Integer getSkipHeaderRows()
+  public int getSkipHeaderRows()
   {
     return skipHeaderRows;
   }
