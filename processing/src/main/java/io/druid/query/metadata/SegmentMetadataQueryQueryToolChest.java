@@ -107,11 +107,13 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           Map<String, Object> context
       )
       {
+        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) query;
+        updatedQuery.setAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
         return new MappedSequence<>(
             CombiningSequence.create(
-                baseRunner.run(query, context),
-                makeOrdering(query),
-                createMergeFn(query)
+                baseRunner.run(updatedQuery, context),
+                makeOrdering(updatedQuery),
+                createMergeFn(updatedQuery)
             ),
             MERGE_TRANSFORM_FN
         );
@@ -120,7 +122,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Override
       protected Ordering<SegmentAnalysis> makeOrdering(Query<SegmentAnalysis> query)
       {
-        if (((SegmentMetadataQuery) query).isMerge()) {
+        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) query;
+        updatedQuery.setAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
+        if ((updatedQuery).isMerge()) {
           // Merge everything always
           return new Ordering<SegmentAnalysis>()
           {
@@ -134,15 +138,17 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           };
         }
 
-        return query.getResultOrdering(); // No two elements should be equal, so it should never merge
+        return updatedQuery.getResultOrdering(); // No two elements should be equal, so it should never merge
       }
 
       @Override
       protected BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final Query<SegmentAnalysis> inQ)
       {
+        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) inQ;
+        updatedQuery.setAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
         return new BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis>()
         {
-          private final SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
+          private final SegmentMetadataQuery query = updatedQuery;
 
           @Override
           public SegmentAnalysis apply(SegmentAnalysis arg1, SegmentAnalysis arg2)
@@ -157,6 +163,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public QueryMetrics<Query<?>> makeMetrics(SegmentMetadataQuery query)
   {
+    query.setAnalysisTypes(getFinalAnalysisTypes(query));
     return queryMetricsFactory.makeMetrics(query);
   }
 
@@ -177,6 +184,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(final SegmentMetadataQuery query)
   {
+    query.setAnalysisTypes(getFinalAnalysisTypes(query));
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
     {
       @Override
@@ -189,7 +197,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       public byte[] computeCacheKey(SegmentMetadataQuery query)
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();
-        byte[] analysisTypesBytes = getAnalysisTypesCacheKey(query);
+        byte[] analysisTypesBytes = query.getAnalysisTypesCacheKey();
         return ByteBuffer.allocate(1 + includerBytes.length + analysisTypesBytes.length)
                          .put(SEGMENT_METADATA_CACHE_PREFIX)
                          .put(includerBytes)
@@ -234,6 +242,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(SegmentMetadataQuery query, List<T> segments)
   {
+    query.setAnalysisTypes(getFinalAnalysisTypes(query));
     if (!query.isUsingDefaultInterval()) {
       return segments;
     }
@@ -406,7 +415,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     );
   }
 
-  public EnumSet<SegmentMetadataQuery.AnalysisType> getAnalysisTypes(SegmentMetadataQuery query)
+  public EnumSet<SegmentMetadataQuery.AnalysisType> getFinalAnalysisTypes(SegmentMetadataQuery query)
   {
     if (query.getAnalysisTypes() == null) {
       return config.getDefaultAnalysisTypes();
@@ -415,29 +424,4 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     }
   }
 
-  public SegmentAnalyzer getSegmentAnalyzer(SegmentMetadataQuery query)
-  {
-    return new SegmentAnalyzer(getAnalysisTypes(query));
-  }
-
-  private byte[] getAnalysisTypesCacheKey(SegmentMetadataQuery query)
-  {
-    int size = 1;
-    final EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes = getAnalysisTypes(query);
-
-    final List<byte[]> typeBytesList = Lists.newArrayListWithExpectedSize(analysisTypes.size());
-    for (SegmentMetadataQuery.AnalysisType analysisType : analysisTypes) {
-      final byte[] bytes = analysisType.getCacheKey();
-      typeBytesList.add(bytes);
-      size += bytes.length;
-    }
-
-    final ByteBuffer bytes = ByteBuffer.allocate(size);
-    bytes.put(SegmentMetadataQuery.ANALYSIS_TYPES_CACHE_PREFIX);
-    for (byte[] typeBytes : typeBytesList) {
-      bytes.put(typeBytes);
-    }
-
-    return bytes.array();
-  }
 }

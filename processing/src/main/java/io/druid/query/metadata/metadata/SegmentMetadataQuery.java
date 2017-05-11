@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -35,8 +36,10 @@ import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -86,7 +89,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   private final ColumnIncluderator toInclude;
   private final boolean merge;
   private final boolean usingDefaultInterval;
-  private final EnumSet<AnalysisType> analysisTypes;
+  private EnumSet<AnalysisType> analysisTypes;
   private final boolean lenientAggregatorMerge;
 
   @JsonCreator
@@ -166,10 +169,64 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return analysisTypes;
   }
 
+  public void setAnalysisTypes(EnumSet<AnalysisType> analysisTypes)
+  {
+    this.analysisTypes = analysisTypes;
+  }
+
   @JsonProperty
   public boolean isLenientAggregatorMerge()
   {
     return lenientAggregatorMerge;
+  }
+
+  public boolean analyzingInterval()
+  {
+    return analysisTypes.contains(AnalysisType.INTERVAL);
+  }
+
+  public boolean hasAggregators()
+  {
+    return analysisTypes.contains(AnalysisType.AGGREGATORS);
+  }
+
+  public boolean hasTimestampSpec()
+  {
+    return analysisTypes.contains(AnalysisType.TIMESTAMPSPEC);
+  }
+
+  public boolean hasQueryGranularity()
+  {
+    return analysisTypes.contains(AnalysisType.QUERYGRANULARITY);
+  }
+
+  public boolean hasRollup()
+  {
+    return analysisTypes.contains(AnalysisType.ROLLUP);
+  }
+
+  public boolean hasMinMax()
+  {
+    return analysisTypes.contains(AnalysisType.MINMAX);
+  }
+
+  public byte[] getAnalysisTypesCacheKey()
+  {
+    int size = 1;
+    List<byte[]> typeBytesList = Lists.newArrayListWithExpectedSize(analysisTypes.size());
+    for (AnalysisType analysisType : analysisTypes) {
+      final byte[] bytes = analysisType.getCacheKey();
+      typeBytesList.add(bytes);
+      size += bytes.length;
+    }
+
+    final ByteBuffer bytes = ByteBuffer.allocate(size);
+    bytes.put(ANALYSIS_TYPES_CACHE_PREFIX);
+    for (byte[] typeBytes : typeBytesList) {
+      bytes.put(typeBytes);
+    }
+
+    return bytes.array();
   }
 
   @Override
