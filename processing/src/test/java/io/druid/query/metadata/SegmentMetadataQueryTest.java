@@ -143,8 +143,12 @@ public class SegmentMetadataQueryTest
   {
     final String id1 = differentIds ? "testSegment1" : "testSegment";
     final String id2 = differentIds ? "testSegment2" : "testSegment";
-    this.runner1 = mmap1 ? makeMMappedQueryRunner(id1, rollup1, FACTORY) : makeIncrementalIndexQueryRunner(id1, rollup1, FACTORY);
-    this.runner2 = mmap2 ? makeMMappedQueryRunner(id2, rollup2, FACTORY) : makeIncrementalIndexQueryRunner(id2, rollup2, FACTORY);
+    this.runner1 = mmap1
+                   ? makeMMappedQueryRunner(id1, rollup1, FACTORY)
+                   : makeIncrementalIndexQueryRunner(id1, rollup1, FACTORY);
+    this.runner2 = mmap2
+                   ? makeMMappedQueryRunner(id2, rollup2, FACTORY)
+                   : makeIncrementalIndexQueryRunner(id2, rollup2, FACTORY);
     this.mmap1 = mmap1;
     this.mmap2 = mmap2;
     this.rollup1 = rollup1;
@@ -242,7 +246,7 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        // null_column will be included only for incremental index, which makes a little bigger result than expected
+            // null_column will be included only for incremental index, which makes a little bigger result than expected
         ), mmap2 ? 123969 : 124664,
         1209,
         null,
@@ -1077,6 +1081,33 @@ public class SegmentMetadataQueryTest
     for (int i = 0; i < filteredSegments2.size(); i++) {
       Assert.assertEquals(expectedSegments2.get(i).getInterval(), filteredSegments2.get(i).getInterval());
     }
+
+    SegmentMetadataQuery testQuery2 = Druids.newSegmentMetadataQueryBuilder()
+                                            .dataSource("testing")
+                                            .intervals("2009/2010")
+                                            .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                                            .merge(true)
+                                            .build();
+
+    List<LogicalSegment> filteredSegments3 = new SegmentMetadataQueryQueryToolChest(
+        twoYearPeriodCfg
+    ).filterSegments(
+        testQuery2,
+        testSegments
+    );
+
+    List<LogicalSegment> expectedSegments3 = Arrays.asList();
+
+    Assert.assertEquals(filteredSegments3, expectedSegments3);
+    Assert.assertEquals(filteredSegments3.size(), 0);
+    for (int i = 0; i < filteredSegments3.size(); i++) {
+      Assert.assertEquals(expectedSegments3.get(i).getInterval(), filteredSegments2.get(i).getInterval());
+    }
+
+    Assert.assertFalse(testQuery2.isUsingDefaultInterval());
+    Assert.assertTrue(testQuery.isUsingDefaultInterval());
+
+
   }
 
   @Test
@@ -1092,11 +1123,15 @@ public class SegmentMetadataQueryTest
                                                 .toInclude(new ListColumnIncluderator(Arrays.asList("fo", "o")))
                                                 .build();
 
-    final byte[] oneColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(oneColumnQuery)
-                                                                                      .computeCacheKey(oneColumnQuery);
+    final byte[] oneColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(
+        oneColumnQuery)
+                                                                                                                  .computeCacheKey(
+                                                                                                                      oneColumnQuery);
 
-    final byte[] twoColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(twoColumnQuery)
-                                                                                      .computeCacheKey(twoColumnQuery);
+    final byte[] twoColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(
+        twoColumnQuery)
+                                                                                                                  .computeCacheKey(
+                                                                                                                      twoColumnQuery);
 
     Assert.assertFalse(Arrays.equals(oneColumnQueryCacheKey, twoColumnQueryCacheKey));
   }
@@ -1106,9 +1141,9 @@ public class SegmentMetadataQueryTest
   {
 
     SegmentMetadataQuery query1 = Druids.newSegmentMetadataQueryBuilder()
-                                                .dataSource("testing")
-                                                .toInclude(new ListColumnIncluderator(Arrays.asList("foo")))
-                                                .build();
+                                        .dataSource("testing")
+                                        .toInclude(new ListColumnIncluderator(Arrays.asList("foo")))
+                                        .build();
 
     SegmentMetadataQuery query2 = Druids.newSegmentMetadataQueryBuilder()
                                         .dataSource("testing")
@@ -1120,10 +1155,14 @@ public class SegmentMetadataQueryTest
     SegmentMetadataQueryConfig analysisCfg = new SegmentMetadataQueryConfig();
     analysisCfg.setDefaultAnalysisTypes(EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY));
 
-    EnumSet<SegmentMetadataQuery.AnalysisType> analysis1 = query1.withFinalizedAnalysisTypes(emptyCfg).getAnalysisTypes();
-    EnumSet<SegmentMetadataQuery.AnalysisType> analysis2 = query2.withFinalizedAnalysisTypes(emptyCfg).getAnalysisTypes();
-    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg1 = query1.withFinalizedAnalysisTypes(analysisCfg).getAnalysisTypes();
-    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg2 = query2.withFinalizedAnalysisTypes(analysisCfg).getAnalysisTypes();
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysis1 = query1.withFinalizedAnalysisTypes(emptyCfg)
+                                                                 .getAnalysisTypes();
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysis2 = query2.withFinalizedAnalysisTypes(emptyCfg)
+                                                                 .getAnalysisTypes();
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg1 = query1.withFinalizedAnalysisTypes(analysisCfg)
+                                                                     .getAnalysisTypes();
+    EnumSet<SegmentMetadataQuery.AnalysisType> analysisWCfg2 = query2.withFinalizedAnalysisTypes(analysisCfg)
+                                                                     .getAnalysisTypes();
 
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis1 = new SegmentMetadataQueryConfig().getDefaultAnalysisTypes();
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysis2 = EnumSet.of(SegmentMetadataQuery.AnalysisType.MINMAX);

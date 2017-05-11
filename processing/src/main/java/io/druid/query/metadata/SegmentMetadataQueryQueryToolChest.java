@@ -119,7 +119,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         );
       }
 
-      protected Ordering<SegmentAnalysis> makeOrdering(SegmentMetadataQuery query)
+      private Ordering<SegmentAnalysis> makeOrdering(SegmentMetadataQuery query)
       {
         if (query.isMerge()) {
           // Merge everything always
@@ -138,16 +138,14 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         return query.getResultOrdering(); // No two elements should be equal, so it should never merge
       }
 
-      protected BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
+      private BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
       {
         return new BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis>()
         {
-          private final SegmentMetadataQuery query = inQ;
-
           @Override
           public SegmentAnalysis apply(SegmentAnalysis arg1, SegmentAnalysis arg2)
           {
-            return mergeAnalyses(arg1, arg2, query.isLenientAggregatorMerge());
+            return mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
           }
         };
       }
