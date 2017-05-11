@@ -170,10 +170,10 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           private int cacheIterateIndex;
 
           // nextFetchIndex indicates which object should be downloaded when fetch is triggered.
-          // This variable is only updated by the fetchExecutor thread, but read by the main thread (in hasNext())
-          // and the fetchExecutor thread (in fetch()). To guarantee that the main thread can read the most fresh value,
-          // this variable should be volatile.
-          private volatile int nextFetchIndex;
+          // When prefetching is enabled, this variable is updated by the fetchExecutor thread, but read by the main
+          // thread (in hasNext()) and the fetchExecutor thread (in fetch()). To guarantee that fetchFiles and
+          // nextFetchIndex are updated atomically, a lock for fetchFiles must be held before updating this variable.
+          private int nextFetchIndex;
 
           {
             cacheInitialized = totalCachedBytes > 0;
@@ -214,8 +214,10 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
               LOG.info("Fetching object[%s], fetchedBytes[%d]", object, fetchedBytes.get());
               final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
               fetchedBytes.addAndGet(download(object, outFile, 0));
-              fetchFiles.put(new FetchedFile(object, outFile));
-              nextFetchIndex++;
+              synchronized (fetchFiles) {
+                fetchFiles.put(new FetchedFile(object, outFile));
+                nextFetchIndex++;
+              }
             }
           }
 
@@ -254,9 +256,11 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           @Override
           public boolean hasNext()
           {
-            return (cacheInitialized && cacheIterateIndex < cacheFiles.size())
-                   || !fetchFiles.isEmpty()
-                   || nextFetchIndex < objects.size();
+            synchronized (fetchFiles) {
+              return (cacheInitialized && cacheIterateIndex < cacheFiles.size())
+                     || !fetchFiles.isEmpty()
+                     || nextFetchIndex < objects.size();
+            }
           }
 
           @Override
