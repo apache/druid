@@ -42,6 +42,7 @@ import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -348,14 +349,15 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             {
               @Override
               public Sequence<Result<SearchResultValue>> run(
-                  Query<Result<SearchResultValue>> query, Map<String, Object> responseContext
+                  QueryPlus<Result<SearchResultValue>> queryPlus, Map<String, Object> responseContext
               )
               {
-                SearchQuery searchQuery = (SearchQuery) query;
+                SearchQuery searchQuery = (SearchQuery) queryPlus.getQuery();
                 if (searchQuery.getDimensionsFilter() != null) {
                   searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
+                  queryPlus = queryPlus.withQuery(searchQuery);
                 }
-                return runner.run(searchQuery, responseContext);
+                return runner.run(queryPlus, responseContext);
               }
             } , this),
         config
@@ -378,23 +380,24 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
     @Override
     public Sequence<Result<SearchResultValue>> run(
-        Query<Result<SearchResultValue>> input,
+        QueryPlus<Result<SearchResultValue>> queryPlus,
         Map<String, Object> responseContext
     )
     {
+      Query<Result<SearchResultValue>> input = queryPlus.getQuery();
       if (!(input instanceof SearchQuery)) {
         throw new ISE("Can only handle [%s], got [%s]", SearchQuery.class, input.getClass());
       }
 
       final SearchQuery query = (SearchQuery) input;
       if (query.getLimit() < config.getMaxSearchLimit()) {
-        return runner.run(query, responseContext);
+        return runner.run(queryPlus, responseContext);
       }
 
       final boolean isBySegment = QueryContexts.isBySegment(query);
 
       return Sequences.map(
-          runner.run(query.withLimit(config.getMaxSearchLimit()), responseContext),
+          runner.run(queryPlus.withQuery(query.withLimit(config.getMaxSearchLimit())), responseContext),
           new Function<Result<SearchResultValue>, Result<SearchResultValue>>()
           {
             @Override

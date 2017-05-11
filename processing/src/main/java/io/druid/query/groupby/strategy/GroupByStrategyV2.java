@@ -48,6 +48,7 @@ import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
@@ -233,21 +234,23 @@ public class GroupByStrategyV2 implements GroupByStrategy
     return query.postProcess(
         Sequences.map(
             mergingQueryRunner.run(
-                new GroupByQuery.Builder(query)
-                    // Don't do post aggs until the end of this method.
-                    .setPostAggregatorSpecs(ImmutableList.of())
-                    // Don't do "having" clause until the end of this method.
-                    .setHavingSpec(null)
-                    .setLimitSpec(NoopLimitSpec.instance())
-                    .overrideContext(
-                        ImmutableMap.of(
-                            "finalize", false,
-                            GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
-                            CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
-                            CTX_KEY_OUTERMOST, false
+                QueryPlus.wrap(
+                    new GroupByQuery.Builder(query)
+                        // Don't do post aggs until the end of this method.
+                        .setPostAggregatorSpecs(ImmutableList.of())
+                        // Don't do "having" clause until the end of this method.
+                        .setHavingSpec(null)
+                        .setLimitSpec(NoopLimitSpec.instance())
+                        .overrideContext(
+                            ImmutableMap.of(
+                                "finalize", false,
+                                GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
+                                CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
+                                CTX_KEY_OUTERMOST, false
+                            )
                         )
-                    )
-                    .build(),
+                        .build()
+                ),
                 responseContext
             ),
             new Function<Row, Row>()
@@ -304,7 +307,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     return mergeResults(new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
       {
         return results;
       }

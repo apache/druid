@@ -24,6 +24,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -91,10 +92,11 @@ public class TimeseriesQueryRunnerFactory
 
     @Override
     public Sequence<Result<TimeseriesResultValue>> run(
-        Query<Result<TimeseriesResultValue>> input,
+        QueryPlus<Result<TimeseriesResultValue>> queryPlus,
         Map<String, Object> responseContext
     )
     {
+      Query<Result<TimeseriesResultValue>> input = queryPlus.getQuery();
       if (!(input instanceof TimeseriesQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeseriesQuery.class);
       }

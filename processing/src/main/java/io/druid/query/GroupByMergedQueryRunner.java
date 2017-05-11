@@ -78,9 +78,9 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
-    final GroupByQuery query = (GroupByQuery) queryParam;
+    final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
     final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
@@ -114,10 +114,10 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                           {
                             try {
                               if (bySegment) {
-                                input.run(queryParam, responseContext)
+                                input.run(queryPlus, responseContext)
                                      .accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
                               } else {
-                                input.run(queryParam, responseContext)
+                                input.run(queryPlus, responseContext)
                                      .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 

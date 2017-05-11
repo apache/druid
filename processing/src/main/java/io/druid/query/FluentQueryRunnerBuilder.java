@@ -49,10 +49,10 @@ public class FluentQueryRunnerBuilder<T>
 
     @Override
     public Sequence<T> run(
-        Query<T> query, Map<String, Object> responseContext
+        QueryPlus<T> queryPlus, Map<String, Object> responseContext
     )
     {
-      return baseRunner.run(query, responseContext);
+      return baseRunner.run(queryPlus, responseContext);
     }
 
     public FluentQueryRunner from(QueryRunner<T> runner) {

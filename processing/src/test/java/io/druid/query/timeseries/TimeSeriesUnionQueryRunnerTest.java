@@ -25,7 +25,7 @@ import com.google.common.collect.Maps;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
-import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
@@ -186,11 +186,11 @@ public class TimeSeriesUnionQueryRunnerTest
             {
               @Override
               public Sequence<Result<TimeseriesResultValue>> run(
-                  Query<Result<TimeseriesResultValue>> query,
+                  QueryPlus<Result<TimeseriesResultValue>> queryPlus,
                   Map<String, Object> responseContext
               )
               {
-                if (query.getDataSource().equals(new TableDataSource("ds1"))) {
+                if (queryPlus.getQuery().getDataSource().equals(new TableDataSource("ds1"))) {
                   return Sequences.simple(descending ? Lists.reverse(ds1) : ds1);
                 } else {
                   return Sequences.simple(descending ? Lists.reverse(ds2) : ds2);

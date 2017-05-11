@@ -42,6 +42,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
@@ -305,7 +306,7 @@ public class DruidSchema extends AbstractSchema
         true
     );
 
-    final Sequence<SegmentAnalysis> sequence = segmentMetadataQuery.run(walker, Maps.<String, Object>newHashMap());
+    final Sequence<SegmentAnalysis> sequence = QueryPlus.wrap(segmentMetadataQuery).run(walker, Maps.newHashMap());
     final List<SegmentAnalysis> results = Sequences.toList(sequence, Lists.<SegmentAnalysis>newArrayList());
     if (results.isEmpty()) {
       return null;
