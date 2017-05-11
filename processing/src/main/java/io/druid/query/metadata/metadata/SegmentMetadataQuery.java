@@ -89,7 +89,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   private final ColumnIncluderator toInclude;
   private final boolean merge;
   private final boolean usingDefaultInterval;
-  private EnumSet<AnalysisType> analysisTypes;
+  private final EnumSet<AnalysisType> analysisTypes;
   private final boolean lenientAggregatorMerge;
 
   @JsonCreator
@@ -167,11 +167,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public EnumSet<AnalysisType> getAnalysisTypes()
   {
     return analysisTypes;
-  }
-
-  public void setAnalysisTypes(EnumSet<AnalysisType> analysisTypes)
-  {
-    this.analysisTypes = analysisTypes;
   }
 
   @JsonProperty
@@ -253,6 +248,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return Druids.SegmentMetadataQueryBuilder.copy(this).toInclude(includerator).build();
   }
 
+  public Query<SegmentAnalysis> withAnalysisTypes(EnumSet<AnalysisType> analysisTypes)
+  {
+    return Druids.SegmentMetadataQueryBuilder.copy(this).analysisTypes(analysisTypes).build();
+  }
   @Override
   public String toString()
   {

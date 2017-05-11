@@ -109,7 +109,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       )
       {
         SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) queryPlus.getQuery();
-        updatedQuery.setAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
+        updatedQuery.withAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
         QueryPlus<SegmentAnalysis> updatedQueryPlus = queryPlus.withQuery(updatedQuery);
         return new MappedSequence<>(
             CombiningSequence.create(
@@ -125,7 +125,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       protected Ordering<SegmentAnalysis> makeOrdering(Query<SegmentAnalysis> query)
       {
         SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) query;
-        updatedQuery.setAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
+        updatedQuery.withAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
         if ((updatedQuery).isMerge()) {
           // Merge everything always
           return new Ordering<SegmentAnalysis>()
@@ -147,7 +147,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       protected BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final Query<SegmentAnalysis> inQ)
       {
         SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) inQ;
-        updatedQuery.setAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
+        updatedQuery.withAnalysisTypes(getFinalAnalysisTypes(updatedQuery));
         return new BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis>()
         {
           private final SegmentMetadataQuery query = updatedQuery;
@@ -165,7 +165,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public QueryMetrics<Query<?>> makeMetrics(SegmentMetadataQuery query)
   {
-    query.setAnalysisTypes(getFinalAnalysisTypes(query));
+    query.withAnalysisTypes(getFinalAnalysisTypes(query));
     return queryMetricsFactory.makeMetrics(query);
   }
 
@@ -186,7 +186,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(final SegmentMetadataQuery query)
   {
-    query.setAnalysisTypes(getFinalAnalysisTypes(query));
+    query.withAnalysisTypes(getFinalAnalysisTypes(query));
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
     {
       @Override
@@ -244,7 +244,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(SegmentMetadataQuery query, List<T> segments)
   {
-    query.setAnalysisTypes(getFinalAnalysisTypes(query));
+    query.withAnalysisTypes(getFinalAnalysisTypes(query));
     if (!query.isUsingDefaultInterval()) {
       return segments;
     }
