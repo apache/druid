@@ -187,11 +187,11 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(final SegmentMetadataQuery query)
   {
-    query.withAnalysisTypes(getFinalAnalysisTypes(query));
+
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
     {
       @Override
-      public boolean isCacheable(SegmentMetadataQuery query, boolean willMergeRunners)
+      public boolean isCacheable(SegmentMetadataQuery updatedQuery, boolean willMergeRunners)
       {
         return true;
       }
@@ -199,8 +199,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Override
       public byte[] computeCacheKey(SegmentMetadataQuery query)
       {
-        byte[] includerBytes = query.getToInclude().getCacheKey();
-        byte[] analysisTypesBytes = query.getAnalysisTypesCacheKey();
+        SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) query.withAnalysisTypes(getFinalAnalysisTypes(query));
+        byte[] includerBytes = updatedQuery.getToInclude().getCacheKey();
+        byte[] analysisTypesBytes = updatedQuery.getAnalysisTypesCacheKey();
         return ByteBuffer.allocate(1 + includerBytes.length + analysisTypesBytes.length)
                          .put(SEGMENT_METADATA_CACHE_PREFIX)
                          .put(includerBytes)
@@ -245,8 +246,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(SegmentMetadataQuery query, List<T> segments)
   {
-    query.withAnalysisTypes(getFinalAnalysisTypes(query));
-    if (!query.isUsingDefaultInterval()) {
+    SegmentMetadataQuery updatedQuery = (SegmentMetadataQuery) query.withAnalysisTypes(getFinalAnalysisTypes(query));
+    if (!updatedQuery.isUsingDefaultInterval()) {
       return segments;
     }
 
