@@ -117,8 +117,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
       log.info("Starting zkCoordinator for server[%s]", me.getName());
 
-      serverAnnouncer.announce();
-
       final String loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
       final String servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
       final String liveSegmentsLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), me.getName());
@@ -137,6 +135,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
         loadLocalCache();
+        serverAnnouncer.announce();
 
         loadQueueCache.getListenable().addListener(
             new PathChildrenCacheListener()
