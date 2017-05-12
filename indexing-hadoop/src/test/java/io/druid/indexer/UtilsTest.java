@@ -65,7 +65,7 @@ public class UtilsTest
   @Rule
   public TemporaryFolder tmpFolder = new TemporaryFolder();
 
-  private class CreateValueFromKey implements Function
+  private static class CreateValueFromKey implements Function
   {
     @Override public Object apply(Object input)
     {

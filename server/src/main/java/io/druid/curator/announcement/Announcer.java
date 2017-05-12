@@ -259,6 +259,11 @@ public class Announcer
                         }
                       }
                       break;
+                    case INITIALIZED:
+                    case CHILD_ADDED:
+                    case CHILD_UPDATED:
+                    case CONNECTION_SUSPENDED:
+                      // do nothing
                   }
                 }
               }

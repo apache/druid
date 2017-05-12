@@ -548,19 +548,19 @@ public class ApproximateHistogram
     } else {
       Preconditions.checkArgument(
           mergedPositions.length >= maxSize,
-          "temp buffer [mergedPositions] too small: length must be at least [%d], got [%d]",
+          "temp buffer [mergedPositions] too small: length must be at least [%s], got [%s]",
           maxSize,
           mergedPositions.length
       );
       Preconditions.checkArgument(
           mergedBins.length >= maxSize,
-          "temp buffer [mergedBins] too small: length must be at least [%d], got [%d]",
+          "temp buffer [mergedBins] too small: length must be at least [%s], got [%s]",
           maxSize,
           mergedPositions.length
       );
       Preconditions.checkArgument(
           deltas.length >= maxSize,
-          "temp buffer [deltas] too small: length must be at least [%d], got [%d]",
+          "temp buffer [deltas] too small: length must be at least [%s], got [%s]",
           maxSize,
           mergedPositions.length
       );

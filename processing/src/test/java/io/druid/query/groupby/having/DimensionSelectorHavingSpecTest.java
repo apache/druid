@@ -108,14 +108,14 @@ public class DimensionSelectorHavingSpecTest
                                  "dimension='gender'," +
                                  " value='m'," +
                                  " extractionFunction='regex(/^([^,]*),/, 1)'}";
-    Assert.assertEquals(new DimensionSelectorHavingSpec("gender", "m", extractionFn).toString(), expected);
+    Assert.assertEquals(expected, new DimensionSelectorHavingSpec("gender", "m", extractionFn).toString());
     
     expected = "DimensionSelectorHavingSpec{" +
                                  "dimension='gender'," +
                                  " value='m'," +
                                  " extractionFunction='Identity'}";
     
-    Assert.assertEquals(new DimensionSelectorHavingSpec("gender", "m", null).toString(), expected);
+    Assert.assertEquals(expected, new DimensionSelectorHavingSpec("gender", "m", null).toString());
   }
 
   @Test(expected = NullPointerException.class)

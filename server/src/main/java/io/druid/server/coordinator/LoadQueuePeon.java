@@ -243,6 +243,9 @@ public class LoadQueuePeon
                     switch (watchedEvent.getType()) {
                       case NodeDeleted:
                         entryRemoved(watchedEvent.getPath());
+                        break;
+                      default:
+                        // do nothing
                     }
                   }
                 }
