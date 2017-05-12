@@ -1104,8 +1104,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     @Override
     public int putIfAbsent(TimeAndDims key, int rowIndex)
     {
-      TimeAndDims prev = facts.putIfAbsent(key, key);
+      // setRowIndex() must be called before facts.putIfAbsent() for visibility of rowIndex from concurrent readers.
       key.setRowIndex(rowIndex);
+      TimeAndDims prev = facts.putIfAbsent(key, key);
       return prev == null ? TimeAndDims.EMPTY_ROW_INDEX : prev.rowIndex;
     }
 
@@ -1211,8 +1212,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         // in race condition, rows may be put by other thread, so always get latest status from facts
         rows = facts.get(time);
       }
-      rows.add(key);
+      // setRowIndex() must be called before rows.add() for visibility of rowIndex from concurrent readers.
       key.setRowIndex(rowIndex);
+      rows.add(key);
       // always return EMPTY_ROW_INDEX to indicate that we always add new row
       return TimeAndDims.EMPTY_ROW_INDEX;
     }
