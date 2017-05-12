@@ -19,12 +19,19 @@
 
 package io.druid.segment.data;
 
+import io.druid.annotations.SubclassesMustBePublic;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 
 /**
  * The "mutable" version of a ReadableOffset.  Introduces "increment()" and "withinBounds()" methods, which are
  * very similar to "next()" and "hasNext()" on the Iterator interface except increment() does not return a value.
+ *
+ * Annotated with {@link SubclassesMustBePublic} because Offset occurrences are replaced with a subclass in {@link
+ * io.druid.query.topn.Historical1SimpleDoubleAggPooledTopNScannerPrototype} and {@link
+ * io.druid.query.topn.HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype} during
+ * specialization, and specialized version of those prototypes must be able to any subclass of Offset.
  */
+@SubclassesMustBePublic
 public abstract class Offset implements ReadableOffset, Cloneable
 {
   @CalledFromHotLoop

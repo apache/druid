@@ -823,7 +823,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private abstract static class TimestampCheckingOffset extends Offset
+  public abstract static class TimestampCheckingOffset extends Offset
   {
     protected final Offset baseOffset;
     protected final GenericColumn timestamps;
@@ -885,7 +885,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static class AscendingTimestampCheckingOffset extends TimestampCheckingOffset
+  public static class AscendingTimestampCheckingOffset extends TimestampCheckingOffset
   {
     public AscendingTimestampCheckingOffset(
         Offset baseOffset,
@@ -917,7 +917,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static class DescendingTimestampCheckingOffset extends TimestampCheckingOffset
+  public static class DescendingTimestampCheckingOffset extends TimestampCheckingOffset
   {
     public DescendingTimestampCheckingOffset(
         Offset baseOffset,
@@ -950,7 +950,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static class NoFilterOffset extends Offset
+  public static class NoFilterOffset extends Offset
   {
     private final int rowCount;
     private final boolean descending;
