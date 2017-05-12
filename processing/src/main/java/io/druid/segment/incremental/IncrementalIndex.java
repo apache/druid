@@ -818,11 +818,18 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public static final class TimeAndDims
   {
     public static final int EMPTY_ROW_INDEX = -1;
-    private int rowIndex;
 
     private final long timestamp;
     private final Object[] dims;
     private final List<DimensionDesc> dimensionDescsList;
+
+    /**
+     * rowIndex is not checked in {@link #equals} and {@link #hashCode} on purpose. TimeAndDims acts as a Map key
+     * and "entry" object (rowIndex is the "value") at the same time. This is done to reduce object indirection and
+     * improve locality, and avoid boxing of rowIndex as Integer, when stored in JDK collection:
+     * {@link RollupFactsHolder} needs concurrent collections, that are not present in fastutil.
+     */
+    private int rowIndex;
 
     TimeAndDims(
         long timestamp,
@@ -1126,7 +1133,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     {
       this.sortFacts = sortFacts;
       if (sortFacts) {
-        this.facts = new ConcurrentSkipListMap<>(Long::compare);
+        this.facts = new ConcurrentSkipListMap<>();
       } else {
         this.facts = new ConcurrentHashMap<>();
       }
@@ -1157,11 +1164,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       } else {
         throw new UnsupportedOperationException("can't get maxTime from unsorted facts data.");
       }
-    }
-
-    public Iterable<TimeAndDims> entrySet()
-    {
-      return concat(facts.values(), false);
     }
 
     @Override
@@ -1199,7 +1201,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     @Override
     public Iterable<TimeAndDims> keySet()
     {
-      return entrySet();
+      return concat(facts.values(), false);
     }
 
     @Override
