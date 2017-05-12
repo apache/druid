@@ -32,6 +32,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DataSource;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
@@ -193,7 +194,7 @@ public class QueryMaker
 
                 return Sequences.concat(
                     Sequences.map(
-                        queryWithPagination.run(walker, Maps.<String, Object>newHashMap()),
+                        QueryPlus.wrap(queryWithPagination).run(walker, Maps.<String, Object>newHashMap()),
                         new Function<Result<SelectResultValue>, Sequence<Object[]>>()
                         {
                           @Override
@@ -264,7 +265,7 @@ public class QueryMaker
     Hook.QUERY_PLAN.run(query);
 
     return Sequences.map(
-        query.run(walker, Maps.<String, Object>newHashMap()),
+        QueryPlus.wrap(query).run(walker, Maps.<String, Object>newHashMap()),
         new Function<Result<TimeseriesResultValue>, Object[]>()
         {
           @Override
@@ -299,7 +300,7 @@ public class QueryMaker
 
     return Sequences.concat(
         Sequences.map(
-            query.run(walker, Maps.<String, Object>newHashMap()),
+            QueryPlus.wrap(query).run(walker, Maps.<String, Object>newHashMap()),
             new Function<Result<TopNResultValue>, Sequence<Object[]>>()
             {
               @Override
@@ -335,7 +336,7 @@ public class QueryMaker
     Hook.QUERY_PLAN.run(query);
 
     return Sequences.map(
-        query.run(walker, Maps.<String, Object>newHashMap()),
+        QueryPlus.wrap(query).run(walker, Maps.<String, Object>newHashMap()),
         new Function<io.druid.data.input.Row, Object[]>()
         {
           @Override

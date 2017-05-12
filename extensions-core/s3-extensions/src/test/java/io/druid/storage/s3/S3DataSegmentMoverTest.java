@@ -158,7 +158,7 @@ public class S3DataSegmentMoverTest
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
   }
 
-  private class MockStorageService extends RestS3Service {
+  private static class MockStorageService extends RestS3Service {
     Map<String, Set<String>> storage = Maps.newHashMap();
     boolean moved = false;
 

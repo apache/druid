@@ -33,6 +33,7 @@ import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -92,14 +93,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       @Override
       public Sequence<Result<TimeseriesResultValue>> doRun(
           QueryRunner<Result<TimeseriesResultValue>> baseRunner,
-          Query<Result<TimeseriesResultValue>> query,
+          QueryPlus<Result<TimeseriesResultValue>> queryPlus,
           Map<String, Object> context
       )
       {
         return super.doRun(
             baseRunner,
             // Don't do post aggs until makePostComputeManipulatorFn() is called
-            ((TimeseriesQuery) query).withPostAggregatorSpecs(ImmutableList.<PostAggregator>of()),
+            queryPlus.withQuery(((TimeseriesQuery) queryPlus.getQuery()).withPostAggregatorSpecs(ImmutableList.of())),
             context
         );
       }
@@ -234,14 +235,15 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
-              Query<Result<TimeseriesResultValue>> query, Map<String, Object> responseContext
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus, Map<String, Object> responseContext
           )
           {
-            TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+            TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
             if (timeseriesQuery.getDimensionsFilter() != null) {
               timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
+              queryPlus = queryPlus.withQuery(timeseriesQuery);
             }
-            return runner.run(timeseriesQuery, responseContext);
+            return runner.run(queryPlus, responseContext);
           }
         }, this);
   }

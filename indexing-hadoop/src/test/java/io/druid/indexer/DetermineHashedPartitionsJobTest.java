@@ -68,8 +68,7 @@ public class DetermineHashedPartitionsJobTest
     return Arrays.asList(
         new Object[][]{
             {
-                DetermineHashedPartitionsJobTest.class.getClass()
-                                                      .getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
+                DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
                 1L,
                 "2011-04-10T00:00:00.000Z/2011-04-11T00:00:00.000Z",
                 0,
@@ -77,8 +76,7 @@ public class DetermineHashedPartitionsJobTest
                 first
             },
             {
-                DetermineHashedPartitionsJobTest.class.getClass()
-                                                      .getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
+                DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
                 100L,
                 "2011-04-10T00:00:00.000Z/2011-04-16T00:00:00.000Z",
                 0,
@@ -86,8 +84,7 @@ public class DetermineHashedPartitionsJobTest
                 second
             },
             {
-                DetermineHashedPartitionsJobTest.class.getClass()
-                                                      .getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
+                DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
                 1L,
                 "2011-04-10T00:00:00.000Z/2011-04-16T00:00:00.000Z",
                 0,

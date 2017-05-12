@@ -23,6 +23,7 @@
 package io.druid.data.input;
 
 import com.google.protobuf.AbstractMessage;
+import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.UnknownFieldSet;
 
 public final class ProtoTestEventWrapper {
@@ -70,7 +71,7 @@ public final class ProtoTestEventWrapper {
     long getSomeLongColumn();
   }
   public static final class ProtoTestEvent extends
-      com.google.protobuf.GeneratedMessage
+      GeneratedMessage
       implements ProtoTestEventOrBuilder {
     // Use ProtoTestEvent.newBuilder() to construct.
     private ProtoTestEvent(Builder builder) {
@@ -506,8 +507,9 @@ public final class ProtoTestEventWrapper {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
+
+    @SuppressWarnings("ParameterPackage")
+    @Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);

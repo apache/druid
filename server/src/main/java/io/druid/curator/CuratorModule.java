@@ -22,7 +22,10 @@ package io.druid.curator;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.DefaultExhibitorRestClient;
 import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
@@ -38,11 +41,6 @@ import org.apache.zookeeper.data.ACL;
 
 import java.io.IOException;
 import java.util.List;
-
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.LazySingleton;
-import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.java.util.common.logger.Logger;
 
 /**
  */
@@ -147,7 +145,7 @@ public class CuratorModule implements Module
     };
   }
 
-  class SecuredACLProvider implements ACLProvider
+  static class SecuredACLProvider implements ACLProvider
   {
     @Override
     public List<ACL> getDefaultAcl()

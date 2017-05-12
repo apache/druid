@@ -53,8 +53,12 @@ $(document).ready(function() {
       return ret;
     }());
     var avg = serverTable.getColTotal('Server percentUsed') / serverTable.getNumRows();
-    $('#avg_server_metric').html('Average Server Percent Used: ' + avg + '%');
-
+    if (!isNaN(avg)) {
+      $('#avg_server_metric').html('Average Server Percent Used: ' + avg + '%');
+    }else{
+      $('.loading').html('Server is still starting...Please try after few minutes.');
+      $('.loading').show()
+    }
     serverTable.toHTMLTable($('#servers'));
     segmentTable.toHTMLTable($('#segments'));
   }

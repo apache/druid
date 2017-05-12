@@ -273,6 +273,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
   }
 
+  @SuppressWarnings("ArgumentParameterSwap")
   @Test
   public void testMergeRollup()
   {

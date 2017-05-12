@@ -45,9 +45,9 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.ChainedExecutionQueryRunner;
-import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
@@ -105,9 +105,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   }
 
   @Override
-  public Sequence<Row> run(final Query<Row> queryParam, final Map<String, Object> responseContext)
+  public Sequence<Row> run(final QueryPlus<Row> queryPlus, final Map<String, Object> responseContext)
   {
-    final GroupByQuery query = (GroupByQuery) queryParam;
+    final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 
     // CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION is here because realtime servers use nested mergeRunners calls
@@ -119,12 +119,13 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
-    final GroupByQuery queryForRunners = query.withOverriddenContext(
-        ImmutableMap.<String, Object>of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true)
+    final QueryPlus<Row> queryPlusForRunners = queryPlus.withQuery(
+        query.withOverriddenContext(ImmutableMap.<String, Object>of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
     );
 
     if (QueryContexts.isBySegment(query) || forceChainedExecution) {
-      return new ChainedExecutionQueryRunner(exec, queryWatcher, queryables).run(query, responseContext);
+      ChainedExecutionQueryRunner<Row> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
+      return runner.run(queryPlusForRunners, responseContext);
     }
 
     final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
@@ -225,7 +226,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                           Releaser bufferReleaser = mergeBufferHolder.increment();
                                           Releaser grouperReleaser = grouperHolder.increment()
                                       ) {
-                                        final AggregateResult retVal = input.run(queryForRunners, responseContext)
+                                        final AggregateResult retVal = input.run(queryPlusForRunners, responseContext)
                                                                             .accumulate(
                                                                                 AggregateResult.ok(),
                                                                                 accumulator

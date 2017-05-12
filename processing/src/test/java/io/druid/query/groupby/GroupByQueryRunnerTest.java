@@ -51,9 +51,9 @@ import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
@@ -2353,20 +2353,20 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
+              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
-                query.getResultOrdering(),
+                queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
                 )
             );
           }
@@ -2649,20 +2649,20 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
+              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
-                query.getResultOrdering(),
+                queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
                 )
             );
           }
@@ -3437,20 +3437,20 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
+              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
-                query.getResultOrdering(),
+                queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
                 )
             );
           }
@@ -3770,20 +3770,20 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
+              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
-                query.getResultOrdering(),
+                queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
                 )
             );
           }
@@ -3879,20 +3879,20 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
+              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
+            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
-                query.getResultOrdering(),
+                queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
                 )
             );
           }

@@ -73,11 +73,11 @@ public class FileRequestLogger implements RequestLogger
         fileWriter = getFileWriter();
       }
       long nextDay = currentDay.plusDays(1).getMillis();
-      Duration delay = new Duration(nextDay - new DateTime().getMillis());
+      Duration initialDelay = new Duration(nextDay - new DateTime().getMillis());
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
-          delay,
+          initialDelay,
           Duration.standardDays(1),
           new Callable<ScheduledExecutors.Signal>()
           {

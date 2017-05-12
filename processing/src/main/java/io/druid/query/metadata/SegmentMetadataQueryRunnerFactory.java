@@ -36,6 +36,7 @@ import io.druid.query.ConcatQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -83,9 +84,9 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
     return new QueryRunner<SegmentAnalysis>()
     {
       @Override
-      public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ, Map<String, Object> responseContext)
+      public Sequence<SegmentAnalysis> run(QueryPlus<SegmentAnalysis> inQ, Map<String, Object> responseContext)
       {
-        SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
+        SegmentMetadataQuery query = (SegmentMetadataQuery) inQ.getQuery();
         final SegmentAnalyzer analyzer = new SegmentAnalyzer(query.getAnalysisTypes());
         final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(segment);
         final long numRows = analyzer.numRows(segment);
@@ -197,10 +198,11 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                 {
                   @Override
                   public Sequence<SegmentAnalysis> run(
-                      final Query<SegmentAnalysis> query,
+                      final QueryPlus<SegmentAnalysis> queryPlus,
                       final Map<String, Object> responseContext
                   )
                   {
+                    final Query<SegmentAnalysis> query = queryPlus.getQuery();
                     final int priority = QueryContexts.getPriority(query);
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
                         new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
@@ -209,7 +211,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
                             return Sequences.simple(
-                                Sequences.toList(input.run(query, responseContext), new ArrayList<>())
+                                Sequences.toList(input.run(queryPlus, responseContext), new ArrayList<>())
                             );
                           }
                         }

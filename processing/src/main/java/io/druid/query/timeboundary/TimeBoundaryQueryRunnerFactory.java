@@ -29,6 +29,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerHelper;
@@ -94,6 +95,7 @@ public class TimeBoundaryQueryRunnerFactory
       this.adapter = segment.asStorageAdapter();
       this.skipToFirstMatching = new Function<Cursor, Result<DateTime>>()
       {
+        @SuppressWarnings("ArgumentParameterSwap")
         @Override
         public Result<DateTime> apply(Cursor cursor)
         {
@@ -131,10 +133,11 @@ public class TimeBoundaryQueryRunnerFactory
 
     @Override
     public Sequence<Result<TimeBoundaryResultValue>> run(
-        final Query<Result<TimeBoundaryResultValue>> input,
+        final QueryPlus<Result<TimeBoundaryResultValue>> queryPlus,
         final Map<String, Object> responseContext
     )
     {
+      Query<Result<TimeBoundaryResultValue>> input = queryPlus.getQuery();
       if (!(input instanceof TimeBoundaryQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeBoundaryQuery.class);
       }

@@ -30,6 +30,7 @@ import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.dimension.ColumnSelectorStrategy;
@@ -186,10 +187,11 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
   @Override
   public Sequence<Result<SearchResultValue>> run(
-      final Query<Result<SearchResultValue>> input,
+      final QueryPlus<Result<SearchResultValue>> queryPlus,
       Map<String, Object> responseContext
   )
   {
+    Query<Result<SearchResultValue>> input = queryPlus.getQuery();
     if (!(input instanceof SearchQuery)) {
       throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SearchQuery.class);
     }

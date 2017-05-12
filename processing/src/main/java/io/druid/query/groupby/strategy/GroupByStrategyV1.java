@@ -37,6 +37,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.GroupByMergedQueryRunner;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -120,25 +121,27 @@ public class GroupByStrategyV1 implements GroupByStrategy
         configSupplier.get(),
         bufferPool,
         baseRunner.run(
-            new GroupByQuery.Builder(query)
-                // Don't do post aggs until the end of this method.
-                .setPostAggregatorSpecs(ImmutableList.of())
-                // Don't do "having" clause until the end of this method.
-                .setHavingSpec(null)
-                .setLimitSpec(NoopLimitSpec.instance())
-                .overrideContext(
-                    ImmutableMap.of(
-                        "finalize", false,
-                        //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                        //in the end when returning results to user. (note this is only respected by groupBy v1)
-                        GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
-                        //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would
-                        //return merged results. (note this is only respected by groupBy v1)
-                        GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false,
-                        GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
+            QueryPlus.wrap(
+                new GroupByQuery.Builder(query)
+                    // Don't do post aggs until the end of this method.
+                    .setPostAggregatorSpecs(ImmutableList.of())
+                    // Don't do "having" clause until the end of this method.
+                    .setHavingSpec(null)
+                    .setLimitSpec(NoopLimitSpec.instance())
+                    .overrideContext(
+                        ImmutableMap.of(
+                            "finalize", false,
+                            //set sort to false avoids unnecessary sorting while merging results. we only need to sort
+                            //in the end when returning results to user. (note this is only respected by groupBy v1)
+                            GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
+                            //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would
+                            //return merged results. (note this is only respected by groupBy v1)
+                            GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false,
+                            GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
+                        )
                     )
-                )
-                .build(),
+                    .build()
+            ),
             responseContext
         ),
         true

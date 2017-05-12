@@ -447,7 +447,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
 
         if (hasMultipleValues) {
-          rMultiValuedColumn = readMultiValuedColum(rVersion, buffer, rFlags, builder.getFileMapper());
+          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags, builder.getFileMapper());
           rSingleValuedColumn = null;
         } else {
           rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer, builder.getFileMapper());
@@ -495,12 +495,13 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           case UNCOMPRESSED_SINGLE_VALUE:
             return VSizeIndexedInts.readFromByteBuffer(buffer).asWritableSupplier();
           case COMPRESSED:
-          return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
+            return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
+          default:
+            throw new IAE("Unsupported single-value version[%s]", version);
         }
-        throw new IAE("Unsupported single-value version[%s]", version);
       }
 
-      private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColum(
+      private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColumn(
           VERSION version, ByteBuffer buffer, int flags, SmooshedFileMapper fileMapper
       )
       {
@@ -515,8 +516,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             } else {
               throw new IAE("Unrecognized multi-value flag[%d]", flags);
             }
+          default:
+            throw new IAE("Unsupported multi-value version[%s]", version);
         }
-        throw new IAE("Unsupported multi-value version[%s]", version);
       }
     };
   }

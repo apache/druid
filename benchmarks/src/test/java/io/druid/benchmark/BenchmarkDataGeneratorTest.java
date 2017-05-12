@@ -384,7 +384,7 @@ public class BenchmarkDataGeneratorTest
   }
 
 
-  private class RowValueTracker
+  private static class RowValueTracker
   {
     private Map<String, Map<Object, Integer>> dimensionMap;
 
