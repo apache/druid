@@ -101,7 +101,7 @@ public class OrFilter implements BooleanFilter
       matchers.add(0, offsetMatcher);
     }
 
-    return makeMatcher(matchers.toArray(new ValueMatcher[0]));
+    return makeMatcher(matchers.toArray(AndFilter.EMPTY_VALUE_MATCHER_ARRAY));
   }
 
 

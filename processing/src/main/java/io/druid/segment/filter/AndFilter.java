@@ -40,6 +40,7 @@ import java.util.List;
 public class AndFilter implements BooleanFilter
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
+  static final ValueMatcher[] EMPTY_VALUE_MATCHER_ARRAY = new ValueMatcher[0];
 
   private final List<Filter> filters;
 
@@ -113,7 +114,7 @@ public class AndFilter implements BooleanFilter
       matchers.add(0, offsetMatcher);
     }
 
-    return makeMatcher(matchers.toArray(new ValueMatcher[0]));
+    return makeMatcher(matchers.toArray(EMPTY_VALUE_MATCHER_ARRAY));
   }
 
   @Override
