@@ -131,7 +131,7 @@ public class GroupByQueryConfig
 
   public Class<? extends GroupByQueryMetricsFactory> getQueryMetricsFactory()
   {
-    return queryMetricsFactory;
+    return queryMetricsFactory != null ? queryMetricsFactory : DefaultGroupByQueryMetricsFactory.class;
   }
 
   public void setQueryMetricsFactory(Class<? extends GroupByQueryMetricsFactory> queryMetricsFactory)

@@ -24,11 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class GenericQueryConfig
 {
   @JsonProperty
-  private Class<? extends GenericQueryMetricsFactory> queryMetricsFactory = DefaultGenericQueryMetricsFactory.class;
+  private Class<? extends GenericQueryMetricsFactory> queryMetricsFactory;
 
   public Class<? extends GenericQueryMetricsFactory> getQueryMetricsFactory()
   {
-    return queryMetricsFactory;
+    return queryMetricsFactory != null ? queryMetricsFactory : DefaultGenericQueryMetricsFactory.class;
   }
 
   public void setQueryMetricsFactory(Class<? extends GenericQueryMetricsFactory> queryMetricsFactory)

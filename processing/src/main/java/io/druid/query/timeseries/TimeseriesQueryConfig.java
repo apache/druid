@@ -24,12 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TimeseriesQueryConfig
 {
   @JsonProperty
-  private Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory =
-      DefaultTimeseriesQueryMetricsFactory.class;
+  private Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory;
 
   public Class<? extends TimeseriesQueryMetricsFactory> getQueryMetricsFactory()
   {
-    return queryMetricsFactory;
+    return queryMetricsFactory != null ? queryMetricsFactory : DefaultTimeseriesQueryMetricsFactory.class;
   }
 
   public void setQueryMetricsFactory(Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory)
