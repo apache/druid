@@ -954,10 +954,10 @@ public class TestNG
     }
   }
 
-  private void addReporter(Class<? extends IReporter> r)
+  private void addReporter(Class<? extends IReporter> reporterClass)
   {
-    if (!m_reporters.contains(r)) {
-      m_reporters.add(ClassHelper.newInstance(r));
+    if (m_reporters.stream().noneMatch(reporterClass::isInstance)) {
+      m_reporters.add(ClassHelper.newInstance(reporterClass));
     }
   }
 

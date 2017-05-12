@@ -462,7 +462,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     int seek(int dictId);
   }
 
-  protected class IndexSeekerWithoutConversion implements IndexSeeker
+  protected static class IndexSeekerWithoutConversion implements IndexSeeker
   {
     private final int limit;
 
@@ -481,7 +481,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   /**
    * Get old dictId from new dictId, and only support access in order
    */
-  protected class IndexSeekerWithConversion implements IndexSeeker
+  protected static class IndexSeekerWithConversion implements IndexSeeker
   {
     private final IntBuffer dimConversions;
     private int currIndex;

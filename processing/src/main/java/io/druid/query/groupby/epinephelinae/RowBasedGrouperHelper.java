@@ -528,20 +528,6 @@ public class RowBasedGrouperHelper
 
   @SuppressWarnings("unchecked")
   private static Function<Comparable, Comparable>[] makeValueConvertFunctions(
-      final Map<String, ValueType> rawInputRowSignature,
-      final List<DimensionSpec> dimensions
-  )
-  {
-    final List<ValueType> valueTypes = Lists.newArrayListWithCapacity(dimensions.size());
-    for (DimensionSpec dimensionSpec : dimensions) {
-      final ValueType valueType = rawInputRowSignature.get(dimensionSpec);
-      valueTypes.add(valueType == null ? ValueType.STRING : valueType);
-    }
-    return makeValueConvertFunctions(valueTypes);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static Function<Comparable, Comparable>[] makeValueConvertFunctions(
       final List<ValueType> valueTypes
   )
   {

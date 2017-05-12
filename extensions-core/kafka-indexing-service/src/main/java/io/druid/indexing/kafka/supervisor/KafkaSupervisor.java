@@ -125,7 +125,7 @@ public class KafkaSupervisor implements Supervisor
    * time, there should only be up to a maximum of [taskCount] actively-reading task groups (tracked in the [taskGroups]
    * map) + zero or more pending-completion task groups (tracked in [pendingCompletionTaskGroups]).
    */
-  private class TaskGroup
+  private static class TaskGroup
   {
     // This specifies the partitions and starting offsets for this task group. It is set on group creation from the data
     // in [partitionGroups] and never changes during the lifetime of this task group, which will live until a task in
@@ -150,7 +150,7 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private class TaskData
+  private static class TaskData
   {
     TaskStatus status;
     DateTime startTime;

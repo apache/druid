@@ -105,7 +105,7 @@ public class SketchEstimateWithErrorBounds
     if (estimate != that.estimate ||
         highBound != that.highBound ||
         lowBound != that.lowBound ||
-        numStdDev != numStdDev) {
+        numStdDev != that.numStdDev) {
       return false;
     }
     return true;
