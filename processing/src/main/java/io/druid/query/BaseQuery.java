@@ -92,6 +92,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return run(querySegmentSpec.lookup(this, walker), context);
   }
 
+  @Override
   public Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context)
   {
     return runner.run(this, context);
@@ -145,10 +146,22 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return QueryContexts.parseBoolean(this, key, defaultValue);
   }
 
-  protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
+  /**
+   * @deprecated use {@link #computeOverriddenContext(Map, Map) computeOverriddenContext(getContext(), overrides))}
+   * instead. This method may be removed in the next minor or major version of Druid.
+   */
+  @Deprecated
+  protected Map<String, Object> computeOverridenContext(final Map<String, Object> overrides)
+  {
+    return computeOverriddenContext(getContext(), overrides);
+  }
+
+  protected static Map<String, Object> computeOverriddenContext(
+      final Map<String, Object> context,
+      final Map<String, Object> overrides
+  )
   {
     Map<String, Object> overridden = Maps.newTreeMap();
-    final Map<String, Object> context = getContext();
     if (context != null) {
       overridden.putAll(context);
     }
@@ -173,13 +186,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public Query withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.<String, Object>of(QUERYID, id));
-  }
-
-  @Override
-  public Query<T> withDefaultTimeout(long defaultTimeout)
-  {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
+    return withOverriddenContext(ImmutableMap.of(QUERYID, id));
   }
 
   @Override

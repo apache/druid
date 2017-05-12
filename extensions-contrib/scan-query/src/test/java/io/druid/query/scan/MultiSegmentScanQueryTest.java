@@ -28,7 +28,7 @@ import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
-import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -214,15 +214,15 @@ public class MultiSegmentScanQueryTest
         new QueryRunner<ScanResultValue>() {
           @Override
           public Sequence<ScanResultValue> run(
-              Query<ScanResultValue> query, Map<String, Object> responseContext
+              QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate results back from 2 historicals
             List<Sequence<ScanResultValue>> sequences = Lists.newArrayListWithExpectedSize(2);
-            sequences.add(factory.createRunner(segment0).run(query, new HashMap<String, Object>()));
-            sequences.add(factory.createRunner(segment1).run(query, new HashMap<String, Object>()));
+            sequences.add(factory.createRunner(segment0).run(queryPlus, new HashMap<String, Object>()));
+            sequences.add(factory.createRunner(segment1).run(queryPlus, new HashMap<String, Object>()));
             return new MergeSequence<>(
-                query.getResultOrdering(),
+                queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(sequences)
             );
           }

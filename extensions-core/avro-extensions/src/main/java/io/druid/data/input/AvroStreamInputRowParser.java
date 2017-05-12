@@ -53,8 +53,13 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
     return parseGenericRecord(avroBytesDecoder.parse(input), parseSpec, dimensions, false, false);
   }
 
-  protected static InputRow parseGenericRecord(GenericRecord record, ParseSpec parseSpec, List<String> dimensions,
-                                               boolean fromPigAvroStorage, boolean binaryAsString)
+  protected static InputRow parseGenericRecord(
+      GenericRecord record,
+      ParseSpec parseSpec,
+      List<String> dimensions,
+      boolean fromPigAvroStorage,
+      boolean binaryAsString
+  )
   {
     GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, fromPigAvroStorage, binaryAsString);
     TimestampSpec timestampSpec = parseSpec.getTimestampSpec();

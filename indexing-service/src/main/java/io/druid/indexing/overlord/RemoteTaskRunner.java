@@ -310,8 +310,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                     waitingFor.decrement();
                     waitingForMonitor.notifyAll();
                   }
-                default:
                   break;
+                case CONNECTION_SUSPENDED:
+                case CONNECTION_RECONNECTED:
+                case CONNECTION_LOST:
+                  // do nothing
               }
             }
           }
@@ -1001,6 +1004,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                         retVal.setException(new IllegalStateException(message));
                       }
                       runPendingTasks();
+                      break;
+                    case CONNECTION_SUSPENDED:
+                    case CONNECTION_RECONNECTED:
+                    case CONNECTION_LOST:
+                      // do nothing
                   }
                 }
                 catch (Exception e) {

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -61,6 +60,8 @@ import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -76,17 +77,10 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private final static Comparator NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
 
-  private final static Comparator<Row> NON_GRANULAR_TIME_COMP = new Comparator<Row>()
-  {
-    @Override
-    public int compare(Row lhs, Row rhs)
-    {
-      return Longs.compare(
-          lhs.getTimestampFromEpoch(),
-          rhs.getTimestampFromEpoch()
-      );
-    }
-  };
+  private final static Comparator<Row> NON_GRANULAR_TIME_COMP = (Row lhs, Row rhs) -> Longs.compare(
+      lhs.getTimestampFromEpoch(),
+      rhs.getTimestampFromEpoch()
+  );
 
   public static Builder builder()
   {
@@ -102,7 +96,7 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
-  private final Function<Sequence<Row>, Sequence<Row>> limitFn;
+  private final Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
 
   @JsonCreator
   public GroupByQuery(
@@ -119,11 +113,63 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("context") Map<String, Object> context
   )
   {
+    this(
+        dataSource,
+        querySegmentSpec,
+        virtualColumns,
+        dimFilter,
+        granularity,
+        dimensions,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        havingSpec,
+        limitSpec,
+        null,
+        context
+    );
+  }
+
+  private Function<Sequence<Row>, Sequence<Row>> makePostProcessingFn()
+  {
+    Function<Sequence<Row>, Sequence<Row>> postProcessingFn =
+        limitSpec.build(dimensions, aggregatorSpecs, postAggregatorSpecs);
+
+    if (havingSpec != null) {
+      postProcessingFn = Functions.compose(
+          postProcessingFn,
+          (Sequence<Row> input) -> {
+            havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
+            return Sequences.filter(input, havingSpec::eval);
+          }
+      );
+    }
+    return postProcessingFn;
+  }
+
+  /**
+   * A private constructor that avoids recomputing postProcessingFn.
+   */
+  private GroupByQuery(
+      final DataSource dataSource,
+      final QuerySegmentSpec querySegmentSpec,
+      final VirtualColumns virtualColumns,
+      final DimFilter dimFilter,
+      final Granularity granularity,
+      final List<DimensionSpec> dimensions,
+      final List<AggregatorFactory> aggregatorSpecs,
+      final List<PostAggregator> postAggregatorSpecs,
+      final HavingSpec havingSpec,
+      final LimitSpec limitSpec,
+      final @Nullable Function<Sequence<Row>, Sequence<Row>> postProcessingFn,
+      final Map<String, Object> context
+  )
+  {
     super(dataSource, querySegmentSpec, false, context);
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
-    this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
+    this.dimensions = dimensions == null ? ImmutableList.of() : dimensions;
     for (DimensionSpec spec : this.dimensions) {
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
     }
@@ -133,77 +179,16 @@ public class GroupByQuery extends BaseQuery<Row>
         postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs
     );
     this.havingSpec = havingSpec;
-    this.limitSpec = (limitSpec == null) ? new NoopLimitSpec() : limitSpec;
+    this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
-
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
     // We're not counting __time, even though that name is problematic. See: https://github.com/druid-io/druid/pull/3684
     verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
-    Function<Sequence<Row>, Sequence<Row>> postProcFn =
-        this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
-
-    if (havingSpec != null) {
-      postProcFn = Functions.compose(
-          postProcFn,
-          new Function<Sequence<Row>, Sequence<Row>>()
-          {
-            @Override
-            public Sequence<Row> apply(Sequence<Row> input)
-            {
-              GroupByQuery.this.havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
-              return Sequences.filter(
-                  input,
-                  new Predicate<Row>()
-                  {
-                    @Override
-                    public boolean apply(Row input)
-                    {
-                      return GroupByQuery.this.havingSpec.eval(input);
-                    }
-                  }
-              );
-            }
-          }
-      );
-    }
-
-    limitFn = postProcFn;
-  }
-
-  /**
-   * A private constructor that avoids all of the various state checks.  Used by the with*() methods where the checks
-   * have already passed in order for the object to exist.
-   */
-  private GroupByQuery(
-      DataSource dataSource,
-      QuerySegmentSpec querySegmentSpec,
-      VirtualColumns virtualColumns,
-      DimFilter dimFilter,
-      Granularity granularity,
-      List<DimensionSpec> dimensions,
-      List<AggregatorFactory> aggregatorSpecs,
-      List<PostAggregator> postAggregatorSpecs,
-      HavingSpec havingSpec,
-      LimitSpec orderBySpec,
-      Function<Sequence<Row>, Sequence<Row>> limitFn,
-      Map<String, Object> context
-  )
-  {
-    super(dataSource, querySegmentSpec, false, context);
-
-    this.virtualColumns = virtualColumns;
-    this.dimFilter = dimFilter;
-    this.granularity = granularity;
-    this.dimensions = dimensions;
-    this.aggregatorSpecs = aggregatorSpecs;
-    this.postAggregatorSpecs = postAggregatorSpecs;
-    this.havingSpec = havingSpec;
-    this.limitSpec = orderBySpec;
-    this.limitFn = limitFn;
+    this.postProcessingFn = postProcessingFn != null ? postProcessingFn : makePostProcessingFn();
   }
 
   @JsonProperty
@@ -284,17 +269,12 @@ public class GroupByQuery extends BaseQuery<Row>
     final Ordering<Row> rowOrdering = getRowOrdering(false);
 
     return Ordering.from(
-        new Comparator<Object>()
-        {
-          @Override
-          public int compare(Object lhs, Object rhs)
-          {
-            if (lhs instanceof Row) {
-              return rowOrdering.compare((Row) lhs, (Row) rhs);
-            } else {
-              // Probably bySegment queries
-              return NATURAL_NULLS_FIRST.compare(lhs, rhs);
-            }
+        (lhs, rhs) -> {
+          if (lhs instanceof Row) {
+            return rowOrdering.compare((Row) lhs, (Row) rhs);
+          } else {
+            // Probably bySegment queries
+            return NATURAL_NULLS_FIRST.compare(lhs, rhs);
           }
         }
     );
@@ -307,47 +287,28 @@ public class GroupByQuery extends BaseQuery<Row>
     final Comparator<Row> timeComparator = getTimeComparator(granular);
 
     if (timeComparator == null) {
-      return Ordering.from(
-          new Comparator<Row>()
-          {
-            @Override
-            public int compare(Row lhs, Row rhs)
-            {
-              return compareDims(dimensions, lhs, rhs);
-            }
-          }
-      );
+      return Ordering.from((lhs, rhs) -> compareDims(dimensions, lhs, rhs));
     } else if (sortByDimsFirst) {
       return Ordering.from(
-          new Comparator<Row>()
-          {
-            @Override
-            public int compare(Row lhs, Row rhs)
-            {
-              final int cmp = compareDims(dimensions, lhs, rhs);
-              if (cmp != 0) {
-                return cmp;
-              }
-
-              return timeComparator.compare(lhs, rhs);
+          (lhs, rhs) -> {
+            final int cmp = compareDims(dimensions, lhs, rhs);
+            if (cmp != 0) {
+              return cmp;
             }
+
+            return timeComparator.compare(lhs, rhs);
           }
       );
     } else {
       return Ordering.from(
-          new Comparator<Row>()
-          {
-            @Override
-            public int compare(Row lhs, Row rhs)
-            {
-              final int timeCompare = timeComparator.compare(lhs, rhs);
+          (lhs, rhs) -> {
+            final int timeCompare = timeComparator.compare(lhs, rhs);
 
-              if (timeCompare != 0) {
-                return timeCompare;
-              }
-
-              return compareDims(dimensions, lhs, rhs);
+            if (timeCompare != 0) {
+              return timeCompare;
             }
+
+            return compareDims(dimensions, lhs, rhs);
           }
       );
     }
@@ -358,17 +319,10 @@ public class GroupByQuery extends BaseQuery<Row>
     if (Granularities.ALL.equals(granularity)) {
       return null;
     } else if (granular) {
-      return new Comparator<Row>()
-      {
-        @Override
-        public int compare(Row lhs, Row rhs)
-        {
-          return Longs.compare(
-              granularity.bucketStart(lhs.getTimestamp()).getMillis(),
-              granularity.bucketStart(rhs.getTimestamp()).getMillis()
-          );
-        }
-      };
+      return (lhs, rhs) -> Longs.compare(
+          granularity.bucketStart(lhs.getTimestamp()).getMillis(),
+          granularity.bucketStart(rhs.getTimestamp()).getMillis()
+      );
     } else {
       return NON_GRANULAR_TIME_COMP;
     }
@@ -398,155 +352,52 @@ public class GroupByQuery extends BaseQuery<Row>
    *
    * @return sequence of rows after applying havingSpec and limitSpec
    */
-  public Sequence<Row> applyLimit(Sequence<Row> results)
+  public Sequence<Row> postProcess(Sequence<Row> results)
   {
-    return limitFn.apply(results);
+    return postProcessingFn.apply(results);
   }
 
   @Override
   public GroupByQuery withOverriddenContext(Map<String, Object> contextOverride)
   {
-    return new GroupByQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        dimensions,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        havingSpec,
-        limitSpec,
-        limitFn,
-        computeOverridenContext(contextOverride)
-    );
+    return new Builder(this).overrideContext(contextOverride).build();
   }
 
   @Override
   public GroupByQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new GroupByQuery(
-        getDataSource(),
-        spec,
-        virtualColumns,
-        dimFilter,
-        granularity,
-        dimensions,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        havingSpec,
-        limitSpec,
-        limitFn,
-        getContext()
-    );
+    return new Builder(this).setQuerySegmentSpec(spec).build();
   }
 
   public GroupByQuery withDimFilter(final DimFilter dimFilter)
   {
-    return new GroupByQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        virtualColumns,
-        dimFilter,
-        getGranularity(),
-        getDimensions(),
-        getAggregatorSpecs(),
-        getPostAggregatorSpecs(),
-        getHavingSpec(),
-        getLimitSpec(),
-        limitFn,
-        getContext()
-    );
+    return new Builder(this).setDimFilter(dimFilter).build();
   }
 
   @Override
   public Query<Row> withDataSource(DataSource dataSource)
   {
-    return new GroupByQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        dimensions,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        havingSpec,
-        limitSpec,
-        limitFn,
-        getContext()
-    );
+    return new Builder(this).setDataSource(dataSource).build();
   }
 
   public GroupByQuery withDimensionSpecs(final List<DimensionSpec> dimensionSpecs)
   {
-    return new GroupByQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        virtualColumns,
-        getDimFilter(),
-        getGranularity(),
-        dimensionSpecs,
-        getAggregatorSpecs(),
-        getPostAggregatorSpecs(),
-        getHavingSpec(),
-        getLimitSpec(),
-        limitFn,
-        getContext()
-    );
+    return new Builder(this).setDimensions(dimensionSpecs).build();
   }
 
-  public GroupByQuery withLimitSpec(final LimitSpec limitSpec)
+  public GroupByQuery withLimitSpec(LimitSpec limitSpec)
   {
-    return new GroupByQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        virtualColumns,
-        getDimFilter(),
-        getGranularity(),
-        getDimensions(),
-        getAggregatorSpecs(),
-        getPostAggregatorSpecs(),
-        getHavingSpec(),
-        limitSpec,
-        getContext()
-    );
+    return new Builder(this).setLimitSpec(limitSpec).build();
   }
 
   public GroupByQuery withAggregatorSpecs(final List<AggregatorFactory> aggregatorSpecs)
   {
-    return new GroupByQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        virtualColumns,
-        getDimFilter(),
-        getGranularity(),
-        getDimensions(),
-        aggregatorSpecs,
-        getPostAggregatorSpecs(),
-        getHavingSpec(),
-        getLimitSpec(),
-        limitFn,
-        getContext()
-    );
+    return new Builder(this).setAggregatorSpecs(aggregatorSpecs).build();
   }
 
   public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
-    return new GroupByQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        virtualColumns,
-        getDimFilter(),
-        getGranularity(),
-        getDimensions(),
-        getAggregatorSpecs(),
-        postAggregatorSpecs,
-        getHavingSpec(),
-        getLimitSpec(),
-        limitFn,
-        getContext()
-    );
+    return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
   }
 
   private static void verifyOutputNames(
@@ -597,6 +448,7 @@ public class GroupByQuery extends BaseQuery<Row>
     private Map<String, Object> context;
 
     private LimitSpec limitSpec = null;
+    private Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
     private int limit = Integer.MAX_VALUE;
 
@@ -609,13 +461,14 @@ public class GroupByQuery extends BaseQuery<Row>
       dataSource = query.getDataSource();
       querySegmentSpec = query.getQuerySegmentSpec();
       virtualColumns = query.getVirtualColumns();
-      limitSpec = query.getLimitSpec();
       dimFilter = query.getDimFilter();
       granularity = query.getGranularity();
       dimensions = query.getDimensions();
       aggregatorSpecs = query.getAggregatorSpecs();
       postAggregatorSpecs = query.getPostAggregatorSpecs();
       havingSpec = query.getHavingSpec();
+      limitSpec = query.getLimitSpec();
+      postProcessingFn = query.postProcessingFn;
       context = query.getContext();
     }
 
@@ -624,15 +477,16 @@ public class GroupByQuery extends BaseQuery<Row>
       dataSource = builder.dataSource;
       querySegmentSpec = builder.querySegmentSpec;
       virtualColumns = builder.virtualColumns;
-      limitSpec = builder.limitSpec;
       dimFilter = builder.dimFilter;
       granularity = builder.granularity;
       dimensions = builder.dimensions;
       aggregatorSpecs = builder.aggregatorSpecs;
       postAggregatorSpecs = builder.postAggregatorSpecs;
       havingSpec = builder.havingSpec;
+      limitSpec = builder.limitSpec;
+      postProcessingFn = builder.postProcessingFn;
       limit = builder.limit;
-
+      orderByColumnSpecs = new ArrayList<>(builder.orderByColumnSpecs);
       context = builder.context;
     }
 
@@ -692,16 +546,17 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
-    public Builder limit(int limit)
+    public Builder setLimit(int limit)
     {
-      ensureExplicitLimitNotSet();
+      ensureExplicitLimitSpecNotSet();
       this.limit = limit;
+      this.postProcessingFn = null;
       return this;
     }
 
     public Builder addOrderByColumn(String dimension)
     {
-      return addOrderByColumn(dimension, (OrderByColumnSpec.Direction) null);
+      return addOrderByColumn(dimension, null);
     }
 
     public Builder addOrderByColumn(String dimension, OrderByColumnSpec.Direction direction)
@@ -711,19 +566,22 @@ public class GroupByQuery extends BaseQuery<Row>
 
     public Builder addOrderByColumn(OrderByColumnSpec columnSpec)
     {
-      ensureExplicitLimitNotSet();
+      ensureExplicitLimitSpecNotSet();
       this.orderByColumnSpecs.add(columnSpec);
+      this.postProcessingFn = null;
       return this;
     }
 
     public Builder setLimitSpec(LimitSpec limitSpec)
     {
+      Preconditions.checkNotNull(limitSpec);
       ensureFluentLimitsNotSet();
       this.limitSpec = limitSpec;
+      this.postProcessingFn = null;
       return this;
     }
 
-    private void ensureExplicitLimitNotSet()
+    private void ensureExplicitLimitSpecNotSet()
     {
       if (limitSpec != null) {
         throw new ISE("Ambiguous build, limitSpec[%s] already set", limitSpec);
@@ -772,12 +630,14 @@ public class GroupByQuery extends BaseQuery<Row>
       }
 
       dimensions.add(dimension);
+      this.postProcessingFn = null;
       return this;
     }
 
     public Builder setDimensions(List<DimensionSpec> dimensions)
     {
       this.dimensions = Lists.newArrayList(dimensions);
+      this.postProcessingFn = null;
       return this;
     }
 
@@ -788,12 +648,14 @@ public class GroupByQuery extends BaseQuery<Row>
       }
 
       aggregatorSpecs.add(aggregator);
+      this.postProcessingFn = null;
       return this;
     }
 
     public Builder setAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
     {
       this.aggregatorSpecs = Lists.newArrayList(aggregatorSpecs);
+      this.postProcessingFn = null;
       return this;
     }
 
@@ -804,12 +666,14 @@ public class GroupByQuery extends BaseQuery<Row>
       }
 
       postAggregatorSpecs.add(postAgg);
+      this.postProcessingFn = null;
       return this;
     }
 
     public Builder setPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs)
     {
       this.postAggregatorSpecs = Lists.newArrayList(postAggregatorSpecs);
+      this.postProcessingFn = null;
       return this;
     }
 
@@ -819,17 +683,16 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
-    public Builder setHavingSpec(HavingSpec havingSpec)
+    public Builder overrideContext(Map<String, Object> contextOverride)
     {
-      this.havingSpec = havingSpec;
-
+      this.context = computeOverriddenContext(context, contextOverride);
       return this;
     }
 
-    public Builder setLimit(Integer limit)
+    public Builder setHavingSpec(HavingSpec havingSpec)
     {
-      this.limit = limit;
-
+      this.havingSpec = havingSpec;
+      this.postProcessingFn = null;
       return this;
     }
 
@@ -843,7 +706,7 @@ public class GroupByQuery extends BaseQuery<Row>
       final LimitSpec theLimitSpec;
       if (limitSpec == null) {
         if (orderByColumnSpecs.isEmpty() && limit == Integer.MAX_VALUE) {
-          theLimitSpec = new NoopLimitSpec();
+          theLimitSpec = NoopLimitSpec.instance();
         } else {
           theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit);
         }
@@ -862,6 +725,7 @@ public class GroupByQuery extends BaseQuery<Row>
           postAggregatorSpecs,
           havingSpec,
           theLimitSpec,
+          postProcessingFn,
           context
       );
     }

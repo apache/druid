@@ -59,6 +59,7 @@ import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -139,8 +140,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
+    final Query<T> query = queryPlus.getQuery();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     final CacheStrategy<T, Object, Query<T>> strategy = toolChest.getCacheStrategy(query);
 
@@ -429,17 +431,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               final Sequence<T> resultSeqToAdd;
               if (!server.isAssignable() || !populateCache || isBySegment) { // Direct server queryable
                 if (!isBySegment) {
-                  resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), responseContext);
+                  resultSeqToAdd = clientQueryable.run(queryPlus.withQuerySegmentSpec(segmentSpec), responseContext);
                 } else {
                   // bySegment queries need to be de-serialized, see DirectDruidClient.run()
-
-                  @SuppressWarnings("unchecked")
-                  final Query<Result<BySegmentResultValueClass<T>>> bySegmentQuery =
-                      (Query<Result<BySegmentResultValueClass<T>>>) ((Query) query);
-
                   @SuppressWarnings("unchecked")
                   final Sequence<Result<BySegmentResultValueClass<T>>> resultSequence = clientQueryable.run(
-                      bySegmentQuery.withQuerySegmentSpec(segmentSpec),
+                      queryPlus.withQuerySegmentSpec(segmentSpec),
                       responseContext
                   );
 
@@ -472,7 +469,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               } else { // Requires some manipulation on broker side
                 @SuppressWarnings("unchecked")
                 final Sequence<Result<BySegmentResultValueClass<T>>> runningSequence = clientQueryable.run(
-                    rewrittenQuery.withQuerySegmentSpec(segmentSpec),
+                    queryPlus.withQuery(rewrittenQuery.withQuerySegmentSpec(segmentSpec)),
                     responseContext
                 );
                 resultSeqToAdd = new MergeSequence(

@@ -316,6 +316,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException;
 
+  public abstract int getLastRowIndex();
+
   protected abstract AggregatorType[] getAggsForRow(int rowOffset);
 
   protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
@@ -593,7 +595,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return capabilities;
   }
 
-  /*
+  /**
    * Currently called to initialize IncrementalIndex dimension order during index creation
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
    * https://github.com/druid-io/druid/issues/2011

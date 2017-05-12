@@ -55,6 +55,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -131,8 +132,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> context)
   {
+    final Query<T> query = queryPlus.getQuery();
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     boolean isBySegment = QueryContexts.isBySegment(query);
 
@@ -269,13 +271,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           long stopTimeNs = System.nanoTime();
           long nodeTimeNs = stopTimeNs - responseStartTimeNs;
+          final long nodeTimeMs = TimeUnit.NANOSECONDS.toMillis(nodeTimeNs);
           log.debug(
               "Completed queryId[%s] request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
               query.getId(),
               url,
               byteCount.get(),
-              TimeUnit.NANOSECONDS.toMillis(nodeTimeNs),
-              byteCount.get() / TimeUnit.NANOSECONDS.toSeconds(nodeTimeNs)
+              nodeTimeMs,
+              byteCount.get() / (0.001 * nodeTimeMs) // Floating math; division by zero will yield Inf, not exception
           );
           queryMetrics.reportNodeTime(nodeTimeNs);
           queryMetrics.reportNodeBytes(byteCount.get());

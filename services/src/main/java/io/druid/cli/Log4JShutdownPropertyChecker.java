@@ -26,10 +26,10 @@ public class Log4JShutdownPropertyChecker implements PropertyChecker
   @Override
   public void checkProperties(Properties properties)
   {
-    if (!properties.contains("log4j.shutdownCallbackRegistry")) {
+    if (!properties.containsKey("log4j.shutdownCallbackRegistry")) {
       properties.setProperty("log4j.shutdownCallbackRegistry", "io.druid.common.config.Log4jShutdown");
     }
-    if (!properties.contains("log4j.shutdownHookEnabled")) {
+    if (!properties.containsKey("log4j.shutdownHookEnabled")) {
       properties.setProperty("log4j.shutdownHookEnabled", "true");
     }
   }

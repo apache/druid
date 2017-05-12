@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Queries;
 import io.druid.query.Query;
 import io.druid.query.Result;
@@ -64,15 +65,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   )
   {
     super(dataSource, querySegmentSpec, descending, context);
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
-    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
+    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
         this.aggregatorSpecs,
-        postAggregatorSpecs == null
-        ? ImmutableList.<PostAggregator>of()
-        : postAggregatorSpecs
+        postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );
   }
 
@@ -131,78 +131,29 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public TimeseriesQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
-    return new TimeseriesQuery(
-        getDataSource(),
-        querySegmentSpec,
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return Druids.TimeseriesQueryBuilder.copy(this).intervals(querySegmentSpec).build();
   }
 
   @Override
   public Query<Result<TimeseriesResultValue>> withDataSource(DataSource dataSource)
   {
-    return new TimeseriesQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return Druids.TimeseriesQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   public TimeseriesQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new TimeseriesQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.TimeseriesQueryBuilder.copy(this).context(newContext).build();
   }
 
   public TimeseriesQuery withDimFilter(DimFilter dimFilter)
   {
-    return new TimeseriesQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return Druids.TimeseriesQueryBuilder.copy(this).filters(dimFilter).build();
   }
 
   public TimeseriesQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
-    return new TimeseriesQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return Druids.TimeseriesQueryBuilder.copy(this).postAggregators(postAggregatorSpecs).build();
   }
 
   @Override

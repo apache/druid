@@ -171,7 +171,7 @@ public class CascadeExtractionFn implements ExtractionFn
            "extractionFns=[" + chainedExtractionFn.toString() + "]}";
   }
 
-  private class ChainedExtractionFn
+  private static class ChainedExtractionFn
   {
     private final ExtractionFn fn;
     private final ChainedExtractionFn child;

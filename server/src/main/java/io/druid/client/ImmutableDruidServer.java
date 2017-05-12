@@ -97,6 +97,11 @@ public class ImmutableDruidServer
     return dataSources.values();
   }
 
+  public ImmutableDruidDataSource getDataSource(String name)
+  {
+    return dataSources.get(name);
+  }
+
   public Map<String, DataSegment> getSegments()
   {
     return segments;

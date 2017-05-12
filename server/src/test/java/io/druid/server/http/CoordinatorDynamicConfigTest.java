@@ -19,20 +19,44 @@
 
 package io.druid.server.http;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
-
+import io.druid.common.config.JacksonConfigManager;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
-import io.druid.segment.TestHelper;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
 public class CoordinatorDynamicConfigTest
 {
+  private JacksonConfigManager configManager;
+  private ObjectMapper mapper;
+
+  @Before
+  public void setup()
+  {
+    mapper = new DefaultObjectMapper();
+    configManager = EasyMock.mock(JacksonConfigManager.class);
+    EasyMock.expect(
+        configManager.watch(
+            CoordinatorDynamicConfig.CONFIG_KEY,
+            CoordinatorDynamicConfig.class
+        )
+    ).andReturn(new AtomicReference<>(null)).anyTimes();
+    EasyMock.replay(configManager);
+    InjectableValues inject = new InjectableValues.Std().addValue(JacksonConfigManager.class, configManager);
+    mapper.setInjectableValues(inject);
+  }
+
   @Test
   public void testSerde() throws Exception
   {
@@ -48,7 +72,6 @@ public class CoordinatorDynamicConfigTest
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"]\n"
                      + "}\n";
 
-    ObjectMapper mapper = TestHelper.getObjectMapper();
     CoordinatorDynamicConfig actual = mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
@@ -80,7 +103,6 @@ public class CoordinatorDynamicConfigTest
                      + "  \"killDataSourceWhitelist\": \" test1 ,test2 \"\n"
                      + "}\n";
 
-    ObjectMapper mapper = TestHelper.getObjectMapper();
     CoordinatorDynamicConfig actual = mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
@@ -112,7 +134,6 @@ public class CoordinatorDynamicConfigTest
                      + "  \"killAllDataSources\": true\n"
                      + "}\n";
 
-    ObjectMapper mapper = TestHelper.getObjectMapper();
     CoordinatorDynamicConfig actual = mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
@@ -153,6 +174,21 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(
         new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false),
         new CoordinatorDynamicConfig.Builder().build()
+    );
+  }
+
+  @Test
+  public void testUpdate()
+  {
+    CoordinatorDynamicConfig current = new CoordinatorDynamicConfig(99, 99, 99, 99, 99, 99, 99, true, ImmutableSet.of("x"), false);
+    JacksonConfigManager mock = EasyMock.mock(JacksonConfigManager.class);
+    EasyMock.expect(mock.watch(CoordinatorDynamicConfig.CONFIG_KEY, CoordinatorDynamicConfig.class)).andReturn(
+        new AtomicReference<>(current)
+    );
+    EasyMock.replay(mock);
+    Assert.assertEquals(
+        current,
+        new CoordinatorDynamicConfig(mock, null, null, null, null, null, null, null, null, null, null)
     );
   }
 

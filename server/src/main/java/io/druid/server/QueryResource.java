@@ -40,8 +40,10 @@ import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -190,7 +192,7 @@ public class QueryResource implements QueryCountStatsProvider
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      query = query.withDefaultTimeout(config.getDefaultQueryTimeout());
+      query = QueryContexts.withDefaultTimeout(query, config.getDefaultQueryTimeout());
 
       toolChest = warehouse.getToolChest(query);
 
@@ -226,7 +228,7 @@ public class QueryResource implements QueryCountStatsProvider
       }
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
-      final Sequence res = query.run(texasRanger, responseContext);
+      final Sequence res = QueryPlus.wrap(query).run(texasRanger, responseContext);
 
       if (prevEtag != null && prevEtag.equals(responseContext.get(HDR_ETAG))) {
         return Response.notModified().build();
@@ -266,6 +268,7 @@ public class QueryResource implements QueryCountStatsProvider
                       success = true;
                     } catch (Exception ex) {
                       exceptionStr = ex.toString();
+                      log.error(ex, "Unable to send query response.");
                       throw Throwables.propagate(ex);
                     } finally {
                       try {

@@ -127,7 +127,7 @@ public interface BufferAggregator extends HotLoopCallee
   {
   }
 
-  /*
+  /**
    * Relocates any cached objects.
    * If underlying ByteBuffer used for aggregation buffer relocates to a new ByteBuffer, positional caches(if any)
    * built on top of old ByteBuffer can not be used for further {@link BufferAggregator#aggregate(ByteBuffer, int)}

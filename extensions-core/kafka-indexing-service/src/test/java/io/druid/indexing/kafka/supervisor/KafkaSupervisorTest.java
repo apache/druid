@@ -65,6 +65,8 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
+import io.druid.server.metrics.DruidMonitorSchedulerConfig;
+import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -414,7 +416,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask task = captured.getValue();
     KafkaIOConfig taskConfig = task.getIOConfig();
-    Assert.assertEquals(String.format("sequenceName-0", DATASOURCE), taskConfig.getBaseSequenceName());
+    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertEquals(10L, (long) taskConfig.getStartPartitions().getPartitionOffsetMap().get(0));
     Assert.assertEquals(20L, (long) taskConfig.getStartPartitions().getPartitionOffsetMap().get(1));
     Assert.assertEquals(30L, (long) taskConfig.getStartPartitions().getPartitionOffsetMap().get(2));
@@ -1718,7 +1720,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskMaster,
             indexerMetadataStorageCoordinator,
             taskClientFactory,
-            objectMapper
+            objectMapper,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig()
         )
     );
   }
@@ -1785,7 +1789,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
-  private class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
+  private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
 
     private TaskLocation location;
@@ -1803,7 +1807,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
-  private class TestableKafkaSupervisor extends KafkaSupervisor
+  private static class TestableKafkaSupervisor extends KafkaSupervisor
   {
     public TestableKafkaSupervisor(
         TaskStorage taskStorage,

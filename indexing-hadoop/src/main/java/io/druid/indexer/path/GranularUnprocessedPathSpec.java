@@ -22,6 +22,7 @@ package io.druid.indexer.path;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -74,13 +75,11 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
     final FileSystem fs = betaInput.getFileSystem(job.getConfiguration());
     final Granularity segmentGranularity = config.getGranularitySpec().getSegmentGranularity();
 
-    Map<Long, Long> inputModifiedTimes = new TreeMap<>(
-        Comparators.inverse(Comparators.comparable())
-    );
+    Map<Long, Long> inputModifiedTimes = new TreeMap<>(Ordering.natural().reverse());
 
     for (FileStatus status : FSSpideringIterator.spiderIterable(fs, betaInput)) {
       final DateTime key = segmentGranularity.toDate(status.getPath().toString());
-      final Long currVal = inputModifiedTimes.get(key);
+      final Long currVal = inputModifiedTimes.get(key.getMillis());
       final long mTime = status.getModificationTime();
 
       inputModifiedTimes.put(key.getMillis(), currVal == null ? mTime : Math.max(currVal, mTime));

@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
@@ -34,6 +35,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +56,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   {
     super(
         dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(MY_Y2K_INTERVAL))
+        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Collections.singletonList(MY_Y2K_INTERVAL))
                                    : querySegmentSpec,
         false,
         context
@@ -82,31 +84,20 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   @Override
   public DataSourceMetadataQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new DataSourceMetadataQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.DataSourceMetadataQueryBuilder.copy(this).context(newContext).build();
   }
 
   @Override
   public DataSourceMetadataQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new DataSourceMetadataQuery(
-        getDataSource(),
-        spec,
-        getContext()
-    );
+    return Druids.DataSourceMetadataQueryBuilder.copy(this).intervals(spec).build();
   }
 
   @Override
   public Query<Result<DataSourceMetadataResultValue>> withDataSource(DataSource dataSource)
   {
-    return new DataSourceMetadataQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        getContext()
-    );
+    return Druids.DataSourceMetadataQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   public Iterable<Result<DataSourceMetadataResultValue>> buildResult(DateTime timestamp, DateTime maxIngestedEventTime)

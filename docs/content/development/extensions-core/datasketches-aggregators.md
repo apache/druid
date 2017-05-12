@@ -32,7 +32,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the aggregator used at ingestion time.|yes|
 |isInputThetaSketch|This should only be used at indexing time if your input data contains theta sketch objects. This would be the case if you use datasketches library outside of Druid, say with Pig/Hive, to produce the data that you are ingesting into Druid |no, defaults to false|
-|size|Must be a power of 2. Internally, size refers to the maximum number of entries sketch object will retain. Higher size means higher accuracy but more space to store sketches. Note that after you index with a particular size, druid will persist sketch in segments and you will use size greater or equal to that at query time. See [theta-size](http://datasketches.github.io/docs/ThetaSize.html) for details. In general, We recommend just sticking to default size. |no, defaults to 16384|
+|size|Must be a power of 2. Internally, size refers to the maximum number of entries sketch object will retain. Higher size means higher accuracy but more space to store sketches. Note that after you index with a particular size, druid will persist sketch in segments and you will use size greater or equal to that at query time. See the [DataSketches site](https://datasketches.github.io/docs/Theta/ThetaSize.html) for details. In general, We recommend just sticking to default size. |no, defaults to 16384|
 
 ### Post Aggregators
 

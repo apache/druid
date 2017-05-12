@@ -215,6 +215,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     return numEntries.get();
   }
 
+  @Override
+  public int getLastRowIndex()
+  {
+    return indexIncrement.get() - 1;
+  }
+
   private void factorizeAggs(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,

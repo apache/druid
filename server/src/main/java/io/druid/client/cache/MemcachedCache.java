@@ -409,7 +409,7 @@ public class MemcachedCache implements Cache
   {
     Preconditions.checkArgument(
         config.getMemcachedPrefix().length() <= MAX_PREFIX_LENGTH,
-        "memcachedPrefix length [%d] exceeds maximum length [%d]",
+        "memcachedPrefix length [%s] exceeds maximum length [%s]",
         config.getMemcachedPrefix().length(),
         MAX_PREFIX_LENGTH
     );

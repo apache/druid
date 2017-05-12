@@ -36,13 +36,13 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
-    DataSource dataSource = query.getDataSource();
+    DataSource dataSource = queryPlus.getQuery().getDataSource();
     if (dataSource instanceof QueryDataSource) {
-      return run((Query<T>) ((QueryDataSource) dataSource).getQuery(), responseContext);
+      return run(queryPlus.withQuery((Query<T>) ((QueryDataSource) dataSource).getQuery()), responseContext);
     } else {
-      return baseRunner.run(query, responseContext);
+      return baseRunner.run(queryPlus, responseContext);
     }
   }
 }

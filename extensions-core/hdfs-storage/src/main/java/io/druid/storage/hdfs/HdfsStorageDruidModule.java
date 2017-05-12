@@ -118,9 +118,9 @@ public class HdfsStorageDruidModule implements DruidModule
     }
 
     if (props != null) {
-      for (String propName : System.getProperties().stringPropertyNames()) {
+      for (String propName : props.stringPropertyNames()) {
         if (propName.startsWith("hadoop.")) {
-          conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
+          conf.set(propName.substring("hadoop.".length()), props.getProperty(propName));
         }
       }
     }
