@@ -89,7 +89,10 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   @Inject
-  public SegmentMetadataQueryQueryToolChest(SegmentMetadataQueryConfig config, GenericQueryMetricsFactory queryMetricsFactory)
+  public SegmentMetadataQueryQueryToolChest(
+      SegmentMetadataQueryConfig config,
+      GenericQueryMetricsFactory queryMetricsFactory
+  )
   {
     this.config = config;
     this.queryMetricsFactory = queryMetricsFactory;
@@ -233,10 +236,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(SegmentMetadataQuery query, List<T> segments)
   {
-    if (!query.isUsingDefaultInterval()) {
-      return segments;
-    }
-
     if (segments.size() <= 1) {
       return segments;
     }
@@ -244,7 +243,23 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     final T max = segments.get(segments.size() - 1);
 
     DateTime targetEnd = max.getInterval().getEnd();
-    final Interval targetInterval = new Interval(config.getDefaultHistory(), targetEnd);
+    List<Interval> intervals = query.getIntervals();
+
+    DateTime queryStartTime = JodaUtils.ETERNITY.getEnd();
+    DateTime queryEndTIme = JodaUtils.ETERNITY.getStart();
+
+    for (Interval interval : intervals) {
+      queryEndTIme = queryEndTIme.isAfter(interval.getEnd()) ? queryEndTIme : interval.getEnd();
+      queryStartTime = queryStartTime.isBefore(interval.getStart()) ? queryStartTime : interval.getStart();
+    }
+
+    Interval targetInterval;
+    if (!query.isUsingDefaultInterval()) {
+      targetInterval = new Interval(queryStartTime, queryEndTIme);
+    } else {
+      DateTime finalEndTime = queryEndTIme.isBefore(targetEnd) ? queryEndTIme : targetEnd;
+      targetInterval = new Interval(config.getDefaultHistory(), finalEndTime);
+    }
 
     return Lists.newArrayList(
         Iterables.filter(

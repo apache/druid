@@ -117,13 +117,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     if (querySegmentSpec == null) {
       this.usingDefaultInterval = true;
     } else {
-      if (querySegmentSpec.getIntervals().size() == 1 && querySegmentSpec.getIntervals()
-                                                                         .get(0)
-                                                                         .equals(DEFAULT_INTERVAL)) {
-        this.usingDefaultInterval = true;
-      } else {
-        this.usingDefaultInterval = false;
-      }
+      this.usingDefaultInterval = (querySegmentSpec.getIntervals().size() == 1 &&
+                                   querySegmentSpec.getIntervals().get(0).equals(DEFAULT_INTERVAL));
     }
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
@@ -262,9 +257,14 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       return this;
     }
     return Druids.SegmentMetadataQueryBuilder
-          .copy(this)
-          .analysisTypes(config.getDefaultAnalysisTypes())
-          .build();
+        .copy(this)
+        .analysisTypes(config.getDefaultAnalysisTypes())
+        .build();
+  }
+
+  public List<Interval> getIntervals()
+  {
+    return this.getQuerySegmentSpec().getIntervals();
   }
 
   @Override

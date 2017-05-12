@@ -1104,9 +1104,8 @@ public class SegmentMetadataQueryTest
       Assert.assertEquals(expectedSegments3.get(i).getInterval(), filteredSegments2.get(i).getInterval());
     }
 
-    Assert.assertFalse(testQuery2.isUsingDefaultInterval());
     Assert.assertTrue(testQuery.isUsingDefaultInterval());
-
+    Assert.assertFalse(testQuery2.isUsingDefaultInterval());
 
   }
 
