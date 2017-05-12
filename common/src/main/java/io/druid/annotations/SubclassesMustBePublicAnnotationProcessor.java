@@ -40,7 +40,8 @@ public class SubclassesMustBePublicAnnotationProcessor extends AbstractProcessor
         if (!element.getModifiers().contains(Modifier.PUBLIC)) {
           processingEnv.getMessager().printMessage(
               Diagnostic.Kind.ERROR,
-              element.getSimpleName() + " must be public"
+              element.getSimpleName() + " must be public",
+              element
           );
         }
       }
