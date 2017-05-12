@@ -17,34 +17,21 @@
  * under the License.
  */
 
-package io.druid.query.topn;
+package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.Min;
-
-/**
- */
-public class TopNQueryConfig
+public class GenericQueryConfig
 {
   @JsonProperty
-  @Min(1)
-  private int minTopNThreshold = 1000;
+  private Class<? extends GenericQueryMetricsFactory> queryMetricsFactory = DefaultGenericQueryMetricsFactory.class;
 
-  @JsonProperty
-  private Class<? extends TopNQueryMetricsFactory> queryMetricsFactory = DefaultTopNQueryMetricsFactory.class;
-
-  public int getMinTopNThreshold()
-  {
-    return minTopNThreshold;
-  }
-
-  public Class<? extends TopNQueryMetricsFactory> getQueryMetricsFactory()
+  public Class<? extends GenericQueryMetricsFactory> getQueryMetricsFactory()
   {
     return queryMetricsFactory;
   }
 
-  public void setQueryMetricsFactory(Class<? extends TopNQueryMetricsFactory> queryMetricsFactory)
+  public void setQueryMetricsFactory(Class<? extends GenericQueryMetricsFactory> queryMetricsFactory)
   {
     this.queryMetricsFactory = queryMetricsFactory;
   }

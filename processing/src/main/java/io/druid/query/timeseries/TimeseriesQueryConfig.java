@@ -17,34 +17,22 @@
  * under the License.
  */
 
-package io.druid.query.topn;
+package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.Min;
-
-/**
- */
-public class TopNQueryConfig
+public class TimeseriesQueryConfig
 {
   @JsonProperty
-  @Min(1)
-  private int minTopNThreshold = 1000;
+  private Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory =
+      DefaultTimeseriesQueryMetricsFactory.class;
 
-  @JsonProperty
-  private Class<? extends TopNQueryMetricsFactory> queryMetricsFactory = DefaultTopNQueryMetricsFactory.class;
-
-  public int getMinTopNThreshold()
-  {
-    return minTopNThreshold;
-  }
-
-  public Class<? extends TopNQueryMetricsFactory> getQueryMetricsFactory()
+  public Class<? extends TimeseriesQueryMetricsFactory> getQueryMetricsFactory()
   {
     return queryMetricsFactory;
   }
 
-  public void setQueryMetricsFactory(Class<? extends TopNQueryMetricsFactory> queryMetricsFactory)
+  public void setQueryMetricsFactory(Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory)
   {
     this.queryMetricsFactory = queryMetricsFactory;
   }
