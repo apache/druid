@@ -1,11 +1,13 @@
 # IntelliJ Setup
-This document contains some examples and instructions on how to get IntelliJ setup to run local debuging and test setups of Druid.
+This document contains some examples and instructions on how to get IntelliJ setup to run local debugging and test setups of Druid.
 
 ## Code Style
 The Code Style is available in XML format at [druid_intellij_formatting.xml](druid_intellij_formatting.xml) and can be [imported into IntelliJ](https://www.jetbrains.com/help/idea/2017.1/copying-code-style-settings.html).
 
-## MySQL
-The installation of mysql is outside the scope of this document, but instructions on setting up MySQL can be found at [docs/content/development/extensions-core/mysql.md](docs/content/development/extensions-core/mysql.md). This assumes you followed the example there and have a database named `druid` with proper permissions for a user named `druid` and a password of `diurd`.
+## Metadata
+The installation of a MySQL metadata store is outside the scope of this document, but instructions on setting up MySQL can be found at [docs/content/development/extensions-core/mysql.md](docs/content/development/extensions-core/mysql.md). This assumes you followed the example there and have a database named `druid` with proper permissions for a user named `druid` and a password of `diurd`.
+
+Use of other databases such as Postgres or Derby are entirely reasonable, but doing so is left as an excercise to the reader.
 
 ## ZooKeeper
 This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
