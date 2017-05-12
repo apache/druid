@@ -277,10 +277,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     synchronized (servers) {
       DruidServerHolder holder = servers.get(containerKey);
       if (holder != null) {
-        DruidServer server = holder.druidServer;
-        if (server.getCurrSize() > 0) {
-          return server;
-        }
+        return holder.druidServer;
       }
     }
 
