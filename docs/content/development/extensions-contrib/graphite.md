@@ -58,7 +58,7 @@ You can omit the hostname by setting `ignoreHostname=true`
 You can omit the service name by setting `ignoreServiceName=true`
 `druid.HOSTNAME.dataSourceName.queryType.query/time`
 
-Elements in metric name by default are separated by "/", so graphite will create all metrics on one level. If you want to have metrics in the tree structure, you have to set `replaceStashWithDot=true`
+Elements in metric name by default are separated by "/", so graphite will create all metrics on one level. If you want to have metrics in the tree structure, you have to set `replaceSlashWithDot=true`
 Original: `druid.HOSTNAME.dataSourceName.queryType.query/time`
 Changed: `druid.HOSTNAME.dataSourceName.queryType.query.time`
 
