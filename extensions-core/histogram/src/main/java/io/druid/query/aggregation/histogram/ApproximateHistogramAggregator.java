@@ -65,7 +65,7 @@ public class ApproximateHistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    histogram.offer(selector.get());
+    histogram.offer(Math.max(Math.min(selector.get(), upperLimit), lowerLimit));
   }
 
   @Override
