@@ -39,7 +39,6 @@ import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
@@ -70,6 +69,8 @@ import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.timeline.DataSegment;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
@@ -230,65 +231,70 @@ public class DruidCoordinator
     return loadManagementPeons;
   }
 
-  public Map<String, CountingMap<String>> getReplicationStatus()
+  public Map<String, ? extends Object2LongMap<String>> getReplicationStatus()
   {
-    final Map<String, CountingMap<String>> retVal = Maps.newHashMap();
+    final Map<String, Object2LongOpenHashMap<String>> retVal = Maps.newHashMap();
 
     if (segmentReplicantLookup == null) {
       return retVal;
     }
 
     final DateTime now = new DateTime();
-    for (DataSegment segment : getAvailableDataSegments()) {
-      List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
-      for (Rule rule : rules) {
-        if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
-          for (Map.Entry<String, Integer> entry : ((LoadRule) rule).getTieredReplicants().entrySet()) {
-            CountingMap<String> dataSourceMap = retVal.get(entry.getKey());
-            if (dataSourceMap == null) {
-              dataSourceMap = new CountingMap<>();
-              retVal.put(entry.getKey(), dataSourceMap);
-            }
 
-            int diff = Math.max(
-                entry.getValue() - segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), entry.getKey()),
-                0
-            );
-            dataSourceMap.add(segment.getDataSource(), diff);
-          }
-          break;
+    for (final DataSegment segment : getAvailableDataSegments()) {
+      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
+
+      for (final Rule rule : rules) {
+        if (!(rule instanceof LoadRule && rule.appliesTo(segment, now))) {
+          continue;
         }
+
+        ((LoadRule) rule)
+            .getTieredReplicants()
+            .forEach(
+                (final String tier, final Integer numReplicants) -> {
+                  final int diff =
+                      numReplicants -
+                      segmentReplicantLookup.getTotalReplicants(
+                          segment.getIdentifier(), tier
+                      );
+                  retVal
+                      .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
+                      .addTo(segment.getDataSource(), Math.max(diff, 0));
+                }
+            );
       }
     }
 
     return retVal;
   }
 
-  public CountingMap<String> getSegmentAvailability()
+
+  public Object2LongMap<String> getSegmentAvailability()
   {
-    final CountingMap<String> retVal = new CountingMap<>();
+    final Object2LongOpenHashMap<String> retVal = new Object2LongOpenHashMap<>();
 
     if (segmentReplicantLookup == null) {
       return retVal;
     }
 
     for (DataSegment segment : getAvailableDataSegments()) {
-      int available = (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0) ? 0 : 1;
-      retVal.add(segment.getDataSource(), 1 - available);
+      int available = (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0)
+                      ? 0
+                      : 1;
+      retVal.addTo(segment.getDataSource(), 1 - available);
     }
 
     return retVal;
   }
 
-  CountingMap<String> getLoadPendingDatasources()
+  boolean hasLoadPending(final String dataSource)
   {
-    final CountingMap<String> retVal = new CountingMap<>();
-    for (LoadQueuePeon peon : loadManagementPeons.values()) {
-      for (DataSegment segment : peon.getSegmentsToLoad()) {
-        retVal.add(segment.getDataSource(), 1);
-      }
-    }
-    return retVal;
+    return loadManagementPeons
+        .values()
+        .stream()
+        .flatMap((final LoadQueuePeon peon) -> peon.getSegmentsToLoad().stream())
+        .anyMatch((final DataSegment segment) -> segment.getDataSource().equals(dataSource));
   }
 
   public Map<String, Double> getLoadStatus()
