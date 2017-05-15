@@ -1074,6 +1074,7 @@ public class IndexMerger
       this.lastVal = NOT_INIT;
     }
 
+    @Override
     public int seek(int dictId)
     {
       if (dimConversions == null) {

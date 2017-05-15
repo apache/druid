@@ -129,6 +129,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return getContextBoolean("skipEmptyBuckets", false);
   }
 
+  @Override
   public TimeseriesQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
     return Druids.TimeseriesQueryBuilder.copy(this).intervals(querySegmentSpec).build();
@@ -140,6 +141,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Druids.TimeseriesQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
+  @Override
   public TimeseriesQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);

@@ -128,5 +128,6 @@ public interface LoadingCache<K, V> extends Closeable
    * the namespace deletion event should call this method to clean up resources.
    */
 
+  @Override
   void close();
 }

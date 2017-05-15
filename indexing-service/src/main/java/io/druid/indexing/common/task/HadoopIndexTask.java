@@ -147,6 +147,7 @@ public class HadoopIndexTask extends HadoopTask
     return spec;
   }
 
+  @Override
   @JsonProperty
   public List<String> getHadoopDependencyCoordinates()
   {

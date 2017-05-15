@@ -70,6 +70,7 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
     this.maxId = maxId;
   }
 
+  @Override
   public void open() throws IOException
   {
     headerOut = new CountingOutputStream(ioPeon.makeOutputStream(headerFileName));

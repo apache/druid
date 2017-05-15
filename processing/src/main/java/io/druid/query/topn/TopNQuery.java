@@ -168,6 +168,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     topNMetricSpec.initTopNAlgorithmSelector(selector);
   }
 
+  @Override
   public TopNQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
     return new TopNQueryBuilder(this).intervals(querySegmentSpec).build();
@@ -199,6 +200,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return new TopNQueryBuilder(this).threshold(threshold).build();
   }
 
+  @Override
   public TopNQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TopNQueryBuilder(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();

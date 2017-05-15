@@ -53,6 +53,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
   @Param({"true", "false"})
   boolean byRow;
 
+  @Override
   protected void setUp()
   {
     Iterable<String[]> values = FluentIterable

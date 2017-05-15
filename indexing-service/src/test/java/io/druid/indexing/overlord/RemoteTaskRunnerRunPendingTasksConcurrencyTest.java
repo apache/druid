@@ -65,6 +65,7 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
     remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
         new TestRemoteTaskRunnerConfig(new Period("PT3600S"))
         {
+          @Override
           public int getPendingTasksRunnerNumThreads()
           {
             return 2;

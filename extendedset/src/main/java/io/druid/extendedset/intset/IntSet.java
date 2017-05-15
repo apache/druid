@@ -605,6 +605,7 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
     /**
      * @return <tt>true</tt> if the iterator has more elements.
      */
+    @Override
     boolean hasNext();
 
     /**
@@ -612,6 +613,7 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
      *
      * @throws NoSuchElementException iteration has no more elements.
      */
+    @Override
     int next();
 
     /**
@@ -648,6 +650,7 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
      *
      * @return a clone of the IntIterator
      */
+    @Override
     public IntIterator clone();
   }
 }

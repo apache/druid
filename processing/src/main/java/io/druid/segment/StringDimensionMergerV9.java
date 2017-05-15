@@ -496,6 +496,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       this.lastVal = NOT_INIT;
     }
 
+    @Override
     public int seek(int dictId)
     {
       if (dimConversions == null) {
