@@ -205,14 +205,18 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   {
                     final Query<SegmentAnalysis> query = queryPlus.getQuery();
                     final int priority = QueryContexts.getPriority(query);
-                    ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
+                    final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.threadSafe();
+                    final ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
                         new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
                         {
                           @Override
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
                             return Sequences.simple(
-                                Sequences.toList(input.run(queryPlus, responseContext), new ArrayList<>())
+                                Sequences.toList(
+                                    input.run(threadSafeQueryPlus, responseContext),
+                                    new ArrayList<>()
+                                )
                             );
                           }
                         }

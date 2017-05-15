@@ -94,7 +94,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
     Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
     final Ordering ordering = query.getResultOrdering();
-
+    final QueryPlus<T> threadSafeQueryPlus = queryPlus.threadSafe();
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
@@ -122,7 +122,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   public Iterable<T> call() throws Exception
                                   {
                                     try {
-                                      Sequence<T> result = input.run(queryPlus, responseContext);
+                                      Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
                                       if (result == null) {
                                         throw new ISE("Got a null result! Segments are missing!");
                                       }

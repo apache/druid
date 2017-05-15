@@ -77,6 +77,31 @@ public final class QueryPlus<T>
   }
 
   /**
+   * Returns a QueryPlus object without the components which are unsafe for concurrent use from multiple threads,
+   * therefore couldn't be passed down in concurrent or async {@link QueryRunner}s.
+   *
+   * Currently the only unsafe component is {@link QueryMetrics}, i. e. {@code threadSafe()} call is equivalent to
+   * {@link #withoutQueryMetrics()}.
+   */
+  public QueryPlus<T> threadSafe()
+  {
+    return withoutQueryMetrics();
+  }
+
+  /**
+   * Returns the same QueryPlus object, if it doesn't have {@link QueryMetrics} ({@link #getQueryMetrics()} returns
+   * null), or returns a new QueryPlus object with {@link Query} from this QueryPlus and null as QueryMetrics.
+   */
+  private QueryPlus<T> withoutQueryMetrics()
+  {
+    if (queryMetrics == null) {
+      return this;
+    } else {
+      return new QueryPlus<>(query, null);
+    }
+  }
+
+  /**
    * Equivalent of withQuery(getQuery().withQuerySegmentSpec(spec)).
    */
   public QueryPlus<T> withQuerySegmentSpec(QuerySegmentSpec spec)
