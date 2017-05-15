@@ -9,7 +9,8 @@ To use this extension, make sure to [include](../../operations/including-extensi
 ## Introduction
 
 This extension emits druid metrics to a graphite carbon server.
-Metrics can be sent by using [plaintext](http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol) or [pickle](http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-pickle-protocol) protocol; the size of the batch is configurable(only pickle protocol).
+Metrics can be sent by using [plaintext](http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol) or [pickle](http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-pickle-protocol) protocol.
+The pickle protocol is more efficient and supports sending batches of metrics (plaintext protocol send only one metric) in one request; batch size is configurable.
 
 ## Configuration
 
@@ -19,9 +20,9 @@ All the configuration parameters for graphite emitter are under `druid.emitter.g
 |--------|-----------|---------|-------|
 |`druid.emitter.graphite.hostname`|The hostname of the graphite server.|yes|none|
 |`druid.emitter.graphite.port`|The port of the graphite server.|yes|none|
-|`druid.emitter.graphite.batchSize`|Number of events to send as one batch(only for pickle protocol)|no|100|
+|`druid.emitter.graphite.batchSize`|Number of events to send as one batch (only for pickle protocol)|no|100|
 |`druid.emitter.graphite.protocol`|Graphite protocol; available protocols: pickle, plaintext.|no|pickle|
-|`druid.emitter.graphite.eventConverter`| Filter and converter of druid events to graphite event(please see next section). |yes|none|  
+|`druid.emitter.graphite.eventConverter`| Filter and converter of druid events to graphite event (please see next section).|yes|none|
 |`druid.emitter.graphite.flushPeriod` | Queue flushing period in milliseconds. |no|1 minute|
 |`druid.emitter.graphite.maxQueueSize`| Maximum size of the queue used to buffer events. |no|`MAX_INT`|
 |`druid.emitter.graphite.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
