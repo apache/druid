@@ -122,6 +122,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   }
 
 
+  @Override
   public long getSerializedSize()
   {
     return 1 +             // version
@@ -132,6 +133,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
            baseBuffers.getSerializedSize(); // data
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));

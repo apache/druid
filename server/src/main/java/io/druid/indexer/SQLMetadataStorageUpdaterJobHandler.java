@@ -48,6 +48,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
     this.dbi = connector.getDBI();
   }
 
+  @Override
   public void publishSegments(final String tableName, final List<DataSegment> segments, final ObjectMapper mapper)
   {
     dbi.withHandle(

@@ -1117,11 +1117,13 @@ public class LookupCoordinatorManagerTest
 
     LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig = new LookupCoordinatorManagerConfig()
     {
+      @Override
       public long getInitialDelay()
       {
         return 1;
       }
 
+      @Override
       public int getThreadPoolSize()
       {
         return 2;

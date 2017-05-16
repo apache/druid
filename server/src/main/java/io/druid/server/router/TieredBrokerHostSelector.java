@@ -122,6 +122,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
     return tierConfig.getDefaultBrokerServiceName();
   }
 
+  @Override
   public Pair<String, ServerDiscoverySelector> select(final Query<T> query)
   {
     synchronized (lock) {

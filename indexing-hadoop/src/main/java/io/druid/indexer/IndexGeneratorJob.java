@@ -153,6 +153,7 @@ public class IndexGeneratorJob implements Jobby
     return jobStats;
   }
 
+  @Override
   public boolean run()
   {
     try {

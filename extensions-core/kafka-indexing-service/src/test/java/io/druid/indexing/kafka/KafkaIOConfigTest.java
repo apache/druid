@@ -74,6 +74,7 @@ public class KafkaIOConfigTest
     Assert.assertEquals(true, config.isUseTransaction());
     Assert.assertEquals(false, config.isPauseAfterRead());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
+    Assert.assertFalse("skipOffsetGaps", config.isSkipOffsetGaps());
   }
 
   @Test
@@ -87,7 +88,8 @@ public class KafkaIOConfigTest
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"pauseAfterRead\": true,\n"
-                     + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\"\n"
+                     + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
+                     + "  \"skipOffsetGaps\": true\n"
                      + "}";
 
     KafkaIOConfig config = (KafkaIOConfig) mapper.readValue(
@@ -108,6 +110,7 @@ public class KafkaIOConfigTest
     Assert.assertEquals(false, config.isUseTransaction());
     Assert.assertEquals(true, config.isPauseAfterRead());
     Assert.assertEquals(new DateTime("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
+    Assert.assertTrue("skipOffsetGaps", config.isSkipOffsetGaps());
   }
 
   @Test

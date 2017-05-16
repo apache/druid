@@ -71,6 +71,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
     this.dbi = connector.getDBI();
   }
 
+  @Override
   @LifecycleStart
   public void start()
   {

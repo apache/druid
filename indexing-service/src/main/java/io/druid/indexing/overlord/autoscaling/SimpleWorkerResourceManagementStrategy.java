@@ -94,6 +94,7 @@ public class SimpleWorkerResourceManagementStrategy extends AbstractWorkerResour
   }
 
 
+  @Override
   protected boolean doProvision(WorkerTaskRunner runner)
   {
     Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
@@ -163,6 +164,7 @@ public class SimpleWorkerResourceManagementStrategy extends AbstractWorkerResour
     }
   }
 
+  @Override
   boolean doTerminate(WorkerTaskRunner runner)
   {
     Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();

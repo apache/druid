@@ -108,6 +108,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     return result;
   }
 
+  @Override
   public QueryableDruidServer pick()
   {
     synchronized (this) {

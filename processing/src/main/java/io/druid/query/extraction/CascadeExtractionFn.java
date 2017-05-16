@@ -34,31 +34,37 @@ public class CascadeExtractionFn implements ExtractionFn
   private final ChainedExtractionFn DEFAULT_CHAINED_EXTRACTION_FN = new ChainedExtractionFn(
       new ExtractionFn()
       {
+        @Override
         public byte[] getCacheKey()
         {
           return new byte[0];
         }
 
+        @Override
         public String apply(Object value)
         {
           return null;
         }
 
+        @Override
         public String apply(String value)
         {
           return null;
         }
 
+        @Override
         public String apply(long value)
         {
           return null;
         }
 
+        @Override
         public boolean preservesOrdering()
         {
           return false;
         }
 
+        @Override
         public ExtractionType getExtractionType()
         {
           return ExtractionType.MANY_TO_ONE;
@@ -219,6 +225,7 @@ public class CascadeExtractionFn implements ExtractionFn
       }
     }
 
+    @Override
     public boolean equals(Object o)
     {
       if (this == o) {
@@ -240,6 +247,7 @@ public class CascadeExtractionFn implements ExtractionFn
       return true;
     }
 
+    @Override
     public int hashCode()
     {
       int result = fn.hashCode();
@@ -249,6 +257,7 @@ public class CascadeExtractionFn implements ExtractionFn
       return result;
     }
 
+    @Override
     public String toString()
     {
       return (child != null)

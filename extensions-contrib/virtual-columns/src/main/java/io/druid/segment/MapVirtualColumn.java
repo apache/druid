@@ -226,6 +226,7 @@ public class MapVirtualColumn implements VirtualColumn
     return valueDimension;
   }
 
+  @Override
   @JsonProperty
   public String getOutputName()
   {

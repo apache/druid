@@ -145,6 +145,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return pagingSpec.getOffset(identifier, isDescending());
   }
 
+  @Override
   public SelectQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
     return Druids.SelectQueryBuilder.copy(this).intervals(querySegmentSpec).build();
@@ -156,6 +157,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return Druids.SelectQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
+  @Override
   public SelectQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);

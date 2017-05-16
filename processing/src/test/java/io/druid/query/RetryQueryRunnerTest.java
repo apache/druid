@@ -165,6 +165,7 @@ public class RetryQueryRunnerTest
           private int numTries = 1;
           private boolean returnPartialResults = true;
 
+          @Override
           public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
@@ -232,6 +233,7 @@ public class RetryQueryRunnerTest
           private int numTries = 4;
           private boolean returnPartialResults = true;
 
+          @Override
           public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
@@ -284,6 +286,7 @@ public class RetryQueryRunnerTest
           private int numTries = 1;
           private boolean returnPartialResults = false;
 
+          @Override
           public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
@@ -396,6 +399,7 @@ public class RetryQueryRunnerTest
           private int numTries = 2;
           private boolean returnPartialResults = false;
 
+          @Override
           public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }

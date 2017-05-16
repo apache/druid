@@ -73,6 +73,7 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(false, config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
+    Assert.assertFalse("skipOffsetGaps", config.isSkipOffsetGaps());
   }
 
   @Test
@@ -89,7 +90,8 @@ public class KafkaSupervisorIOConfigTest
                      + "  \"period\": \"PT10S\",\n"
                      + "  \"useEarliestOffset\": true,\n"
                      + "  \"completionTimeout\": \"PT45M\",\n"
-                     + "  \"lateMessageRejectionPeriod\": \"PT1H\"\n"
+                     + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
+                     + "  \"skipOffsetGaps\": true\n"
                      + "}";
 
     KafkaSupervisorIOConfig config = mapper.readValue(
@@ -111,6 +113,7 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(true, config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
     Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
+    Assert.assertTrue("skipOffsetGaps", config.isSkipOffsetGaps());
   }
 
   @Test

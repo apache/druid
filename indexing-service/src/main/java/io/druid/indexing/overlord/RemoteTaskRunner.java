@@ -428,12 +428,14 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return ImmutableList.copyOf(pendingTasks.values());
   }
 
+  @Override
   public Collection<Task> getPendingTaskPayloads()
   {
     // return a snapshot of current pending task payloads.
     return ImmutableList.copyOf(pendingTaskPayloads.values());
   }
 
+  @Override
   public RemoteTaskRunnerConfig getConfig()
   {
     return config;
