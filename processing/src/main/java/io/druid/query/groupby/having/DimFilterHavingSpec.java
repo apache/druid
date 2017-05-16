@@ -29,15 +29,13 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.segment.column.ValueType;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class DimFilterHavingSpec extends BaseHavingSpec
 {
-  private static final byte CACHE_KEY = (byte) 0x9;
-
   private final DimFilter dimFilter;
   private final SettableSupplier<Row> rowSupplier;
+
   private ValueMatcher valueMatcher;
   private int evalCount;
 
@@ -75,16 +73,6 @@ public class DimFilterHavingSpec extends BaseHavingSpec
       throw new IllegalStateException("concurrent 'eval' calls not permitted!");
     }
     return retVal;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    final byte[] filterBytes = dimFilter.getCacheKey();
-    return ByteBuffer.allocate(1 + filterBytes.length)
-                     .put(CACHE_KEY)
-                     .put(filterBytes)
-                     .array();
   }
 
   @Override

@@ -24,17 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.druid.data.input.Row;
-import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 
 public class DimensionSelectorHavingSpec extends BaseHavingSpec
 {
-  private static final byte CACHE_KEY = (byte) 0x8;
-  private static final byte STRING_SEPARATOR = (byte) 0xFF;
   private final String dimension;
   private final String value;
   private final ExtractionFn extractionFn;
@@ -87,22 +83,6 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
     }
 
     return false;
-  }
-
-  public byte[] getCacheKey()
-  {
-    byte[] dimBytes = StringUtils.toUtf8(dimension);
-    byte[] valBytes = StringUtils.toUtf8(value);
-    byte [] extractionFnBytes = this.getExtractionFn().getCacheKey();
-
-    return ByteBuffer.allocate(3 + dimBytes.length + valBytes.length + extractionFnBytes.length)
-                       .put(CACHE_KEY)
-                       .put(dimBytes)
-                       .put(STRING_SEPARATOR)
-                       .put(valBytes)
-                       .put(STRING_SEPARATOR)
-                       .put(extractionFnBytes)
-                       .array();
   }
 
   @Override

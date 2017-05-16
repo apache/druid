@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Row;
 import io.druid.segment.column.ValueType;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -34,9 +33,7 @@ import java.util.Map;
  */
 public class OrHavingSpec extends BaseHavingSpec
 {
-  private static final byte CACHE_KEY = 0x7;
-
-  private List<HavingSpec> havingSpecs;
+  private final List<HavingSpec> havingSpecs;
 
   @JsonCreator
   public OrHavingSpec(@JsonProperty("havingSpecs") List<HavingSpec> havingSpecs)
@@ -68,25 +65,6 @@ public class OrHavingSpec extends BaseHavingSpec
     }
 
     return false;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    final byte[][] havingBytes = new byte[havingSpecs.size()][];
-    int havingBytesSize = 0;
-    int index = 0;
-    for (HavingSpec havingSpec : havingSpecs) {
-      havingBytes[index] = havingSpec.getCacheKey();
-      havingBytesSize += havingBytes[index].length;
-      ++index;
-    }
-
-    ByteBuffer buffer = ByteBuffer.allocate(1 + havingBytesSize).put(CACHE_KEY);
-    for (byte[] havingByte : havingBytes) {
-      buffer.put(havingByte);
-    }
-    return buffer.array();
   }
 
   @Override
