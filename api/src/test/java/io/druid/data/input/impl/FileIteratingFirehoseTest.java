@@ -59,7 +59,7 @@ public class FileIteratingFirehoseTest
     final List<Object[]> args = new ArrayList<>();
     for (int numSkipHeadRows = 0; numSkipHeadRows < 3; numSkipHeadRows++) {
       for (List<String> texts : inputTexts) {
-        args.add(new Object[] {texts, numSkipHeadRows});
+        args.add(new Object[] { texts, numSkipHeadRows });
       }
     }
 
@@ -86,26 +86,26 @@ public class FileIteratingFirehoseTest
 
     this.inputs = texts;
     this.expectedResults = inputs.stream()
-                                 .map(input -> input.split("\n"))
-                                 .flatMap(lines -> {
-                                   final List<String> filteredLines = Arrays.asList(lines).stream()
-                                                                            .filter(line -> line.length() > 0)
-                                                                            .map(line -> line.split(",")[1])
-                                                                            .collect(Collectors.toList());
+        .map(input -> input.split("\n"))
+        .flatMap(lines -> {
+          final List<String> filteredLines = Arrays.asList(lines).stream()
+              .filter(line -> line.length() > 0)
+              .map(line -> line.split(",")[1])
+              .collect(Collectors.toList());
 
-                                   final int numRealSkippedRows = Math.min(filteredLines.size(), numSkipHeaderRows);
-                                   IntStream.range(0, numRealSkippedRows).forEach(i -> filteredLines.set(i, null));
-                                   return filteredLines.stream();
-                                 })
-                                 .collect(Collectors.toList());
+          final int numRealSkippedRows = Math.min(filteredLines.size(), numSkipHeaderRows);
+          IntStream.range(0, numRealSkippedRows).forEach(i -> filteredLines.set(i, null));
+          return filteredLines.stream();
+        })
+        .collect(Collectors.toList());
   }
 
   @Test
   public void testFirehose() throws Exception
   {
     final List<LineIterator> lineIterators = inputs.stream()
-                                                   .map(s -> new LineIterator(new StringReader(s)))
-                                                   .collect(Collectors.toList());
+        .map(s -> new LineIterator(new StringReader(s)))
+        .collect(Collectors.toList());
 
     try (final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser)) {
       final List<String> results = Lists.newArrayList();

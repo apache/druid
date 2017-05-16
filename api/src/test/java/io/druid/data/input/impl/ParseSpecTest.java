@@ -26,6 +26,7 @@ import io.druid.java.util.common.parsers.ParseException;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class ParseSpecTest
 {
@@ -83,7 +84,7 @@ public class ParseSpecTest
             null
         ),
         new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a")),
+            DimensionsSpec.getDefaultSchemas(Collections.singletonList("a")),
             Lists.newArrayList("B", "B"),
             Lists.<SpatialDimensionSchema>newArrayList()
         ),

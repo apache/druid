@@ -191,15 +191,15 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public String toString()
   {
     return "ScanQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", descending=" + isDescending() +
-           ", resultFormat='" + resultFormat + '\'' +
-           ", batchSize=" + batchSize +
-           ", limit=" + limit +
-           ", dimFilter=" + dimFilter +
-           ", columns=" + columns +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", descending=" + isDescending() +
+        ", resultFormat='" + resultFormat + '\'' +
+        ", batchSize=" + batchSize +
+        ", limit=" + limit +
+        ", dimFilter=" + dimFilter +
+        ", columns=" + columns +
+        '}';
   }
 
   /**

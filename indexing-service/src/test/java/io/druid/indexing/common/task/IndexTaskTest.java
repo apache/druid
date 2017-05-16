@@ -207,7 +207,7 @@ public class IndexTaskTest
             null,
             new ArbitraryGranularitySpec(
                 Granularities.MINUTE,
-                Arrays.asList(new Interval("2014/2015"))
+                Collections.singletonList(new Interval("2014/2015"))
             ),
             10,
             null,
@@ -244,7 +244,7 @@ public class IndexTaskTest
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.HOUR,
-                Arrays.asList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
+                Collections.singletonList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
             ),
             50,
             null,
@@ -497,7 +497,7 @@ public class IndexTaskTest
           public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
           {
             if (taskAction instanceof LockListAction) {
-              return (RetType) Arrays.asList(
+              return (RetType) Collections.singletonList(
                   new TaskLock(
                       "", "", null, new DateTime().toString()
                   )

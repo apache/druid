@@ -357,7 +357,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     /**
      * Returns the value at the given index in the current decompression buffer
      *
-     * @param index index of the value in the curent buffer
+     * @param index index of the value in the current buffer
      *
      * @return the value at the given index
      */
