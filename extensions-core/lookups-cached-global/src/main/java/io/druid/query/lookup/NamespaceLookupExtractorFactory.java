@@ -232,4 +232,10 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       readLock.unlock();
     }
   }
+
+  @VisibleForTesting
+  CacheScheduler getCacheScheduler()
+  {
+    return cacheScheduler;
+  }
 }
