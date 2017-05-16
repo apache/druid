@@ -245,19 +245,16 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     DateTime targetEnd = max.getInterval().getEnd();
     List<Interval> intervals = query.getIntervals();
 
-    DateTime queryStartTime = JodaUtils.ETERNITY.getEnd();
-    DateTime queryEndTIme = JodaUtils.ETERNITY.getStart();
-
-    for (Interval interval : intervals) {
-      queryEndTIme = queryEndTIme.isAfter(interval.getEnd()) ? queryEndTIme : interval.getEnd();
-      queryStartTime = queryStartTime.isBefore(interval.getStart()) ? queryStartTime : interval.getStart();
-    }
+    DateTime queryEndTime = intervals.stream().map(Interval::getEnd)
+                                      .max(Ordering.natural()).orElseThrow(IllegalStateException::new);
+    DateTime queryStartTime = intervals.stream().map(Interval::getStart)
+                                     .min(Ordering.natural()).orElseThrow(IllegalStateException::new);
 
     Interval targetInterval;
     if (!query.isUsingDefaultInterval()) {
-      targetInterval = new Interval(queryStartTime, queryEndTIme);
+      targetInterval = new Interval(queryStartTime, queryEndTime);
     } else {
-      DateTime finalEndTime = queryEndTIme.isBefore(targetEnd) ? queryEndTIme : targetEnd;
+      DateTime finalEndTime = queryEndTime.isBefore(targetEnd) ? queryEndTime : targetEnd;
       targetInterval = new Interval(config.getDefaultHistory(), finalEndTime);
     }
 
