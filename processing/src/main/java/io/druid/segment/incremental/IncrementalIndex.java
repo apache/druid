@@ -70,6 +70,7 @@ import java.io.Closeable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
@@ -868,9 +869,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             public Object apply(@Nullable Object input)
             {
               if (input == null || Array.getLength(input) == 0) {
-                return Arrays.asList("null");
+                return Collections.singletonList("null");
               }
-              return Arrays.asList(input);
+              return Collections.singletonList(input);
             }
           }
       ) + '}';
@@ -1001,11 +1002,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       this.value = value;
     }
 
+    @Override
     public TimeAndDims getKey()
     {
       return key;
     }
 
+    @Override
     public Integer getValue()
     {
       return value;
@@ -1116,6 +1119,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
     }
 
+    @Override
     public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet()
     {
       return facts.entrySet();
@@ -1212,6 +1216,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
     }
 
+    @Override
     public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet()
     {
       return concat(facts.values(), false);

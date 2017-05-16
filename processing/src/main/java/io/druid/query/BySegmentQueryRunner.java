@@ -24,7 +24,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import org.joda.time.DateTime;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +55,7 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
       final Sequence<T> baseSequence = base.run(queryPlus, responseContext);
       final List<T> results = Sequences.toList(baseSequence, Lists.<T>newArrayList());
       return Sequences.simple(
-          Arrays.asList(
+          Collections.singletonList(
               (T) new Result<BySegmentResultValueClass<T>>(
                   timestamp,
                   new BySegmentResultValueClass<T>(

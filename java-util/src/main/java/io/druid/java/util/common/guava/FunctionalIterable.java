@@ -58,6 +58,7 @@ public class FunctionalIterable<T> implements Iterable<T>
     this.delegate = delegate;
   }
 
+  @Override
   public Iterator<T> iterator()
   {
     return delegate.iterator();

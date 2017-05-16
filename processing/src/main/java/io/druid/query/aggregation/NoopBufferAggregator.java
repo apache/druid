@@ -73,5 +73,6 @@ public final class NoopBufferAggregator implements BufferAggregator
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

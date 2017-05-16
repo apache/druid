@@ -89,7 +89,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,7 +156,7 @@ public class TopNBenchmark
     BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
 
     { // basic.A
-      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
@@ -176,7 +176,7 @@ public class TopNBenchmark
       basicQueries.put("A", queryBuilderA);
     }
     { // basic.numericSort
-      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
@@ -192,7 +192,7 @@ public class TopNBenchmark
       basicQueries.put("numericSort", queryBuilderA);
     }
     { // basic.alphanumericSort
-      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));

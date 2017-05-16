@@ -30,6 +30,7 @@ import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -152,7 +153,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return fieldName != null ? Arrays.asList(fieldName) : Parser.findRequiredBindings(expression);
+    return fieldName != null ? Collections.singletonList(fieldName) : Parser.findRequiredBindings(expression);
   }
 
   @Override

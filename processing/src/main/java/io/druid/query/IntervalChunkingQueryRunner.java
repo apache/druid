@@ -31,7 +31,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +113,8 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                         ),
                         executor, queryWatcher
                     ).run(
-                        queryPlus.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))),
+                        queryPlus.withQuerySegmentSpec(
+                            new MultipleIntervalSegmentSpec(Collections.singletonList(singleInterval))),
                         responseContext
                     );
                   }

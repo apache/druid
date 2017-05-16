@@ -34,7 +34,6 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +56,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
     super(
         dataSource,
         (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Collections.singletonList(MY_Y2K_INTERVAL))
-                                   : querySegmentSpec,
+            : querySegmentSpec,
         false,
         context
     );
@@ -102,10 +101,12 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
 
   public Iterable<Result<DataSourceMetadataResultValue>> buildResult(DateTime timestamp, DateTime maxIngestedEventTime)
   {
-    return Arrays.asList(new Result<>(timestamp, new DataSourceMetadataResultValue(maxIngestedEventTime)));
+    return Collections.singletonList(new Result<>(timestamp, new DataSourceMetadataResultValue(maxIngestedEventTime)));
   }
 
-  public Iterable<Result<DataSourceMetadataResultValue>> mergeResults(List<Result<DataSourceMetadataResultValue>> results)
+  public Iterable<Result<DataSourceMetadataResultValue>> mergeResults(
+      List<Result<DataSourceMetadataResultValue>> results
+  )
   {
     if (results == null || results.isEmpty()) {
       return Lists.newArrayList();
@@ -126,10 +127,10 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   public String toString()
   {
     return "DataSourceMetadataQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", duration=" + getDuration() +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", duration=" + getDuration() +
+        '}';
   }
 
 }

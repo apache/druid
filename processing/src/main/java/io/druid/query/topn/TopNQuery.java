@@ -83,8 +83,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     this.postAggregatorSpecs = Queries.prepareAggregations(
         this.aggregatorSpecs,
         postAggregatorSpecs == null
-        ? ImmutableList.<PostAggregator>of()
-        : postAggregatorSpecs
+            ? ImmutableList.<PostAggregator>of()
+            : postAggregatorSpecs
     );
 
     Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
@@ -168,6 +168,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     topNMetricSpec.initTopNAlgorithmSelector(selector);
   }
 
+  @Override
   public TopNQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
     return new TopNQueryBuilder(this).intervals(querySegmentSpec).build();
@@ -199,6 +200,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return new TopNQueryBuilder(this).threshold(threshold).build();
   }
 
+  @Override
   public TopNQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TopNQueryBuilder(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
@@ -213,17 +215,17 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public String toString()
   {
     return "TopNQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", dimensionSpec=" + dimensionSpec +
-           ", topNMetricSpec=" + topNMetricSpec +
-           ", threshold=" + threshold +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", virtualColumns=" + virtualColumns +
-           ", dimFilter=" + dimFilter +
-           ", granularity='" + granularity + '\'' +
-           ", aggregatorSpecs=" + aggregatorSpecs +
-           ", postAggregatorSpecs=" + postAggregatorSpecs +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", dimensionSpec=" + dimensionSpec +
+        ", topNMetricSpec=" + topNMetricSpec +
+        ", threshold=" + threshold +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", virtualColumns=" + virtualColumns +
+        ", dimFilter=" + dimFilter +
+        ", granularity='" + granularity + '\'' +
+        ", aggregatorSpecs=" + aggregatorSpecs +
+        ", postAggregatorSpecs=" + postAggregatorSpecs +
+        '}';
   }
 
   @Override
@@ -240,13 +242,13 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     }
     final TopNQuery topNQuery = (TopNQuery) o;
     return threshold == topNQuery.threshold &&
-           Objects.equals(virtualColumns, topNQuery.virtualColumns) &&
-           Objects.equals(dimensionSpec, topNQuery.dimensionSpec) &&
-           Objects.equals(topNMetricSpec, topNQuery.topNMetricSpec) &&
-           Objects.equals(dimFilter, topNQuery.dimFilter) &&
-           Objects.equals(granularity, topNQuery.granularity) &&
-           Objects.equals(aggregatorSpecs, topNQuery.aggregatorSpecs) &&
-           Objects.equals(postAggregatorSpecs, topNQuery.postAggregatorSpecs);
+        Objects.equals(virtualColumns, topNQuery.virtualColumns) &&
+        Objects.equals(dimensionSpec, topNQuery.dimensionSpec) &&
+        Objects.equals(topNMetricSpec, topNQuery.topNMetricSpec) &&
+        Objects.equals(dimFilter, topNQuery.dimFilter) &&
+        Objects.equals(granularity, topNQuery.granularity) &&
+        Objects.equals(aggregatorSpecs, topNQuery.aggregatorSpecs) &&
+        Objects.equals(postAggregatorSpecs, topNQuery.postAggregatorSpecs);
   }
 
   @Override

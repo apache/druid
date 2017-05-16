@@ -34,6 +34,7 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.SingleValueDimensionSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -105,12 +106,18 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         throw new UnsupportedOperationException("time dimension must provide an extraction function");
       }
 
-      return new DimensionSelector()
+      return new SingleValueDimensionSelector()
       {
         @Override
         public IndexedInts getRow()
         {
           return ZeroIndexedInts.instance();
+        }
+
+        @Override
+        public int getRowValue()
+        {
+          return 0;
         }
 
         @Override
@@ -123,6 +130,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
             {
               String rowValue = extractionFn.apply(row.get().getTimestampFromEpoch());
               return Objects.equals(rowValue, value);
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+              inspector.visit("row", row);
+              inspector.visit("extractionFn", extractionFn);
             }
           };
         }
@@ -137,6 +151,14 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
             {
               String rowValue = extractionFn.apply(row.get().getTimestampFromEpoch());
               return predicate.apply(rowValue);
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+              inspector.visit("row", row);
+              inspector.visit("extractionFn", extractionFn);
+              inspector.visit("predicate", predicate);
             }
           };
         }
@@ -204,6 +226,12 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
                 return false;
               }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("row", row);
+              }
             };
           } else {
             return new ValueMatcher()
@@ -222,6 +250,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                   }
                 }
                 return false;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("row", row);
+                inspector.visit("extractionFn", extractionFn);
               }
             };
           }
@@ -249,6 +284,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
                 return false;
               }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("row", row);
+                inspector.visit("predicate", predicate);
+              }
             };
           } else {
             return new ValueMatcher()
@@ -267,6 +309,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                   }
                 }
                 return false;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("row", row);
+                inspector.visit("predicate", predicate);
               }
             };
           }

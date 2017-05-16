@@ -42,6 +42,7 @@ public class LookupIntrospectionResourceImplTest extends JerseyTest
    static LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
 
 
+  @Override
   @Before
   public void setUp() throws Exception
   {

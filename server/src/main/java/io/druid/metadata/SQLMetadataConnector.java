@@ -444,6 +444,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public abstract DBI getDBI();
 
+  @Override
   public void createDataSourceTable()
   {
     if (config.get().isCreateTables()) {
@@ -633,6 +634,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
+  @Override
   public void deleteAllRecords(final String tableName)
   {
     try {

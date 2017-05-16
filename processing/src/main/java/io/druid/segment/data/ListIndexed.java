@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
 import java.util.Iterator;
 import java.util.List;
 
@@ -66,5 +68,11 @@ public class ListIndexed<T> implements Indexed<T>
   public Iterator<T> iterator()
   {
     return baseList.iterator();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("baseList", baseList);
   }
 }

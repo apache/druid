@@ -389,6 +389,7 @@ public class RealtimeManager implements QuerySegmentWalker
       return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
     }
 
+    @Override
     public void close() throws IOException
     {
       synchronized (this) {

@@ -98,6 +98,7 @@ public class StringComparators
   {
     // This code is based on https://github.com/amjjd/java-alphanum, see
     // NOTICE file for more information
+    @Override
     public int compare(String str1, String str2)
     {
       int[] pos =

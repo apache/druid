@@ -110,6 +110,7 @@ public class LookupExtractorFactoryContainerTest
       return null;
     }
 
+    @Override
     public boolean equals(Object other)
     {
       return other instanceof TestLookupExtractorFactory;

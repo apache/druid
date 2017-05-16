@@ -405,12 +405,21 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
             if (record.offset() < endOffsets.get(record.partition())) {
               if (record.offset() != nextOffsets.get(record.partition())) {
-                throw new ISE(
-                    "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
-                    record.offset(),
-                    nextOffsets.get(record.partition()),
-                    record.partition()
-                );
+                if (ioConfig.isSkipOffsetGaps()) {
+                  log.warn(
+                      "Skipped to offset[%,d] after offset[%,d] in partition[%d].",
+                      record.offset(),
+                      nextOffsets.get(record.partition()),
+                      record.partition()
+                  );
+                } else {
+                  throw new ISE(
+                      "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
+                      record.offset(),
+                      nextOffsets.get(record.partition()),
+                      record.partition()
+                  );
+                }
               }
 
               try {

@@ -115,10 +115,9 @@ public class CompressedVSizeIndexedV3WriterTest
   private void checkSerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
     FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
-    final IOPeon ioPeon = new TmpFileIOPeon();
     final IndexedMultivalue<IndexedInts> indexedMultivalue;
 
-    try {
+    try (IOPeon ioPeon = new TmpFileIOPeon()) {
       int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
       CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
           ioPeon, "offset", offsetChunkFactor, byteOrder, compressionStrategy
@@ -169,9 +168,6 @@ public class CompressedVSizeIndexedV3WriterTest
         }
       }
       CloseQuietly.close(indexedMultivalue);
-    }
-    finally {
-      ioPeon.close();
     }
   }
 
@@ -245,10 +241,9 @@ public class CompressedVSizeIndexedV3WriterTest
         offsetChunkFactor
     )).toFile();
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
-    final IOPeon ioPeon = new TmpFileIOPeon();
     int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
 
-    try {
+    try (IOPeon ioPeon = new TmpFileIOPeon()) {
       CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
           offsetChunkFactor,
           compressionStrategy,
@@ -315,9 +310,6 @@ public class CompressedVSizeIndexedV3WriterTest
       }
       CloseQuietly.close(indexedMultivalue);
       mapper.close();
-    }
-    finally {
-      ioPeon.close();
     }
   }
 

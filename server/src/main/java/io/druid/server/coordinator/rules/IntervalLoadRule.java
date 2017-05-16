@@ -58,6 +58,7 @@ public class IntervalLoadRule extends LoadRule
     return "loadByInterval";
   }
 
+  @Override
   @JsonProperty
   public Map<String, Integer> getTieredReplicants()
   {

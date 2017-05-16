@@ -20,6 +20,7 @@
 package io.druid.segment.filter;
 
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 final class TrueValueMatcher implements ValueMatcher
 {
@@ -38,5 +39,11 @@ final class TrueValueMatcher implements ValueMatcher
   public boolean matches()
   {
     return true;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // nothing to inspect
   }
 }

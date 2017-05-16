@@ -157,7 +157,12 @@ public class CardinalityAggregatorTest
         @Override
         public void close() throws IOException
         {
+        }
 
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          // Don't care about runtime shape in tests
         }
       };
     }
@@ -210,6 +215,7 @@ public class CardinalityAggregatorTest
     @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
+      // Don't care about runtime shape in tests
     }
   }
 

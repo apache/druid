@@ -50,6 +50,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
 
     return new Function<Object, String>()
     {
+      @Override
       public String apply(Object input)
       {
         // ideally we need a close() function to discard the context once it is not used anymore

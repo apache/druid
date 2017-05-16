@@ -603,6 +603,7 @@ public class MemcachedCache implements Cache
     return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
   }
 
+  @Override
   public boolean isLocal()
   {
     return false;

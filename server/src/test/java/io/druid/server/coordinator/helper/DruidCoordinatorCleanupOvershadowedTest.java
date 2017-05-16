@@ -38,7 +38,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class DruidCoordinatorCleanupOvershadowedTest
@@ -63,6 +63,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
                                                            .interval(new Interval(start, start.plusHours(1)))
                                                            .version("2")
                                                            .build();
+
   @Test
   public void testRun()
   {
@@ -71,14 +72,16 @@ public class DruidCoordinatorCleanupOvershadowedTest
 
     druidCluster = new DruidCluster(
         null,
-        ImmutableMap.of("normal", MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(Arrays.asList(
-            new ServerHolder(druidServer, mockPeon
-            )))));
+        ImmutableMap.of("normal", MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+            Collections.singletonList(new ServerHolder(druidServer, mockPeon))
+        )));
 
     EasyMock.expect(druidServer.getDataSources())
             .andReturn(ImmutableList.of(druidDataSource))
             .anyTimes();
-    EasyMock.expect(druidDataSource.getSegments()).andReturn(ImmutableSet.<DataSegment>of(segmentV1, segmentV2)).anyTimes();
+    EasyMock.expect(druidDataSource.getSegments())
+            .andReturn(ImmutableSet.<DataSegment>of(segmentV1, segmentV2))
+            .anyTimes();
     EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
     coordinator.removeSegment(segmentV1);
     coordinator.removeSegment(segmentV0);
