@@ -9,10 +9,10 @@ For rolling Druid cluster updates with no downtime, we recommend updating Druid 
 following order:
 
 1. Historical
-2. Overlord (if any)
-3. Middle Manager (if any)
-4. Standalone Real-time (if any)
-5. Broker
+2. Middle Manager (if any)
+3. Standalone Real-time (if any)
+4. Broker
+5. Overlord (if any)
 6. Coordinator
 
 ## Historical
@@ -61,8 +61,9 @@ to `<MiddleManager_IP:PORT>/druid/worker/v1/enable`.
 
 If autoscaling is enabled on your Overlord, then Overlord nodes can launch new Middle Manager nodes
 en masse and then gracefully terminate old ones as their tasks finish. This process is configured by
-setting `druid.indexer.runner.minWorkerVersion=#{VERSION}`. Each time you update your overlord node,
-the `VERSION` value should be increased, which will trigger a mass launch of new Middle Managers.
+setting `druid.indexer.runner.minWorkerVersion=#{VERSION}`.
+So, first you increase `VERSION` value on the overlord, which will trigger mass launch of new Middle Managers.
+Once all Middle Managers are updated, then update the Overlord to new version.
 
 The config `druid.indexer.autoscale.workerVersion=#{VERSION}` also needs to be set.
 
