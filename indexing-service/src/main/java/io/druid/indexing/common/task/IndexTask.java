@@ -415,6 +415,10 @@ public class IndexTask extends AbstractTask
           try {
             final InputRow inputRow = firehose.nextRow();
 
+            if (inputRow == null) {
+              continue;
+            }
+
             final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
             if (!optInterval.isPresent()) {
               fireDepartmentMetrics.incrementThrownAway();
