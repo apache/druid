@@ -22,9 +22,7 @@ package io.druid.indexer;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-
 import io.druid.java.util.common.ISE;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -67,7 +65,8 @@ public class UtilsTest
 
   private static class CreateValueFromKey implements Function
   {
-    @Override public Object apply(Object input)
+    @Override
+    public Object apply(Object input)
     {
       return input.toString() + DUMMY_STRING;
     }
@@ -82,7 +81,7 @@ public class UtilsTest
     EasyMock.replay(mockJobContext);
 
     setOfKeys = new HashSet();
-    setOfKeys.addAll(new ArrayList<>(Arrays.asList("key1","key2","key3")));
+    setOfKeys.addAll(new ArrayList<>(Arrays.asList("key1", "key2", "key3")));
     expectedMap = (Map<String, Object>) Maps.asMap(setOfKeys, new CreateValueFromKey());
 
     tmpFile = tmpFolder.newFile(TMP_FILE_NAME);
@@ -99,20 +98,20 @@ public class UtilsTest
   @Test
   public void testExistsPlainFile() throws IOException
   {
-    boolean expected = Utils.exists(mockJobContext,defaultFileSystem,tmpPath);
-    Assert.assertTrue("Should be true since file is created",expected);
+    boolean expected = Utils.exists(mockJobContext, defaultFileSystem, tmpPath);
+    Assert.assertTrue("Should be true since file is created", expected);
     tmpFolder.delete();
-    expected = Utils.exists(mockJobContext,defaultFileSystem,tmpPath);
-    Assert.assertFalse("Should be false since file is deleted",expected);
+    expected = Utils.exists(mockJobContext, defaultFileSystem, tmpPath);
+    Assert.assertFalse("Should be false since file is deleted", expected);
     EasyMock.verify(mockJobContext);
   }
 
   @Test
   public void testPlainStoreThenGetStats() throws IOException
   {
-    Utils.storeStats(mockJobContext, tmpPath,expectedMap);
+    Utils.storeStats(mockJobContext, tmpPath, expectedMap);
     Map actualMap = Utils.getStats(mockJobContext, tmpPath);
-    Assert.assertThat(actualMap,Is.is(actualMap));
+    Assert.assertThat(actualMap, Is.is(actualMap));
     EasyMock.verify(mockJobContext);
   }
 
@@ -120,7 +119,7 @@ public class UtilsTest
   public void testExceptionInMakePathAndOutputStream() throws IOException
   {
     boolean overwrite = false;
-    Utils.makePathAndOutputStream(mockJobContext,tmpPath,overwrite);
+    Utils.makePathAndOutputStream(mockJobContext, tmpPath, overwrite);
   }
 
   @Test

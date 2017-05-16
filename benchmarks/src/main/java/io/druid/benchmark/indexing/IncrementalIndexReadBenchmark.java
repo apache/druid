@@ -67,6 +67,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -173,7 +174,7 @@ public class IncrementalIndexReadBenchmark
             new JavaScriptDimFilter("dimSequential", "function(x) { return false }", null, JavaScriptConfig.getEnabledInstance()),
             new RegexDimFilter("dimSequential", "X", null),
             new SearchQueryDimFilter("dimSequential", new ContainsSearchQuerySpec("X", false), null),
-            new InDimFilter("dimSequential", Arrays.asList("X"), null)
+            new InDimFilter("dimSequential", Collections.singletonList("X"), null)
         )
     );
 

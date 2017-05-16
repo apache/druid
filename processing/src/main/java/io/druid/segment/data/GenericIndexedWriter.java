@@ -391,7 +391,6 @@ public class GenericIndexedWriter<T> implements Closeable
       }
       writeHeaderLong(smoosher, headerFile, bagSizePower, buffer);
     }
-
   }
 
   public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
@@ -403,7 +402,8 @@ public class GenericIndexedWriter<T> implements Closeable
     }
   }
 
-  private void writeHeaderLong(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower, byte[] buffer) throws IOException
+  private void writeHeaderLong(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower, byte[] buffer)
+      throws IOException
   {
     ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES).order(ByteOrder.nativeOrder());
 

@@ -176,16 +176,16 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   public String toString()
   {
     return "SelectQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", descending=" + isDescending() +
-           ", dimFilter=" + dimFilter +
-           ", granularity=" + granularity +
-           ", dimensions=" + dimensions +
-           ", metrics=" + metrics +
-           ", virtualColumns=" + virtualColumns +
-           ", pagingSpec=" + pagingSpec +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", descending=" + isDescending() +
+        ", dimFilter=" + dimFilter +
+        ", granularity=" + granularity +
+        ", dimensions=" + dimensions +
+        ", metrics=" + metrics +
+        ", virtualColumns=" + virtualColumns +
+        ", pagingSpec=" + pagingSpec +
+        '}';
   }
 
   @Override

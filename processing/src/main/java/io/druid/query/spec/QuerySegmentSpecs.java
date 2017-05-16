@@ -21,7 +21,7 @@ package io.druid.query.spec;
 
 import org.joda.time.Interval;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -35,7 +35,7 @@ public class QuerySegmentSpecs
 
   public static QuerySegmentSpec create(Interval interval)
   {
-    return create(Arrays.asList(interval));
+    return create(Collections.singletonList(interval));
   }
 
   public static QuerySegmentSpec create(List<Interval> intervals)

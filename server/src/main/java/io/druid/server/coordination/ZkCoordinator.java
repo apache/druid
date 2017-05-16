@@ -305,7 +305,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   }
 
   /**
-   * Load a single segment. If the segment is loaded succesfully, this function simply returns. Otherwise it will
+   * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
    * throw a SegmentLoadingException
    *
    * @throws SegmentLoadingException
@@ -606,7 +606,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
           throw new SegmentLoadingException(e, "Failed to announce segments[%s]", queue);
         }
 
-        // get any exception that may have been thrown in background annoucing
+        // get any exception that may have been thrown in background announcing
         try {
           // check in case intervalMillis is <= 0
           if (startedAnnouncing != null) {

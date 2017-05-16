@@ -37,7 +37,7 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +50,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
    * Prepend 0xFF before the analysisTypes as a separator to avoid
    * any potential confusion with string values.
    */
-  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[]{(byte) 0xFF};
+  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[] { (byte) 0xFF };
 
   public enum AnalysisType
   {
@@ -78,7 +78,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 
     public byte[] getCacheKey()
     {
-      return new byte[]{(byte) this.ordinal()};
+      return new byte[] { (byte) this.ordinal() };
     }
   }
 
@@ -112,8 +112,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   {
     super(
         dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(DEFAULT_INTERVAL))
-                                   : querySegmentSpec,
+        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Collections.singletonList(DEFAULT_INTERVAL))
+            : querySegmentSpec,
         false,
         context
     );
@@ -230,7 +230,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return bytes.array();
   }
 
-
   @Override
   public Query<SegmentAnalysis> withOverriddenContext(Map<String, Object> contextOverride)
   {
@@ -259,14 +258,14 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public String toString()
   {
     return "SegmentMetadataQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", toInclude=" + toInclude +
-           ", merge=" + merge +
-           ", usingDefaultInterval=" + usingDefaultInterval +
-           ", analysisTypes=" + analysisTypes +
-           ", lenientAggregatorMerge=" + lenientAggregatorMerge +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", toInclude=" + toInclude +
+        ", merge=" + merge +
+        ", usingDefaultInterval=" + usingDefaultInterval +
+        ", analysisTypes=" + analysisTypes +
+        ", lenientAggregatorMerge=" + lenientAggregatorMerge +
+        '}';
   }
 
   @Override
@@ -283,10 +282,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     }
     SegmentMetadataQuery that = (SegmentMetadataQuery) o;
     return merge == that.merge &&
-           usingDefaultInterval == that.usingDefaultInterval &&
-           lenientAggregatorMerge == that.lenientAggregatorMerge &&
-           Objects.equals(toInclude, that.toInclude) &&
-           Objects.equals(analysisTypes, that.analysisTypes);
+        usingDefaultInterval == that.usingDefaultInterval &&
+        lenientAggregatorMerge == that.lenientAggregatorMerge &&
+        Objects.equals(toInclude, that.toInclude) &&
+        Objects.equals(analysisTypes, that.analysisTypes);
   }
 
   @Override

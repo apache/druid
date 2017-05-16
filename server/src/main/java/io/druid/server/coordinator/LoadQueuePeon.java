@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.coordination.DataSegmentChangeRequest;
@@ -38,8 +37,8 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.data.Stat;
 
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -155,7 +154,7 @@ public class LoadQueuePeon
 
     log.info("Asking server peon[%s] to load segment[%s]", basePath, segment.getIdentifier());
     queuedSize.addAndGet(segment.getSize());
-    segmentsToLoad.put(segment, new SegmentHolder(segment, LOAD, Arrays.asList(callback)));
+    segmentsToLoad.put(segment, new SegmentHolder(segment, LOAD, Collections.singletonList(callback)));
   }
 
   public void dropSegment(
@@ -184,7 +183,7 @@ public class LoadQueuePeon
     }
 
     log.info("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
-    segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Arrays.asList(callback)));
+    segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
   }
 
   private void processSegmentChangeRequest() {

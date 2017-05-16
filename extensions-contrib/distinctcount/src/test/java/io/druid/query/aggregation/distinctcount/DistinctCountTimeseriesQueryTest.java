@@ -21,7 +21,6 @@ package io.druid.query.aggregation.distinctcount;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
@@ -40,7 +39,7 @@ import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class DistinctCountTimeseriesQueryTest
@@ -100,7 +99,7 @@ public class DistinctCountTimeseriesQueryTest
         Lists.<Result<TimeseriesResultValue>>newLinkedList()
     );
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             time,
             new TimeseriesResultValue(

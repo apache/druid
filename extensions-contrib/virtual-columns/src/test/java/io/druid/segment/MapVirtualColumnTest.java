@@ -55,6 +55,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -164,8 +165,8 @@ public class MapVirtualColumnTest
             "params", mapOf("key1", "value1", "key5", "value5")
         )
     );
-    List<VirtualColumn> virtualColumns = Arrays.<VirtualColumn>asList(new MapVirtualColumn("keys", "values", "params"));
-    SelectQuery selectQuery = builder.dimensions(Arrays.asList("dim"))
+    List<VirtualColumn> virtualColumns = Collections.singletonList(new MapVirtualColumn("keys", "values", "params"));
+    SelectQuery selectQuery = builder.dimensions(Collections.singletonList("dim"))
                                      .metrics(Arrays.asList("params.key1", "params.key3", "params.key5", "params"))
                                      .virtualColumns(virtualColumns)
                                      .build();

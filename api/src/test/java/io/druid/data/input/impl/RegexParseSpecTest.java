@@ -25,7 +25,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 
 /**
  */
@@ -38,9 +38,9 @@ public class RegexParseSpecTest
   {
     RegexParseSpec spec = new RegexParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
         "\u0001",
-        Arrays.asList("abc"),
+        Collections.singletonList("abc"),
         "abc"
     );
     final RegexParseSpec serde = jsonMapper.readValue(
@@ -52,6 +52,6 @@ public class RegexParseSpecTest
 
     Assert.assertEquals("abc", serde.getPattern());
     Assert.assertEquals("\u0001", serde.getListDelimiter());
-    Assert.assertEquals(Arrays.asList("abc"), serde.getDimensionsSpec().getDimensionNames());
+    Assert.assertEquals(Collections.singletonList("abc"), serde.getDimensionsSpec().getDimensionNames());
   }
 }

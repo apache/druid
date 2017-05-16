@@ -42,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -157,7 +158,7 @@ public class VersionedIntervalTimelineTest
   public void testMay() throws Exception
   {
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "4", 9)
         ),
         timeline.lookup(new Interval("2011-05-01/2011-05-09"))
@@ -216,7 +217,7 @@ public class VersionedIntervalTimelineTest
     add(new Interval(overallStart, overallStart.plus(Days.ONE)), "2", 2);
 
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected(oneHourInterval1.toString(), "2", 2)
         ),
         timeline.lookup(oneHourInterval1)
@@ -380,7 +381,7 @@ public class VersionedIntervalTimelineTest
   {
     add("2011-05-01/2011-05-10", "5", 10);
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "5", 10)
         ),
         timeline.lookup(new Interval("2011-05-01/2011-05-09"))
@@ -391,7 +392,7 @@ public class VersionedIntervalTimelineTest
         timeline.remove(new Interval("2011-05-01/2011-05-10"), "5", makeSingle(10))
     );
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "4", 9)
         ),
         timeline.lookup(new Interval("2011-05-01/2011-05-09"))
@@ -399,7 +400,7 @@ public class VersionedIntervalTimelineTest
 
     add("2011-05-01/2011-05-10", "5", 10);
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "5", 10)
         ),
         timeline.lookup(new Interval("2011-05-01/2011-05-09"))
@@ -410,7 +411,7 @@ public class VersionedIntervalTimelineTest
         timeline.remove(new Interval("2011-05-01/2011-05-10"), "4", makeSingle(9))
     );
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "5", 10)
         ),
         timeline.lookup(new Interval("2011-05-01/2011-05-09"))
@@ -450,7 +451,7 @@ public class VersionedIntervalTimelineTest
     add("2011-01-01/2011-01-10", "1", 4);
 
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-01-01/2011-01-10", "2", 2)
         ),
         timeline.lookup(new Interval("2011-01-01/2011-01-10"))
@@ -1177,7 +1178,7 @@ public class VersionedIntervalTimelineTest
     timeline.remove(new Interval("2011-01-10/2011-01-15"), "2", makeSingle(2));
 
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-01-01/2011-01-20", "1", 1)
         ),
         timeline.lookup(new Interval("2011-01-01/2011-01-20"))
@@ -1218,7 +1219,7 @@ public class VersionedIntervalTimelineTest
     timeline.remove(new Interval("2011-01-10/2011-01-14"), "2", makeSingle(3));
 
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-01-01/2011-01-20", "1", 1)
 
         ),
@@ -1258,7 +1259,7 @@ public class VersionedIntervalTimelineTest
     add("2011-01-01/2011-01-20", "1", 1);
 
     assertValues(
-        Arrays.asList(
+        Collections.singletonList(
             createExpected("2011-01-01/2011-01-20", "1", 1)
         ),
         timeline.lookup(new Interval("2011-01-01/2011-01-20"))

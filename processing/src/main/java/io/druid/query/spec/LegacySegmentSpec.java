@@ -26,6 +26,7 @@ import io.druid.java.util.common.IAE;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -39,7 +40,7 @@ public class LegacySegmentSpec extends MultipleIntervalSegmentSpec
     if (intervals instanceof String) {
       intervalStringList = Arrays.asList((((String) intervals).split(",")));
     } else if (intervals instanceof Interval) {
-      intervalStringList = Arrays.asList(intervals.toString());
+      intervalStringList = Collections.singletonList(intervals.toString());
     } else if (intervals instanceof Map) {
       intervalStringList = (List) ((Map) intervals).get("intervals");
     } else if (intervals instanceof List) {

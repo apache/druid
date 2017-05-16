@@ -25,7 +25,7 @@ import io.druid.data.input.Row;
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * The "&lt;" operator in a "having" clause. This is similar to SQL's "having aggregation &lt; value",
@@ -69,7 +69,7 @@ public class LessThanHavingSpec extends BaseHavingSpec
   public byte[] getCacheKey()
   {
     final byte[] aggBytes = StringUtils.toUtf8(aggregationName);
-    final byte[] valBytes = Bytes.toArray(Arrays.asList(value));
+    final byte[] valBytes = Bytes.toArray(Collections.singletonList(value));
     return ByteBuffer.allocate(1 + aggBytes.length + valBytes.length)
                      .put(CACHE_KEY)
                      .put(aggBytes)

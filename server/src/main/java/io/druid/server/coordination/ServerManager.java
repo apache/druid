@@ -68,6 +68,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -381,11 +382,11 @@ public class ServerManager implements QuerySegmentWalker
 
                 final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(input.getPartitionNumber());
                 if (chunk == null) {
-                  return Arrays.<QueryRunner<T>>asList(new ReportTimelineMissingSegmentQueryRunner<T>(input));
+                  return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<T>(input));
                 }
 
                 final ReferenceCountingSegment adapter = chunk.getObject();
-                return Arrays.asList(
+                return Collections.singletonList(
                     buildAndDecorateQueryRunner(factory, toolChest, adapter, input, cpuTimeAccumulator)
                 );
               }
