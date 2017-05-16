@@ -246,9 +246,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     List<Interval> intervals = query.getIntervals();
 
     DateTime queryEndTime = intervals.stream().map(Interval::getEnd)
-                                      .max(Ordering.natural()).orElseThrow(IllegalStateException::new);
+                                     .max(Ordering.natural()).orElseThrow(IllegalStateException::new);
     DateTime queryStartTime = intervals.stream().map(Interval::getStart)
-                                     .min(Ordering.natural()).orElseThrow(IllegalStateException::new);
+                                       .min(Ordering.natural()).orElseThrow(IllegalStateException::new);
 
     Interval targetInterval;
     if (!query.isUsingDefaultInterval()) {
