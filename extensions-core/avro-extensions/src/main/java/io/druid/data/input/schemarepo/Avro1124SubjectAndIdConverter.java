@@ -20,9 +20,7 @@ package io.druid.data.input.schemarepo;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.druid.java.util.common.Pair;
-
 import org.schemarepo.api.converter.Converter;
 import org.schemarepo.api.converter.IdentityConverter;
 import org.schemarepo.api.converter.IntegerConverter;
@@ -51,7 +49,7 @@ public class Avro1124SubjectAndIdConverter implements SubjectAndIdConverter<Stri
   @Override
   public Pair<String, Integer> getSubjectAndId(ByteBuffer payload)
   {
-    return new Pair<String, Integer>(topic, payload.getInt());
+    return new Pair<>(topic, payload.getInt());
   }
 
   @Override

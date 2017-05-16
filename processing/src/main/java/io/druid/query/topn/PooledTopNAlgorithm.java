@@ -469,6 +469,7 @@ public class PooledTopNAlgorithm
               dimValues.get(6),
               currentPosition
           );
+          // fall through
         case 6:
           currentPosition = aggregateDimValue(
               positions,
@@ -481,6 +482,7 @@ public class PooledTopNAlgorithm
               dimValues.get(5),
               currentPosition
           );
+          // fall through
         case 5:
           currentPosition = aggregateDimValue(
               positions,
@@ -493,6 +495,7 @@ public class PooledTopNAlgorithm
               dimValues.get(4),
               currentPosition
           );
+          // fall through
         case 4:
           currentPosition = aggregateDimValue(
               positions,
@@ -505,6 +508,7 @@ public class PooledTopNAlgorithm
               dimValues.get(3),
               currentPosition
           );
+          // fall through
         case 3:
           currentPosition = aggregateDimValue(
               positions,
@@ -517,6 +521,7 @@ public class PooledTopNAlgorithm
               dimValues.get(2),
               currentPosition
           );
+          // fall through
         case 2:
           currentPosition = aggregateDimValue(
               positions,
@@ -529,6 +534,7 @@ public class PooledTopNAlgorithm
               dimValues.get(1),
               currentPosition
           );
+          // fall through
         case 1:
           currentPosition = aggregateDimValue(
               positions,
@@ -668,16 +674,22 @@ public class PooledTopNAlgorithm
     switch(aggExtra) {
       case 7:
         theAggregators[6].aggregate(resultsBuf, position + aggregatorOffsets[6]);
+        // fall through
       case 6:
         theAggregators[5].aggregate(resultsBuf, position + aggregatorOffsets[5]);
+        // fall through
       case 5:
         theAggregators[4].aggregate(resultsBuf, position + aggregatorOffsets[4]);
+        // fall through
       case 4:
         theAggregators[3].aggregate(resultsBuf, position + aggregatorOffsets[3]);
+        // fall through
       case 3:
         theAggregators[2].aggregate(resultsBuf, position + aggregatorOffsets[2]);
+        // fall through
       case 2:
         theAggregators[1].aggregate(resultsBuf, position + aggregatorOffsets[1]);
+        // fall through
       case 1:
         theAggregators[0].aggregate(resultsBuf, position + aggregatorOffsets[0]);
     }

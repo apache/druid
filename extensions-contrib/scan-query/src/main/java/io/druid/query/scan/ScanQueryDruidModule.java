@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class ScanQueryDruidModule implements DruidModule {
+  @Override
   public void configure(Binder binder) {
     DruidBinders.queryToolChestBinder(binder)
                 .addBinding(ScanQuery.class)
@@ -42,6 +43,7 @@ public class ScanQueryDruidModule implements DruidModule {
                 .in(LazySingleton.class);
   }
 
+  @Override
   public List<? extends Module> getJacksonModules() {
     return Arrays.<Module>asList(
         new SimpleModule("ScanQueryDruidModule")

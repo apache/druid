@@ -44,8 +44,8 @@ import java.util.Set;
 public abstract class LoadRule implements Rule
 {
   private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
-  private static final String assignedCount = "assignedCount";
-  private static final String droppedCount = "droppedCount";
+  static final String ASSIGNED_COUNT = "assignedCount";
+  static final String DROPPED_COUNT = "droppedCount";
 
   @Override
   public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
@@ -84,7 +84,7 @@ public abstract class LoadRule implements Rule
             segment
         );
         stats.accumulate(assignStats);
-        totalReplicantsInCluster += assignStats.getPerTierStats().get(assignedCount).get(tier).get();
+        totalReplicantsInCluster += assignStats.getPerTierStats().get(ASSIGNED_COUNT).get(tier).get();
       }
 
       loadStatus.put(tier, expectedReplicantsInTier - loadedReplicantsInTier);
@@ -108,7 +108,7 @@ public abstract class LoadRule implements Rule
   )
   {
     final CoordinatorStats stats = new CoordinatorStats();
-    stats.addToTieredStat(assignedCount, tier, 0);
+    stats.addToTieredStat(ASSIGNED_COUNT, tier, 0);
 
     int currReplicantsInTier = totalReplicantsInTier;
     int currTotalReplicantsInCluster = totalReplicantsInCluster;
@@ -153,7 +153,7 @@ public abstract class LoadRule implements Rule
           }
       );
 
-      stats.addToTieredStat(assignedCount, tier, 1);
+      stats.addToTieredStat(ASSIGNED_COUNT, tier, 1);
       ++currReplicantsInTier;
       ++currTotalReplicantsInCluster;
     }
@@ -186,7 +186,7 @@ public abstract class LoadRule implements Rule
       int loadedNumReplicantsForTier = entry.getValue();
       int expectedNumReplicantsForTier = getNumReplicants(tier);
 
-      stats.addToTieredStat(droppedCount, tier, 0);
+      stats.addToTieredStat(DROPPED_COUNT, tier, 0);
 
       MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().get(tier);
       if (serverQueue == null) {
@@ -208,7 +208,7 @@ public abstract class LoadRule implements Rule
               null
           );
           --loadedNumReplicantsForTier;
-          stats.addToTieredStat(droppedCount, tier, 1);
+          stats.addToTieredStat(DROPPED_COUNT, tier, 1);
         }
         droppedServers.add(holder);
       }

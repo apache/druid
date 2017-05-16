@@ -58,6 +58,7 @@ public class IntervalLoadRule extends LoadRule
     return "loadByInterval";
   }
 
+  @Override
   @JsonProperty
   public Map<String, Integer> getTieredReplicants()
   {
@@ -86,7 +87,7 @@ public class IntervalLoadRule extends LoadRule
   @Override
   public boolean appliesTo(Interval theInterval, DateTime referenceTimestamp)
   {
-    return interval.contains(theInterval);
+    return Rules.eligibleForLoad(interval, theInterval);
   }
 
   @Override

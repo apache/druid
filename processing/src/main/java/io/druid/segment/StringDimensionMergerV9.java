@@ -30,9 +30,9 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
@@ -461,7 +461,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     int seek(int dictId);
   }
 
-  protected class IndexSeekerWithoutConversion implements IndexSeeker
+  protected static class IndexSeekerWithoutConversion implements IndexSeeker
   {
     private final int limit;
 
@@ -480,7 +480,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   /**
    * Get old dictId from new dictId, and only support access in order
    */
-  protected class IndexSeekerWithConversion implements IndexSeeker
+  protected static class IndexSeekerWithConversion implements IndexSeeker
   {
     private final IntBuffer dimConversions;
     private int currIndex;
@@ -495,6 +495,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       this.lastVal = NOT_INIT;
     }
 
+    @Override
     public int seek(int dictId)
     {
       if (dimConversions == null) {

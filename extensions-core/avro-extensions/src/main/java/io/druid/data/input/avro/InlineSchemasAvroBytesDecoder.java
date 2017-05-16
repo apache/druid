@@ -72,9 +72,8 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
 
       Map<String, Object> schema = e.getValue();
       String schemaStr = mapper.writeValueAsString(schema);
-      ;
 
-      LOGGER.info("Schema string [%s] = [%s]", id, schemaStr);
+      LOGGER.debug("Schema string [%s] = [%s]", id, schemaStr);
       schemaObjs.put(id, new Schema.Parser().parse(schemaStr));
     }
   }
@@ -116,10 +115,8 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
       throw new ParseException("Failed to find schema for id [%s]", schemaId);
     }
 
-    try {
-      DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(schemaObj);
-      ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes));
-
+    DatumReader<GenericRecord> reader = new GenericDatumReader<>(schemaObj);
+    try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
     catch (EOFException eof) {

@@ -54,6 +54,12 @@ public class ToLowerCaseParser implements Parser<String, Object>
   }
 
   @Override
+  public void startFileFromBeginning()
+  {
+    baseParser.startFileFromBeginning();
+  }
+
+  @Override
   public void setFieldNames(Iterable<String> fieldNames)
   {
     baseParser.setFieldNames(fieldNames);

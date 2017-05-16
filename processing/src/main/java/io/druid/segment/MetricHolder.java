@@ -45,7 +45,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.WritableByteChannel;
 
 /**
  */
@@ -101,26 +100,6 @@ public class MetricHolder
     serializerUtils.writeString(toOutputSupplier(outSupplier), name);
     serializerUtils.writeString(toOutputSupplier(outSupplier), "long");
     column.closeAndConsolidate(outSupplier);
-  }
-
-  public static void writeToChannel(MetricHolder holder, WritableByteChannel out) throws IOException
-  {
-    out.write(ByteBuffer.wrap(version));
-    serializerUtils.writeString(out, holder.name);
-    serializerUtils.writeString(out, holder.typeName);
-
-    switch (holder.type) {
-      case FLOAT:
-        holder.floatType.writeToChannel(out);
-        break;
-      case COMPLEX:
-        if (holder.complexType instanceof GenericIndexed) {
-          ((GenericIndexed) holder.complexType).writeToChannel(out);
-        } else {
-          throw new IAE("Cannot serialize out MetricHolder for complex type that is not a GenericIndexed");
-        }
-        break;
-    }
   }
 
   public static MetricHolder fromByteBuffer(ByteBuffer buf, SmooshedFileMapper mapper) throws IOException

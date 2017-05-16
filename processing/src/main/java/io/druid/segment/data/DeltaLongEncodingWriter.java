@@ -57,6 +57,7 @@ public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingW
     serializer.write(value - base);
   }
 
+  @Override
   public void putMeta(OutputStream metaOut, CompressedObjectStrategy.CompressionStrategy strategy) throws IOException
   {
     metaOut.write(CompressionFactory.setEncodingFlag(strategy.getId()));

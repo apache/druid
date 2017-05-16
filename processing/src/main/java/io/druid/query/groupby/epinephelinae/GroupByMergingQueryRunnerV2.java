@@ -35,7 +35,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.collections.Releaser;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -45,11 +44,10 @@ import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
-import io.druid.query.BaseQuery;
 import io.druid.query.ChainedExecutionQueryRunner;
-import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
@@ -107,9 +105,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   }
 
   @Override
-  public Sequence<Row> run(final Query<Row> queryParam, final Map<String, Object> responseContext)
+  public Sequence<Row> run(final QueryPlus<Row> queryPlus, final Map<String, Object> responseContext)
   {
-    final GroupByQuery query = (GroupByQuery) queryParam;
+    final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 
     // CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION is here because realtime servers use nested mergeRunners calls
@@ -121,12 +119,13 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
-    final GroupByQuery queryForRunners = query.withOverriddenContext(
-        ImmutableMap.<String, Object>of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true)
+    final QueryPlus<Row> queryPlusForRunners = queryPlus.withQuery(
+        query.withOverriddenContext(ImmutableMap.<String, Object>of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
     );
 
-    if (BaseQuery.getContextBySegment(query, false) || forceChainedExecution) {
-      return new ChainedExecutionQueryRunner(exec, queryWatcher, queryables).run(query, responseContext);
+    if (QueryContexts.isBySegment(query) || forceChainedExecution) {
+      ChainedExecutionQueryRunner<Row> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
+      return runner.run(queryPlusForRunners, responseContext);
     }
 
     final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
@@ -141,14 +140,13 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    final int priority = BaseQuery.getContextPriority(query, 0);
+    final int priority = QueryContexts.getPriority(query);
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
-    final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
-    final long timeoutAt = queryTimeout == null
-                           ? JodaUtils.MAX_INSTANT
-                           : System.currentTimeMillis() + queryTimeout.longValue();
+    final long queryTimeout = QueryContexts.getTimeout(query);
+    final boolean hasTimeout = QueryContexts.hasTimeout(query);
+    final long timeoutAt = System.currentTimeMillis() + queryTimeout;
 
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Row, CloseableGrouperIterator<RowBasedKey, Row>>()
@@ -170,9 +168,13 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder;
               try {
                 // This will potentially block if there are no merge buffers left in the pool.
-                final long timeout = timeoutAt - System.currentTimeMillis();
-                if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
-                  throw new TimeoutException();
+                if (hasTimeout) {
+                  final long timeout = timeoutAt - System.currentTimeMillis();
+                  if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
+                    throw new TimeoutException();
+                  }
+                } else {
+                  mergeBufferHolder = mergeBufferPool.take();
                 }
                 resources.add(mergeBufferHolder);
               }
@@ -224,7 +226,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                           Releaser bufferReleaser = mergeBufferHolder.increment();
                                           Releaser grouperReleaser = grouperHolder.increment()
                                       ) {
-                                        final AggregateResult retVal = input.run(queryForRunners, responseContext)
+                                        final AggregateResult retVal = input.run(queryPlusForRunners, responseContext)
                                                                             .accumulate(
                                                                                 AggregateResult.ok(),
                                                                                 accumulator
@@ -248,6 +250,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                 waitForFutureCompletion(
                                     query,
                                     Futures.allAsList(ImmutableList.of(future)),
+                                    hasTimeout,
                                     timeoutAt - System.currentTimeMillis()
                                 );
                               }
@@ -260,7 +263,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
               );
 
               if (!isSingleThreaded) {
-                waitForFutureCompletion(query, futures, timeoutAt - System.currentTimeMillis());
+                waitForFutureCompletion(query, futures, hasTimeout, timeoutAt - System.currentTimeMillis());
               }
 
               return RowBasedGrouperHelper.makeGrouperIterator(
@@ -299,6 +302,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   private void waitForFutureCompletion(
       GroupByQuery query,
       ListenableFuture<List<AggregateResult>> future,
+      boolean hasTimeout,
       long timeout
   )
   {
@@ -307,11 +311,11 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         queryWatcher.registerQuery(query, future);
       }
 
-      if (timeout <= 0) {
+      if (hasTimeout && timeout <= 0) {
         throw new TimeoutException();
       }
 
-      final List<AggregateResult> results = future.get(timeout, TimeUnit.MILLISECONDS);
+      final List<AggregateResult> results = hasTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
 
       for (AggregateResult result : results) {
         if (!result.isOk()) {

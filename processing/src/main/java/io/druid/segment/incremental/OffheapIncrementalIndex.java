@@ -277,6 +277,12 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
+  public int getLastRowIndex()
+  {
+    return indexIncrement.get() - 1;
+  }
+
+  @Override
   public boolean canAppendRow()
   {
     final boolean canAdd = size() < maxRowCount;

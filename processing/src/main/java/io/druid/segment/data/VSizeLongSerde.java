@@ -497,6 +497,7 @@ public class VSizeLongSerde
       this.offset = bufferOffset;
     }
 
+    @Override
     public long get(int index)
     {
       return buffer.getShort(offset + (index << 1)) & 0xFFFF;

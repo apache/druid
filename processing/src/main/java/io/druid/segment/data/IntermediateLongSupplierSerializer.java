@@ -75,16 +75,19 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     this.compression = compression;
   }
 
+  @Override
   public void open() throws IOException
   {
     tempOut = new CountingOutputStream(ioPeon.makeOutputStream(tempFile));
   }
 
+  @Override
   public int size()
   {
     return numInserted;
   }
 
+  @Override
   public void add(long value) throws IOException
   {
     SerializerUtils.writeBigEndianLongToOutputStream(tempOut, value, helperBuffer);
@@ -131,12 +134,15 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 
     try (DataInputStream tempIn = new DataInputStream(new BufferedInputStream(ioPeon.makeInputStream(tempFile)))) {
       delegate.open();
-      while (tempIn.available() > 0) {
+      int available = numInserted;
+      while (available > 0) {
         delegate.add(tempIn.readLong());
+        available--;
       }
     }
   }
 
+  @Override
   public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
   {
     tempOut.close();
@@ -144,6 +150,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     delegate.closeAndConsolidate(consolidatedOut);
   }
 
+  @Override
   public void close() throws IOException
   {
     tempOut.close();
@@ -151,11 +158,13 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     delegate.close();
   }
 
+  @Override
   public long getSerializedSize()
   {
     return delegate.getSerializedSize();
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     delegate.writeToChannel(channel, smoosher);

@@ -84,6 +84,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     return endMetadata;
   }
 
+  @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
     return new TypeReference<SegmentPublishResult>()

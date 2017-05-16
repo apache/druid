@@ -123,12 +123,13 @@ public interface BufferAggregator extends HotLoopCallee
    * <p>The default implementation inspects nothing. Classes that implement {@code BufferAggregator} are encouraged to
    * override this method, following the specification of {@link HotLoopCallee#inspectRuntimeShape}.
    */
+  @Override
   default void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // nothing to inspect
   }
 
-  /*
+  /**
    * Relocates any cached objects.
    * If underlying ByteBuffer used for aggregation buffer relocates to a new ByteBuffer, positional caches(if any)
    * built on top of old ByteBuffer can not be used for further {@link BufferAggregator#aggregate(ByteBuffer, int)}

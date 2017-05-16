@@ -75,14 +75,14 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   public CompressedIntsIndexedWriter(
       final int chunkFactor,
       final CompressedObjectStrategy.CompressionStrategy compression,
-      GenericIndexedWriter<ResourceHolder<IntBuffer>> flattner
+      GenericIndexedWriter<ResourceHolder<IntBuffer>> flattener
   )
   {
     this.chunkFactor = chunkFactor;
     this.compression = compression;
     this.endBuffer = IntBuffer.allocate(chunkFactor);
     this.numInserted = 0;
-    this.flattener = flattner;
+    this.flattener = flattener;
   }
 
   @Override

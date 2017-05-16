@@ -55,10 +55,11 @@ import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -139,8 +140,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
+    final Query<T> query = queryPlus.getQuery();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     final CacheStrategy<T, Object, Query<T>> strategy = toolChest.getCacheStrategy(query);
 
@@ -151,12 +153,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final boolean useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
     final boolean populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
-    final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
+    final boolean isBySegment = QueryContexts.isBySegment(query);
 
     final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    final int priority = BaseQuery.getContextPriority(query, 0);
-    contextBuilder.put("priority", priority);
+    final int priority = QueryContexts.getPriority(query);
+    contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
 
     if (populateCache) {
       // prevent down-stream nodes from caching results as well if we are populating the cache
@@ -177,7 +179,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Note that enabling this leads to putting uncovered intervals information in the response headers
     // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
-    int uncoveredIntervalsLimit = BaseQuery.getContextUncoveredIntervalsLimit(query, 0);
+    int uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query);
 
     if (uncoveredIntervalsLimit > 0) {
       List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);
@@ -429,17 +431,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               final Sequence<T> resultSeqToAdd;
               if (!server.isAssignable() || !populateCache || isBySegment) { // Direct server queryable
                 if (!isBySegment) {
-                  resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), responseContext);
+                  resultSeqToAdd = clientQueryable.run(queryPlus.withQuerySegmentSpec(segmentSpec), responseContext);
                 } else {
                   // bySegment queries need to be de-serialized, see DirectDruidClient.run()
-
-                  @SuppressWarnings("unchecked")
-                  final Query<Result<BySegmentResultValueClass<T>>> bySegmentQuery =
-                      (Query<Result<BySegmentResultValueClass<T>>>) ((Query) query);
-
                   @SuppressWarnings("unchecked")
                   final Sequence<Result<BySegmentResultValueClass<T>>> resultSequence = clientQueryable.run(
-                      bySegmentQuery.withQuerySegmentSpec(segmentSpec),
+                      queryPlus.withQuerySegmentSpec(segmentSpec),
                       responseContext
                   );
 
@@ -472,7 +469,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               } else { // Requires some manipulation on broker side
                 @SuppressWarnings("unchecked")
                 final Sequence<Result<BySegmentResultValueClass<T>>> runningSequence = clientQueryable.run(
-                    rewrittenQuery.withQuerySegmentSpec(segmentSpec),
+                    queryPlus.withQuery(rewrittenQuery.withQuerySegmentSpec(segmentSpec)),
                     responseContext
                 );
                 resultSeqToAdd = new MergeSequence(

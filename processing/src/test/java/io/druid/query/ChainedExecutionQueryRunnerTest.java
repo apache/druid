@@ -251,7 +251,7 @@ public class ChainedExecutionQueryRunnerTest
               .dataSource("test")
               .intervals("2014/2015")
               .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
-              .context(ImmutableMap.<String, Object>of(QueryContextKeys.TIMEOUT, 100, "queryId", "test"))
+              .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
               .build(),
         context
     );
@@ -330,7 +330,7 @@ public class ChainedExecutionQueryRunnerTest
     }
 
     @Override
-    public Sequence<Integer> run(Query<Integer> query, Map<String, Object> responseContext)
+    public Sequence<Integer> run(QueryPlus<Integer> queryPlus, Map<String, Object> responseContext)
     {
       // do a lot of work
       synchronized (this) {

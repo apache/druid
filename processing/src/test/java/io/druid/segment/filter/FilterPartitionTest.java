@@ -61,7 +61,7 @@ import java.util.Objects;
 @RunWith(Parameterized.class)
 public class FilterPartitionTest extends BaseFilterTest
 {
-  private class NoBitmapSelectorFilter extends SelectorFilter
+  private static class NoBitmapSelectorFilter extends SelectorFilter
   {
     public NoBitmapSelectorFilter(
         String dimension,
@@ -78,7 +78,7 @@ public class FilterPartitionTest extends BaseFilterTest
     }
   }
 
-  private class NoBitmapDimensionPredicateFilter extends DimensionPredicateFilter
+  private static class NoBitmapDimensionPredicateFilter extends DimensionPredicateFilter
   {
     public NoBitmapDimensionPredicateFilter(
         final String dimension,
@@ -96,7 +96,7 @@ public class FilterPartitionTest extends BaseFilterTest
     }
   }
 
-  private class NoBitmapSelectorDimFilter extends SelectorDimFilter
+  private static class NoBitmapSelectorDimFilter extends SelectorDimFilter
   {
     public NoBitmapSelectorDimFilter(
         String dimension,

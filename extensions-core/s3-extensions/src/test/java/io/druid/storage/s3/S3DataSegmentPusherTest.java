@@ -44,7 +44,7 @@ import java.io.File;
  */
 public class S3DataSegmentPusherTest
 {
-  private class ValueContainer<T> {
+  private static class ValueContainer<T> {
     private T value;
 
     public T getValue() {

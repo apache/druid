@@ -213,6 +213,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
 
       private final Runnable doNothingRunnable = new Runnable()
       {
+        @Override
         public void run()
         {
         }

@@ -37,16 +37,19 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = "loadForever", value = ForeverLoadRule.class),
     @JsonSubTypes.Type(name = "dropByPeriod", value = PeriodDropRule.class),
     @JsonSubTypes.Type(name = "dropByInterval", value = IntervalDropRule.class),
-    @JsonSubTypes.Type(name = "dropForever", value = ForeverDropRule.class)
+    @JsonSubTypes.Type(name = "dropForever", value = ForeverDropRule.class),
+    @JsonSubTypes.Type(name = ForeverBroadcastDistributionRule.TYPE, value = ForeverBroadcastDistributionRule.class),
+    @JsonSubTypes.Type(name = IntervalBroadcastDistributionRule.TYPE, value = IntervalBroadcastDistributionRule.class),
+    @JsonSubTypes.Type(name = PeriodBroadcastDistributionRule.TYPE, value = PeriodBroadcastDistributionRule.class)
 })
 
 public interface Rule
 {
-  public String getType();
+  String getType();
 
-  public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp);
+  boolean appliesTo(DataSegment segment, DateTime referenceTimestamp);
 
-  public boolean appliesTo(Interval interval, DateTime referenceTimestamp);
+  boolean appliesTo(Interval interval, DateTime referenceTimestamp);
 
-  public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
+  CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
 }

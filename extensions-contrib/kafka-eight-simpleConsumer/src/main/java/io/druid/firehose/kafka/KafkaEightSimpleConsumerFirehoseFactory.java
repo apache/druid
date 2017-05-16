@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Committer;
@@ -182,7 +183,6 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       @Override
       public void start() throws Exception
       {
-        nextMessage();
       }
 
       @Override
@@ -223,6 +223,15 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       {
         if (stopped) {
           return null;
+        }
+        // currRow will be called before the first advance
+        if (row == null) {
+          try {
+            nextMessage();
+          }
+          catch (ParseException e) {
+            return null;
+          }
         }
         return row;
       }

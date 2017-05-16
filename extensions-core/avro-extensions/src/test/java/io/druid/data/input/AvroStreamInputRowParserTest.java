@@ -109,6 +109,7 @@ public class AvroStreamInputRowParserTest
   public static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
   private static final Function<Object, String> TO_STRING_INCLUDING_NULL = new Function<Object, String>()
   {
+    @Override
     public String apply(Object o) { return String.valueOf(o); }
   };
 

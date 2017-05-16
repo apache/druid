@@ -22,6 +22,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.java.util.common.parsers.CloseableIterator;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 
 import java.io.IOException;
@@ -36,13 +37,15 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
   private long count = 0;
 
   public ScanQueryLimitRowIterator(
-      QueryRunner<ScanResultValue> baseRunner, ScanQuery query,
+      QueryRunner<ScanResultValue> baseRunner,
+      QueryPlus<ScanResultValue> queryPlus,
       Map<String, Object> responseContext
   )
   {
+    ScanQuery query = (ScanQuery) queryPlus.getQuery();
     resultFormat = query.getResultFormat();
     limit = query.getLimit();
-    Sequence<ScanResultValue> baseSequence = baseRunner.run(query, responseContext);
+    Sequence<ScanResultValue> baseSequence = baseRunner.run(queryPlus, responseContext);
     yielder = baseSequence.toYielder(
         null,
         new YieldingAccumulator<ScanResultValue, ScanResultValue>()

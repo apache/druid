@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
@@ -74,6 +75,24 @@ public class IndexTaskTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
+      new TimestampSpec(
+          "ts",
+          "auto",
+          null
+      ),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
+          Lists.newArrayList(),
+          Lists.newArrayList()
+      ),
+      null,
+      Arrays.asList("ts", "dim", "val"),
+      false,
+      0
+  );
+
   private final IndexSpec indexSpec;
   private final ObjectMapper jsonMapper;
   private IndexMerger indexMerger;
@@ -107,7 +126,7 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, 2, null, false, false),
+        createIngestionSpec(tmpDir, null, null, 2, null, false, false),
         null,
         jsonMapper
     );
@@ -145,7 +164,7 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, 2, null, true, false),
+        createIngestionSpec(tmpDir, null, null, 2, null, true, false),
         null,
         jsonMapper
     );
@@ -185,9 +204,10 @@ public class IndexTaskTest
         null,
         createIngestionSpec(
             tmpDir,
+            null,
             new ArbitraryGranularitySpec(
                 Granularities.MINUTE,
-                Arrays.asList(new Interval("2014/2015"))
+                Collections.singletonList(new Interval("2014/2015"))
             ),
             10,
             null,
@@ -220,10 +240,11 @@ public class IndexTaskTest
         null,
         createIngestionSpec(
             tmpDir,
+            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.HOUR,
-                Arrays.asList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
+                Collections.singletonList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
             ),
             50,
             null,
@@ -254,7 +275,7 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, null, 1, false, false),
+        createIngestionSpec(tmpDir, null, null, null, 1, false, false),
         null,
         jsonMapper
     );
@@ -285,7 +306,7 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, 2, null, false, true),
+        createIngestionSpec(tmpDir, null, null, 2, null, false, true),
         null,
         jsonMapper
     );
@@ -323,6 +344,7 @@ public class IndexTaskTest
         null,
         createIngestionSpec(
             tmpDir,
+            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,
@@ -357,6 +379,112 @@ public class IndexTaskTest
     Assert.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
   }
 
+  @Test
+  public void testCSVFileWithHeader() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    PrintWriter writer = new PrintWriter(tmpFile);
+    writer.println("time,d,val");
+    writer.println("2014-01-01T00:00:10Z,a,1");
+
+    writer.close();
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            new CSVParseSpec(
+                new TimestampSpec(
+                    "time",
+                    "auto",
+                    null
+                ),
+                new DimensionsSpec(
+                    null,
+                    Lists.<String>newArrayList(),
+                    Lists.<SpatialDimensionSchema>newArrayList()
+                ),
+                null,
+                null,
+                true,
+                0
+            ),
+            null,
+            2,
+            null,
+            false,
+            false
+        ),
+        null,
+        jsonMapper
+    );
+
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
+    Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
+    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+  }
+
+  @Test
+  public void testCSVFileWithHeaderColumnOverride() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    PrintWriter writer = new PrintWriter(tmpFile);
+    writer.println("time,d,val");
+    writer.println("2014-01-01T00:00:10Z,a,1");
+
+    writer.close();
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            new CSVParseSpec(
+                new TimestampSpec(
+                    "time",
+                    "auto",
+                    null
+                ),
+                new DimensionsSpec(
+                    null,
+                    Lists.<String>newArrayList(),
+                    Lists.<SpatialDimensionSchema>newArrayList()
+                ),
+                null,
+                Arrays.asList("time", "dim", "val"),
+                true,
+                0
+            ),
+            null,
+            2,
+            null,
+            false,
+            false
+        ),
+        null,
+        jsonMapper
+    );
+
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Arrays.asList("dim"), segments.get(0).getDimensions());
+    Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
+    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+  }
+
   private final List<DataSegment> runTask(final IndexTask indexTask) throws Exception
   {
     final List<DataSegment> segments = Lists.newArrayList();
@@ -369,7 +497,7 @@ public class IndexTaskTest
           public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
           {
             if (taskAction instanceof LockListAction) {
-              return (RetType) Arrays.asList(
+              return (RetType) Collections.singletonList(
                   new TaskLock(
                       "", "", null, new DateTime().toString()
                   )
@@ -434,6 +562,7 @@ public class IndexTaskTest
 
   private IndexTask.IndexIngestionSpec createIngestionSpec(
       File baseDir,
+      ParseSpec parseSpec,
       GranularitySpec granularitySpec,
       Integer targetPartitionSize,
       Integer numShards,
@@ -446,20 +575,7 @@ public class IndexTaskTest
             "test",
             jsonMapper.convertValue(
                 new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec(
-                            "ts",
-                            "auto",
-                            null
-                        ),
-                        new DimensionsSpec(
-                            DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-                            Lists.<String>newArrayList(),
-                            Lists.<SpatialDimensionSchema>newArrayList()
-                        ),
-                        null,
-                        Arrays.asList("ts", "dim", "val")
-                    ),
+                    parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC,
                     null
                 ),
                 Map.class

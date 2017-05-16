@@ -45,11 +45,11 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
     return Arrays.asList(
         (CostBalancerStrategy[]) Arrays.asList(
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
-                    Executors.newFixedThreadPool(1)))
+                Executors.newFixedThreadPool(1)))
         ).toArray(),
         (CostBalancerStrategy[]) Arrays.asList(
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
-                    Executors.newFixedThreadPool(4)))
+                Executors.newFixedThreadPool(4)))
         ).toArray()
     );
   }
@@ -71,7 +71,8 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
   }
 
   @AfterClass
-  public static void tearDown(){
+  public static void tearDown()
+  {
     serverHolderList = null;
   }
 

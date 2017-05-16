@@ -193,16 +193,19 @@ public class LifecycleScopeTest
       ++ran;
     }
 
+    @Override
     public int getStarted()
     {
       return started;
     }
 
+    @Override
     public int getStopped()
     {
       return stopped;
     }
 
+    @Override
     public int getRan()
     {
       return ran;
@@ -233,16 +236,19 @@ public class LifecycleScopeTest
       ++ran;
     }
 
+    @Override
     public int getStarted()
     {
       return started;
     }
 
+    @Override
     public int getStopped()
     {
       return stopped;
     }
 
+    @Override
     public int getRan()
     {
       return ran;

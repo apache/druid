@@ -38,6 +38,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
@@ -83,8 +84,9 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
+    Query<T> query = queryPlus.getQuery();
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
     final boolean populateCache = CacheUtil.populateCacheOnDataNodes(query, strategy, cacheConfig);
     final boolean useCache = CacheUtil.useCacheOnDataNodes(query, strategy, cacheConfig);
@@ -145,7 +147,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
       return Sequences.withEffect(
           Sequences.map(
-              base.run(query, responseContext),
+              base.run(queryPlus, responseContext),
               new Function<T, T>()
               {
                 @Override
@@ -190,7 +192,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
           backgroundExecutorService
       );
     } else {
-      return base.run(query, responseContext);
+      return base.run(queryPlus, responseContext);
     }
   }
 

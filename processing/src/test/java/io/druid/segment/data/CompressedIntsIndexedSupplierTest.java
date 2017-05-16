@@ -34,7 +34,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.channels.Channels;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -331,7 +330,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
       indices[i] = i;
     }
 
-    Collections.shuffle(Arrays.asList(indices));
+    Collections.shuffle(Ints.asList(indices));
     // random access
     for (int i = 0; i < indexed.size(); ++i) {
       int k = indices[i];

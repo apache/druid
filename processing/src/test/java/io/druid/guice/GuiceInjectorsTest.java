@@ -63,7 +63,7 @@ public class GuiceInjectorsTest
     }
   }
 
-  private class CustomEmitterFactory implements Provider<CustomEmitter> {
+  private static class CustomEmitterFactory implements Provider<CustomEmitter> {
 
     private Emitter emitter;
     private Injector injector;

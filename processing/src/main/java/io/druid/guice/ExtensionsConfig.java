@@ -41,6 +41,10 @@ public class ExtensionsConfig
   @JsonProperty
   private String hadoopContainerDruidClasspath = null;
 
+  //Only applicable when hadoopContainerDruidClasspath is explicitly specified.
+  @JsonProperty
+  private boolean addExtensionsToHadoopContainer = false;
+
   @JsonProperty
   private List<String> loadList;
 
@@ -64,6 +68,11 @@ public class ExtensionsConfig
     return hadoopContainerDruidClasspath;
   }
 
+  public boolean getAddExtensionsToHadoopContainer()
+  {
+    return addExtensionsToHadoopContainer;
+  }
+
   public List<String> getLoadList()
   {
     return loadList;
@@ -77,6 +86,7 @@ public class ExtensionsConfig
            ", directory='" + directory + '\'' +
            ", hadoopDependenciesDir='" + hadoopDependenciesDir + '\'' +
            ", hadoopContainerDruidClasspath='" + hadoopContainerDruidClasspath + '\'' +
+           ", addExtensionsToHadoopContainer=" + addExtensionsToHadoopContainer +
            ", loadList=" + loadList +
            '}';
   }

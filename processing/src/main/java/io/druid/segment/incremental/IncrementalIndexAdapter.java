@@ -54,7 +54,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private final IncrementalIndex<?> index;
   private final Map<String, DimensionAccessor> accessors;
 
-  private class DimensionAccessor
+  private static class DimensionAccessor
   {
     private final IncrementalIndex.DimensionDesc dimensionDesc;
     private final MutableBitmap[] invertedIndexes;

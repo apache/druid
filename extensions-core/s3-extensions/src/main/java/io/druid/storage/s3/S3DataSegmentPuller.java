@@ -363,6 +363,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       this.path = key;
     }
 
+    @Override
     public String toString()
     {
       return String.format("s3://%s/%s", bucket, path);

@@ -77,7 +77,9 @@ public class JobHelperTest
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
-                            ImmutableList.of("timestamp", "host", "visited_num")
+                            ImmutableList.of("timestamp", "host", "visited_num"),
+                            false,
+                            0
                         ),
                         null
                     ),

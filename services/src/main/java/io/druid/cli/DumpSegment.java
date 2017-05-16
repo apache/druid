@@ -51,6 +51,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -471,7 +472,7 @@ public class DumpSegment extends GuiceRunnable
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
     final Sequence results = factory.getToolchest().mergeResults(
         factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner>of(runner))
-    ).run(query, Maps.<String, Object>newHashMap());
+    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return (Sequence<T>) results;
   }
 

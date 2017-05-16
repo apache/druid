@@ -153,6 +153,7 @@ public class IndexGeneratorJob implements Jobby
     return jobStats;
   }
 
+  @Override
   public boolean run()
   {
     try {
@@ -775,10 +776,7 @@ public class IndexGeneratorJob implements Jobby
           FileUtils.deleteDirectory(file);
         }
       }
-      catch (ExecutionException e) {
-        throw Throwables.propagate(e);
-      }
-      catch (TimeoutException e) {
+      catch (ExecutionException | TimeoutException e) {
         throw Throwables.propagate(e);
       }
       finally {

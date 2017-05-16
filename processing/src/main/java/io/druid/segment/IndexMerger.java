@@ -43,13 +43,13 @@ import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.nary.BinaryFn;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -1069,6 +1069,7 @@ public class IndexMerger
       this.lastVal = NOT_INIT;
     }
 
+    @Override
     public int seek(int dictId)
     {
       if (dimConversions == null) {

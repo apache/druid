@@ -47,6 +47,7 @@ import io.druid.query.Druids;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -679,9 +680,9 @@ public class ServerManagerTest
     }
 
     @Override
-    public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+    public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
     {
-      return new BlockingSequence<T>(runner.run(query, responseContext), waitLatch, waitYieldLatch, notifyLatch);
+      return new BlockingSequence<>(runner.run(queryPlus, responseContext), waitLatch, waitYieldLatch, notifyLatch);
     }
   }
 

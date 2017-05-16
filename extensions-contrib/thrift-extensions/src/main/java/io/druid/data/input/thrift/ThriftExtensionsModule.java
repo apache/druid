@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ThriftExtensionsModule implements DruidModule
@@ -34,7 +34,7 @@ public class ThriftExtensionsModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.asList(
+    return Collections.singletonList(
         new SimpleModule("ThriftInputRowParserModule")
             .registerSubtypes(
                 new NamedType(ThriftInputRowParser.class, "thrift")

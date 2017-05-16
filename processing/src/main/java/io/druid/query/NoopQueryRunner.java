@@ -29,7 +29,7 @@ import java.util.Map;
 public class NoopQueryRunner<T> implements QueryRunner<T>
 {
   @Override
-  public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
     return Sequences.empty();
   }

@@ -181,6 +181,7 @@ public class ReferenceCountingSegment extends AbstractSegment
     }
   }
 
+  @Override
   public <T> T as(Class<T> clazz)
   {
     return getBaseSegment().as(clazz);
