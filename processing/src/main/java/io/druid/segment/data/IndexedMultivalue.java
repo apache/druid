@@ -23,4 +23,6 @@ import java.io.Closeable;
 
 public interface IndexedMultivalue<T extends IndexedInts> extends Indexed<T>, Closeable
 {
+  @Override
+  T get(int index);
 }

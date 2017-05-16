@@ -19,12 +19,16 @@
 
 package io.druid.segment.data;
 
-public interface Indexed<T> extends Iterable<T>
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
+
+public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
   Class<? extends T> getClazz();
 
   int size();
 
+  @CalledFromHotLoop
   T get(int index);
 
   /**

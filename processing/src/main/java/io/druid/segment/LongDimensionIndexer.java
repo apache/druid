@@ -119,6 +119,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
+        // nothing to inspect
       }
     }
 
@@ -150,6 +151,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
+        // nothing to inspect
       }
     }
 

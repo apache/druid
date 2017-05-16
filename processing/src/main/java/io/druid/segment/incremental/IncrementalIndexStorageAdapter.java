@@ -490,6 +490,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
                     {
+                      // nothing to inspect
                     }
                   }
                   return new TimeLongColumnSelector();

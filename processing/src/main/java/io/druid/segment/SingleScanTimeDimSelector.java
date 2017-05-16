@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class SingleScanTimeDimSelector implements DimensionSelector
+public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
 {
   private final ExtractionFn extractionFn;
   private final LongColumnSelector selector;
@@ -65,6 +65,12 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   }
 
   @Override
+  public int getRowValue()
+  {
+    return getDimensionValueIndex();
+  }
+
+  @Override
   public ValueMatcher makeValueMatcher(final String value)
   {
     return new ValueMatcher()
@@ -73,6 +79,12 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       public boolean matches()
       {
         return Objects.equals(lookupName(getDimensionValueIndex()), value);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", SingleScanTimeDimSelector.this);
       }
     };
   }
@@ -86,6 +98,13 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       public boolean matches()
       {
         return predicate.apply(lookupName(getDimensionValueIndex()));
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", SingleScanTimeDimSelector.this);
+        inspector.visit("predicate", predicate);
       }
     };
   }

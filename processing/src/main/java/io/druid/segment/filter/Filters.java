@@ -38,6 +38,7 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
@@ -452,6 +453,13 @@ public class Filters
       public boolean matches()
       {
         return predicate.applyLong(longSelector.get());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("longSelector", longSelector);
+        inspector.visit("predicate", predicate);
       }
     };
   }
