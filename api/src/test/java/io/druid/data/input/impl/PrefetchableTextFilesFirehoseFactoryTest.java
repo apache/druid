@@ -66,7 +66,9 @@ public class PrefetchableTextFilesFirehoseFactoryTest
               Lists.newArrayList()
           ),
           ",",
-          Arrays.asList("timestamp", "a", "b")
+          Arrays.asList("timestamp", "a", "b"),
+          false,
+          0
       ),
       Charsets.UTF_8.name()
   );

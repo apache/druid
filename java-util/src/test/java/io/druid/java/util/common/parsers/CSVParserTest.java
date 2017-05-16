@@ -21,7 +21,7 @@ package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Map;
@@ -80,7 +80,7 @@ public class CSVParserTest
   @Test
   public void testCSVParserWithoutHeader()
   {
-    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null));
+    final Parser<String, Object> csvParser = new CSVParser(Optional.<String>fromNullable(null), false, 0);
     String body = "hello,world,foo";
     final Map<String, Object> jsonMap = csvParser.parse(body);
     Assert.assertEquals(
@@ -88,5 +88,49 @@ public class CSVParserTest
         ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),
         jsonMap
     );
+  }
+
+  @Test
+  public void testCSVParserWithSkipHeaderRows()
+  {
+    final int skipHeaderRows = 2;
+    final Parser<String, Object> csvParser = new CSVParser(
+        Optional.absent(),
+        false,
+        skipHeaderRows
+    );
+    csvParser.startFileFromBeginning();
+    final String[] body = new String[] {
+        "header,line,1",
+        "header,line,2",
+        "hello,world,foo"
+    };
+    int index;
+    for (index = 0; index < skipHeaderRows; index++) {
+      Assert.assertNull(csvParser.parse(body[index]));
+    }
+    final Map<String, Object> jsonMap = csvParser.parse(body[index]);
+    Assert.assertEquals(
+        "jsonMap",
+        ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),
+        jsonMap
+    );
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testCSVParserWithoutStartFileFromBeginning()
+  {
+    final int skipHeaderRows = 2;
+    final Parser<String, Object> csvParser = new CSVParser(
+        Optional.absent(),
+        false,
+        skipHeaderRows
+    );
+    final String[] body = new String[] {
+        "header\tline\t1",
+        "header\tline\t2",
+        "hello\tworld\tfoo"
+    };
+    csvParser.parse(body[0]);
   }
 }

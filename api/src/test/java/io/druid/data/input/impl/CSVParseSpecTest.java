@@ -41,7 +41,9 @@ public class CSVParseSpecTest
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
-        Arrays.asList("a")
+        Arrays.asList("a"),
+        false,
+        0
     );
   }
 
@@ -60,7 +62,9 @@ public class CSVParseSpecTest
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
-        Arrays.asList("a")
+        Arrays.asList("a"),
+        false,
+        0
     );
   }
 }
