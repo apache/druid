@@ -59,7 +59,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
-import javax.annotation.concurrent.GuardedBy;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,7 +95,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private volatile Predicate<Pair<DruidServerMetadata, DataSegment>> finalPredicate;
 
   // For each queryable server, a name -> DruidServerHolder entry is kept
-  @GuardedBy("inventory")
   private final Map<String, DruidServerHolder> servers = new HashMap<>();
 
   private volatile ExecutorService executor;
@@ -420,10 +418,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     //lock is used to keep state in counter and and segment list in druidServer consistent
     // so that in "updateHolder()" method, new DruidServerHolder with updated DruidServer info
     // can be safely created
-    @GuardedBy("lock")
     private final DruidServer druidServer;
 
-    @GuardedBy("lock")
     private volatile SegmentChangeRequestHistory.Counter counter = null;
 
     private final HostAndPort serverHostAndPort;

@@ -30,7 +30,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.common.utils.StringUtils;
 import io.druid.java.util.common.IAE;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,12 +52,9 @@ public class SegmentChangeRequestHistory
 
   private final int maxSize;
 
-  @GuardedBy("this")
   private final CircularBuffer<Holder> changes;
 
-
   @VisibleForTesting
-  @GuardedBy("waitingFutures")
   final LinkedHashMap<CustomSettableFuture, Counter> waitingFutures;
 
   private final ExecutorService singleThreadedExecutor;
