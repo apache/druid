@@ -56,6 +56,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
     return segments;
   }
 
+  @Override
   public TypeReference<Set<DataSegment>> getReturnTypeReference()
   {
     return new TypeReference<Set<DataSegment>>()

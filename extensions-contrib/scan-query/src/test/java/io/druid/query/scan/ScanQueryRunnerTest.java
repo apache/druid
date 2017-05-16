@@ -47,6 +47,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -414,8 +415,7 @@ public class ScanQueryRunnerTest
         Lists.<ScanResultValue>newArrayList()
     );
 
-    List<ScanResultValue> expectedResults = Arrays.asList(
-    );
+    List<ScanResultValue> expectedResults = Collections.emptyList();
 
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }

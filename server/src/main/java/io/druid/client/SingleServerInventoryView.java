@@ -101,6 +101,7 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
     return container;
   }
 
+  @Override
   public void registerSegmentCallback(
       final Executor exec,
       final SegmentCallback callback,

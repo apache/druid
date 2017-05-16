@@ -51,7 +51,6 @@ import io.druid.segment.Segment;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -169,7 +168,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
 
         return Sequences.simple(
-            Arrays.asList(
+            Collections.singletonList(
                 new SegmentAnalysis(
                     segment.getIdentifier(),
                     retIntervals,
@@ -236,7 +235,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       future.cancel(true);
                       throw new QueryInterruptedException(e);
                     }
-                    catch(CancellationException e) {
+                    catch (CancellationException e) {
                       throw new QueryInterruptedException(e);
                     }
                     catch (TimeoutException e) {

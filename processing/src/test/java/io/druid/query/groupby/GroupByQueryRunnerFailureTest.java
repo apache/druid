@@ -154,6 +154,7 @@ public class GroupByQueryRunnerFailureTest
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
+        @Override
         public String getDefaultStrategy()
         {
           return "v2";
@@ -247,7 +248,6 @@ public class GroupByQueryRunnerFailureTest
   @Test(timeout = 10000, expected = InsufficientResourcesException.class)
   public void testInsufficientResourcesOnBroker() throws IOException
   {
-    final ReferenceCountingResourceHolder<List<ByteBuffer>> holder = mergeBufferPool.takeBatch(1, 10);
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(
@@ -267,10 +267,8 @@ public class GroupByQueryRunnerFailureTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
-    try {
+    try (ReferenceCountingResourceHolder<List<ByteBuffer>> holder = mergeBufferPool.takeBatch(1, 10)) {
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    } finally {
-      holder.close();
     }
   }
 }

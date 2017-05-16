@@ -107,6 +107,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
     return LargeColumnSupportedComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
   }
 
+  @Override
   public ObjectStrategy getObjectStrategy()
   {
     return new ObjectStrategy<ApproximateHistogram>()

@@ -122,6 +122,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   }
 
 
+  @Override
   public long getSerializedSize()
   {
     return 1 +             // version
@@ -132,6 +133,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
            baseBuffers.getSerializedSize(); // data
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
@@ -357,7 +359,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     /**
      * Returns the value at the given index in the current decompression buffer
      *
-     * @param index index of the value in the curent buffer
+     * @param index index of the value in the current buffer
      *
      * @return the value at the given index
      */

@@ -190,6 +190,7 @@ public class GroupByQueryMergeBufferTest
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
+        @Override
         public String getDefaultStrategy()
         {
           return "v2";

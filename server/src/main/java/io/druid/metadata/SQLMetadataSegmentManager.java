@@ -111,6 +111,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     this.connector = connector;
   }
 
+  @Override
   @LifecycleStart
   public void start()
   {
@@ -145,6 +146,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  @Override
   @LifecycleStop
   public void stop()
   {

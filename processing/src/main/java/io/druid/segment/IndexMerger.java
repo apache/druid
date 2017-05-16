@@ -86,6 +86,7 @@ import java.nio.IntBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -101,7 +102,7 @@ public class IndexMerger
 {
   private static final Logger log = new Logger(IndexMerger.class);
 
-  protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Arrays.asList(""), String.class);
+  protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Collections.singletonList(""), String.class);
   protected static final SerializerUtils serializerUtils = new SerializerUtils();
   protected static final int INVALID_ROW = -1;
   protected static final Splitter SPLITTER = Splitter.on(",");
@@ -1074,6 +1075,7 @@ public class IndexMerger
       this.lastVal = NOT_INIT;
     }
 
+    @Override
     public int seek(int dictId)
     {
       if (dimConversions == null) {

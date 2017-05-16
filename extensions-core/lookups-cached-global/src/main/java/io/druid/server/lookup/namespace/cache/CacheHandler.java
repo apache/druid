@@ -44,6 +44,7 @@ public final class CacheHandler implements AutoCloseable
     return cache;
   }
 
+  @Override
   public void close()
   {
     cacheManager.disposeCache(this);

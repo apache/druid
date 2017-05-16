@@ -37,6 +37,7 @@ public class NotDimFilter implements DimFilter
 {
   private static final Function<DimFilter, DimFilter> NEGATE =
       new Function<DimFilter, DimFilter>() {
+        @Override
         public DimFilter apply(DimFilter filter) { return Druids.newNotDimFilterBuilder().field(filter).build(); }
       };
 

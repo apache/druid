@@ -48,6 +48,7 @@ public interface SegmentHandoffNotifier extends Closeable
   /**
    * Perform any final processing and clean up after ourselves.
    */
+  @Override
   void close();
 
 }

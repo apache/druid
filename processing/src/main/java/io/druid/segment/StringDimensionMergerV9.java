@@ -64,14 +64,14 @@ import java.io.IOException;
 import java.nio.IntBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 {
   private static final Logger log = new Logger(StringDimensionMergerV9.class);
 
-  protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Arrays.asList(""), String.class);
+  protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Collections.singletonList(""), String.class);
   protected static final int[] EMPTY_STR_DIM_ARRAY = new int[]{0};
   protected static final Splitter SPLITTER = Splitter.on(",");
 
@@ -496,6 +496,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       this.lastVal = NOT_INIT;
     }
 
+    @Override
     public int seek(int dictId)
     {
       if (dimConversions == null) {

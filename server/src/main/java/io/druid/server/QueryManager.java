@@ -57,6 +57,7 @@ public class QueryManager implements QueryWatcher
     return success;
   }
 
+  @Override
   public void registerQuery(Query query, final ListenableFuture future)
   {
     final String id = query.getId();

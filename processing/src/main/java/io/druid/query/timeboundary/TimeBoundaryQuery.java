@@ -37,7 +37,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -68,8 +68,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   {
     super(
         dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(MY_Y2K_INTERVAL))
-                                   : querySegmentSpec,
+        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Collections.singletonList(MY_Y2K_INTERVAL))
+            : querySegmentSpec,
         false,
         context
     );
@@ -79,7 +79,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   }
 
   @Override
-  public boolean hasFilters() {
+  public boolean hasFilters()
+  {
     return dimFilter != null;
   }
 
@@ -123,15 +124,15 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   public byte[] getCacheKey()
   {
-    final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
+    final byte[] filterBytes = dimFilter == null ? new byte[] {} : dimFilter.getCacheKey();
     final byte[] boundBytes = StringUtils.toUtf8(bound);
     final byte delimiter = (byte) 0xff;
     return ByteBuffer.allocate(2 + boundBytes.length + filterBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(boundBytes)
-                     .put(delimiter)
-                     .put(filterBytes)
-                     .array();
+        .put(CACHE_TYPE_ID)
+        .put(boundBytes)
+        .put(delimiter)
+        .put(filterBytes)
+        .array();
   }
 
   public Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
@@ -208,12 +209,12 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   public String toString()
   {
     return "TimeBoundaryQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", duration=" + getDuration() +
-           ", bound=" + bound +
-           ", dimFilter=" + dimFilter +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", duration=" + getDuration() +
+        ", bound=" + bound +
+        ", dimFilter=" + dimFilter +
+        '}';
   }
 
   @Override

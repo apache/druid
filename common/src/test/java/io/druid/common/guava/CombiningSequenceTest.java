@@ -40,6 +40,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -92,11 +93,11 @@ public class CombiningSequenceTest
   @Test
   public void testNoMergeOne() throws Exception
   {
-    List<Pair<Integer, Integer>> pairs = Arrays.asList(
+    List<Pair<Integer, Integer>> pairs = Collections.singletonList(
         Pair.of(0, 1)
     );
 
-    List<Pair<Integer, Integer>> expected = Arrays.asList(
+    List<Pair<Integer, Integer>> expected = Collections.singletonList(
         Pair.of(0, 1)
     );
 
@@ -151,7 +152,7 @@ public class CombiningSequenceTest
         Pair.of(0, 1)
     );
 
-    List<Pair<Integer, Integer>> expected = Arrays.asList(
+    List<Pair<Integer, Integer>> expected = Collections.singletonList(
         Pair.of(0, 2)
     );
 

@@ -92,7 +92,7 @@ public class InsertSegment extends GuiceRunnable
     indexerMetadataStorageCoordinator = injector.getInstance(IndexerMetadataStorageCoordinator.class);
     final DataSegmentFinder dataSegmentFinder = injector.getInstance(DataSegmentFinder.class);
 
-    log.info("Start seraching segments under [%s]", workingDirPath);
+    log.info("Start searching segments under [%s]", workingDirPath);
 
     Set<DataSegment> segments = null;
     try {

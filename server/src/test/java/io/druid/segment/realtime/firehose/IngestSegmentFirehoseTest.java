@@ -108,7 +108,9 @@ public class IngestSegmentFirehoseTest
             new TimestampSpec("timestamp", "yyyyMMddHH", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
             null,
-            ImmutableList.of("timestamp", "host", "visited")
+            ImmutableList.of("timestamp", "host", "visited"),
+            false,
+            0
         ),
         Charsets.UTF_8.toString()
     );

@@ -36,7 +36,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -189,7 +189,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
         }
 
         if (spatialDimVals.size() == spatialDim.getDims().size()) {
-          spatialLookup.put(spatialDimName, Arrays.asList(JOINER.join(spatialDimVals)));
+          spatialLookup.put(spatialDimName, Collections.singletonList(JOINER.join(spatialDimVals)));
           finalDims.add(spatialDimName);
         }
       }

@@ -65,11 +65,13 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
     this.valueSupplier = valueSupplier;
   }
 
+  @Override
   public long getSerializedSize()
   {
     return 1 + offsetSupplier.getSerializedSize() + valueSupplier.getSerializedSize();
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{version}));

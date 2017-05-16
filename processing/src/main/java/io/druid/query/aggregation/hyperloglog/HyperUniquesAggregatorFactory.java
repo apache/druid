@@ -37,6 +37,7 @@ import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -193,7 +194,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(fieldName);
+    return Collections.singletonList(fieldName);
   }
 
   @JsonProperty

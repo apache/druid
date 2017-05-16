@@ -180,6 +180,7 @@ public class OrFilter implements BooleanFilter
     return Math.min(selectivity, 1.);
   }
 
+  @Override
   public String toString()
   {
     return String.format("(%s)", OR_JOINER.join(filters));
