@@ -516,6 +516,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     }
   }
 
+  @Override
   @LifecycleStop
   public void stop()
   {

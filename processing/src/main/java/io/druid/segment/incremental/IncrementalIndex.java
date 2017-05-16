@@ -1002,11 +1002,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       this.value = value;
     }
 
+    @Override
     public TimeAndDims getKey()
     {
       return key;
     }
 
+    @Override
     public Integer getValue()
     {
       return value;
@@ -1117,6 +1119,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
     }
 
+    @Override
     public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet()
     {
       return facts.entrySet();
@@ -1213,6 +1216,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
     }
 
+    @Override
     public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet()
     {
       return concat(facts.values(), false);

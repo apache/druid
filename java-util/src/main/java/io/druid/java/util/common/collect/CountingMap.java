@@ -41,6 +41,7 @@ public class CountingMap<K> extends AbstractMap<K, Long>
     counts.get(k).addAndGet(n);
   }
 
+  @Override
   public Set<Entry<K, Long>> entrySet()
   {
     return Maps.transformValues(

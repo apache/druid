@@ -148,5 +148,6 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Stop any currently-running processing and clean up after ourselves. This will not remove any on-disk persisted
    * data, but it will drop any data that has not yet been persisted.
    */
+  @Override
   void close();
 }

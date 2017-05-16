@@ -69,6 +69,7 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
     return extractionFn;
   }
 
+  @Override
   public boolean eval(Row row)
   {
     List<String> dimRowValList = row.getDimension(dimension);
@@ -89,6 +90,7 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
     return false;
   }
 
+  @Override
   public byte[] getCacheKey()
   {
     byte[] dimBytes = StringUtils.toUtf8(dimension);
@@ -143,6 +145,7 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
   }
 
 
+  @Override
   public String toString()
   {
     StringBuilder sb = new StringBuilder();

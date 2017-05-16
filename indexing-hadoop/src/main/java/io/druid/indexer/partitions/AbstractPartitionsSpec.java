@@ -52,18 +52,21 @@ public abstract class AbstractPartitionsSpec implements PartitionsSpec
     );
   }
 
+  @Override
   @JsonProperty
   public long getTargetPartitionSize()
   {
     return targetPartitionSize;
   }
 
+  @Override
   @JsonProperty
   public long getMaxPartitionSize()
   {
     return maxPartitionSize;
   }
 
+  @Override
   @JsonProperty
   public boolean isAssumeGrouped()
   {

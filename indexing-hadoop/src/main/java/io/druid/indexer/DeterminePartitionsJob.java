@@ -104,6 +104,7 @@ public class DeterminePartitionsJob implements Jobby
     this.config = config;
   }
 
+  @Override
   public boolean run()
   {
     try {

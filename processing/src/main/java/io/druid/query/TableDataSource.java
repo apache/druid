@@ -48,6 +48,7 @@ public class TableDataSource implements DataSource
     return Collections.singletonList(name);
   }
 
+  @Override
   public String toString() { return name; }
 
   @Override

@@ -183,16 +183,19 @@ public class CombiningSequence<T> implements Sequence<T>
       return accumulator;
     }
 
+    @Override
     public void reset()
     {
       accumulator.reset();
     }
 
+    @Override
     public boolean yielded()
     {
       return accumulator.yielded();
     }
 
+    @Override
     public void yield()
     {
       accumulator.yield();
