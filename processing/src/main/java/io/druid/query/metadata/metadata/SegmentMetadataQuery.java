@@ -262,6 +262,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
         .build();
   }
 
+  @Override
   public List<Interval> getIntervals()
   {
     return this.getQuerySegmentSpec().getIntervals();
