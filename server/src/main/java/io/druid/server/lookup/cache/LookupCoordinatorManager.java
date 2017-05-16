@@ -116,7 +116,7 @@ public class LookupCoordinatorManager
   // management loop, then they get discarded automatically.
   @VisibleForTesting
   final AtomicReference<Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> knownOldState =
-      new AtomicReference<>();
+      new AtomicReference<>(ImmutableMap.of());
 
   // Updated by config watching service
   private AtomicReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>> lookupMapConfigRef;
@@ -275,11 +275,28 @@ public class LookupCoordinatorManager
   public Collection<String> discoverTiers()
   {
     try {
+      Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
       return listenerDiscoverer.discoverChildren(LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public Collection<HostAndPort> discoverNodesInTier(String tier)
+  {
+    try {
+      Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
+      return listenerDiscoverer.getNodes(LookupModule.getTierListenerPath(tier));
+    } catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> getLastKnownLookupsStateOnNodes()
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
+    return knownOldState.get();
   }
 
   /**

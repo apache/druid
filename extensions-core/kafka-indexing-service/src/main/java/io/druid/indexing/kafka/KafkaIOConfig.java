@@ -74,7 +74,7 @@ public class KafkaIOConfig implements IOConfig
       Preconditions.checkArgument(
           endPartitions.getPartitionOffsetMap().get(partition) >= startPartitions.getPartitionOffsetMap()
                                                                                  .get(partition),
-          "end offset must be >= start offset for partition[%d]",
+          "end offset must be >= start offset for partition[%s]",
           partition
       );
     }

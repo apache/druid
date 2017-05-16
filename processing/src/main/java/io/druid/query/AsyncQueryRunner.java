@@ -47,8 +47,9 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
+    final Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
     final ListenableFuture<Sequence<T>> future = executor.submit(new AbstractPrioritizedCallable<Sequence<T>>(priority)
         {
@@ -57,7 +58,7 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
           {
             //Note: this is assumed that baseRunner does most of the work eagerly on call to the
             //run() method and resulting sequence accumulate/yield is fast.
-            return baseRunner.run(query, responseContext);
+            return baseRunner.run(queryPlus, responseContext);
           }
         });
     queryWatcher.registerQuery(query, future);

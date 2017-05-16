@@ -53,5 +53,10 @@
       <property name="format" value="^// {2}"/>
       <property name="illegalPattern" value="true"/>
     </module>
+    <module name="Regexp">
+      <!-- Force comments to classes and methods to be Javadoc comments -->
+      <property name="format" value="/\*[^\*].*?\n(\s*\*.*?\n)*\s+\*/[\s\n]*(transient|volatile|strictfp|synchronized|native|abstract|class|interface|enum|static|private|public|protected|default|void|byte|char|short|int|float|long|double|[A-Z])"/>
+      <property name="illegalPattern" value="true"/>
+    </module>
   </module>
 </module>

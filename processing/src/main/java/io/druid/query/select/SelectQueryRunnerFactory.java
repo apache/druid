@@ -24,6 +24,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -90,10 +91,11 @@ public class SelectQueryRunnerFactory
 
     @Override
     public Sequence<Result<SelectResultValue>> run(
-        Query<Result<SelectResultValue>> input,
+        QueryPlus<Result<SelectResultValue>> queryPlus,
         Map<String, Object> responseContext
     )
     {
+      Query<Result<SelectResultValue>> input = queryPlus.getQuery();
       if (!(input instanceof SelectQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SelectQuery.class);
       }

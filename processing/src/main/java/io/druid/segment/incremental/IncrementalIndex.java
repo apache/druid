@@ -595,7 +595,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return capabilities;
   }
 
-  /*
+  /**
    * Currently called to initialize IncrementalIndex dimension order during index creation
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
    * https://github.com/druid-io/druid/issues/2011

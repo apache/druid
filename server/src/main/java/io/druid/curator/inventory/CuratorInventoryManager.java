@@ -256,9 +256,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
               inventoryCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
               strategy.newContainer(container);
             }
-
-            break;
           }
+          break;
         case CHILD_REMOVED:
           synchronized (lock) {
             final ChildData child = event.getData();
@@ -281,9 +280,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             synchronized (removed) {
               markInventoryInitialized(removed);
             }
-
-            break;
           }
+          break;
         case CHILD_UPDATED:
           synchronized (lock) {
             final ChildData child = event.getData();
@@ -310,9 +308,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
                 holder.setContainer(strategy.updateContainer(holder.getContainer(), container));
               }
             }
-
-            break;
           }
+          break;
         case INITIALIZED:
           synchronized (lock) {
             // must await initialized of all containerholders
@@ -325,8 +322,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             }
             containersInitialized = true;
             maybeDoneInitializing();
-            break;
           }
+          break;
+        case CONNECTION_SUSPENDED:
+        case CONNECTION_RECONNECTED:
+        case CONNECTION_LOST:
+          // do nothing
       }
     }
 
@@ -431,7 +432,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             break;
           }
-          case INITIALIZED:
+          case INITIALIZED: {
             // make sure to acquire locks in (lock -> holder) order
             synchronized (lock) {
               synchronized (holder) {
@@ -440,6 +441,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             }
 
             break;
+          }
+          case CONNECTION_SUSPENDED:
+          case CONNECTION_RECONNECTED:
+          case CONNECTION_LOST:
+            // do nothing
         }
       }
     }

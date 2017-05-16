@@ -61,7 +61,7 @@ public class AsyncQueryRunnerTest
     QueryRunner baseRunner = new QueryRunner()
     {
       @Override
-      public Sequence run(Query query, Map responseContext)
+      public Sequence run(QueryPlus queryPlus, Map responseContext)
       {
         try {
           latch.await();
@@ -85,7 +85,7 @@ public class AsyncQueryRunnerTest
     QueryRunner baseRunner = new QueryRunner()
     {
       @Override
-      public Sequence run(Query query, Map responseContext)
+      public Sequence run(QueryPlus queryPlus, Map responseContext)
       {
         try {
           Thread.sleep(Long.MAX_VALUE);
@@ -117,7 +117,7 @@ public class AsyncQueryRunnerTest
     QueryRunner baseRunner = new QueryRunner()
     {
       @Override
-      public Sequence run(Query query, Map responseContext) { return null; }
+      public Sequence run(QueryPlus queryPlus, Map responseContext) { return null; }
     };
 
     QueryWatcher mock = EasyMock.createMock(QueryWatcher.class);

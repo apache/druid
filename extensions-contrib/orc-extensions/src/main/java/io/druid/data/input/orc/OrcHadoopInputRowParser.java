@@ -70,6 +70,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     initialize();
   }
 
+  @SuppressWarnings("ArgumentParameterSwap")
   @Override
   public InputRow parse(OrcStruct input)
   {

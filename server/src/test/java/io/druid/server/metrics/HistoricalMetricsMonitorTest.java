@@ -119,7 +119,7 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
               @Nullable ServiceEventBuilder<ServiceMetricEvent> input
           )
           {
-            final HashMap<String, Object> map = new HashMap<>(input.build(host, service).toMap());
+            final HashMap<String, Object> map = new HashMap<>(input.build(service, host).toMap());
             Assert.assertNotNull(map.remove("feed"));
             Assert.assertNotNull(map.remove("timestamp"));
             Assert.assertNotNull(map.remove("service"));

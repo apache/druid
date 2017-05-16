@@ -43,6 +43,7 @@ import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
@@ -102,13 +103,14 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Override
       public Sequence<SegmentAnalysis> doRun(
           QueryRunner<SegmentAnalysis> baseRunner,
-          Query<SegmentAnalysis> query,
+          QueryPlus<SegmentAnalysis> queryPlus,
           Map<String, Object> context
       )
       {
+        Query<SegmentAnalysis> query = queryPlus.getQuery();
         return new MappedSequence<>(
             CombiningSequence.create(
-                baseRunner.run(query, context),
+                baseRunner.run(queryPlus, context),
                 makeOrdering(query),
                 createMergeFn(query)
             ),

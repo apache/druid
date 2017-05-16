@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import org.junit.Assert;
@@ -35,7 +36,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -189,7 +189,7 @@ public class CompressedLongsSerdeTest
       indices[i] = i;
     }
 
-    Collections.shuffle(Arrays.asList(indices));
+    Collections.shuffle(Ints.asList(indices));
     // random access
     for (int i = 0; i < indexed.size(); ++i) {
       int k = indices[i];

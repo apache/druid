@@ -20,56 +20,45 @@
 package io.druid.query;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.Map;
 
-public class QueryContextsTest
+/**
+ * Tests that if a QueryRunner overrides a legacy {@link QueryRunner#run(Query, Map)} method, it still works. This
+ * test should be removed when {@link QueryRunner#run(Query, Map)} is removed.
+ */
+public class LegacyApiQueryRunnerTest
 {
+  private static class LegacyApiQueryRunner<T> implements QueryRunner<T>
+  {
+    /**
+     * Overrides legacy API.
+     */
+    @Override
+    public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+    {
+      return Sequences.empty();
+    }
+  }
 
   @Test
-  public void testDefaultQueryTimeout()
+  public void testQueryRunnerLegacyApi()
   {
-    final Query<?> query = new TestQuery(
+    final Query query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(new Interval("0/100"))),
         false,
         new HashMap()
     );
-    Assert.assertEquals(300_000, QueryContexts.getDefaultTimeout(query));
-  }
 
-  @Test
-  public void testEmptyQueryTimeout()
-  {
-    Query<?> query = new TestQuery(
-        new TableDataSource("test"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of(new Interval("0/100"))),
-        false,
-        new HashMap()
-    );
-    Assert.assertEquals(300_000, QueryContexts.getTimeout(query));
-
-    query = QueryContexts.withDefaultTimeout(query, 60_000);
-    Assert.assertEquals(60_000, QueryContexts.getTimeout(query));
-  }
-
-  @Test
-  public void testQueryTimeout()
-  {
-    Query<?> query = new TestQuery(
-        new TableDataSource("test"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of(new Interval("0/100"))),
-        false,
-        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
-    );
-    Assert.assertEquals(1000, QueryContexts.getTimeout(query));
-
-    query = QueryContexts.withDefaultTimeout(query, 1_000_000);
-    Assert.assertEquals(1000, QueryContexts.getTimeout(query));
+    Map<String, Object> context = new HashMap<>();
+    Assert.assertEquals(Sequences.empty(), new LegacyApiQueryRunner<>().run(QueryPlus.wrap(query), context));
   }
 }

@@ -315,7 +315,7 @@ public class BatchDataSegmentAnnouncerTest
                       .build();
   }
 
-  private class SegmentReader
+  private static class SegmentReader
   {
     private final CuratorFramework cf;
     private final ObjectMapper jsonMapper;

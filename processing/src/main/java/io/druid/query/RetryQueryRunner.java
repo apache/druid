@@ -61,10 +61,10 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> context)
   {
     final List<Sequence<T>> listOfSequences = Lists.newArrayList();
-    listOfSequences.add(baseRunner.run(query, context));
+    listOfSequences.add(baseRunner.run(queryPlus, context));
 
     return new YieldingSequenceBase<T>()
     {
@@ -80,12 +80,12 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
             log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
             context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-            final Query<T> retryQuery = query.withQuerySegmentSpec(
+            final QueryPlus<T> retryQueryPlus = queryPlus.withQuerySegmentSpec(
                 new MultipleSpecificSegmentSpec(
                     missingSegments
                 )
             );
-            Sequence<T> retrySequence = baseRunner.run(retryQuery, context);
+            Sequence<T> retrySequence = baseRunner.run(retryQueryPlus, context);
             listOfSequences.add(retrySequence);
             missingSegments = getMissingSegments(context);
             if (missingSegments.isEmpty()) {
@@ -99,7 +99,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           }
 
           return new MergeSequence<>(
-              query.getResultOrdering(),
+              queryPlus.getQuery().getResultOrdering(),
               Sequences.simple(listOfSequences)).toYielder(
               initValue, accumulator
           );

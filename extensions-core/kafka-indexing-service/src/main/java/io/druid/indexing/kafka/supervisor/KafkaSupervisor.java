@@ -42,7 +42,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.MonitorSchedulerConfig;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskLocation;
@@ -70,6 +69,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.metadata.EntryExistsException;
+import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -79,8 +79,8 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -125,7 +125,7 @@ public class KafkaSupervisor implements Supervisor
    * time, there should only be up to a maximum of [taskCount] actively-reading task groups (tracked in the [taskGroups]
    * map) + zero or more pending-completion task groups (tracked in [pendingCompletionTaskGroups]).
    */
-  private class TaskGroup
+  private static class TaskGroup
   {
     // This specifies the partitions and starting offsets for this task group. It is set on group creation from the data
     // in [partitionGroups] and never changes during the lifetime of this task group, which will live until a task in
@@ -150,7 +150,7 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private class TaskData
+  private static class TaskData
   {
     TaskStatus status;
     DateTime startTime;
@@ -185,7 +185,7 @@ public class KafkaSupervisor implements Supervisor
   private final ObjectMapper sortingMapper;
   private final KafkaSupervisorSpec spec;
   private final ServiceEmitter emitter;
-  private final MonitorSchedulerConfig monitorSchedulerConfig;
+  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final String dataSource;
   private final KafkaSupervisorIOConfig ioConfig;
   private final KafkaSupervisorTuningConfig tuningConfig;
@@ -1793,6 +1793,9 @@ public class KafkaSupervisor implements Supervisor
           emitter.emit(
               ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", lag)
           );
+        }
+        catch (InterruptedException e) {
+          // do nothing, probably we are shutting down
         }
         catch (Exception e) {
           log.warn(e, "Unable to compute Kafka lag");

@@ -46,7 +46,6 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
 
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
         !currentlyMovingSegments.get("normal").containsKey(segmentName) &&
-        !toServer.getSegments().containsKey(segmentName) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
       log.info(
           "Moving [%s] from [%s] to [%s]",
@@ -71,7 +70,7 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
         log.info(e, String.format("[%s] : Moving exception", segmentName));
       }
     } else {
-      currentlyMovingSegments.get("normal").remove(segment);
+      currentlyMovingSegments.get("normal").remove(segmentName);
     }
   }
 }

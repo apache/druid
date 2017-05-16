@@ -81,18 +81,18 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
         final long offset = computeOffset(now);
 
-        final Interval interval = query.getIntervals().get(0);
+        final Interval interval = queryPlus.getQuery().getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
             Math.min(interval.getStartMillis() + offset, now + offset),
             Math.min(interval.getEndMillis() + offset, now + offset)
         );
         return Sequences.map(
             baseRunner.run(
-                query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval))),
+                queryPlus.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval))),
                 responseContext
             ),
             new Function<T, T>()
@@ -113,7 +113,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
 
                     final DateTime maxTime = boundary.getMaxTime();
 
-                    return (T) ((TimeBoundaryQuery) query).buildResult(
+                    return (T) ((TimeBoundaryQuery) queryPlus.getQuery()).buildResult(
                         new DateTime(Math.min(res.getTimestamp().getMillis() - offset, now)),
                         minTime != null ? minTime.minus(offset) : null,
                         maxTime != null ? new DateTime(Math.min(maxTime.getMillis() - offset, now)) : null

@@ -32,6 +32,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
@@ -95,11 +96,9 @@ public class QueryResourceTest
       return new QueryRunner<T>()
       {
         @Override
-        public Sequence<T> run(
-            Query<T> query, Map<String, Object> responseContext
-        )
+        public Sequence<T> run(QueryPlus<T> query, Map<String, Object> responseContext)
         {
-          return Sequences.<T>empty();
+          return Sequences.empty();
         }
       };
     }
