@@ -89,7 +89,7 @@ public class DruidServerMetadata
 
   public boolean segmentReplicatable()
   {
-    return type.segmentReplicatable();
+    return type.isSegmentReplicationTarget();
   }
 
   @Override

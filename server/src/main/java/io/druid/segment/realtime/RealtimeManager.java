@@ -51,7 +51,6 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Plumbers;
-import io.druid.server.SegmentManager;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -74,34 +73,28 @@ public class RealtimeManager implements QuerySegmentWalker
    */
   private final Map<String, Map<Integer, FireChief>> chiefs;
 
-  private final SegmentManager segmentManager;
-
   @Inject
   public RealtimeManager(
       List<FireDepartment> fireDepartments,
-      QueryRunnerFactoryConglomerate conglomerate,
-      SegmentManager segmentManager
+      QueryRunnerFactoryConglomerate conglomerate
   )
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
 
     this.chiefs = Maps.newHashMap();
-    this.segmentManager = segmentManager;
   }
 
   @VisibleForTesting
   RealtimeManager(
       List<FireDepartment> fireDepartments,
       QueryRunnerFactoryConglomerate conglomerate,
-      Map<String, Map<Integer, FireChief>> chiefs,
-      SegmentManager segmentManager
+      Map<String, Map<Integer, FireChief>> chiefs
   )
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
     this.chiefs = chiefs == null ? Maps.newHashMap() : Maps.newHashMap(chiefs);
-    this.segmentManager = segmentManager;
   }
 
   @LifecycleStart

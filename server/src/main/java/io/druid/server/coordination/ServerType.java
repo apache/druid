@@ -25,7 +25,7 @@ public enum ServerType
   BRIDGE,
   REALTIME {
     @Override
-    public boolean segmentReplicatable()
+    public boolean isSegmentReplicationTarget()
     {
       return false;
     }
@@ -38,7 +38,7 @@ public enum ServerType
    *
    * @see io.druid.server.coordinator.rules.LoadRule
    */
-  boolean segmentReplicatable()
+  boolean isSegmentReplicationTarget()
   {
     return true;
   }
@@ -48,7 +48,7 @@ public enum ServerType
    *
    * @return true if it is available for broadcast.
    */
-  boolean segmentBroadcastable()
+  boolean isSegmentBroadcastTarget()
   {
     return true;
   }
