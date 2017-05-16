@@ -40,7 +40,9 @@ public class DelimitedParseSpecTest
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
         "\u0001",
         "\u0002",
-        Arrays.asList("abc")
+        Arrays.asList("abc"),
+        false,
+        0
     );
     final DelimitedParseSpec serde = jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
@@ -71,7 +73,9 @@ public class DelimitedParseSpecTest
         ),
         ",",
         " ",
-        Arrays.asList("a")
+        Arrays.asList("a"),
+        false,
+        0
     );
   }
 
@@ -91,12 +95,15 @@ public class DelimitedParseSpecTest
         ),
         ",",
         null,
-        Arrays.asList("a")
+        Arrays.asList("a"),
+        false,
+        0
     );
   }
 
-  @Test(expected = NullPointerException.class)
-  public void testDefaultColumnList(){
+  @Test(expected = IllegalArgumentException.class)
+  public void testDefaultColumnList()
+  {
     final DelimitedParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -110,8 +117,9 @@ public class DelimitedParseSpecTest
         ),
         ",",
         null,
-        // pass null columns not allowed
-        null
+        null,
+        false,
+        0
     );
   }
 }
