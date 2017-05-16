@@ -19,7 +19,6 @@
 
 package io.druid.server;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
@@ -74,10 +73,10 @@ public class SegmentManager
     return segmentLoader.isSegmentLoaded(segment);
   }
 
-  public Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> getDataSources()
+  public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline(String dataSource)
   {
     synchronized (lock) {
-      return ImmutableMap.copyOf(dataSources);
+      return dataSources.get(dataSource);
     }
   }
 
@@ -92,23 +91,7 @@ public class SegmentManager
    */
   public boolean loadSegment(final DataSegment segment) throws SegmentLoadingException
   {
-    final Segment adapter;
-    try {
-      adapter = segmentLoader.getSegment(segment);
-    }
-    catch (SegmentLoadingException e) {
-      try {
-        segmentLoader.cleanup(segment);
-      }
-      catch (SegmentLoadingException e1) {
-        // ignore
-      }
-      throw e;
-    }
-
-    if (adapter == null) {
-      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", segment.getLoadSpec());
-    }
+    final Segment adapter = getAdapter(segment);
 
     synchronized (lock) {
       final String dataSource = segment.getDataSource();
@@ -139,6 +122,28 @@ public class SegmentManager
       }
       return true;
     }
+  }
+
+  private Segment getAdapter(final DataSegment segment) throws SegmentLoadingException
+  {
+    final Segment adapter;
+    try {
+      adapter = segmentLoader.getSegment(segment);
+    }
+    catch (SegmentLoadingException e) {
+      try {
+        segmentLoader.cleanup(segment);
+      }
+      catch (SegmentLoadingException e1) {
+        e.addSuppressed(e1);
+      }
+      throw e;
+    }
+
+    if (adapter == null) {
+      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", segment.getLoadSpec());
+    }
+    return adapter;
   }
 
   public void dropSegment(final DataSegment segment) throws SegmentLoadingException

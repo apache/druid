@@ -76,6 +76,7 @@ public class ImmutableDruidDataSource
   @Override
   public String toString()
   {
+    // partitionNames is intentionally ignored because it is usually large
     return "ImmutableDruidDataSource{"
            + "name='" + name
            + "', segments='" + segmentsHolder

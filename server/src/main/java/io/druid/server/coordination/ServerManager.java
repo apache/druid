@@ -120,8 +120,9 @@ public class ServerManager implements QuerySegmentWalker
     }
     String dataSourceName = getDataSourceName(dataSource);
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = segmentManager.getDataSources()
-                                                                                               .get(dataSourceName);
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = segmentManager.getTimeline(
+        dataSourceName
+    );
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -210,8 +211,9 @@ public class ServerManager implements QuerySegmentWalker
 
     String dataSourceName = getDataSourceName(query.getDataSource());
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = segmentManager.getDataSources()
-                                                                                               .get(dataSourceName);
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = segmentManager.getTimeline(
+        dataSourceName
+    );
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();

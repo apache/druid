@@ -111,6 +111,7 @@ public class ImmutableDruidServer
   @Override
   public String toString()
   {
+    // segments is intentionally ignored because it is usually large
     return "ImmutableDruidServer{"
            + "meta='" + metadata
            + "', size='" + currSize
