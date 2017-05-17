@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
@@ -31,6 +30,7 @@ import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;

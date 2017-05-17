@@ -24,17 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.druid.data.input.Row;
-import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
 
-import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Objects;
 
 public class DimensionSelectorHavingSpec extends BaseHavingSpec
 {
-  private static final byte CACHE_KEY = (byte) 0x8;
-  private static final byte STRING_SEPARATOR = (byte) 0xFF;
   private final String dimension;
   private final String value;
   private final ExtractionFn extractionFn;
@@ -69,6 +66,7 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
     return extractionFn;
   }
 
+  @Override
   public boolean eval(Row row)
   {
     List<String> dimRowValList = row.getDimension(dimension);
@@ -89,24 +87,8 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
     return false;
   }
 
-  public byte[] getCacheKey()
-  {
-    byte[] dimBytes = StringUtils.toUtf8(dimension);
-    byte[] valBytes = StringUtils.toUtf8(value);
-    byte [] extractionFnBytes = this.getExtractionFn().getCacheKey();
-
-    return ByteBuffer.allocate(3 + dimBytes.length + valBytes.length + extractionFnBytes.length)
-                       .put(CACHE_KEY)
-                       .put(dimBytes)
-                       .put(STRING_SEPARATOR)
-                       .put(valBytes)
-                       .put(STRING_SEPARATOR)
-                       .put(extractionFnBytes)
-                       .array();
-  }
-
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -114,44 +96,25 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    DimensionSelectorHavingSpec that = (DimensionSelectorHavingSpec) o;
-    boolean valEquals = false;
-    boolean dimEquals = false;
-
-    if (value != null && that.value != null) {
-      valEquals = value.equals(that.value);
-    } else if (value == null && that.value == null) {
-      valEquals = true;
-    }
-
-    if (dimension != null && that.dimension != null) {
-      dimEquals = dimension.equals(that.dimension);
-    } else if (dimension == null && that.dimension == null) {
-      dimEquals = true;
-    }
-
-    return (valEquals && dimEquals && extractionFn.equals(that.extractionFn));
+    final DimensionSelectorHavingSpec that = (DimensionSelectorHavingSpec) o;
+    return Objects.equals(dimension, that.dimension) &&
+           Objects.equals(value, that.value) &&
+           Objects.equals(extractionFn, that.extractionFn);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimension != null ? dimension.hashCode() : 0;
-    result = 31 * result + (value != null ? value.hashCode() : 0);
-    return result;
+    return Objects.hash(dimension, value, extractionFn);
   }
 
-
+  @Override
   public String toString()
   {
-    StringBuilder sb = new StringBuilder();
-    sb.append("DimensionSelectorHavingSpec");
-    sb.append("{dimension='").append(dimension).append('\'');
-    sb.append(", value='").append(value);
-    sb.append("', extractionFunction='").append(getExtractionFn());
-    sb.append("'}");
-    return sb.toString();
+    return "DimensionSelectorHavingSpec{" +
+           "dimension='" + dimension + '\'' +
+           ", value='" + value + '\'' +
+           ", extractionFn=" + extractionFn +
+           '}';
   }
-
 }

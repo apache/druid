@@ -19,9 +19,11 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
 /**
  */
-public class IntersectingOffset implements Offset {
+public class IntersectingOffset extends Offset {
   private final Offset lhs;
   private final Offset rhs;
 
@@ -90,5 +92,12 @@ public class IntersectingOffset implements Offset {
     final Offset lhsClone = lhs.clone();
     final Offset rhsClone = rhs.clone();
     return new IntersectingOffset(lhsClone, rhsClone);
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("lhs", lhs);
+    inspector.visit("rhs", rhs);
   }
 }

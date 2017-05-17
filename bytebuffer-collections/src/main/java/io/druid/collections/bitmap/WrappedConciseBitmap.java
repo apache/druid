@@ -42,7 +42,7 @@ public class WrappedConciseBitmap implements MutableBitmap
   }
 
   /**
-   * Create a bitmap wrappign the given bitmap
+   * Create a bitmap wrapping the given bitmap
    *
    * @param conciseSet bitmap to be wrapped
    */

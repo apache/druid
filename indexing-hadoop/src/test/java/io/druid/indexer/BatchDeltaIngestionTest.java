@@ -322,8 +322,7 @@ public class BatchDeltaIngestionTest
         ImmutableList.of(new WindowedStorageAdapter(adapter, windowedDataSegment.getInterval())),
         ImmutableList.of("host"),
         ImmutableList.of("visited_sum", "unique_hosts"),
-        null,
-        Granularities.NONE
+        null
     );
 
     List<InputRow> rows = Lists.newArrayList();
@@ -347,7 +346,9 @@ public class BatchDeltaIngestionTest
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
-                            ImmutableList.of("timestamp", "host", "host2", "visited_num")
+                            ImmutableList.of("timestamp", "host", "host2", "visited_num"),
+                            false,
+                            0
                         ),
                         null
                     ),

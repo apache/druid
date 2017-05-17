@@ -19,12 +19,9 @@
 
 package io.druid.query;
 
-import com.google.common.base.Function;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.guava.Sequence;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -52,10 +49,10 @@ public class FluentQueryRunnerBuilder<T>
 
     @Override
     public Sequence<T> run(
-        Query<T> query, Map<String, Object> responseContext
+        QueryPlus<T> queryPlus, Map<String, Object> responseContext
     )
     {
-      return baseRunner.run(query, responseContext);
+      return baseRunner.run(queryPlus, responseContext);
     }
 
     public FluentQueryRunner from(QueryRunner<T> runner) {
@@ -90,15 +87,7 @@ public class FluentQueryRunnerBuilder<T>
       return from(
           CPUTimeMetricQueryRunner.safeBuild(
               baseRunner,
-              new Function<Query<T>, ServiceMetricEvent.Builder>()
-              {
-                @Nullable
-                @Override
-                public ServiceMetricEvent.Builder apply(Query<T> tQuery)
-                {
-                  return toolChest.makeMetricBuilder(tQuery);
-                }
-              },
+              toolChest,
               emitter,
               new AtomicLong(0L),
               true

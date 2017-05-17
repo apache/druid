@@ -19,9 +19,11 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
 /**
  */
-public class UnioningOffset implements Offset
+public class UnioningOffset extends Offset
 {
   private final Offset[] offsets = new Offset[2];
   private final int[] offsetVals = new int[2];
@@ -134,5 +136,12 @@ public class UnioningOffset implements Offset
     }
 
     return new UnioningOffset(newOffsets, newOffsetValues, nextOffsetIndex);
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("lhs", offsets[0]);
+    inspector.visit("rhs", offsets[1]);
   }
 }

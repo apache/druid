@@ -22,6 +22,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.java.util.common.parsers.CloseableIterator;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 
 import java.io.IOException;
@@ -32,17 +33,19 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
 {
   private Yielder<ScanResultValue> yielder;
   private String resultFormat;
-  private int limit = 0;
-  private int count = 0;
+  private long limit = 0;
+  private long count = 0;
 
   public ScanQueryLimitRowIterator(
-      QueryRunner<ScanResultValue> baseRunner, ScanQuery query,
+      QueryRunner<ScanResultValue> baseRunner,
+      QueryPlus<ScanResultValue> queryPlus,
       Map<String, Object> responseContext
   )
   {
+    ScanQuery query = (ScanQuery) queryPlus.getQuery();
     resultFormat = query.getResultFormat();
     limit = query.getLimit();
-    Sequence<ScanResultValue> baseSequence = baseRunner.run(query, responseContext);
+    Sequence<ScanResultValue> baseSequence = baseRunner.run(queryPlus, responseContext);
     yielder = baseSequence.toYielder(
         null,
         new YieldingAccumulator<ScanResultValue, ScanResultValue>()
@@ -76,7 +79,8 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
         return batch;
       } else {
         // last batch
-        int left = limit - count;
+        // single batch length is <= Integer.MAX_VALUE, so this should not overflow
+        int left = (int) (limit - count);
         count = limit;
         return new ScanResultValue(batch.getSegmentId(), batch.getColumns(), events.subList(0, left));
       }

@@ -23,6 +23,7 @@
 package io.druid.data.input;
 
 import com.google.protobuf.AbstractMessage;
+import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.UnknownFieldSet;
 
 public final class ProtoTestEventWrapper {
@@ -70,7 +71,7 @@ public final class ProtoTestEventWrapper {
     long getSomeLongColumn();
   }
   public static final class ProtoTestEvent extends
-      com.google.protobuf.GeneratedMessage
+      GeneratedMessage
       implements ProtoTestEventOrBuilder {
     // Use ProtoTestEvent.newBuilder() to construct.
     private ProtoTestEvent(Builder builder) {
@@ -83,6 +84,7 @@ public final class ProtoTestEventWrapper {
       return defaultInstance;
     }
     
+    @Override
     public ProtoTestEvent getDefaultInstanceForType() {
       return defaultInstance;
     }
@@ -98,7 +100,8 @@ public final class ProtoTestEventWrapper {
       return ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
     }
     
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable;
     }
@@ -115,6 +118,7 @@ public final class ProtoTestEventWrapper {
       public static final int CATEGORY_TWO_VALUE = 2;
       
       
+      @Override
       public final int getNumber() { return value; }
       
       public static EventCategory valueOf(int value) {
@@ -133,15 +137,18 @@ public final class ProtoTestEventWrapper {
       private static com.google.protobuf.Internal.EnumLiteMap<EventCategory>
           internalValueMap =
             new com.google.protobuf.Internal.EnumLiteMap<EventCategory>() {
+              @Override
               public EventCategory findValueByNumber(int number) {
                 return EventCategory.valueOf(number);
               }
             };
       
+      @Override
       public final com.google.protobuf.Descriptors.EnumValueDescriptor
           getValueDescriptor() {
         return getDescriptor().getValues().get(index);
       }
+      @Override
       public final com.google.protobuf.Descriptors.EnumDescriptor
           getDescriptorForType() {
         return getDescriptor();
@@ -179,9 +186,11 @@ public final class ProtoTestEventWrapper {
     // required .prototest.ProtoTestEvent.EventCategory eventType = 1;
     public static final int EVENTTYPE_FIELD_NUMBER = 1;
     private ProtoTestEventWrapper.ProtoTestEvent.EventCategory eventType_;
+    @Override
     public boolean hasEventType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    @Override
     public ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType() {
       return eventType_;
     }
@@ -189,9 +198,11 @@ public final class ProtoTestEventWrapper {
     // required uint64 id = 2;
     public static final int ID_FIELD_NUMBER = 2;
     private long id_;
+    @Override
     public boolean hasId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    @Override
     public long getId() {
       return id_;
     }
@@ -199,9 +210,11 @@ public final class ProtoTestEventWrapper {
     // required string timestamp = 3;
     public static final int TIMESTAMP_FIELD_NUMBER = 3;
     private java.lang.Object timestamp_;
+    @Override
     public boolean hasTimestamp() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+    @Override
     public String getTimestamp() {
       java.lang.Object ref = timestamp_;
       if (ref instanceof String) {
@@ -231,9 +244,11 @@ public final class ProtoTestEventWrapper {
     // optional uint32 someOtherId = 4;
     public static final int SOMEOTHERID_FIELD_NUMBER = 4;
     private int someOtherId_;
+    @Override
     public boolean hasSomeOtherId() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
+    @Override
     public int getSomeOtherId() {
       return someOtherId_;
     }
@@ -241,9 +256,11 @@ public final class ProtoTestEventWrapper {
     // optional bool isValid = 5;
     public static final int ISVALID_FIELD_NUMBER = 5;
     private boolean isValid_;
+    @Override
     public boolean hasIsValid() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
+    @Override
     public boolean getIsValid() {
       return isValid_;
     }
@@ -251,9 +268,11 @@ public final class ProtoTestEventWrapper {
     // optional string description = 6;
     public static final int DESCRIPTION_FIELD_NUMBER = 6;
     private java.lang.Object description_;
+    @Override
     public boolean hasDescription() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
+    @Override
     public String getDescription() {
       java.lang.Object ref = description_;
       if (ref instanceof String) {
@@ -283,9 +302,11 @@ public final class ProtoTestEventWrapper {
     // optional float someFloatColumn = 7;
     public static final int SOMEFLOATCOLUMN_FIELD_NUMBER = 7;
     private float someFloatColumn_;
+    @Override
     public boolean hasSomeFloatColumn() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
+    @Override
     public float getSomeFloatColumn() {
       return someFloatColumn_;
     }
@@ -293,9 +314,11 @@ public final class ProtoTestEventWrapper {
     // optional uint32 someIntColumn = 8;
     public static final int SOMEINTCOLUMN_FIELD_NUMBER = 8;
     private int someIntColumn_;
+    @Override
     public boolean hasSomeIntColumn() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
+    @Override
     public int getSomeIntColumn() {
       return someIntColumn_;
     }
@@ -303,9 +326,11 @@ public final class ProtoTestEventWrapper {
     // optional uint64 someLongColumn = 9;
     public static final int SOMELONGCOLUMN_FIELD_NUMBER = 9;
     private long someLongColumn_;
+    @Override
     public boolean hasSomeLongColumn() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
+    @Override
     public long getSomeLongColumn() {
       return someLongColumn_;
     }
@@ -322,6 +347,7 @@ public final class ProtoTestEventWrapper {
       someLongColumn_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
+    @Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) {
@@ -344,6 +370,7 @@ public final class ProtoTestEventWrapper {
       return true;
     }
     
+    @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -378,6 +405,7 @@ public final class ProtoTestEventWrapper {
     }
     
     private int memoizedSerializedSize = -1;
+    @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) {
@@ -427,7 +455,7 @@ public final class ProtoTestEventWrapper {
     }
     
     private static final long serialVersionUID = 0L;
-    @java.lang.Override
+    @Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
@@ -501,27 +529,31 @@ public final class ProtoTestEventWrapper {
     }
     
     public static Builder newBuilder() { return Builder.create(); }
+    @Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(ProtoTestEventWrapper.ProtoTestEvent prototype) {
       return newBuilder().mergeFrom(prototype);
     }
+    @Override
     public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
+
+    @SuppressWarnings("ParameterPackage")
+    @Override
     protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
+        GeneratedMessage.Builder<Builder>
        implements ProtoTestEventWrapper.ProtoTestEventOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
         return ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
       }
       
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      @Override
+      protected GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable;
       }
@@ -536,13 +568,14 @@ public final class ProtoTestEventWrapper {
         maybeForceBuilderInitialization();
       }
       private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        if (GeneratedMessage.alwaysUseFieldBuilders) {
         }
       }
       private static Builder create() {
         return new Builder();
       }
       
+      @Override
       public Builder clear() {
         super.clear();
         eventType_ = ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO;
@@ -566,19 +599,23 @@ public final class ProtoTestEventWrapper {
         return this;
       }
       
+      @Override
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
       
+      @Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return ProtoTestEventWrapper.ProtoTestEvent.getDescriptor();
       }
       
+      @Override
       public ProtoTestEventWrapper.ProtoTestEvent getDefaultInstanceForType() {
         return ProtoTestEventWrapper.ProtoTestEvent.getDefaultInstance();
       }
       
+      @Override
       public ProtoTestEventWrapper.ProtoTestEvent build() {
         ProtoTestEventWrapper.ProtoTestEvent result = buildPartial();
         if (!result.isInitialized()) {
@@ -598,6 +635,7 @@ public final class ProtoTestEventWrapper {
         return result;
       }
       
+      @Override
       public ProtoTestEventWrapper.ProtoTestEvent buildPartial() {
         ProtoTestEventWrapper.ProtoTestEvent result = new ProtoTestEventWrapper.ProtoTestEvent(this);
         int from_bitField0_ = bitField0_;
@@ -643,6 +681,7 @@ public final class ProtoTestEventWrapper {
         return result;
       }
       
+      @Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof ProtoTestEventWrapper.ProtoTestEvent) {
           return mergeFrom((ProtoTestEventWrapper.ProtoTestEvent)other);
@@ -687,6 +726,7 @@ public final class ProtoTestEventWrapper {
         return this;
       }
       
+      @Override
       public final boolean isInitialized() {
         if (!hasEventType()) {
           
@@ -703,6 +743,7 @@ public final class ProtoTestEventWrapper {
         return true;
       }
       
+      @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -785,9 +826,11 @@ public final class ProtoTestEventWrapper {
       
       // required .prototest.ProtoTestEvent.EventCategory eventType = 1;
       private ProtoTestEventWrapper.ProtoTestEvent.EventCategory eventType_ = ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO;
+      @Override
       public boolean hasEventType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      @Override
       public ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType() {
         return eventType_;
       }
@@ -809,9 +852,11 @@ public final class ProtoTestEventWrapper {
       
       // required uint64 id = 2;
       private long id_ ;
+      @Override
       public boolean hasId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      @Override
       public long getId() {
         return id_;
       }
@@ -830,9 +875,11 @@ public final class ProtoTestEventWrapper {
       
       // required string timestamp = 3;
       private java.lang.Object timestamp_ = "";
+      @Override
       public boolean hasTimestamp() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      @Override
       public String getTimestamp() {
         java.lang.Object ref = timestamp_;
         if (!(ref instanceof String)) {
@@ -866,9 +913,11 @@ public final class ProtoTestEventWrapper {
       
       // optional uint32 someOtherId = 4;
       private int someOtherId_ ;
+      @Override
       public boolean hasSomeOtherId() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
+      @Override
       public int getSomeOtherId() {
         return someOtherId_;
       }
@@ -887,9 +936,11 @@ public final class ProtoTestEventWrapper {
       
       // optional bool isValid = 5;
       private boolean isValid_ ;
+      @Override
       public boolean hasIsValid() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
+      @Override
       public boolean getIsValid() {
         return isValid_;
       }
@@ -908,9 +959,11 @@ public final class ProtoTestEventWrapper {
       
       // optional string description = 6;
       private java.lang.Object description_ = "";
+      @Override
       public boolean hasDescription() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
+      @Override
       public String getDescription() {
         java.lang.Object ref = description_;
         if (!(ref instanceof String)) {
@@ -944,9 +997,11 @@ public final class ProtoTestEventWrapper {
       
       // optional float someFloatColumn = 7;
       private float someFloatColumn_ ;
+      @Override
       public boolean hasSomeFloatColumn() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
+      @Override
       public float getSomeFloatColumn() {
         return someFloatColumn_;
       }
@@ -965,9 +1020,11 @@ public final class ProtoTestEventWrapper {
       
       // optional uint32 someIntColumn = 8;
       private int someIntColumn_ ;
+      @Override
       public boolean hasSomeIntColumn() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
+      @Override
       public int getSomeIntColumn() {
         return someIntColumn_;
       }
@@ -986,9 +1043,11 @@ public final class ProtoTestEventWrapper {
       
       // optional uint64 someLongColumn = 9;
       private long someLongColumn_ ;
+      @Override
       public boolean hasSomeLongColumn() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
+      @Override
       public long getSomeLongColumn() {
         return someLongColumn_;
       }
@@ -1019,7 +1078,7 @@ public final class ProtoTestEventWrapper {
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_prototest_ProtoTestEvent_descriptor;
   private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    GeneratedMessage.FieldAccessorTable
       internal_static_prototest_ProtoTestEvent_fieldAccessorTable;
   
   public static com.google.protobuf.Descriptors.FileDescriptor
@@ -1043,13 +1102,14 @@ public final class ProtoTestEventWrapper {
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
+        @Override
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
           internal_static_prototest_ProtoTestEvent_descriptor =
             getDescriptor().getMessageTypes().get(0);
           internal_static_prototest_ProtoTestEvent_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+            GeneratedMessage.FieldAccessorTable(
               internal_static_prototest_ProtoTestEvent_descriptor,
               new java.lang.String[] { "EventType", "Id", "Timestamp", "SomeOtherId", "IsValid", "Description", "SomeFloatColumn", "SomeIntColumn", "SomeLongColumn", },
               ProtoTestEventWrapper.ProtoTestEvent.class,

@@ -21,6 +21,7 @@ package io.druid.query.dimension;
 
 import com.google.common.base.Predicate;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.data.ArrayBasedIndexedInts;
@@ -78,6 +79,13 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
         // null should match empty rows in multi-value columns
         return nullRow && value == null;
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // PredicateFilteredDimensionSelector.this inspects selector and predicate as well.
+        inspector.visit("selector", PredicateFilteredDimensionSelector.this);
+      }
     };
   }
 
@@ -105,6 +113,14 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
         // null should match empty rows in multi-value columns
         return nullRow && matchNull;
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // PredicateFilteredDimensionSelector.this inspects selector and predicate as well.
+        inspector.visit("selector", PredicateFilteredDimensionSelector.this);
+        inspector.visit("matcherPredicate", matcherPredicate);
+      }
     };
   }
 
@@ -131,5 +147,12 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
   public IdLookup idLookup()
   {
     return selector.idLookup();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
+    inspector.visit("predicate", predicate);
   }
 }

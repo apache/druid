@@ -9,9 +9,37 @@ var killTask = function(taskId) {
       url: '/druid/indexer/v1/task/'+ taskId +'/shutdown',
       data: ''
     }).done(function(data) {
-      setTimeout(function() { location.reload(true) }, 75);
+      setTimeout(function() { location.reload(true) }, 750);
     }).fail(function(data) {
       alert('Kill request failed with status: '+data.status+' please check overlord logs');
+    })
+  }
+}
+
+var resetSupervisor = function(supervisorId) {
+  if(confirm('Do you really want to reset: '+ supervisorId)) {
+    $.ajax({
+      type:'POST',
+      url: '/druid/indexer/v1/supervisor/' + supervisorId + '/reset',
+      data: ''
+    }).done(function(data) {
+      setTimeout(function() { location.reload(true) }, 750);
+    }).fail(function(data) {
+      alert('Reset request failed, please check overlord logs for details.');
+    })
+  }
+}
+
+var shutdownSupervisor = function(supervisorId) {
+  if(confirm('Do you really want to shutdown: '+ supervisorId)) {
+    $.ajax({
+      type:'POST',
+      url: '/druid/indexer/v1/supervisor/' + supervisorId + '/shutdown',
+      data: ''
+    }).done(function(data) {
+      setTimeout(function() { location.reload(true) }, 750);
+    }).fail(function(data) {
+      alert('Shutdown request failed, please check overlord logs for details.');
     })
   }
 }
@@ -30,6 +58,26 @@ $(document).ready(function() {
       }
     }
   }
+
+  $.get('/druid/indexer/v1/supervisor', function(dataList) {
+    var data = []
+    for (i = 0 ; i < dataList.length ; i++) {
+      var supervisorId = encodeURIComponent(dataList[i])
+      data[i] = {
+        "dataSource" : supervisorId,
+        "more" :
+          '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '">payload</a>' +
+          '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '/status">status</a>' +
+          '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '/history">history</a>' +
+          '<a onclick="resetSupervisor(\'' + supervisorId + '\');">reset</a>' +
+          '<a onclick="shutdownSupervisor(\'' + supervisorId + '\');">shutdown</a>'
+      }
+    }
+    buildTable((data), $('#supervisorsTable'));
+    if (dataList.length > 0) {
+      $('.supervisors_section').show();
+    }
+  });
 
   $.get('/druid/indexer/v1/runningTasks', function(data) {
     $('.running_loading').hide();

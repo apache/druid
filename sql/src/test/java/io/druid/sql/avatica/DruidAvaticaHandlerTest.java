@@ -272,13 +272,13 @@ public class DruidAvaticaHandlerTest
     Assert.assertEquals(
         ImmutableList.of(
             ROW(
-                Pair.of("TABLE_CAT", null),
+                Pair.of("TABLE_CAT", ""),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
             ROW(
-                Pair.of("TABLE_CAT", null),
+                Pair.of("TABLE_CAT", ""),
                 Pair.of("TABLE_NAME", "foo2"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")

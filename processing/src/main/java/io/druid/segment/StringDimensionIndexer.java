@@ -29,9 +29,11 @@ import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import io.druid.java.util.common.ISE;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.Indexed;
@@ -325,6 +327,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       {
         return IndexedIterable.create(this).iterator();
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
     };
   }
 
@@ -397,6 +405,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     class IndexerDimensionSelector implements DimensionSelector, IdLookup
     {
+      private int[] nullIdIntArray;
+
       @Override
       public IndexedInts getRow()
       {
@@ -411,27 +421,27 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
         int[] row = null;
         int rowSize = 0;
+
+        // usually due to currEntry's rowIndex is smaller than the row's rowIndex in which this dim first appears
         if (indices == null || indices.length == 0) {
           final int nullId = getEncodedValue(null, false);
           if (nullId > -1) {
-            if (nullId < maxId) {
-              row = new int[] {nullId};
-              rowSize = 1;
-            } else {
-              // Choose to use ArrayBasedIndexedInts later, instead of EmptyIndexedInts, for monomorphism
-              row = IntArrays.EMPTY_ARRAY;
-              rowSize = 0;
+            if (nullIdIntArray == null) {
+              nullIdIntArray = new int[] {nullId};
             }
+            row = nullIdIntArray;
+            rowSize = 1;
+          } else {
+            // doesn't contain nullId, then empty array is used
+            // Choose to use ArrayBasedIndexedInts later, instead of EmptyIndexedInts, for monomorphism
+            row = IntArrays.EMPTY_ARRAY;
+            rowSize = 0;
           }
         }
 
         if (row == null && indices != null && indices.length > 0) {
-          row = new int[indices.length];
-          for (int id : indices) {
-            if (id < maxId) {
-              row[rowSize++] = id;
-            }
-          }
+          row = indices;
+          rowSize = indices.length;
         }
 
         return ArrayBasedIndexedInts.of(row, rowSize);
@@ -464,6 +474,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
                   }
                 }
                 return false;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                // nothing to inspect
               }
             };
           } else {
@@ -502,6 +518,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
             }
             return false;
           }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            // nothing to inspect
+          }
         };
       }
 
@@ -514,6 +536,9 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public String lookupName(int id)
       {
+        if (id >= maxId) {
+          throw new ISE("id[%d] >= maxId[%d]", id, maxId);
+        }
         final String strValue = getActualValue(id, false);
         return extractionFn == null ? strValue : extractionFn.apply(strValue);
       }
@@ -540,6 +565,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           );
         }
         return getEncodedValue(name, false);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("currEntry", currEntry);
       }
     }
     return new IndexerDimensionSelector();

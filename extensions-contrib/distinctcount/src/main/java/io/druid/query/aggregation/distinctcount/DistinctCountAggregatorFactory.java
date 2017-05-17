@@ -37,6 +37,7 @@ import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -83,7 +84,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   {
     DimensionSelector selector = makeDimensionSelector(columnFactory);
     if (selector == null) {
-      return new EmptyDistinctCountBufferAggregator();
+      return EmptyDistinctCountBufferAggregator.instance();
     } else {
       return new DistinctCountBufferAggregator(makeDimensionSelector(columnFactory));
     }
@@ -168,7 +169,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(fieldName);
+    return Collections.singletonList(fieldName);
   }
 
   @Override

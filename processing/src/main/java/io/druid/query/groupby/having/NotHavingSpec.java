@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.Row;
 import io.druid.segment.column.ValueType;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
@@ -32,9 +31,7 @@ import java.util.Map;
  */
 public class NotHavingSpec extends BaseHavingSpec
 {
-  private static final byte CACHE_KEY = 0x6;
-
-  private HavingSpec havingSpec;
+  private final HavingSpec havingSpec;
 
   @JsonCreator
   public NotHavingSpec(@JsonProperty("havingSpec") HavingSpec havingSpec)
@@ -58,15 +55,6 @@ public class NotHavingSpec extends BaseHavingSpec
   public boolean eval(Row row)
   {
     return !havingSpec.eval(row);
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return ByteBuffer.allocate(1 + havingSpec.getCacheKey().length)
-                     .put(CACHE_KEY)
-                     .put(havingSpec.getCacheKey())
-                     .array();
   }
 
   @Override

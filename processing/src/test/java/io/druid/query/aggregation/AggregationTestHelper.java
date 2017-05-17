@@ -50,6 +50,7 @@ import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -67,6 +68,7 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNQueryRunnerFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
@@ -84,6 +86,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -533,10 +536,10 @@ public class AggregationTestHelper
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> map)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(query, Maps.<String, Object>newHashMap());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.<String, Object>newHashMap());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()
@@ -557,7 +560,7 @@ public class AggregationTestHelper
           List resultRows = Lists.transform(
               readQueryResultArrayFromString(resultStr),
               toolChest.makePreComputeManipulatorFn(
-                  query,
+                  queryPlus.getQuery(),
                   MetricManipulatorFns.deserializing()
               )
           );
@@ -590,6 +593,31 @@ public class AggregationTestHelper
   public ObjectMapper getObjectMapper()
   {
     return mapper;
+  }
+
+  public <T> T[] runRelocateVerificationTest(
+      AggregatorFactory factory,
+      ColumnSelectorFactory selector,
+      Class<T> clazz
+  )
+  {
+    T[] results = (T[]) Array.newInstance(clazz, 2);
+    BufferAggregator agg = factory.factorizeBuffered(selector);
+    ByteBuffer myBuf = ByteBuffer.allocate(10040902);
+    agg.init(myBuf, 0);
+    agg.aggregate(myBuf, 0);
+    results[0] = (T) agg.get(myBuf, 0);
+
+    byte[] theBytes = new byte[factory.getMaxIntermediateSize()];
+    myBuf.get(theBytes);
+
+    ByteBuffer newBuf = ByteBuffer.allocate(941209);
+    newBuf.position(7574);
+    newBuf.put(theBytes);
+    newBuf.position(0);
+    agg.relocate(0, 7574, myBuf, newBuf);
+    results[1] = (T) agg.get(newBuf, 7574);
+    return results;
   }
 }
 

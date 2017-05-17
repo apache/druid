@@ -22,16 +22,17 @@ package io.druid.query.aggregation.distinctcount;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.bitmap.WrappedRoaringBitmap;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 
 public class DistinctCountBufferAggregator implements BufferAggregator
 {
   private final DimensionSelector selector;
-  private final Map<Integer, MutableBitmap> mutableBitmapCollection = new HashMap<>();
+  private final Int2ObjectMap<MutableBitmap> mutableBitmapCollection = new Int2ObjectOpenHashMap<>();
 
   public DistinctCountBufferAggregator(
       DimensionSelector selector
@@ -88,5 +89,11 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   public void close()
   {
     mutableBitmapCollection.clear();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
   }
 }

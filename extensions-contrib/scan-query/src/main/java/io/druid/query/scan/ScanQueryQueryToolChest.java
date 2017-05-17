@@ -21,12 +21,14 @@ package io.druid.query.scan;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import com.google.inject.Inject;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.DruidMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.MetricManipulationFn;
@@ -39,6 +41,14 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   {
   };
 
+  private final GenericQueryMetricsFactory queryMetricsFactory;
+
+  @Inject
+  public ScanQueryQueryToolChest(GenericQueryMetricsFactory queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
+
   @Override
   public QueryRunner<ScanResultValue> mergeResults(final QueryRunner<ScanResultValue> runner)
   {
@@ -46,12 +56,12 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     {
       @Override
       public Sequence<ScanResultValue> run(
-          final Query<ScanResultValue> query, final Map<String, Object> responseContext
+          final QueryPlus<ScanResultValue> queryPlus, final Map<String, Object> responseContext
       )
       {
-        ScanQuery scanQuery = (ScanQuery) query;
-        if (scanQuery.getLimit() == Integer.MAX_VALUE) {
-          return runner.run(query, responseContext);
+        ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
+        if (scanQuery.getLimit() == Long.MAX_VALUE) {
+          return runner.run(queryPlus, responseContext);
         }
         return new BaseSequence<>(
             new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
@@ -59,7 +69,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
               @Override
               public ScanQueryLimitRowIterator make()
               {
-                return new ScanQueryLimitRowIterator(runner, (ScanQuery) query, responseContext);
+                return new ScanQueryLimitRowIterator(runner, queryPlus, responseContext);
               }
 
               @Override
@@ -74,9 +84,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(ScanQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(ScanQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query);
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override
@@ -100,14 +110,15 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     {
       @Override
       public Sequence<ScanResultValue> run(
-          Query<ScanResultValue> query, Map<String, Object> responseContext
+          QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext
       )
       {
-        ScanQuery scanQuery = (ScanQuery) query;
+        ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
         if (scanQuery.getDimensionsFilter() != null) {
           scanQuery = scanQuery.withDimFilter(scanQuery.getDimensionsFilter().optimize());
+          queryPlus = queryPlus.withQuery(scanQuery);
         }
-        return runner.run(scanQuery, responseContext);
+        return runner.run(queryPlus, responseContext);
       }
     };
   }

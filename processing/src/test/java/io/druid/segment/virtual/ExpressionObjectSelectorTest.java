@@ -21,9 +21,9 @@ package io.druid.segment.virtual;
 
 import com.google.common.base.Supplier;
 import io.druid.common.guava.SettableSupplier;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.TestFloatColumnSelector;
+import io.druid.segment.TestLongColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,7 +35,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromLongSelector()
   {
     final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromLongSelector(
-        new LongColumnSelector()
+        new TestLongColumnSelector()
         {
           @Override
           public long get()
@@ -52,7 +52,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromFloatSelector()
   {
     final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromFloatSelector(
-        new FloatColumnSelector()
+        new TestFloatColumnSelector()
         {
           @Override
           public float get()

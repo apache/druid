@@ -20,11 +20,9 @@ package io.druid.data.input.avro;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.druid.data.input.schemarepo.SubjectAndIdConverter;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.parsers.ParseException;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -35,6 +33,7 @@ import org.schemarepo.Repository;
 import org.schemarepo.api.TypedSchemaRepository;
 import org.schemarepo.api.converter.AvroSchemaConverter;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -53,7 +52,7 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
   {
     this.subjectAndIdConverter = subjectAndIdConverter;
     this.schemaRepository = schemaRepository;
-    typedRepository = new TypedSchemaRepository<ID, Schema, SUBJECT>(
+    this.typedRepository = new TypedSchemaRepository<>(
         schemaRepository,
         subjectAndIdConverter.getIdConverter(),
         new AvroSchemaConverter(false),
@@ -78,12 +77,15 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
   {
     Pair<SUBJECT, ID> subjectAndId = subjectAndIdConverter.getSubjectAndId(bytes);
     Schema schema = typedRepository.getSchema(subjectAndId.lhs, subjectAndId.rhs);
-    DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(schema);
-    ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes));
-    try {
+    DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
+    try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
-    }
-    catch (IOException e) {
+    } catch (EOFException eof) {
+      // waiting for avro v1.9.0 (#AVRO-813)
+      throw new ParseException(
+          eof, "Avro's unnecessary EOFException, detail: [%s]", "https://issues.apache.org/jira/browse/AVRO-813"
+      );
+    } catch (IOException e) {
       throw new ParseException(e, "Fail to decode avro message!");
     }
   }
@@ -106,8 +108,8 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
       return false;
     }
     return !(schemaRepository != null
-             ? !schemaRepository.equals(that.schemaRepository)
-             : that.schemaRepository != null);
+        ? !schemaRepository.equals(that.schemaRepository)
+        : that.schemaRepository != null);
   }
 
   @Override

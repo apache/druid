@@ -20,6 +20,7 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -30,7 +31,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
@@ -38,13 +38,12 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
-import io.druid.query.DruidMetrics;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
-import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
@@ -85,15 +84,27 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private final GroupByStrategySelector strategySelector;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final GroupByQueryMetricsFactory queryMetricsFactory;
 
-  @Inject
+  @VisibleForTesting
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
+    this(strategySelector, intervalChunkingQueryRunnerDecorator, DefaultGroupByQueryMetricsFactory.instance());
+  }
+
+  @Inject
+  public GroupByQueryQueryToolChest(
+      GroupByStrategySelector strategySelector,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      GroupByQueryMetricsFactory queryMetricsFactory
+  )
+  {
     this.strategySelector = strategySelector;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -102,20 +113,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
       {
-        if (BaseQuery.getContextBySegment(query, false)) {
-          return runner.run(query, responseContext);
+        if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+          return runner.run(queryPlus, responseContext);
         }
 
-        if (query.getContextBoolean(GROUP_BY_MERGE_KEY, true)) {
+        final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
+        if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
           return initAndMergeGroupByResults(
-              (GroupByQuery) query,
+              groupByQuery,
               runner,
               responseContext
           );
         }
-        return runner.run(query, responseContext);
+        return runner.run(queryPlus, responseContext);
       }
     };
   }
@@ -181,7 +193,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           subquery.withOverriddenContext(
               ImmutableMap.<String, Object>of(
                   //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                  //in the end when returning results to user.
+                  //in the end when returning results to user. (note this is only respected by groupBy v1)
                   GroupByQueryHelper.CTX_KEY_SORT_RESULTS,
                   false
               )
@@ -192,7 +204,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       );
 
       final Sequence<Row> finalizingResults;
-      if (GroupByQuery.getContextFinalize(subquery, false)) {
+      if (QueryContexts.isFinalize(subquery, false)) {
         finalizingResults = new MappedSequence<>(
             subqueryResult,
             makePreComputeManipulatorFn(
@@ -211,15 +223,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(GroupByQuery query)
+  public GroupByQueryMetrics makeMetrics(GroupByQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query)
-                       .setDimension("numDimensions", String.valueOf(query.getDimensions().size()))
-                       .setDimension("numMetrics", String.valueOf(query.getAggregatorSpecs().size()))
-                       .setDimension(
-                           "numComplexMetrics",
-                           String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
-                       );
+    GroupByQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
+    queryMetrics.query(query);
+    return queryMetrics;
   }
 
   @Override
@@ -319,9 +327,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
-            GroupByQuery groupByQuery = (GroupByQuery) query;
+            GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
             if (groupByQuery.getDimFilter() != null) {
               groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
             }
@@ -357,7 +365,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                                        GroupByQueryQueryToolChest.this
                                    )
                                    .run(
-                                       delegateGroupByQuery.withDimensionSpecs(dimensionSpecs),
+                                       queryPlus.withQuery(delegateGroupByQuery.withDimensionSpecs(dimensionSpecs)),
                                        responseContext
                                    );
           }
@@ -387,8 +395,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             .appendByte(CACHE_STRATEGY_VERSION)
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimFilter())
-            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
-            .appendCacheablesIgnoringOrder(query.getDimensions())
+            .appendCacheables(query.getAggregatorSpecs())
+            .appendCacheables(query.getDimensions())
             .appendCacheable(query.getVirtualColumns())
             .build();
       }

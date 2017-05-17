@@ -29,8 +29,10 @@ import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
@@ -94,11 +96,9 @@ public class QueryResourceTest
       return new QueryRunner<T>()
       {
         @Override
-        public Sequence<T> run(
-            Query<T> query, Map<String, Object> responseContext
-        )
+        public Sequence<T> run(QueryPlus<T> query, Map<String, Object> responseContext)
         {
-          return Sequences.<T>empty();
+          return Sequences.empty();
         }
       };
     }
@@ -139,7 +139,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig()
+        new AuthConfig(),
+        new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
   }
 
@@ -213,7 +214,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true)
+        new AuthConfig(true),
+        new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
 
     Response response = queryResource.doPost(
@@ -283,7 +285,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true)
+        new AuthConfig(true),
+        new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -379,7 +382,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true)
+        new AuthConfig(true),
+        new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","

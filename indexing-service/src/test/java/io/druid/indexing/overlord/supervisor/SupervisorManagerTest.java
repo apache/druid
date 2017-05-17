@@ -269,7 +269,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
   }
 
-  private class TestSupervisorSpec implements SupervisorSpec
+  private static class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;
     private final Supervisor supervisor;
@@ -291,5 +291,12 @@ public class SupervisorManagerTest extends EasyMockSupport
     {
       return supervisor;
     }
+
+    @Override
+    public List<String> getDataSources()
+    {
+      return null;
+    }
+
   }
 }

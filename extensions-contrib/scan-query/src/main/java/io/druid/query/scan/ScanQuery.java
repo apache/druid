@@ -48,7 +48,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   private final String resultFormat;
   private final int batchSize;
-  private final int limit;
+  private final long limit;
   private final DimFilter dimFilter;
   private final List<String> columns;
 
@@ -58,7 +58,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("resultFormat") String resultFormat,
       @JsonProperty("batchSize") int batchSize,
-      @JsonProperty("limit") int limit,
+      @JsonProperty("limit") long limit,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("context") Map<String, Object> context
@@ -67,7 +67,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     super(dataSource, querySegmentSpec, false, context);
     this.resultFormat = resultFormat == null ? RESULT_FORMAT_LIST : resultFormat;
     this.batchSize = (batchSize == 0) ? 4096 * 5 : batchSize;
-    this.limit = (limit == 0) ? Integer.MAX_VALUE : limit;
+    this.limit = (limit == 0) ? Long.MAX_VALUE : limit;
     Preconditions.checkArgument(this.batchSize > 0, "batchSize must be greater than 0");
     Preconditions.checkArgument(this.limit > 0, "limit must be greater than 0");
     this.dimFilter = dimFilter;
@@ -87,7 +87,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @JsonProperty
-  public int getLimit()
+  public long getLimit()
   {
     return limit;
   }
@@ -125,60 +125,24 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public Query<ScanResultValue> withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
-    return new ScanQuery(
-        getDataSource(),
-        querySegmentSpec,
-        resultFormat,
-        batchSize,
-        limit,
-        dimFilter,
-        columns,
-        getContext()
-    );
+    return ScanQueryBuilder.copy(this).intervals(querySegmentSpec).build();
   }
 
   @Override
   public Query<ScanResultValue> withDataSource(DataSource dataSource)
   {
-    return new ScanQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        resultFormat,
-        batchSize,
-        limit,
-        dimFilter,
-        columns,
-        getContext()
-    );
+    return ScanQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   @Override
   public Query<ScanResultValue> withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new ScanQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        resultFormat,
-        batchSize,
-        limit,
-        dimFilter,
-        columns,
-        computeOverridenContext(contextOverrides)
-    );
+    return ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
 
   public ScanQuery withDimFilter(DimFilter dimFilter)
   {
-    return new ScanQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        resultFormat,
-        batchSize,
-        limit,
-        dimFilter,
-        columns,
-        getContext()
-    );
+    return ScanQueryBuilder.copy(this).filters(dimFilter).build();
   }
 
   @Override
@@ -217,7 +181,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     int result = super.hashCode();
     result = 31 * result + (resultFormat != null ? resultFormat.hashCode() : 0);
     result = 31 * result + batchSize;
-    result = 31 * result + limit;
+    result = 31 * result + (int) (limit ^ (limit >>> 32));
     result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
     result = 31 * result + (columns != null ? columns.hashCode() : 0);
     return result;
@@ -227,15 +191,15 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public String toString()
   {
     return "ScanQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", descending=" + isDescending() +
-           ", resultFormat='" + resultFormat + '\'' +
-           ", batchSize=" + batchSize +
-           ", limit=" + limit +
-           ", dimFilter=" + dimFilter +
-           ", columns=" + columns +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", descending=" + isDescending() +
+        ", resultFormat='" + resultFormat + '\'' +
+        ", batchSize=" + batchSize +
+        ", limit=" + limit +
+        ", dimFilter=" + dimFilter +
+        ", columns=" + columns +
+        '}';
   }
 
   /**
@@ -260,7 +224,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     private Map<String, Object> context;
     private String resultFormat;
     private int batchSize;
-    private int limit;
+    private long limit;
     private DimFilter dimFilter;
     private List<String> columns;
 
@@ -290,12 +254,17 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       );
     }
 
-    public ScanQueryBuilder copy(ScanQueryBuilder builder)
+    public static ScanQueryBuilder copy(ScanQuery query)
     {
       return new ScanQueryBuilder()
-          .dataSource(builder.dataSource)
-          .intervals(builder.querySegmentSpec)
-          .context(builder.context);
+          .dataSource(query.getDataSource())
+          .intervals(query.getQuerySegmentSpec())
+          .resultFormat(query.getResultFormat())
+          .batchSize(query.getBatchSize())
+          .limit(query.getLimit())
+          .filters(query.getFilter())
+          .columns(query.getColumns())
+          .context(query.getContext());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -346,7 +315,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       return this;
     }
 
-    public ScanQueryBuilder limit(int l)
+    public ScanQueryBuilder limit(long l)
     {
       limit = l;
       return this;

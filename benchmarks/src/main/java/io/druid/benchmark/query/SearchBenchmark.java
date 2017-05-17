@@ -97,7 +97,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -188,7 +188,7 @@ public class SearchBenchmark
 
   private static SearchQueryBuilder basicA(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
@@ -199,7 +199,7 @@ public class SearchBenchmark
 
   private static SearchQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     final List<String> dimUniformFilterVals = Lists.newArrayList();
     int resultNum = (int) (100000 * 0.1);
@@ -230,7 +230,7 @@ public class SearchBenchmark
 
   private static SearchQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     final List<String> dimUniformFilterVals = Lists.newArrayList();
     final int resultNum = (int) (100000 * 0.1);
@@ -284,7 +284,7 @@ public class SearchBenchmark
 
   private static SearchQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     final List<String> dimUniformFilterVals = Lists.newArrayList();
     final int resultNum = (int) (100000 * 0.1);

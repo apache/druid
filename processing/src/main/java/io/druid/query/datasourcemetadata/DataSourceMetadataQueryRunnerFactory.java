@@ -25,6 +25,7 @@ import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -42,12 +43,16 @@ import java.util.concurrent.ExecutorService;
 public class DataSourceMetadataQueryRunnerFactory
     implements QueryRunnerFactory<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
-  private static final DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest();
+  private final DataSourceQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
   @Inject
-  public DataSourceMetadataQueryRunnerFactory(QueryWatcher queryWatcher)
+  public DataSourceMetadataQueryRunnerFactory(
+      DataSourceQueryQueryToolChest toolChest,
+      QueryWatcher queryWatcher
+  )
   {
+    this.toolChest = toolChest;
     this.queryWatcher = queryWatcher;
   }
 
@@ -84,15 +89,16 @@ public class DataSourceMetadataQueryRunnerFactory
 
     @Override
     public Sequence<Result<DataSourceMetadataResultValue>> run(
-        Query<Result<DataSourceMetadataResultValue>> input,
+        QueryPlus<Result<DataSourceMetadataResultValue>> input,
         Map<String, Object> responseContext
     )
     {
-      if (!(input instanceof DataSourceMetadataQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", input.getClass().getCanonicalName(), DataSourceMetadataQuery.class);
+      Query<Result<DataSourceMetadataResultValue>> query = input.getQuery();
+      if (!(query instanceof DataSourceMetadataQuery)) {
+        throw new ISE("Got a [%s] which isn't a %s", query.getClass().getCanonicalName(), DataSourceMetadataQuery.class);
       }
 
-      final DataSourceMetadataQuery legacyQuery = (DataSourceMetadataQuery) input;
+      final DataSourceMetadataQuery legacyQuery = (DataSourceMetadataQuery) query;
 
       return new BaseSequence<>(
           new BaseSequence.IteratorMaker<Result<DataSourceMetadataResultValue>, Iterator<Result<DataSourceMetadataResultValue>>>()

@@ -548,19 +548,19 @@ public class ApproximateHistogram
     } else {
       Preconditions.checkArgument(
           mergedPositions.length >= maxSize,
-          "temp buffer [mergedPositions] too small: length must be at least [%d], got [%d]",
+          "temp buffer [mergedPositions] too small: length must be at least [%s], got [%s]",
           maxSize,
           mergedPositions.length
       );
       Preconditions.checkArgument(
           mergedBins.length >= maxSize,
-          "temp buffer [mergedBins] too small: length must be at least [%d], got [%d]",
+          "temp buffer [mergedBins] too small: length must be at least [%s], got [%s]",
           maxSize,
           mergedPositions.length
       );
       Preconditions.checkArgument(
           deltas.length >= maxSize,
-          "temp buffer [deltas] too small: length must be at least [%d], got [%d]",
+          "temp buffer [deltas] too small: length must be at least [%s], got [%s]",
           maxSize,
           mergedPositions.length
       );
@@ -1430,16 +1430,13 @@ public class ApproximateHistogram
    */
   public static ApproximateHistogram fromBytes(ByteBuffer buf)
   {
-    ByteBuffer copy = buf.asReadOnlyBuffer();
     // negative size indicates compact representation
     // this works regardless of whether we use int or short for the size since the leftmost bit is the sign bit
-    if (copy.getShort(buf.position()) < 0) {
+    if (buf.getShort(buf.position()) < 0) {
       return fromBytesCompact(buf);
     } else {
-      // ignore size
-      copy.getInt();
-      // determine if sparse or dense based on sign of binCount
-      if (copy.getInt() < 0) {
+      // ignore size, determine if sparse or dense based on sign of binCount
+      if (buf.getInt(buf.position() + Ints.BYTES) < 0) {
         return fromBytesSparse(buf);
       } else {
         return fromBytesDense(buf);

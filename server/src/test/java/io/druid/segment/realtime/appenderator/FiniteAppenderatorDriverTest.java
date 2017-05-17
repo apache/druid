@@ -199,7 +199,7 @@ public class FiniteAppenderatorDriverTest
     };
   }
 
-  private class TestCommitterSupplier<T> implements Supplier<Committer>
+  private static class TestCommitterSupplier<T> implements Supplier<Committer>
   {
     private final AtomicReference<T> metadata = new AtomicReference<>();
 
@@ -229,7 +229,7 @@ public class FiniteAppenderatorDriverTest
     }
   }
 
-  private class TestSegmentAllocator implements SegmentAllocator
+  private static class TestSegmentAllocator implements SegmentAllocator
   {
     private final String dataSource;
     private final Granularity granularity;
@@ -264,7 +264,7 @@ public class FiniteAppenderatorDriverTest
     }
   }
 
-  private class TestSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
+  private static class TestSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
   {
     @Override
     public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)

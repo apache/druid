@@ -162,6 +162,16 @@ public class ReplayableFirehoseFactory implements FirehoseFactory<InputRowParser
               while (delegateFirehose.hasMore() && cos.getCount() < getMaxTempFileSize()) {
                 try {
                   InputRow row = delegateFirehose.nextRow();
+
+                  // delegateFirehose may return a null row if the underlying parser returns null.
+                  // This should be written, but deserialization of null values causes an error of
+                  // 'com.fasterxml.jackson.databind.RuntimeJsonMappingException: Can not deserialize instance of io.druid.data.input.MapBasedRow out of VALUE_NULL token'
+                  // Since ReplayableFirehoseFactory is planed to be removed in https://github.com/druid-io/druid/pull/4193,
+                  // we simply skip null rows for now.
+                  if (row == null) {
+                    continue;
+                  }
+
                   generator.writeObject(row);
                   dimensionScratch.addAll(row.getDimensions());
                   counter++;

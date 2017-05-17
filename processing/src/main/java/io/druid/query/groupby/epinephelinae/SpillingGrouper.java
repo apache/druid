@@ -28,7 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.query.QueryInterruptedException;
+import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import net.jpountz.lz4.LZ4BlockInputStream;
@@ -51,6 +51,10 @@ import java.util.List;
  */
 public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
+  private static final AggregateResult DISK_FULL = AggregateResult.failure(
+      "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
+  );
+
   private final BufferGrouper<KeyType> grouper;
   private final KeySerde<KeyType> keySerde;
   private final LimitedTemporaryStorage temporaryStorage;
@@ -106,29 +110,31 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public boolean aggregate(KeyType key, int keyHash)
+  public AggregateResult aggregate(KeyType key, int keyHash)
   {
-    if (grouper.aggregate(key, keyHash)) {
-      return true;
-    } else if (spillingAllowed) {
+    final AggregateResult result = grouper.aggregate(key, keyHash);
+
+    if (result.isOk() || temporaryStorage.maxSize() <= 0 || !spillingAllowed) {
+      return result;
+    } else {
       // Warning: this can potentially block up a processing thread for a while.
       try {
         spill();
       }
       catch (TemporaryStorageFullException e) {
-        return false;
+        return DISK_FULL;
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
       }
+
+      // Try again.
       return grouper.aggregate(key, keyHash);
-    } else {
-      return false;
     }
   }
 
   @Override
-  public boolean aggregate(KeyType key)
+  public AggregateResult aggregate(KeyType key)
   {
     return aggregate(key, Groupers.hash(key));
   }
@@ -200,9 +206,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       outFile = out.getFile();
       final Iterator<Entry<KeyType>> it = grouper.iterator(true);
       while (it.hasNext()) {
-        if (Thread.interrupted()) {
-          throw new QueryInterruptedException(new InterruptedException());
-        }
+        BaseQuery.checkInterrupted();
 
         jsonGenerator.writeObject(it.next());
       }

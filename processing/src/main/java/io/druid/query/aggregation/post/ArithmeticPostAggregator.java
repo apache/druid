@@ -197,6 +197,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   {
     PLUS("+")
         {
+          @Override
           public double compute(double lhs, double rhs)
           {
             return lhs + rhs;
@@ -204,6 +205,7 @@ public class ArithmeticPostAggregator implements PostAggregator
         },
     MINUS("-")
         {
+          @Override
           public double compute(double lhs, double rhs)
           {
             return lhs - rhs;
@@ -211,6 +213,7 @@ public class ArithmeticPostAggregator implements PostAggregator
         },
     MULT("*")
         {
+          @Override
           public double compute(double lhs, double rhs)
           {
             return lhs * rhs;
@@ -218,6 +221,7 @@ public class ArithmeticPostAggregator implements PostAggregator
         },
     DIV("/")
         {
+          @Override
           public double compute(double lhs, double rhs)
           {
             return (rhs == 0.0) ? 0 : (lhs / rhs);
@@ -225,6 +229,7 @@ public class ArithmeticPostAggregator implements PostAggregator
         },
     QUOTIENT("quotient")
         {
+          @Override
           public double compute(double lhs, double rhs)
           {
             return lhs / rhs;
@@ -267,6 +272,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   public static enum Ordering implements Comparator<Double> {
     // ensures the following order: numeric > NaN > Infinite
     numericFirst {
+      @Override
       public int compare(Double lhs, Double rhs) {
         if(isFinite(lhs) && !isFinite(rhs)) {
           return 1;

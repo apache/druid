@@ -438,7 +438,7 @@ public class ReplayableFirehoseFactoryTest extends EasyMockSupport
     verifyAll();
   }
 
-  private class TestReadingException extends RuntimeException
+  private static class TestReadingException extends RuntimeException
   {
   }
 }

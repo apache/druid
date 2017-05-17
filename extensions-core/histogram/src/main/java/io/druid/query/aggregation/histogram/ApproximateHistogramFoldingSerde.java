@@ -107,6 +107,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
     return LargeColumnSupportedComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
   }
 
+  @Override
   public ObjectStrategy getObjectStrategy()
   {
     return new ObjectStrategy<ApproximateHistogram>()
@@ -120,9 +121,8 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       @Override
       public ApproximateHistogram fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-        readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-        return ApproximateHistogram.fromBytes(readOnlyBuffer);
+        buffer.limit(buffer.position() + numBytes);
+        return ApproximateHistogram.fromBytes(buffer);
       }
 
       @Override

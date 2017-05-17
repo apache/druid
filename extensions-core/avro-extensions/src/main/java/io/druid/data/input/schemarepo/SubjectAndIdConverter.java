@@ -20,9 +20,7 @@ package io.druid.data.input.schemarepo;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 import io.druid.java.util.common.Pair;
-
 import org.schemarepo.api.converter.Converter;
 
 import java.nio.ByteBuffer;

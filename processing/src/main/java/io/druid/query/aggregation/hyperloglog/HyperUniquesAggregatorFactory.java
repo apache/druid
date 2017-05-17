@@ -28,14 +28,16 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
-import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.NoopAggregator;
+import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -85,7 +87,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
 
     if (selector == null) {
-      return Aggregators.noopAggregator();
+      return NoopAggregator.instance();
     }
 
     final Class classOfObject = selector.classOfObject();
@@ -104,7 +106,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
 
     if (selector == null) {
-      return Aggregators.noopBufferAggregator();
+      return NoopBufferAggregator.instance();
     }
 
     final Class classOfObject = selector.classOfObject();
@@ -192,7 +194,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(fieldName);
+    return Collections.singletonList(fieldName);
   }
 
   @JsonProperty

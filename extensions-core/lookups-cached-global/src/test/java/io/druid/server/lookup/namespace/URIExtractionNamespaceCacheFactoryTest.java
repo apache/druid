@@ -214,7 +214,7 @@ public class URIExtractionNamespaceCacheFactoryTest
           {
             if (cacheManagerCreatorsIt.hasNext()) {
               Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator = cacheManagerCreatorsIt.next();
-              return new Object[]{ compressions[0], compressions[1], cacheManagerCreator };
+              return new Object[]{compressions[0], compressions[1], cacheManagerCreator};
             } else {
               cacheManagerCreatorsIt = cacheManagerCreators.iterator();
               compressions = compressionIt.next();
@@ -275,19 +275,18 @@ public class URIExtractionNamespaceCacheFactoryTest
     Assert.assertTrue(tmpFileParent.isDirectory());
     tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
     final ObjectMapper mapper = new DefaultObjectMapper();
-    try (OutputStream ostream = outStreamSupplier.apply(tmpFile)) {
-      try (OutputStreamWriter out = new OutputStreamWriter(ostream)) {
-        out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of(
-            "boo",
-            "bar",
-            "foo",
-            "bar",
-            "",
-            "MissingValue",
-            "emptyString",
-            ""
-        )));
-      }
+    try (OutputStream ostream = outStreamSupplier.apply(tmpFile);
+         OutputStreamWriter out = new OutputStreamWriter(ostream)) {
+      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of(
+          "boo",
+          "bar",
+          "foo",
+          "bar",
+          "",
+          "MissingValue",
+          "emptyString",
+          ""
+      )));
     }
     populator = new URIExtractionNamespaceCacheFactory(FINDERS);
     namespace = new URIExtractionNamespace(

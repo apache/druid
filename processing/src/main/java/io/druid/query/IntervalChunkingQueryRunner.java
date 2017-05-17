@@ -20,10 +20,8 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
@@ -33,7 +31,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -65,18 +63,18 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
-    final Period chunkPeriod = getChunkPeriod(query);
+    final Period chunkPeriod = getChunkPeriod(queryPlus.getQuery());
 
     // Check for non-empty chunkPeriod, avoiding toStandardDuration since that cannot handle periods like P1M.
     if (EPOCH.plus(chunkPeriod).getMillis() == EPOCH.getMillis()) {
-      return baseRunner.run(query, responseContext);
+      return baseRunner.run(queryPlus, responseContext);
     }
 
     List<Interval> chunkIntervals = Lists.newArrayList(
         FunctionalIterable
-            .create(query.getIntervals())
+            .create(queryPlus.getQuery().getIntervals())
             .transformCat(
                 new Function<Interval, Iterable<Interval>>()
                 {
@@ -90,7 +88,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
     );
 
     if (chunkIntervals.size() <= 1) {
-      return baseRunner.run(query, responseContext);
+      return baseRunner.run(queryPlus, responseContext);
     }
 
     return Sequences.concat(
@@ -107,22 +105,16 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                         toolChest.mergeResults(
                             new MetricsEmittingQueryRunner<T>(
                                 emitter,
-                                new Function<Query<T>, ServiceMetricEvent.Builder>()
-                                {
-                                  @Override
-                                  public ServiceMetricEvent.Builder apply(Query<T> input)
-                                  {
-                                    return toolChest.makeMetricBuilder(input);
-                                  }
-                                },
+                                toolChest,
                                 baseRunner,
-                                "query/intervalChunk/time",
-                                ImmutableMap.of("chunkInterval", singleInterval.toString())
+                                QueryMetrics::reportIntervalChunkTime,
+                                queryMetrics -> queryMetrics.chunkInterval(singleInterval)
                             ).withWaitMeasuredFromNow()
                         ),
                         executor, queryWatcher
                     ).run(
-                        query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))),
+                        queryPlus.withQuerySegmentSpec(
+                            new MultipleIntervalSegmentSpec(Collections.singletonList(singleInterval))),
                         responseContext
                     );
                   }
@@ -157,7 +149,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
 
   private Period getChunkPeriod(Query<T> query)
   {
-    String p = query.getContextValue(QueryContextKeys.CHUNK_PERIOD, "P0D");
+    final String p = QueryContexts.getChunkPeriod(query);
     return Period.parse(p);
   }
 }

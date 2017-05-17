@@ -32,6 +32,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -110,8 +111,9 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                     new QueryRunner<T>()
                     {
                       @Override
-                      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+                      public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
                       {
+                        Query<T> query = queryPlus.getQuery();
                         final VersionedIntervalTimeline<String, Segment> timeline = getTimelineForTableDataSource(query);
                         return makeBaseRunner(
                             query,
@@ -154,7 +156,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                                       }
                                     }
                                 )
-                        ).run(query, responseContext);
+                        ).run(queryPlus, responseContext);
                       }
                     }
                 )

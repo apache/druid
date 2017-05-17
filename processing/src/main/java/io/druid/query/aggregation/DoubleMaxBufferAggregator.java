@@ -25,13 +25,12 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class DoubleMaxBufferAggregator implements BufferAggregator
+public class DoubleMaxBufferAggregator extends SimpleDoubleBufferAggregator
 {
-  private final FloatColumnSelector selector;
 
-  public DoubleMaxBufferAggregator(FloatColumnSelector selector)
+  DoubleMaxBufferAggregator(FloatColumnSelector selector)
   {
-    this.selector = selector;
+    super(selector);
   }
 
   @Override
@@ -41,32 +40,18 @@ public class DoubleMaxBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public void putFirst(ByteBuffer buf, int position, double value)
   {
-    buf.putDouble(position, Math.max(buf.getDouble(position), (double) selector.get()));
+    if (!Double.isNaN(value)) {
+      buf.putDouble(position, value);
+    } else {
+      init(buf, position);
+    }
   }
 
   @Override
-  public Object get(ByteBuffer buf, int position)
+  public void aggregate(ByteBuffer buf, int position, double value)
   {
-    return buf.getDouble(position);
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return (float) buf.getDouble(position);
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    return (long) buf.getDouble(position);
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
+    buf.putDouble(position, Math.max(buf.getDouble(position), value));
   }
 }

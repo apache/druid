@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
@@ -53,7 +54,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   /**
    * provide for performance reason.
    */
-  public static byte[] getBytesNoPaddingfromList(List<Integer> list, int maxValue)
+  public static byte[] getBytesNoPaddingFromList(List<Integer> list, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
 
@@ -76,6 +77,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   private static void writeToBuffer(ByteBuffer buffer, List<Integer> list, int numBytes, int maxValue)
   {
     int i = 0;
+    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
     for (Integer val : list) {
       if (val < 0) {
         throw new IAE("integer values must be positive, got[%d], i[%d]", val, i);
@@ -84,8 +86,8 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
         throw new IAE("val[%d] > maxValue[%d], please don't lie about maxValue.  i[%d]", val, maxValue, i);
       }
 
-      byte[] intAsBytes = Ints.toByteArray(val);
-      buffer.put(intAsBytes, intAsBytes.length - numBytes, numBytes);
+      helperBuffer.putInt(0, val);
+      buffer.put(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
       ++i;
     }
     buffer.position(0);
@@ -219,7 +221,12 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   @Override
   public void close() throws IOException
   {
+  }
 
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("buffer", buffer);
   }
 
   public WritableSupplier<IndexedInts> asWritableSupplier() {

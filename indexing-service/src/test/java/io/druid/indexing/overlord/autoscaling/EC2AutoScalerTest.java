@@ -128,7 +128,7 @@ public class EC2AutoScalerTest
     Assert.assertEquals(created.getNodeIds().size(), 1);
     Assert.assertEquals("theInstance", created.getNodeIds().get(0));
 
-    AutoScalingData deleted = autoScaler.terminate(Arrays.asList("dummyIP"));
+    AutoScalingData deleted = autoScaler.terminate(Collections.singletonList("dummyIP"));
 
     Assert.assertEquals(deleted.getNodeIds().size(), 1);
     Assert.assertEquals(INSTANCE_ID, deleted.getNodeIds().get(0));
@@ -185,7 +185,7 @@ public class EC2AutoScalerTest
     );
     EasyMock.replay(describeInstancesResult);
 
-    EasyMock.expect(reservation.getInstances()).andReturn(Arrays.asList(instance)).times(n);
+    EasyMock.expect(reservation.getInstances()).andReturn(Collections.singletonList(instance)).times(n);
     EasyMock.replay(reservation);
 
     List<String> ids = autoScaler.ipToIdLookup(ips);

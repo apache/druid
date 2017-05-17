@@ -26,11 +26,12 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.QueryInterruptedException;
+import io.druid.query.BaseQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
@@ -239,6 +240,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
             return new Cursor()
             {
               private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this);
+              private final int maxRowIndex;
               private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
               private Iterable<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> cursorIterable;
               private boolean emptyRange;
@@ -247,6 +249,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               boolean done;
 
               {
+                maxRowIndex = index.getLastRowIndex();
                 cursorIterable = index.getFacts().timeRangeIterable(
                     descending,
                     timeStart,
@@ -273,20 +276,49 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 while (baseIter.hasNext()) {
-                  if (Thread.interrupted()) {
-                    throw new QueryInterruptedException(new InterruptedException());
+                  BaseQuery.checkInterrupted();
+
+                  Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getValue())) {
+                    continue;
                   }
 
-                  currEntry.set(baseIter.next());
+                  currEntry.set(entry);
 
                   if (filterMatcher.matches()) {
                     return;
                   }
                 }
 
-                if (!filterMatcher.matches()) {
+                done = true;
+              }
+
+              @Override
+              public void advanceUninterruptibly()
+              {
+                if (!baseIter.hasNext()) {
                   done = true;
+                  return;
                 }
+
+                while (baseIter.hasNext()) {
+                  if (Thread.currentThread().isInterrupted()) {
+                    return;
+                  }
+
+                  Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getValue())) {
+                    continue;
+                  }
+
+                  currEntry.set(entry);
+
+                  if (filterMatcher.matches()) {
+                    return;
+                  }
+                }
+
+                done = true;
               }
 
               @Override
@@ -306,6 +338,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               }
 
               @Override
+              public boolean isDoneOrInterrupted()
+              {
+                return isDone() || Thread.currentThread().isInterrupted();
+              }
+
+              @Override
               public void reset()
               {
                 baseIter = cursorIterable.iterator();
@@ -316,13 +354,16 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   Iterators.advance(baseIter, numAdvanced);
                 }
 
-                if (Thread.interrupted()) {
-                  throw new QueryInterruptedException(new InterruptedException());
-                }
+                BaseQuery.checkInterrupted();
 
                 boolean foundMatched = false;
                 while (baseIter.hasNext()) {
-                  currEntry.set(baseIter.next());
+                  Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getValue())) {
+                    numAdvanced++;
+                    continue;
+                  }
+                  currEntry.set(entry);
                   if (filterMatcher.matches()) {
                     foundMatched = true;
                     break;
@@ -332,6 +373,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 done = !foundMatched && (emptyRange || !baseIter.hasNext());
+              }
+
+              private boolean beyondMaxRowIndex(int rowIndex) {
+                // ignore rows whose rowIndex is beyond the maxRowIndex
+                // rows are order by timestamp, not rowIndex,
+                // so we still need to go through all rows to skip rows added after cursor created
+                return rowIndex > maxRowIndex;
               }
 
               @Override
@@ -414,6 +462,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   {
                     return index.getMetricFloatValue(currEntry.getValue(), metricIndex);
                   }
+
+                  @Override
+                  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                  {
+                    inspector.visit("index", index);
+                  }
                 };
               }
 
@@ -425,14 +479,21 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 if (columnName.equals(Column.TIME_COLUMN_NAME)) {
-                  return new LongColumnSelector()
+                  class TimeLongColumnSelector implements LongColumnSelector
                   {
                     @Override
                     public long get()
                     {
                       return currEntry.getKey().getTimestamp();
                     }
-                  };
+
+                    @Override
+                    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                    {
+                      // nothing to inspect
+                    }
+                  }
+                  return new TimeLongColumnSelector();
                 }
 
                 final Integer dimIndex = index.getDimensionIndex(columnName);
@@ -461,6 +522,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         currEntry.getValue(),
                         metricIndex
                     );
+                  }
+
+                  @Override
+                  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                  {
+                    inspector.visit("index", index);
                   }
                 };
               }

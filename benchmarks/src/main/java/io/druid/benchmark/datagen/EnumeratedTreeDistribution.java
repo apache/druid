@@ -25,7 +25,7 @@ import org.apache.commons.math3.util.Pair;
 import java.util.List;
 import java.util.TreeMap;
 
-/*
+/**
  * EnumeratedDistrubtion's sample() method does a linear scan through the array of probabilities.
  *
  * This is too slow with high cardinality value sets, so this subclass overrides sample() to use

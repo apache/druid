@@ -139,7 +139,7 @@ public class GroupByRowProcessor
 
               closeOnExit.add(temporaryStorage);
 
-              Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
+              Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
                   true,
                   rowSignature,
@@ -160,15 +160,12 @@ public class GroupByRowProcessor
                   aggregatorFactories
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
-              final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
+              final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
               closeOnExit.add(grouper);
 
-              final Grouper<RowBasedKey> retVal = filteredSequence.accumulate(
-                  grouper,
-                  accumulator
-              );
-              if (retVal != grouper) {
-                throw new ResourceLimitExceededException("Grouping resources exhausted");
+              final AggregateResult retVal = filteredSequence.accumulate(AggregateResult.ok(), accumulator);
+              if (!retVal.isOk()) {
+                throw new ResourceLimitExceededException(retVal.getReason());
               }
 
               return RowBasedGrouperHelper.makeGrouperIterator(

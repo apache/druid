@@ -304,7 +304,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -346,7 +347,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -400,7 +402,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            new DateTime("2010")
+            new DateTime("2010"),
+            false
         ),
         null,
         null
@@ -461,7 +464,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -502,7 +506,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -554,7 +559,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -605,7 +611,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -638,7 +645,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -652,7 +660,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -706,7 +715,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -720,7 +730,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -775,7 +786,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             false,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -789,7 +801,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             false,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -849,7 +862,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -906,7 +920,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -920,7 +935,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -976,7 +992,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1011,7 +1028,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1063,7 +1081,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1146,7 +1165,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             true,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1233,7 +1253,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1247,7 +1268,9 @@ public class KafkaIndexTaskTest
 
     task.pause(0);
 
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+    while (!task.getStatus().equals(KafkaIndexTask.Status.PAUSED)) {
+      Thread.sleep(25);
+    }
   }
 
   @Test(timeout = 30_000L)
@@ -1269,7 +1292,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         true

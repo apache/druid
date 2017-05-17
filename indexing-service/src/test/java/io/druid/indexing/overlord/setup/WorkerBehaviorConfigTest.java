@@ -41,7 +41,7 @@ public class WorkerBehaviorConfigTest
   {
     WorkerBehaviorConfig config = new WorkerBehaviorConfig(
         new FillCapacityWithAffinityWorkerSelectStrategy(
-            new FillCapacityWithAffinityConfig(
+            new AffinityConfig(
                 ImmutableMap.of("foo", Arrays.asList("localhost"))
             )
         ),

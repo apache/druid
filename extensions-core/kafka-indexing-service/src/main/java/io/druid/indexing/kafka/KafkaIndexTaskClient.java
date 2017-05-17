@@ -60,7 +60,7 @@ import java.util.concurrent.Callable;
 
 public class KafkaIndexTaskClient
 {
-  public class NoTaskLocationException extends RuntimeException
+  public static class NoTaskLocationException extends RuntimeException
   {
     public NoTaskLocationException(String message)
     {
@@ -68,7 +68,7 @@ public class KafkaIndexTaskClient
     }
   }
 
-  public class TaskNotRunnableException extends RuntimeException
+  public static class TaskNotRunnableException extends RuntimeException
   {
     public TaskNotRunnableException(String message)
     {

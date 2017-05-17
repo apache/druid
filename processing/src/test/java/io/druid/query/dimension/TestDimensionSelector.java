@@ -21,6 +21,7 @@ package io.druid.query.dimension;
 
 import com.google.common.base.Predicate;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
@@ -91,5 +92,11 @@ class TestDimensionSelector implements DimensionSelector
         return name.charAt(0) - 'a';
       }
     };
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // Don't care about runtime shape in tests
   }
 }

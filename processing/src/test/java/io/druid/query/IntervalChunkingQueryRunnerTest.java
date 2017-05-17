@@ -60,13 +60,13 @@ public class IntervalChunkingQueryRunnerTest
 
   @Test
   public void testDefaultNoChunking() {
-    Query query = queryBuilder.intervals("2014/2016").build();
+    QueryPlus queryPlus = QueryPlus.wrap(queryBuilder.intervals("2014/2016").build());
 
-    EasyMock.expect(baseRunner.run(query, Collections.EMPTY_MAP)).andReturn(Sequences.empty());
+    EasyMock.expect(baseRunner.run(queryPlus, Collections.EMPTY_MAP)).andReturn(Sequences.empty());
     EasyMock.replay(baseRunner);
 
     QueryRunner runner = decorator.decorate(baseRunner, toolChest);
-    runner.run(query, Collections.EMPTY_MAP);
+    runner.run(queryPlus, Collections.EMPTY_MAP);
 
     EasyMock.verify(baseRunner);
   }

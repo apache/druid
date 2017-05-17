@@ -32,7 +32,9 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.query.DruidMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.QueryCountStatsProvider;
@@ -103,6 +105,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final DruidHttpClientConfig httpClientConfig;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
   private HttpClient broadcastClient;
 
@@ -115,7 +118,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       @Router Provider<HttpClient> httpClientProvider,
       DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
-      RequestLogger requestLogger
+      RequestLogger requestLogger,
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.warehouse = warehouse;
@@ -126,6 +130,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.httpClientConfig = httpClientConfig;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -278,7 +283,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
     if (query != null) {
-      return newMetricsEmittingProxyResponseListener(request, response, query, System.currentTimeMillis());
+      return newMetricsEmittingProxyResponseListener(request, response, query, System.nanoTime());
     } else {
       return super.newProxyResponseListener(request, response);
     }
@@ -331,10 +336,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       HttpServletRequest request,
       HttpServletResponse response,
       Query query,
-      long start
+      long startNs
   )
   {
-    return new MetricsEmittingProxyResponseListener(request, response, query, start);
+    return new MetricsEmittingProxyResponseListener(request, response, query, startNs);
   }
 
   @Override
@@ -361,13 +366,13 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     private final HttpServletRequest req;
     private final HttpServletResponse res;
     private final Query query;
-    private final long start;
+    private final long startNs;
 
     public MetricsEmittingProxyResponseListener(
         HttpServletRequest request,
         HttpServletResponse response,
         Query query,
-        long start
+        long startNs
     )
     {
       super(request, response);
@@ -375,13 +380,13 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       this.req = request;
       this.res = response;
       this.query = query;
-      this.start = start;
+      this.startNs = startNs;
     }
 
     @Override
     public void onComplete(Result result)
     {
-      final long requestTime = System.currentTimeMillis() - start;
+      final long requestTimeNs = System.nanoTime() - startNs;
       try {
         boolean success = result.isSucceeded();
         if (success) {
@@ -389,10 +394,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         } else {
           failedQueryCount.incrementAndGet();
         }
-        emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(warehouse.getToolChest(query), jsonMapper, query, req.getRemoteAddr())
-                        .build("query/time", requestTime)
-        );
+        emitQueryTime(requestTimeNs, success);
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
@@ -401,7 +403,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 new QueryStats(
                     ImmutableMap.<String, Object>of(
                         "query/time",
-                        requestTime,
+                        TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
                         success
                         && result.getResponse().getStatus() == javax.ws.rs.core.Response.Status.OK.getStatusCode()
@@ -425,6 +427,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       try {
         final String errorMessage = failure.getMessage();
         failedQueryCount.incrementAndGet();
+        emitQueryTime(System.nanoTime() - startNs, false);
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
@@ -452,6 +455,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
          .emit();
 
       super.onFailure(response, failure);
+    }
+
+    private void emitQueryTime(long requestTimeNs, boolean success) throws JsonProcessingException
+    {
+      QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+          queryMetricsFactory,
+          warehouse.getToolChest(query),
+          query,
+          req.getRemoteAddr()
+      );
+      queryMetrics.success(success);
+      queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }
   }
 }

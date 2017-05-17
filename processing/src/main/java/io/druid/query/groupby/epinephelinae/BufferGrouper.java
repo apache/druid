@@ -59,6 +59,16 @@ import java.util.List;
 public class BufferGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger log = new Logger(BufferGrouper.class);
+  private static final AggregateResult DICTIONARY_FULL = AggregateResult.failure(
+      "Not enough dictionary space to execute this query. Try increasing "
+      + "druid.query.groupBy.maxMergingDictionarySize or enable disk spilling by setting "
+      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
+  );
+  private static final AggregateResult HASHTABLE_FULL = AggregateResult.failure(
+      "Not enough aggregation table space to execute this query. Try increasing "
+      + "druid.processing.buffer.sizeBytes or enable disk spilling by setting "
+      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
+  );
 
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
@@ -146,11 +156,13 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public boolean aggregate(KeyType key, int keyHash)
+  public AggregateResult aggregate(KeyType key, int keyHash)
   {
     final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
     if (keyBuffer == null) {
-      return false;
+      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
+      // be correct.
+      return DICTIONARY_FULL;
     }
 
     if (keyBuffer.remaining() != keySize) {
@@ -178,7 +190,9 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
       }
 
       if (bucket < 0) {
-        return false;
+        // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
+        // be correct.
+        return HASHTABLE_FULL;
       }
     }
 
@@ -203,11 +217,11 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
       aggregators[i].aggregate(tableBuffer, offset + aggregatorOffsets[i]);
     }
 
-    return true;
+    return AggregateResult.ok();
   }
 
   @Override
-  public boolean aggregate(final KeyType key)
+  public AggregateResult aggregate(final KeyType key)
   {
     return aggregate(key, Groupers.hash(key));
   }
@@ -430,8 +444,9 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
 
     for (int oldBucket = 0; oldBucket < buckets; oldBucket++) {
       if (isUsed(oldBucket)) {
+        int oldPosition = oldBucket * bucketSize;
         entryBuffer.limit((oldBucket + 1) * bucketSize);
-        entryBuffer.position(oldBucket * bucketSize);
+        entryBuffer.position(oldPosition);
         keyBuffer.limit(entryBuffer.position() + HASH_SIZE + keySize);
         keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
@@ -442,8 +457,18 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
           throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
         }
 
-        newTableBuffer.position(newBucket * bucketSize);
+        int newPosition = newBucket * bucketSize;
+        newTableBuffer.position(newPosition);
         newTableBuffer.put(entryBuffer);
+
+        for (int i = 0; i < aggregators.length; i++) {
+          aggregators[i].relocate(
+              oldPosition + aggregatorOffsets[i],
+              newPosition + aggregatorOffsets[i],
+              tableBuffer,
+              newTableBuffer
+          );
+        }
 
         buffer.putInt(tableArenaSize + newSize * Ints.BYTES, newBucket * bucketSize);
         newSize++;

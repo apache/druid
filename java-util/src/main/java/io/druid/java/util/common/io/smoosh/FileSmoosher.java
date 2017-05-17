@@ -25,12 +25,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closer;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.MappedByteBufferHandler;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.BufferedWriter;
@@ -46,7 +46,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.GatheringByteChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -134,7 +134,7 @@ public class FileSmoosher implements Closeable
 
   public void add(String name, ByteBuffer bufferToAdd) throws IOException
   {
-    add(name, Arrays.asList(bufferToAdd));
+    add(name, Collections.singletonList(bufferToAdd));
   }
 
   public void add(String name, List<ByteBuffer> bufferToAdd) throws IOException

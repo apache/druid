@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 
 import java.util.Map;
@@ -47,12 +47,12 @@ public class SerializingQueryRunner<T> implements QueryRunner<T>
 
   @Override
   public Sequence<T> run(
-      final Query<T> query,
+      final QueryPlus<T> queryPlus,
       final Map<String, Object> responseContext
   )
   {
     return Sequences.map(
-        baseRunner.run(query, responseContext),
+        baseRunner.run(queryPlus, responseContext),
         new Function<T, T>()
         {
           @Override

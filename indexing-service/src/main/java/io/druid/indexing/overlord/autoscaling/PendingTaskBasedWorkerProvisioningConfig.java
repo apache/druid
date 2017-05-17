@@ -41,30 +41,35 @@ public class PendingTaskBasedWorkerProvisioningConfig extends SimpleWorkerProvis
     return this;
   }
 
+  @Override
   public PendingTaskBasedWorkerProvisioningConfig setWorkerIdleTimeout(Period workerIdleTimeout)
   {
     super.setWorkerIdleTimeout(workerIdleTimeout);
     return this;
   }
 
+  @Override
   public PendingTaskBasedWorkerProvisioningConfig setMaxScalingDuration(Period maxScalingDuration)
   {
     super.setMaxScalingDuration(maxScalingDuration);
     return this;
   }
 
+  @Override
   public PendingTaskBasedWorkerProvisioningConfig setNumEventsToTrack(int numEventsToTrack)
   {
     super.setNumEventsToTrack(numEventsToTrack);
     return this;
   }
 
+  @Override
   public PendingTaskBasedWorkerProvisioningConfig setWorkerVersion(String workerVersion)
   {
     super.setWorkerVersion(workerVersion);
     return this;
   }
 
+  @Override
   public PendingTaskBasedWorkerProvisioningConfig setPendingTaskTimeout(Period pendingTaskTimeout)
   {
     super.setPendingTaskTimeout(pendingTaskTimeout);

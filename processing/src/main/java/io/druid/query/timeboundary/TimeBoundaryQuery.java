@@ -27,6 +27,7 @@ import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
@@ -36,7 +37,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -67,8 +68,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   {
     super(
         dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(MY_Y2K_INTERVAL))
-                                   : querySegmentSpec,
+        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Collections.singletonList(MY_Y2K_INTERVAL))
+            : querySegmentSpec,
         false,
         context
     );
@@ -78,26 +79,22 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   }
 
   @Override
-  public boolean hasFilters() {
+  public boolean hasFilters()
+  {
     return dimFilter != null;
   }
 
+  @JsonProperty("filter")
   @Override
   public DimFilter getFilter()
   {
-    return null;
+    return dimFilter;
   }
 
   @Override
   public String getType()
   {
     return Query.TIME_BOUNDARY;
-  }
-
-  @JsonProperty("filter")
-  public DimFilter getDimensionsFilter()
-  {
-    return dimFilter;
   }
 
   @JsonProperty
@@ -109,50 +106,33 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   @Override
   public TimeBoundaryQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new TimeBoundaryQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        bound,
-        dimFilter,
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.TimeBoundaryQueryBuilder.copy(this).context(newContext).build();
   }
 
   @Override
   public TimeBoundaryQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new TimeBoundaryQuery(
-        getDataSource(),
-        spec,
-        bound,
-        dimFilter,
-        getContext()
-    );
+    return Druids.TimeBoundaryQueryBuilder.copy(this).intervals(spec).build();
   }
 
   @Override
   public Query<Result<TimeBoundaryResultValue>> withDataSource(DataSource dataSource)
   {
-    return new TimeBoundaryQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        bound,
-        dimFilter,
-        getContext()
-    );
+    return Druids.TimeBoundaryQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   public byte[] getCacheKey()
   {
-    final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
+    final byte[] filterBytes = dimFilter == null ? new byte[] {} : dimFilter.getCacheKey();
     final byte[] boundBytes = StringUtils.toUtf8(bound);
     final byte delimiter = (byte) 0xff;
     return ByteBuffer.allocate(2 + boundBytes.length + filterBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(boundBytes)
-                     .put(delimiter)
-                     .put(filterBytes)
-                     .array();
+        .put(CACHE_TYPE_ID)
+        .put(boundBytes)
+        .put(delimiter)
+        .put(filterBytes)
+        .array();
   }
 
   public Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
@@ -229,12 +209,12 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   public String toString()
   {
     return "TimeBoundaryQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", duration=" + getDuration() +
-           ", bound=" + bound +
-           ", dimFilter=" + dimFilter +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", duration=" + getDuration() +
+        ", bound=" + bound +
+        ", dimFilter=" + dimFilter +
+        '}';
   }
 
   @Override

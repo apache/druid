@@ -55,6 +55,7 @@ import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
@@ -168,6 +169,12 @@ public class IndexTask extends AbstractTask
                                                        .isPresent();
 
     final FirehoseFactory delegateFirehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+
+    if (delegateFirehoseFactory instanceof IngestSegmentFirehoseFactory) {
+      // pass toolbox to Firehose
+      ((IngestSegmentFirehoseFactory) delegateFirehoseFactory).setTaskToolbox(toolbox);
+    }
+
     final FirehoseFactory firehoseFactory;
     if (ingestionSchema.getIOConfig().isSkipFirehoseCaching()
         || delegateFirehoseFactory instanceof ReplayableFirehoseFactory) {
@@ -265,6 +272,11 @@ public class IndexTask extends AbstractTask
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
+        // The null inputRow means the caller must skip this row.
+        if (inputRow == null) {
+          continue;
+        }
+
         final Interval interval;
         if (determineIntervals) {
           interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
@@ -290,7 +302,10 @@ public class IndexTask extends AbstractTask
           hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
         }
 
-        List<Object> groupKey = Rows.toGroupKey(queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(), inputRow);
+        List<Object> groupKey = Rows.toGroupKey(
+            queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
+            inputRow
+        );
         hllCollectors.get(interval).get().add(hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
       }
     }
@@ -385,7 +400,12 @@ public class IndexTask extends AbstractTask
 
     try (
         final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema);
-        final FiniteAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator, fireDepartmentMetrics);
+        final FiniteAppenderatorDriver driver = newDriver(
+            appenderator,
+            toolbox,
+            segmentAllocator,
+            fireDepartmentMetrics
+        );
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser())
     ) {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);

@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
@@ -28,6 +29,7 @@ import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -122,6 +124,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   }
 
 
+  @Override
   public long getSerializedSize()
   {
     return 1 +             // version
@@ -132,6 +135,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
            baseBuffers.getSerializedSize(); // data
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
@@ -141,9 +145,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     baseBuffers.writeToChannel(channel);
   }
 
-  /**
-   * For testing.  Do not use unless you like things breaking
-   */
+  @VisibleForTesting
   GenericIndexed<ResourceHolder<ByteBuffer>> getBaseBuffers()
   {
     return baseBuffers;
@@ -357,7 +359,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     /**
      * Returns the value at the given index in the current decompression buffer
      *
-     * @param index index of the value in the curent buffer
+     * @param index index of the value in the current buffer
      *
      * @return the value at the given index
      */
@@ -408,6 +410,15 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     public void close() throws IOException
     {
       Closeables.close(holder, false);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      // ideally should inspect buffer and bigEndian, but at the moment of inspectRuntimeShape() call buffer is likely
+      // to be null and bigEndian = false, because loadBuffer() is not yet called, although during the processing buffer
+      // is not null, hence "visiting" null is not representative, and visiting bigEndian = false could be misleading.
+      inspector.visit("singleThreadedBuffers", singleThreadedBuffers);
     }
   }
 }

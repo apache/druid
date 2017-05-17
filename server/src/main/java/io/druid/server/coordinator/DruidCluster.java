@@ -24,7 +24,10 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidServer;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Contains a representation of the current state of the cluster by tier.
@@ -68,6 +71,11 @@ public class DruidCluster
   public MinMaxPriorityQueue<ServerHolder> getServersByTier(String tier)
   {
     return cluster.get(tier);
+  }
+
+  public List<ServerHolder> getAllServers()
+  {
+    return cluster.values().stream().flatMap(Collection::stream).collect(Collectors.toList());
   }
 
   public Iterable<MinMaxPriorityQueue<ServerHolder>> getSortedServersByTier()

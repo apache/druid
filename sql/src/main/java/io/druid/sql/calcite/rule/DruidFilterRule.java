@@ -21,6 +21,7 @@ package io.druid.sql.calcite.rule;
 
 import io.druid.query.filter.DimFilter;
 import io.druid.sql.calcite.expression.Expressions;
+import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.rel.DruidRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -28,16 +29,12 @@ import org.apache.calcite.rel.core.Filter;
 
 public class DruidFilterRule extends RelOptRule
 {
-  private static final DruidFilterRule INSTANCE = new DruidFilterRule();
+  private final DruidOperatorTable operatorTable;
 
-  private DruidFilterRule()
+  public DruidFilterRule(final DruidOperatorTable operatorTable)
   {
     super(operand(Filter.class, operand(DruidRel.class, none())));
-  }
-
-  public static DruidFilterRule instance()
-  {
-    return INSTANCE;
+    this.operatorTable = operatorTable;
   }
 
   @Override
@@ -53,6 +50,7 @@ public class DruidFilterRule extends RelOptRule
     }
 
     final DimFilter dimFilter = Expressions.toFilter(
+        operatorTable,
         druidRel.getPlannerContext(),
         druidRel.getSourceRowSignature(),
         filter.getCondition()

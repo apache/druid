@@ -447,6 +447,7 @@ public class GroupByQueryEngine
       throw new UnsupportedOperationException();
     }
 
+    @Override
     public void close()
     {
       // cleanup

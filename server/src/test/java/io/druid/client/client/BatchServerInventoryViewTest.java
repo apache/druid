@@ -39,6 +39,7 @@ import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
@@ -285,14 +286,8 @@ public class BatchServerInventoryViewTest
     Assert.assertEquals(testSegments, segments);
 
     ServerView.SegmentCallback callback = EasyMock.createStrictMock(ServerView.SegmentCallback.class);
-    Comparator<DataSegment> dataSegmentComparator = new Comparator<DataSegment>()
-    {
-      @Override
-      public int compare(DataSegment o1, DataSegment o2)
-      {
-        return o1.getInterval().equals(o2.getInterval()) ? 0 : -1;
-      }
-    };
+    Comparator<DataSegment> dataSegmentComparator =
+        Comparator.comparing(DataSegment::getInterval, Comparators.intervalsByStartThenEnd());
 
     EasyMock
         .expect(

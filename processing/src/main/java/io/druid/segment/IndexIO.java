@@ -32,7 +32,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
@@ -43,6 +42,8 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.io.Closer;
+import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -93,6 +94,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.AbstractList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -114,13 +116,12 @@ public class IndexIO
 
   private final ObjectMapper mapper;
   private final DefaultIndexIOHandler defaultIndexIOHandler;
-  private final ColumnConfig columnConfig;
 
   @Inject
   public IndexIO(ObjectMapper mapper, ColumnConfig columnConfig)
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
-    this.columnConfig = Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
+    Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     defaultIndexIOHandler = new DefaultIndexIOHandler(mapper);
     indexLoaders = ImmutableMap.<Integer, IndexLoader>builder()
         .put(0, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
@@ -134,8 +135,6 @@ public class IndexIO
         .put(8, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
         .put(9, new V9IndexLoader(columnConfig))
         .build();
-
-
   }
 
   public void validateTwoSegments(File dir1, File dir2) throws IOException
@@ -607,14 +606,14 @@ public class IndexIO
                   );
 
                   bitmaps = GenericIndexed.fromIterable(
-                      Iterables.concat(Arrays.asList(theNullSet), bitmaps),
+                      Iterables.concat(Collections.singletonList(theNullSet), bitmaps),
                       bitmapSerdeFactory.getObjectStrategy()
                   );
                 } else {
                   bumpedDictionary = false;
                   bitmaps = GenericIndexed.fromIterable(
                       Iterables.concat(
-                          Arrays.asList(
+                          Collections.singletonList(
                               bitmapFactory
                                   .union(Arrays.asList(theNullSet, bitmaps.get(0)))
                           ),
@@ -689,17 +688,7 @@ public class IndexIO
             final ColumnDescriptor serdeficator = builder
                 .addSerde(columnPartBuilder.build())
                 .build();
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
-            byte[] specBytes = baos.toByteArray();
-
-            final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-                dimension, serdeficator.numBytes() + specBytes.length
-            );
-            channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel, v9Smoosher);
-            channel.close();
+            makeColumn(v9Smoosher, dimension, serdeficator);
           } else if (filename.startsWith("met_") || filename.startsWith("numeric_dim_")) {
             // NOTE: identifying numeric dimensions by using a different filename pattern is meant to allow the
             // legacy merger (which will be deprecated) to support long/float dims. Going forward, the V9 merger
@@ -751,17 +740,7 @@ public class IndexIO
             }
 
             final ColumnDescriptor serdeficator = builder.build();
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
-            byte[] specBytes = baos.toByteArray();
-
-            final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-                metric, serdeficator.numBytes() + specBytes.length
-            );
-            channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel, v9Smoosher);
-            channel.close();
+            makeColumn(v9Smoosher, metric, serdeficator);
           } else if (String.format("time_%s.drd", BYTE_ORDER).equals(filename)) {
             CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
                 v8SmooshedFiles.mapFile(filename),
@@ -778,17 +757,7 @@ public class IndexIO
                                           .build()
             );
             final ColumnDescriptor serdeficator = builder.build();
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
-            byte[] specBytes = baos.toByteArray();
-
-            final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-                "__time", serdeficator.numBytes() + specBytes.length
-            );
-            channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel, v9Smoosher);
-            channel.close();
+            makeColumn(v9Smoosher, "__time", serdeficator);
           } else {
             skippedFiles.add(filename);
           }
@@ -852,6 +821,20 @@ public class IndexIO
       }
       finally {
         closer.close();
+      }
+    }
+
+    private void makeColumn(FileSmoosher v9Smoosher, String dimension, ColumnDescriptor serdeficator)
+        throws IOException
+    {
+      ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
+      serializerUtils.writeString(specBytes, mapper.writeValueAsString(serdeficator));
+
+      try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+          dimension, serdeficator.numBytes() + specBytes.size()
+      )) {
+        specBytes.writeTo(channel);
+        serdeficator.write(channel, v9Smoosher);
       }
     }
   }

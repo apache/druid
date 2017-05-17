@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
@@ -53,7 +54,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private final IncrementalIndex<?> index;
   private final Map<String, DimensionAccessor> accessors;
 
-  private class DimensionAccessor
+  private static class DimensionAccessor
   {
     private final IncrementalIndex.DimensionDesc dimensionDesc;
     private final MutableBitmap[] invertedIndexes;
@@ -300,6 +301,12 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     @Override
     public void close() throws IOException
     {
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("bitmapIndex", bitmapIndex);
     }
   }
 

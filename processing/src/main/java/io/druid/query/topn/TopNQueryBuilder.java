@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.DataSource;
+import io.druid.query.QueryMetrics;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -75,6 +76,7 @@ public class TopNQueryBuilder
   private List<AggregatorFactory> aggregatorSpecs;
   private List<PostAggregator> postAggregatorSpecs;
   private Map<String, Object> context;
+  private QueryMetrics<?> queryMetrics;
 
   public TopNQueryBuilder()
   {
@@ -310,9 +312,10 @@ public class TopNQueryBuilder
     return this;
   }
 
-  public TopNQueryBuilder aggregators(List<AggregatorFactory> a)
+  @SuppressWarnings("unchecked")
+  public TopNQueryBuilder aggregators(List<? extends AggregatorFactory> a)
   {
-    aggregatorSpecs = a;
+    aggregatorSpecs = (List<AggregatorFactory>) a;
     return this;
   }
 
@@ -325,6 +328,12 @@ public class TopNQueryBuilder
   public TopNQueryBuilder context(Map<String, Object> c)
   {
     context = c;
+    return this;
+  }
+
+  public TopNQueryBuilder queryMetrics(QueryMetrics<?> m)
+  {
+    queryMetrics = m;
     return this;
   }
 }

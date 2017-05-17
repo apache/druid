@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -33,7 +32,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
-import com.google.common.io.Closer;
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
@@ -51,6 +49,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.nary.BinaryFn;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -63,8 +62,6 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedIterable;
-import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -101,10 +98,8 @@ public class IndexMerger
 {
   private static final Logger log = new Logger(IndexMerger.class);
 
-  protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Arrays.asList(""), String.class);
   protected static final SerializerUtils serializerUtils = new SerializerUtils();
   protected static final int INVALID_ROW = -1;
-  protected static final Splitter SPLITTER = Splitter.on(",");
 
   protected final ObjectMapper mapper;
   protected final IndexIO indexIO;
@@ -1074,6 +1069,7 @@ public class IndexMerger
       this.lastVal = NOT_INIT;
     }
 
+    @Override
     public int seek(int dictId)
     {
       if (dimConversions == null) {
@@ -1173,46 +1169,6 @@ public class IndexMerger
             }
           }
       );
-    }
-  }
-
-  public static class AggFactoryStringIndexed implements Indexed<String>
-  {
-    private final AggregatorFactory[] metricAggs;
-
-    public AggFactoryStringIndexed(AggregatorFactory[] metricAggs)
-    {
-      this.metricAggs = metricAggs;
-    }
-
-    @Override
-    public Class<? extends String> getClazz()
-    {
-      return String.class;
-    }
-
-    @Override
-    public int size()
-    {
-      return metricAggs.length;
-    }
-
-    @Override
-    public String get(int index)
-    {
-      return metricAggs[index].getName();
-    }
-
-    @Override
-    public int indexOf(String value)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Iterator<String> iterator()
-    {
-      return IndexedIterable.create(this).iterator();
     }
   }
 

@@ -19,20 +19,27 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Longs;
+import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import it.unimi.dsi.fastutil.longs.Long2IntMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Unsafe for concurrent use from multiple threads.
+ */
 public class IntermediateLongSupplierSerializer implements LongSupplierSerializer
 {
 
@@ -42,10 +49,13 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
   private final ByteOrder order;
   private final CompressedObjectStrategy.CompressionStrategy compression;
   private CountingOutputStream tempOut = null;
+  private final ByteBuffer helperBuffer = ByteBuffer.allocate(Longs.BYTES);
 
   private int numInserted = 0;
 
-  private BiMap<Long, Integer> uniqueValues = HashBiMap.create();
+  private final Long2IntMap uniqueValues = new Long2IntOpenHashMap();
+  private final LongList valuesAddedInOrder = new LongArrayList();
+
   private long maxVal = Long.MIN_VALUE;
   private long minVal = Long.MAX_VALUE;
 
@@ -65,22 +75,26 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     this.compression = compression;
   }
 
+  @Override
   public void open() throws IOException
   {
     tempOut = new CountingOutputStream(ioPeon.makeOutputStream(tempFile));
   }
 
+  @Override
   public int size()
   {
     return numInserted;
   }
 
+  @Override
   public void add(long value) throws IOException
   {
-    tempOut.write(Longs.toByteArray(value));
+    SerializerUtils.writeBigEndianLongToOutputStream(tempOut, value, helperBuffer);
     ++numInserted;
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE && !uniqueValues.containsKey(value)) {
       uniqueValues.put(value, uniqueValues.size());
+      valuesAddedInOrder.add(value);
     }
     if (value > maxVal) {
       maxVal = value;
@@ -101,7 +115,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
       delta = -1;
     }
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE) {
-      writer = new TableLongEncodingWriter(uniqueValues);
+      writer = new TableLongEncodingWriter(uniqueValues, valuesAddedInOrder);
     } else if (delta != -1 && delta != Long.MAX_VALUE) {
       writer = new DeltaLongEncodingWriter(minVal, delta);
     } else {
@@ -120,12 +134,15 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 
     try (DataInputStream tempIn = new DataInputStream(new BufferedInputStream(ioPeon.makeInputStream(tempFile)))) {
       delegate.open();
-      while (tempIn.available() > 0) {
+      int available = numInserted;
+      while (available > 0) {
         delegate.add(tempIn.readLong());
+        available--;
       }
     }
   }
 
+  @Override
   public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
   {
     tempOut.close();
@@ -133,6 +150,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     delegate.closeAndConsolidate(consolidatedOut);
   }
 
+  @Override
   public void close() throws IOException
   {
     tempOut.close();
@@ -140,11 +158,13 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     delegate.close();
   }
 
+  @Override
   public long getSerializedSize()
   {
     return delegate.getSerializedSize();
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     delegate.writeToChannel(channel, smoosher);

@@ -20,7 +20,6 @@
 package io.druid.query.lookup;
 
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.logger.Logger;
 
 import javax.ws.rs.Path;
@@ -44,19 +43,20 @@ public class LookupIntrospectionResource
   @Path("/{lookupId}")
   public Object introspectLookup(@PathParam("lookupId") final String lookupId)
   {
-    final LookupExtractorFactory lookupExtractorFactory = lookupReferencesManager.get(lookupId);
-    if (lookupExtractorFactory == null) {
+    final LookupExtractorFactoryContainer container = lookupReferencesManager.get(lookupId);
+
+    if (container == null) {
       LOGGER.error("trying to introspect non existing lookup [%s]", lookupId);
       return Response.status(Response.Status.NOT_FOUND).build();
     }
-    LookupIntrospectHandler introspectHandler = lookupExtractorFactory.getIntrospectHandler();
+    LookupIntrospectHandler introspectHandler = container.getLookupExtractorFactory().getIntrospectHandler();
     if (introspectHandler != null) {
       return introspectHandler;
     } else {
       LOGGER.warn(
           "Trying to introspect lookup [%s] of type [%s] but implementation doesn't provide resource",
           lookupId,
-          lookupExtractorFactory.get().getClass()
+          container.getLookupExtractorFactory().get().getClass()
       );
       return Response.status(Response.Status.NOT_FOUND).build();
     }
