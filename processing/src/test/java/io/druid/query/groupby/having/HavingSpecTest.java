@@ -168,12 +168,6 @@ public class HavingSpecTest
       counter.incrementAndGet();
       return value;
     }
-
-    @Override
-    public byte[] getCacheKey()
-    {
-      return new byte[0];
-    }
   }
 
   @Test
