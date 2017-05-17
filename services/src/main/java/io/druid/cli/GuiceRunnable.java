@@ -77,9 +77,10 @@ public abstract class GuiceRunnable implements Runnable
       final StartupLoggingConfig startupLoggingConfig = injector.getInstance(StartupLoggingConfig.class);
 
       log.info(
-          "Starting up with processors[%,d], memory[%,d].",
+          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d].",
           Runtime.getRuntime().availableProcessors(),
-          Runtime.getRuntime().totalMemory()
+          Runtime.getRuntime().totalMemory(),
+          Runtime.getRuntime().maxMemory()
       );
 
       if (startupLoggingConfig.isLogProperties()) {
