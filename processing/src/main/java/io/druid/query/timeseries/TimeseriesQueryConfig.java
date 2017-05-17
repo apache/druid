@@ -19,11 +19,20 @@
 
 package io.druid.query.timeseries;
 
-/**
- * Implementations of this interface could be injected using {@link TimeseriesQueryConfig#queryMetricsFactory} option.
- */
-public interface TimeseriesQueryMetricsFactory
-{
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-  TimeseriesQueryMetrics makeMetrics();
+public class TimeseriesQueryConfig
+{
+  @JsonProperty
+  private Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory;
+
+  public Class<? extends TimeseriesQueryMetricsFactory> getQueryMetricsFactory()
+  {
+    return queryMetricsFactory != null ? queryMetricsFactory : DefaultTimeseriesQueryMetricsFactory.class;
+  }
+
+  public void setQueryMetricsFactory(Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
 }

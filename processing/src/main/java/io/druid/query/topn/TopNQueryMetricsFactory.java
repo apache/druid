@@ -19,6 +19,9 @@
 
 package io.druid.query.topn;
 
+/**
+ * Implementations of this interface could be injected using {@link TopNQueryConfig#queryMetricsFactory} option.
+ */
 public interface TopNQueryMetricsFactory
 {
 

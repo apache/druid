@@ -17,13 +17,22 @@
  * under the License.
  */
 
-package io.druid.query.timeseries;
+package io.druid.query;
 
-/**
- * Implementations of this interface could be injected using {@link TimeseriesQueryConfig#queryMetricsFactory} option.
- */
-public interface TimeseriesQueryMetricsFactory
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class GenericQueryConfig
 {
+  @JsonProperty
+  private Class<? extends GenericQueryMetricsFactory> queryMetricsFactory;
 
-  TimeseriesQueryMetrics makeMetrics();
+  public Class<? extends GenericQueryMetricsFactory> getQueryMetricsFactory()
+  {
+    return queryMetricsFactory != null ? queryMetricsFactory : DefaultGenericQueryMetricsFactory.class;
+  }
+
+  public void setQueryMetricsFactory(Class<? extends GenericQueryMetricsFactory> queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
 }
