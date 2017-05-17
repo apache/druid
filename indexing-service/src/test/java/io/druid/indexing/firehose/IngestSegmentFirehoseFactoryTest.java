@@ -270,6 +270,7 @@ public class IngestSegmentFirehoseFactoryTest
           }
         },
         null, // segment announcer
+        null,
         notifierFactory,
         null, // query runner factory conglomerate corporation unionized collective
         null, // query executor service

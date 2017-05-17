@@ -226,6 +226,15 @@ public class DruidServer implements Comparable
     return dataSources.values();
   }
 
+  public void removeAllSegments()
+  {
+    synchronized (lock) {
+      dataSources.clear();
+      segments.clear();
+      currSize = 0;
+    }
+  }
+
   @Override
   public boolean equals(Object o)
   {

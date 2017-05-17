@@ -17,11 +17,12 @@
  * under the License.
  */
 
-package io.druid.client;
+package io.druid.server.coordination;
 
 /**
- * Marker interface for making batch/single/http server inventory view configurable.
  */
-public interface ServerInventoryView extends ServerView, InventoryView
+public interface DataSegmentServerAnnouncer
 {
+  void announce();
+  void unannounce();
 }

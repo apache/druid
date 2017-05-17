@@ -50,6 +50,7 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Plumbers;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -66,6 +67,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
   private final List<FireDepartment> fireDepartments;
   private final QueryRunnerFactoryConglomerate conglomerate;
+  private final DataSegmentServerAnnouncer serverAnnouncer;
 
   /**
    * key=data source name,value=mappings of partition number to FireChief
@@ -75,29 +77,31 @@ public class RealtimeManager implements QuerySegmentWalker
   @Inject
   public RealtimeManager(
       List<FireDepartment> fireDepartments,
-      QueryRunnerFactoryConglomerate conglomerate
+      QueryRunnerFactoryConglomerate conglomerate,
+      DataSegmentServerAnnouncer serverAnnouncer
   )
   {
-    this.fireDepartments = fireDepartments;
-    this.conglomerate = conglomerate;
-
-    this.chiefs = Maps.newHashMap();
+    this(fireDepartments, conglomerate, serverAnnouncer, Maps.newHashMap());
   }
 
   RealtimeManager(
       List<FireDepartment> fireDepartments,
       QueryRunnerFactoryConglomerate conglomerate,
+      DataSegmentServerAnnouncer serverAnnouncer,
       Map<String, Map<Integer, FireChief>> chiefs
   )
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
+    this.serverAnnouncer = serverAnnouncer;
     this.chiefs = chiefs;
   }
 
   @LifecycleStart
   public void start() throws IOException
   {
+    serverAnnouncer.announce();
+
     for (final FireDepartment fireDepartment : fireDepartments) {
       final DataSchema schema = fireDepartment.getDataSchema();
 
@@ -129,6 +133,8 @@ public class RealtimeManager implements QuerySegmentWalker
         CloseQuietly.close(chief);
       }
     }
+
+    serverAnnouncer.unannounce();
   }
 
   public FireDepartmentMetrics getMetrics(String datasource)

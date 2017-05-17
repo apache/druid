@@ -72,6 +72,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final DruidServerMetadata me;
   private final CuratorFramework curator;
   private final DataSegmentAnnouncer announcer;
+  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final ServerManager serverManager;
   private final ScheduledExecutorService exec;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
@@ -87,6 +88,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       ZkPathsConfig zkPaths,
       DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
+      DataSegmentServerAnnouncer serverAnnouncer,
       CuratorFramework curator,
       ServerManager serverManager,
       ScheduledExecutorFactory factory
@@ -98,6 +100,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     this.me = me;
     this.curator = curator;
     this.announcer = announcer;
+    this.serverAnnouncer = serverAnnouncer;
     this.serverManager = serverManager;
 
     this.exec = factory.create(1, "ZkCoordinator-Exec--%d");
@@ -132,6 +135,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
         loadLocalCache();
+        serverAnnouncer.announce();
 
         loadQueueCache.getListenable().addListener(
             new PathChildrenCacheListener()
@@ -226,6 +230,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
       try {
         loadQueueCache.close();
+        serverAnnouncer.unannounce();
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -360,13 +365,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         }
       }
       loadSegment(segment, callback);
-      if (!announcer.isAnnounced(segment)) {
-        try {
-          announcer.announceSegment(segment);
-        }
-        catch (IOException e) {
-          throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
-        }
+      try {
+        announcer.announceSegment(segment);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
       }
     }
     catch (SegmentLoadingException e) {
@@ -408,14 +411,12 @@ public class ZkCoordinator implements DataSegmentChangeHandler
                       segment.getIdentifier()
                   );
                   loadSegment(segment, callback);
-                  if (!announcer.isAnnounced(segment)) {
-                    try {
-                      backgroundSegmentAnnouncer.announceSegment(segment);
-                    }
-                    catch (InterruptedException e) {
-                      Thread.currentThread().interrupt();
-                      throw new SegmentLoadingException(e, "Loading Interrupted");
-                    }
+                  try {
+                    backgroundSegmentAnnouncer.announceSegment(segment);
+                  }
+                  catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new SegmentLoadingException(e, "Loading Interrupted");
                   }
                 }
                 catch (SegmentLoadingException e) {

@@ -131,4 +131,16 @@ public class TestServerView implements FilteredServerInventoryView, ServerView.S
   {
     return null;
   }
+
+  @Override
+  public boolean isStarted()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
+  {
+    return false;
+  }
 }

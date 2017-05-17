@@ -207,4 +207,16 @@ public class CoordinatorServerView implements InventoryView
   {
     return baseView.getInventory();
   }
+
+  @Override
+  public boolean isStarted()
+  {
+    return baseView.isStarted();
+  }
+
+  @Override
+  public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
+  {
+    return baseView.isSegmentLoadedByServer(serverKey, segment);
+  }
 }
