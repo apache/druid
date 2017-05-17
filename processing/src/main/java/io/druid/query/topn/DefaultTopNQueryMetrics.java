@@ -22,6 +22,8 @@ package io.druid.query.topn;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.query.DefaultQueryMetrics;
 import io.druid.query.DruidMetrics;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.Cursor;
 
 public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> implements TopNQueryMetrics
 {
@@ -64,5 +66,55 @@ public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> impl
   {
     int numComplexAggs = DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs());
     builder.setDimension("numComplexMetrics", String.valueOf(numComplexAggs));
+  }
+
+  @Override
+  public void dimensionCardinality(int cardinality)
+  {
+    // Don't emit by default.
+  }
+
+  @Override
+  public void algorithm(TopNAlgorithm algorithm)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void cursor(Cursor cursor)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void columnValueSelector(ColumnValueSelector columnValueSelector)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void numValuesPerPass(TopNParams params)
+  {
+    // Don't emit by default.
+  }
+
+  @Override
+  public TopNQueryMetrics addProcessedRows(long numRows)
+  {
+    // Emit nothing by default.
+    return this;
+  }
+
+  @Override
+  public void startRecordingScanTime()
+  {
+    // Don't record scan time by default.
+  }
+
+  @Override
+  public TopNQueryMetrics stopRecordingScanTime()
+  {
+    // Emit nothing by default.
+    return this;
   }
 }

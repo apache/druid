@@ -73,7 +73,8 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
           throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TopNQuery.class);
         }
 
-        return queryEngine.query((TopNQuery) input.getQuery(), segment.asStorageAdapter());
+        TopNQuery query = (TopNQuery) input.getQuery();
+        return queryEngine.query(query, segment.asStorageAdapter(), (TopNQueryMetrics) input.getQueryMetrics());
       }
     };
 

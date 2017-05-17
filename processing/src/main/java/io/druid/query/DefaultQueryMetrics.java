@@ -25,9 +25,12 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -147,6 +150,24 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void preFilters(List<Filter> preFilters)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void postFilters(List<Filter> postFilters)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory)
+  {
+    return new DefaultBitmapResultFactory(factory);
+  }
+
+  @Override
   public QueryMetrics<QueryType> reportQueryTime(long timeNs)
   {
     return defaultTimeMetric("query/time", timeNs);
@@ -212,6 +233,27 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public QueryMetrics<QueryType> reportNodeBytes(long byteCount)
   {
     metrics.put("query/node/bytes", byteCount);
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportBitmapConstructionTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentRows(long numRows)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportPreFilteredRows(long numRows)
+  {
+    // Don't emit by default.
     return this;
   }
 

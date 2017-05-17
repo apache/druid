@@ -254,7 +254,8 @@ public class DumpSegment extends GuiceRunnable
         index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
         VirtualColumns.EMPTY,
         Granularities.ALL,
-        false
+        false,
+        null
     );
 
     withOutputStream(

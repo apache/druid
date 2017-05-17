@@ -20,7 +20,7 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
-import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -50,7 +50,7 @@ public class ColumnComparisonFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     throw new UnsupportedOperationException();
   }

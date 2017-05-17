@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
@@ -34,6 +33,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
@@ -304,7 +304,8 @@ public abstract class BaseFilterTest
         new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
         VIRTUAL_COLUMNS,
         Granularities.ALL,
-        false
+        false,
+        null
     );
   }
 
@@ -376,7 +377,7 @@ public abstract class BaseFilterTest
     final Filter postFilteringFilter = new Filter()
     {
       @Override
-      public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
       {
         throw new UnsupportedOperationException();
       }

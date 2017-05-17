@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Query;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -233,25 +234,26 @@ public class Filters
    *
    * @param dimension dimension to look at
    * @param selector  bitmap selector
+   * @param bitmapResultFactory
    * @param predicate predicate to use
-   *
    * @return bitmap of matching rows
    *
    * @see #estimateSelectivity(String, BitmapIndexSelector, Predicate)
    */
-  public static ImmutableBitmap matchPredicate(
+  public static <T> T matchPredicate(
       final String dimension,
       final BitmapIndexSelector selector,
+      BitmapResultFactory<T> bitmapResultFactory,
       final Predicate<String> predicate
   )
   {
-    return selector.getBitmapFactory().union(matchPredicateNoUnion(dimension, selector, predicate));
+    return bitmapResultFactory.unionDimensionValueBitmaps(matchPredicateNoUnion(dimension, selector, predicate));
   }
 
   /**
    * Return an iterable of bitmaps for all values matching a particular predicate. Unioning these bitmaps
-   * yields the same result that {@link #matchPredicate(String, BitmapIndexSelector, Predicate)} would have
-   * returned.
+   * yields the same result that {@link #matchPredicate(String, BitmapIndexSelector, BitmapResultFactory, Predicate)}
+   * would have returned.
    *
    * @param dimension dimension to look at
    * @param selector  bitmap selector
@@ -289,7 +291,7 @@ public class Filters
    *
    * @return estimated selectivity
    *
-   * @see #matchPredicate(String, BitmapIndexSelector, Predicate)
+   * @see #matchPredicate(String, BitmapIndexSelector, BitmapResultFactory, Predicate)
    */
   public static double estimateSelectivity(
       final String dimension,

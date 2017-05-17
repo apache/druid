@@ -62,7 +62,7 @@ public class FloatTopNColumnSelectorStrategy
   }
 
   @Override
-  public void dimExtractionScanAndAggregate(
+  public long dimExtractionScanAndAggregate(
       TopNQuery query,
       FloatColumnSelector selector,
       Cursor cursor,
@@ -70,6 +70,7 @@ public class FloatTopNColumnSelectorStrategy
       Int2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
+    long processedRows = 0;
     while (!cursor.isDone()) {
       int key = Float.floatToIntBits(selector.get());
       Aggregator[] theAggregators = aggregatesStore.get(key);
@@ -81,7 +82,9 @@ public class FloatTopNColumnSelectorStrategy
         aggregator.aggregate();
       }
       cursor.advance();
+      processedRows++;
     }
+    return processedRows;
   }
 
   @Override
