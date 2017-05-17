@@ -143,12 +143,14 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
   }
 
+  @Override
   @JsonProperty
   public int getMaxRowsInMemory()
   {
     return maxRowsInMemory;
   }
 
+  @Override
   @JsonProperty
   public Period getIntermediatePersistPeriod()
   {
@@ -161,6 +163,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return windowPeriod;
   }
 
+  @Override
   @JsonProperty
   public File getBasePersistDirectory()
   {
@@ -179,6 +182,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return rejectionPolicyFactory;
   }
 
+  @Override
   @JsonProperty
   public int getMaxPendingPersists()
   {
@@ -191,6 +195,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return shardSpec;
   }
 
+  @Override
   @JsonProperty
   public IndexSpec getIndexSpec()
   {
@@ -215,6 +220,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return this.mergeThreadPriority;
   }
 
+  @Override
   @JsonProperty
   public boolean isReportParseExceptions()
   {

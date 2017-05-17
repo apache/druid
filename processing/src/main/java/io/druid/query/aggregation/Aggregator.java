@@ -41,6 +41,7 @@ public interface Aggregator extends Closeable
   Object get();
   float getFloat();
 
+  @Override
   void close();
 
   long getLong();

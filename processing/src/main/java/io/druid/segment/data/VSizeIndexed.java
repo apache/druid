@@ -24,6 +24,7 @@ import io.druid.common.utils.SerializerUtils;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -188,6 +189,12 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
   public void close() throws IOException
   {
     // no-op
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("theBuffer", theBuffer);
   }
 
   public WritableSupplier<IndexedMultivalue<IndexedInts>> asWritableSupplier() {

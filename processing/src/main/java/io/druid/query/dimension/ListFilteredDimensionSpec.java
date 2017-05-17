@@ -28,7 +28,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 import javax.annotation.Nullable;
@@ -93,7 +92,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     }
     final int maxPossibleFilteredCardinality = values.size();
     int count = 0;
-    final Int2IntMap forwardMapping = new Int2IntOpenHashMap(maxPossibleFilteredCardinality);
+    final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap(maxPossibleFilteredCardinality);
     forwardMapping.defaultReturnValue(-1);
     final int[] reverseMapping = new int[maxPossibleFilteredCardinality];
     IdLookup idLookup = selector.idLookup();
@@ -134,7 +133,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     }
     final int maxPossibleFilteredCardinality = selectorCardinality;
     int count = 0;
-    final Int2IntMap forwardMapping = new Int2IntOpenHashMap(maxPossibleFilteredCardinality);
+    final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap(maxPossibleFilteredCardinality);
     forwardMapping.defaultReturnValue(-1);
     final int[] reverseMapping = new int[maxPossibleFilteredCardinality];
     for (int i = 0; i < selectorCardinality; i++) {

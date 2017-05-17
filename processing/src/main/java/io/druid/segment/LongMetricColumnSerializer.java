@@ -81,6 +81,7 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
     closeFile(outFile);
   }
 
+  @Override
   public void closeFile(final File outFile) throws IOException
   {
     outFile.delete();

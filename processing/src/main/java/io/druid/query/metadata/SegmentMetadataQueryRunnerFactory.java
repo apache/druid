@@ -51,7 +51,7 @@ import io.druid.segment.Segment;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
@@ -110,7 +110,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
             columns.put(columnName, column);
           }
         }
-        List<Interval> retIntervals = query.analyzingInterval() ? Arrays.asList(segment.getDataInterval()) : null;
+        List<Interval> retIntervals = query.analyzingInterval() ?
+                                      Collections.singletonList(segment.getDataInterval()) : null;
 
         final Map<String, AggregatorFactory> aggregators;
         Metadata metadata = null;
@@ -162,7 +163,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
 
         return Sequences.simple(
-            Arrays.asList(
+            Collections.singletonList(
                 new SegmentAnalysis(
                     segment.getIdentifier(),
                     retIntervals,
@@ -229,7 +230,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       future.cancel(true);
                       throw new QueryInterruptedException(e);
                     }
-                    catch(CancellationException e) {
+                    catch (CancellationException e) {
                       throw new QueryInterruptedException(e);
                     }
                     catch (TimeoutException e) {

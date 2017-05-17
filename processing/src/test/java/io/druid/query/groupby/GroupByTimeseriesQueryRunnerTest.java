@@ -136,6 +136,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
+  @Override
   @Test
   public void testFullOnTimeseriesMaxMin()
   {

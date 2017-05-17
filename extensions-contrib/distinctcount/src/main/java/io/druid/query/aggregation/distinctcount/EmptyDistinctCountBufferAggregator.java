@@ -77,5 +77,6 @@ public final class EmptyDistinctCountBufferAggregator implements BufferAggregato
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

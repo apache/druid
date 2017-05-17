@@ -130,6 +130,7 @@ public class ExpressionSelectors
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("baseSelector", baseSelector);
+          inspector.visit("extractionFn", extractionFn);
         }
       }
       return new ExtractionExpressionDimensionSelector();

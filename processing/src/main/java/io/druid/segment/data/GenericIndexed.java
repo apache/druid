@@ -27,6 +27,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import java.io.Closeable;
@@ -166,7 +167,7 @@ public class GenericIndexed<T> implements Indexed<T>
   private int logBaseTwoOfElementsPerValueFile;
   private int relativeIndexMask;
 
-  private ByteBuffer theBuffer;
+  private final ByteBuffer theBuffer;
 
   /**
    * Constructor for version one.
@@ -210,6 +211,7 @@ public class GenericIndexed<T> implements Indexed<T>
   {
     this.versionOne = false;
 
+    this.theBuffer = null;
     this.strategy = strategy;
     this.allowReverseLookup = allowReverseLookup;
     this.valueBuffers = valueBuffs;
@@ -345,6 +347,21 @@ public class GenericIndexed<T> implements Indexed<T>
     copyValueBuffer.position(startOffset);
     // fromByteBuffer must not modify the buffer limit
     return strategy.fromByteBuffer(copyValueBuffer, size);
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("versionOne", versionOne);
+    inspector.visit("headerBuffer", headerBuffer);
+    if (versionOne) {
+      inspector.visit("firstValueBuffer", firstValueBuffer);
+    } else {
+      // Inspecting just one example of valueBuffer, not needed to inspect the whole array, because all buffers in it
+      // are the same.
+      inspector.visit("valueBuffer", valueBuffers.length > 0 ? valueBuffers[0] : null);
+    }
+    inspector.visit("strategy", strategy);
   }
 
   abstract class BufferIndexed implements Indexed<T>
@@ -525,6 +542,14 @@ public class GenericIndexed<T> implements Indexed<T>
         }
         return bufferedIndexedGet(copyBuffer, startOffset, endOffset);
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("headerBuffer", headerBuffer);
+        inspector.visit("copyBuffer", copyBuffer);
+        inspector.visit("strategy", strategy);
+      }
     };
   }
 
@@ -632,6 +657,16 @@ public class GenericIndexed<T> implements Indexed<T>
         }
         int fileNum = index >> logBaseTwoOfElementsPerValueFile;
         return bufferedIndexedGet(copyValueBuffers[fileNum], startOffset, endOffset);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("headerBuffer", headerBuffer);
+        // Inspecting just one example of copyValueBuffer, not needed to inspect the whole array, because all buffers
+        // in it are the same.
+        inspector.visit("copyValueBuffer", copyValueBuffers.length > 0 ? copyValueBuffers[0] : null);
+        inspector.visit("strategy", strategy);
       }
     };
   }

@@ -48,7 +48,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -154,7 +154,7 @@ public class SpecificSegmentQueryRunnerTest
           public Sequence run(QueryPlus queryPlus, Map responseContext)
           {
             return Sequences.withEffect(
-                Sequences.simple(Arrays.asList(value)),
+                Sequences.simple(Collections.singletonList(value)),
                 new Runnable()
                 {
                   @Override

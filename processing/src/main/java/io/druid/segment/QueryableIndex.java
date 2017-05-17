@@ -43,5 +43,6 @@ public interface QueryableIndex extends ColumnSelector, Closeable
    * @throws java.io.IOException if an exception was thrown closing the index
    */
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
+  @Override
   public void close() throws IOException;
 }

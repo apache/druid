@@ -95,6 +95,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -128,7 +129,11 @@ public class FilteredAggregatorBenchmark
   private File tmpDir;
 
   private static String JS_FN = "function(str) { return 'super-' + str; }";
-  private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
+  private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(
+      JS_FN,
+      false,
+      JavaScriptConfig.getEnabledInstance()
+  );
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -169,10 +174,15 @@ public class FilteredAggregatorBenchmark
     filter = new OrDimFilter(
         Arrays.asList(
             new BoundDimFilter("dimSequential", "-1", "-1", true, true, null, null, StringComparators.ALPHANUMERIC),
-            new JavaScriptDimFilter("dimSequential", "function(x) { return false }", null, JavaScriptConfig.getEnabledInstance()),
+            new JavaScriptDimFilter(
+                "dimSequential",
+                "function(x) { return false }",
+                null,
+                JavaScriptConfig.getEnabledInstance()
+            ),
             new RegexDimFilter("dimSequential", "X", null),
             new SearchQueryDimFilter("dimSequential", new ContainsSearchQuerySpec("X", false), null),
-            new InDimFilter("dimSequential", Arrays.asList("X"), null)
+            new InDimFilter("dimSequential", Collections.singletonList("X"), null)
         )
     );
     filteredMetrics = new AggregatorFactory[1];
@@ -208,7 +218,7 @@ public class FilteredAggregatorBenchmark
     );
 
     BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
-    QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+    QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
     List<AggregatorFactory> queryAggs = new ArrayList<>();
     queryAggs.add(filteredMetrics[0]);
 

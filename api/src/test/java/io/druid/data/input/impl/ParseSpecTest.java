@@ -26,6 +26,7 @@ import io.druid.java.util.common.parsers.ParseException;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class ParseSpecTest
 {
@@ -45,7 +46,9 @@ public class ParseSpecTest
         ),
         ",",
         " ",
-        Arrays.asList("a", "b")
+        Arrays.asList("a", "b"),
+        false,
+        0
     );
   }
 
@@ -65,7 +68,9 @@ public class ParseSpecTest
         ),
         ",",
         null,
-        Arrays.asList("a", "B")
+        Arrays.asList("a", "B"),
+        false,
+        0
     );
   }
 
@@ -79,13 +84,15 @@ public class ParseSpecTest
             null
         ),
         new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a")),
+            DimensionsSpec.getDefaultSchemas(Collections.singletonList("a")),
             Lists.newArrayList("B", "B"),
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
         null,
-        Arrays.asList("a", "B")
+        Arrays.asList("a", "B"),
+        false,
+        0
     );
   }
 }

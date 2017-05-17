@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -66,5 +68,11 @@ public class ArrayIndexed<T> implements Indexed<T>
   public Iterator<T> iterator()
   {
     return Arrays.asList(baseArray).iterator();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // nothing to inspect
   }
 }

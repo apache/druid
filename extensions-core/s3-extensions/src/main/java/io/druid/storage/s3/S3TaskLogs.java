@@ -108,6 +108,7 @@ public class S3TaskLogs implements TaskLogs
     }
   }
 
+  @Override
   public void pushTaskLog(final String taskid, final File logFile) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid);

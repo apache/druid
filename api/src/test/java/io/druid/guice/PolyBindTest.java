@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Properties;
 
 /**
@@ -46,7 +47,7 @@ public class PolyBindTest
     props = new Properties();
     injector = Guice.createInjector(
         Iterables.concat(
-            Arrays.asList(
+            Collections.singletonList(
                 new Module()
                 {
                   @Override

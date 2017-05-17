@@ -148,6 +148,7 @@ public class ExpressionPostAggregator implements PostAggregator
   {
     // ensures the following order: numeric > NaN > Infinite
     numericFirst {
+      @Override
       public int compare(Number lhs, Number rhs)
       {
         if (lhs instanceof Long && rhs instanceof Long) {

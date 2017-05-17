@@ -201,7 +201,6 @@ public class IndexMergerV9CompatibilityTest
     finally {
       if (index != null) {
         index.close();
-        ;
       }
 
       if (outDir != null) {

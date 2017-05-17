@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import io.druid.java.util.common.IAE;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 
@@ -81,6 +82,12 @@ public final class DimensionSelectorUtils
             return false;
           }
         }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("selector", selector);
+        }
       };
     } else {
       if (matchNull) {
@@ -92,6 +99,12 @@ public final class DimensionSelectorUtils
             final IndexedInts row = selector.getRow();
             final int size = row.size();
             return size == 0;
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("selector", selector);
           }
         };
       } else {
@@ -123,6 +136,12 @@ public final class DimensionSelectorUtils
           }
           return false;
         }
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
       }
     };
   }
@@ -169,6 +188,12 @@ public final class DimensionSelectorUtils
           return false;
         }
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
+      }
     };
   }
 
@@ -196,6 +221,13 @@ public final class DimensionSelectorUtils
           }
           return false;
         }
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
+        inspector.visit("predicate", predicate);
       }
     };
   }

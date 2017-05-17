@@ -735,17 +735,17 @@ public class GroupByQuery extends BaseQuery<Row>
   public String toString()
   {
     return "GroupByQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", virtualColumns=" + virtualColumns +
-           ", limitSpec=" + limitSpec +
-           ", dimFilter=" + dimFilter +
-           ", granularity=" + granularity +
-           ", dimensions=" + dimensions +
-           ", aggregatorSpecs=" + aggregatorSpecs +
-           ", postAggregatorSpecs=" + postAggregatorSpecs +
-           ", havingSpec=" + havingSpec +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", virtualColumns=" + virtualColumns +
+        ", limitSpec=" + limitSpec +
+        ", dimFilter=" + dimFilter +
+        ", granularity=" + granularity +
+        ", dimensions=" + dimensions +
+        ", aggregatorSpecs=" + aggregatorSpecs +
+        ", postAggregatorSpecs=" + postAggregatorSpecs +
+        ", havingSpec=" + havingSpec +
+        '}';
   }
 
   @Override
@@ -762,13 +762,13 @@ public class GroupByQuery extends BaseQuery<Row>
     }
     final GroupByQuery that = (GroupByQuery) o;
     return Objects.equals(virtualColumns, that.virtualColumns) &&
-           Objects.equals(limitSpec, that.limitSpec) &&
-           Objects.equals(havingSpec, that.havingSpec) &&
-           Objects.equals(dimFilter, that.dimFilter) &&
-           Objects.equals(granularity, that.granularity) &&
-           Objects.equals(dimensions, that.dimensions) &&
-           Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
-           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
+        Objects.equals(limitSpec, that.limitSpec) &&
+        Objects.equals(havingSpec, that.havingSpec) &&
+        Objects.equals(dimFilter, that.dimFilter) &&
+        Objects.equals(granularity, that.granularity) &&
+        Objects.equals(dimensions, that.dimensions) &&
+        Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
+        Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
   }
 
   @Override

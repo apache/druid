@@ -34,6 +34,7 @@ public class StringRuntimeShapeTest
     @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
+      // Don't care about runtime shape in tests
     }
   }
 

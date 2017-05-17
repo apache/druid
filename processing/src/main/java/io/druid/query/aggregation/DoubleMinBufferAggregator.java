@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class DoubleMinBufferAggregator extends DoubleBufferAggregator
+public class DoubleMinBufferAggregator extends SimpleDoubleBufferAggregator
 {
 
   DoubleMinBufferAggregator(FloatColumnSelector selector)
@@ -40,8 +40,18 @@ public class DoubleMinBufferAggregator extends DoubleBufferAggregator
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public void putFirst(ByteBuffer buf, int position, double value)
   {
-    buf.putDouble(position, Math.min(buf.getDouble(position), (double) selector.get()));
+    if (!Double.isNaN(value)) {
+      buf.putDouble(position, value);
+    } else {
+      init(buf, position);
+    }
+  }
+
+  @Override
+  public void aggregate(ByteBuffer buf, int position, double value)
+  {
+    buf.putDouble(position, Math.min(buf.getDouble(position), value));
   }
 }

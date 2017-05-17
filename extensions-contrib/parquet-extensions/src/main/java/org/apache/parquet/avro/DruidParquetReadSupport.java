@@ -73,6 +73,7 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
     return new MessageType(name, partialFields);
   }
 
+  @Override
   public ReadContext init(InitContext context)
   {
     MessageType requestedProjection = getSchemaForRead(context.getFileSchema(), getPartialReadSchema(context));

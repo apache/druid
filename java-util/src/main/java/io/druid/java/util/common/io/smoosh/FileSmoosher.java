@@ -46,7 +46,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.GatheringByteChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -134,7 +134,7 @@ public class FileSmoosher implements Closeable
 
   public void add(String name, ByteBuffer bufferToAdd) throws IOException
   {
-    add(name, Arrays.asList(bufferToAdd));
+    add(name, Collections.singletonList(bufferToAdd));
   }
 
   public void add(String name, List<ByteBuffer> bufferToAdd) throws IOException

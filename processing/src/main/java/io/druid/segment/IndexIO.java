@@ -94,6 +94,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.AbstractList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -605,14 +606,14 @@ public class IndexIO
                   );
 
                   bitmaps = GenericIndexed.fromIterable(
-                      Iterables.concat(Arrays.asList(theNullSet), bitmaps),
+                      Iterables.concat(Collections.singletonList(theNullSet), bitmaps),
                       bitmapSerdeFactory.getObjectStrategy()
                   );
                 } else {
                   bumpedDictionary = false;
                   bitmaps = GenericIndexed.fromIterable(
                       Iterables.concat(
-                          Arrays.asList(
+                          Collections.singletonList(
                               bitmapFactory
                                   .union(Arrays.asList(theNullSet, bitmaps.get(0)))
                           ),

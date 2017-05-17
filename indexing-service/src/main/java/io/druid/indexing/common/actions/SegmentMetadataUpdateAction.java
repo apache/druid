@@ -51,6 +51,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
     return segments;
   }
 
+  @Override
   public TypeReference<Void> getReturnTypeReference()
   {
     return new TypeReference<Void>() {};

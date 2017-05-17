@@ -27,6 +27,7 @@ import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -94,6 +95,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     }
   }
 
+  @Override
   public long getSerializedSize()
   {
     return 1 + // version
@@ -103,6 +105,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
            baseIntBuffers.getSerializedSize(); // data
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
@@ -364,6 +367,15 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     public void close() throws IOException
     {
       Closeables.close(holder, false);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      // ideally should inspect buffer, but at the moment of inspectRuntimeShape() call buffer is likely to be null,
+      // because loadBuffer() is not yet called, although during the processing it is not null, hence "visiting" null is
+      // not representative.
+      inspector.visit("singleThreadedIntBuffers", singleThreadedIntBuffers);
     }
   }
 }

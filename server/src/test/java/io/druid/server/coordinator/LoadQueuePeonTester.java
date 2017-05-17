@@ -41,6 +41,7 @@ public class LoadQueuePeonTester extends LoadQueuePeon
     segmentsToLoad.add(segment);
   }
 
+  @Override
   public ConcurrentSkipListSet<DataSegment> getSegmentsToLoad()
   {
     return segmentsToLoad;

@@ -68,5 +68,6 @@ public class CountBufferAggregator implements BufferAggregator
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

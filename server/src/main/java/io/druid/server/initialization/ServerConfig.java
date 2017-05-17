@@ -41,6 +41,10 @@ public class ServerConfig
   @Min(0)
   private long defaultQueryTimeout = 300_000; // 5 minutes
 
+  @JsonProperty
+  @Min(1)
+  private long maxScatterGatherBytes = Long.MAX_VALUE;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -56,6 +60,11 @@ public class ServerConfig
     return defaultQueryTimeout;
   }
 
+  public long getMaxScatterGatherBytes()
+  {
+    return maxScatterGatherBytes;
+  }
+
   @Override
   public String toString()
   {
@@ -63,6 +72,7 @@ public class ServerConfig
            "numThreads=" + numThreads +
            ", maxIdleTime=" + maxIdleTime +
            ", defaultQueryTimeout=" + defaultQueryTimeout +
+           ", maxScatterGatherBytes=" + maxScatterGatherBytes +
            '}';
   }
 }

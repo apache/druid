@@ -164,7 +164,9 @@ public class HadoopConverterJobTest
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(TestIndex.DIMENSIONS)), null, null),
                             "\t",
                             "\u0001",
-                            Arrays.asList(TestIndex.COLUMNS)
+                            Arrays.asList(TestIndex.COLUMNS),
+                            false,
+                            0
                         ),
                         null
                     ),

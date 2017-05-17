@@ -22,6 +22,8 @@ package io.druid.query;
 /**
  * This factory is used for DI of custom {@link QueryMetrics} implementations for all query types, which don't (yet)
  * need to emit custom dimensions and/or metrics, i. e. they are good with the generic {@link QueryMetrics} interface.
+ *
+ * Implementations could be injected using {@link GenericQueryConfig#queryMetricsFactory} option.
  */
 public interface GenericQueryMetricsFactory
 {

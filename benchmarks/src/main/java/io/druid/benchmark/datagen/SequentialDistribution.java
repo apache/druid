@@ -22,7 +22,7 @@ package io.druid.benchmark.datagen;
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
 import org.apache.commons.math3.util.Pair;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class SequentialDistribution extends EnumeratedDistribution
@@ -37,7 +37,7 @@ public class SequentialDistribution extends EnumeratedDistribution
   public SequentialDistribution(Integer start, Integer end, List<Object> enumeratedValues)
   {
     // just pass in some bogus probability mass function, we won't be using it
-    super(Arrays.asList(new Pair<Object, Double>(null, 1.0)));
+    super(Collections.singletonList(new Pair<Object, Double>(null, 1.0)));
     this.start = start;
     this.end = end;
     this.enumeratedValues = enumeratedValues;

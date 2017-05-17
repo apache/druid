@@ -17,48 +17,19 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.annotations;
 
-import it.unimi.dsi.fastutil.ints.IntIterator;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.io.IOException;
-import java.util.List;
-
-/**
- */
-public class ListBasedIndexedInts implements IndexedInts
+@Documented
+@Inherited
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.TYPE)
+public @interface SubclassesMustBePublic
 {
-  private final List<Integer> expansion;
-
-  public ListBasedIndexedInts(List<Integer> expansion) {this.expansion = expansion;}
-
-  @Override
-  public int size()
-  {
-    return expansion.size();
-  }
-
-  @Override
-  public int get(int index)
-  {
-    return expansion.get(index);
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return new IndexedIntsIterator(this);
-  }
-
-  @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-
-  }
 }
