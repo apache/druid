@@ -127,7 +127,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   }
 
   @Override
-  public Firehose connect(InputRowParser inputRowParser) throws IOException, ParseException
+  public Firehose connect(InputRowParser inputRowParser, File temporaryDirectory) throws IOException, ParseException
   {
     log.info("Connecting firehose: dataSource[%s], interval[%s]", dataSource, interval);
 

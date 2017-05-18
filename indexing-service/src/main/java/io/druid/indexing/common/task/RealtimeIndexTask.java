@@ -63,6 +63,7 @@ import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -277,7 +278,7 @@ public class RealtimeIndexTask extends AbstractTask
     DataSchema dataSchema = spec.getDataSchema();
     RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
     RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
-                                            .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+                                            .withBasePersistDirectory(toolbox.getPersistDir())
                                             .withVersioningPolicy(versioningPolicy);
 
     final FireDepartment fireDepartment = new FireDepartment(
@@ -318,6 +319,7 @@ public class RealtimeIndexTask extends AbstractTask
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     Supplier<Committer> committerSupplier = null;
+    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
     try {
       toolbox.getDataSegmentServerAnnouncer().announce();
@@ -327,6 +329,9 @@ public class RealtimeIndexTask extends AbstractTask
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
 
+      // Firehose temporary directory is automatically removed when this RealtimeIndexTask completes.
+      FileUtils.forceMkdir(firehoseTempDir);
+
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
       final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
@@ -334,7 +339,7 @@ public class RealtimeIndexTask extends AbstractTask
       // Skip connecting firehose if we've been stopped before we got started.
       synchronized (this) {
         if (!gracefullyStopped) {
-          firehose = firehoseFactory.connect(spec.getDataSchema().getParser());
+          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
           committerSupplier = Committers.supplierFromFirehose(firehose);
         }
       }

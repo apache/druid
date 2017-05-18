@@ -80,7 +80,6 @@ import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
-import io.druid.segment.realtime.firehose.ReplayableFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
@@ -89,6 +88,7 @@ import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
+import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -168,28 +168,18 @@ public class IndexTask extends AbstractTask
                                                        .bucketIntervals()
                                                        .isPresent();
 
-    final FirehoseFactory delegateFirehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
-    if (delegateFirehoseFactory instanceof IngestSegmentFirehoseFactory) {
+    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
       // pass toolbox to Firehose
-      ((IngestSegmentFirehoseFactory) delegateFirehoseFactory).setTaskToolbox(toolbox);
+      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
     }
 
-    final FirehoseFactory firehoseFactory;
-    if (ingestionSchema.getIOConfig().isSkipFirehoseCaching()
-        || delegateFirehoseFactory instanceof ReplayableFirehoseFactory) {
-      firehoseFactory = delegateFirehoseFactory;
-    } else {
-      firehoseFactory = new ReplayableFirehoseFactory(
-          delegateFirehoseFactory,
-          ingestionSchema.getTuningConfig().isReportParseExceptions(),
-          null,
-          null,
-          smileMapper
-      );
-    }
+    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
+    // Firehose temporary directory is automatically removed when this IndexTask completes.
+    FileUtils.forceMkdir(firehoseTempDir);
 
-    final Map<Interval, List<ShardSpec>> shardSpecs = determineShardSpecs(toolbox, firehoseFactory);
+    final Map<Interval, List<ShardSpec>> shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir);
 
     final String version;
     final DataSchema dataSchema;
@@ -211,7 +201,7 @@ public class IndexTask extends AbstractTask
       dataSchema = ingestionSchema.getDataSchema();
     }
 
-    if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, version, firehoseFactory)) {
+    if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, version, firehoseFactory, firehoseTempDir)) {
       return TaskStatus.success(getId());
     } else {
       return TaskStatus.failure(getId());
@@ -224,7 +214,8 @@ public class IndexTask extends AbstractTask
    */
   private Map<Interval, List<ShardSpec>> determineShardSpecs(
       final TaskToolbox toolbox,
-      final FirehoseFactory firehoseFactory
+      final FirehoseFactory firehoseFactory,
+      final File firehoseTempDir
   ) throws IOException
   {
     final ObjectMapper jsonMapper = toolbox.getObjectMapper();
@@ -268,7 +259,10 @@ public class IndexTask extends AbstractTask
 
     log.info("Determining intervals and shardSpecs");
     long determineShardSpecsStartMillis = System.currentTimeMillis();
-    try (final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
+    try (final Firehose firehose = firehoseFactory.connect(
+        ingestionSchema.getDataSchema().getParser(),
+        firehoseTempDir)
+    ) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
@@ -353,7 +347,8 @@ public class IndexTask extends AbstractTask
       final DataSchema dataSchema,
       final Map<Interval, List<ShardSpec>> shardSpecs,
       final String version,
-      final FirehoseFactory firehoseFactory
+      final FirehoseFactory firehoseFactory,
+      final File firehoseTempDir
   ) throws IOException, InterruptedException
 
   {
@@ -406,7 +401,7 @@ public class IndexTask extends AbstractTask
             segmentAllocator,
             fireDepartmentMetrics
         );
-        final Firehose firehose = firehoseFactory.connect(dataSchema.getParser())
+        final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
       final Map<Interval, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
@@ -419,6 +414,10 @@ public class IndexTask extends AbstractTask
         while (firehose.hasMore()) {
           try {
             final InputRow inputRow = firehose.nextRow();
+
+            if (inputRow == null) {
+              continue;
+            }
 
             final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
             if (!optInterval.isPresent()) {
@@ -512,7 +511,7 @@ public class IndexTask extends AbstractTask
   {
     return Appenderators.createOffline(
         dataSchema,
-        ingestionSchema.getTuningConfig().withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist")),
+        ingestionSchema.getTuningConfig().withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
@@ -589,22 +588,18 @@ public class IndexTask extends AbstractTask
   public static class IndexIOConfig implements IOConfig
   {
     private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
-    private static final boolean DEFAULT_SKIP_FIREHOSE_CACHING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final boolean appendToExisting;
-    private final boolean skipFirehoseCaching;
 
     @JsonCreator
     public IndexIOConfig(
         @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
-        @JsonProperty("skipFirehoseCaching") @Nullable Boolean skipFirehoseCaching
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
     )
     {
       this.firehoseFactory = firehoseFactory;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
-      this.skipFirehoseCaching = skipFirehoseCaching == null ? DEFAULT_SKIP_FIREHOSE_CACHING : skipFirehoseCaching;
     }
 
     @JsonProperty("firehose")
@@ -617,12 +612,6 @@ public class IndexTask extends AbstractTask
     public boolean isAppendToExisting()
     {
       return appendToExisting;
-    }
-
-    @JsonProperty("skipFirehoseCaching")
-    public boolean isSkipFirehoseCaching()
-    {
-      return skipFirehoseCaching;
     }
   }
 

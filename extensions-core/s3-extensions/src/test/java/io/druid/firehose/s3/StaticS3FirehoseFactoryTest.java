@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
+import org.easymock.EasyMock;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -54,6 +56,7 @@ public class StaticS3FirehoseFactoryTest
     );
 
     Assert.assertEquals(factory, outputFact);
+    Assert.assertEquals(uris, outputFact.getUris());
   }
 
   // This class is a workaround for the injectable value that StaticS3FirehoseFactory requires
@@ -64,7 +67,7 @@ public class StaticS3FirehoseFactoryTest
         @JsonProperty("uris") List<URI> uris
     )
     {
-      super(null, uris);
+      super(EasyMock.niceMock(RestS3Service.class), uris, null, null, null, null, null, null);
     }
   }
 }

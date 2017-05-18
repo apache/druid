@@ -262,4 +262,19 @@ public class TaskToolbox
   public IndexMergerV9 getIndexMergerV9() {
     return indexMergerV9;
   }
+
+  public File getFirehoseTemporaryDir()
+  {
+    return new File(taskWorkDir, "firehose");
+  }
+
+  public File getMergeDir()
+  {
+    return new File(taskWorkDir, "merge");
+  }
+
+  public File getPersistDir()
+  {
+    return new File(taskWorkDir, "persist");
+  }
 }

@@ -595,7 +595,7 @@ public class IndexTaskTest
                 baseDir,
                 "druid*",
                 null
-            ), appendToExisting, null
+            ), appendToExisting
         ),
         new IndexTask.IndexTuningConfig(
             targetPartitionSize,

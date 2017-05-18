@@ -309,14 +309,15 @@ public class RealtimeManager implements QuerySegmentWalker
       catch (RuntimeException e) {
         log.makeAlert(
             e,
-            "RuntimeException aborted realtime processing[%s]",
+            "[%s] aborted realtime processing[%s]",
+            e.getClass().getSimpleName(),
             fireDepartment.getDataSchema().getDataSource()
         ).emit();
         normalExit = false;
-        throw e;
+        throw Throwables.propagate(e);
       }
       catch (Error e) {
-        log.makeAlert(e, "Exception aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
+        log.makeAlert(e, "Error aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
            .emit();
         normalExit = false;
         throw e;
