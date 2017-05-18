@@ -169,7 +169,7 @@ public class WorkerTaskMonitorTest
             new TaskToolboxFactory(
                 taskConfig,
                 taskActionClientFactory,
-                null, null, null, null, null, null, notifierFactory, null, null, null, new SegmentLoaderFactory(
+                null, null, null, null, null, null, null, notifierFactory, null, null, null, new SegmentLoaderFactory(
                 new SegmentLoaderLocalCacheManager(
                     null,
                     new SegmentLoaderConfig()

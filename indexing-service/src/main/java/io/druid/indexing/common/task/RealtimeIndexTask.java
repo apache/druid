@@ -248,12 +248,6 @@ public class RealtimeIndexTask extends AbstractTask
           }
         }
       }
-
-      @Override
-      public boolean isAnnounced(DataSegment segment)
-      {
-        return toolbox.getSegmentAnnouncer().isAnnounced(segment);
-      }
     };
 
     // NOTE: getVersion will block if there is lock contention, which will block plumber.getSink
@@ -326,6 +320,8 @@ public class RealtimeIndexTask extends AbstractTask
     Supplier<Committer> committerSupplier = null;
 
     try {
+      toolbox.getDataSegmentServerAnnouncer().announce();
+
       plumber.startJob();
 
       // Set up metrics emission
@@ -425,6 +421,8 @@ public class RealtimeIndexTask extends AbstractTask
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
       }
+
+      toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
     log.info("Job done!");

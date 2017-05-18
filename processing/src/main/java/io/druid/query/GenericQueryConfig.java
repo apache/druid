@@ -17,11 +17,22 @@
  * under the License.
  */
 
-package io.druid.client;
+package io.druid.query;
 
-/**
- * Marker interface for making batch/single/http server inventory view configurable.
- */
-public interface ServerInventoryView extends ServerView, InventoryView
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class GenericQueryConfig
 {
+  @JsonProperty
+  private Class<? extends GenericQueryMetricsFactory> queryMetricsFactory;
+
+  public Class<? extends GenericQueryMetricsFactory> getQueryMetricsFactory()
+  {
+    return queryMetricsFactory != null ? queryMetricsFactory : DefaultGenericQueryMetricsFactory.class;
+  }
+
+  public void setQueryMetricsFactory(Class<? extends GenericQueryMetricsFactory> queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
 }

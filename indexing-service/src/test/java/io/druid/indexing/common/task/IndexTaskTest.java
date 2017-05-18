@@ -550,7 +550,7 @@ public class IndexTaskTest
             segments.add(segment);
             return segment;
           }
-        }, null, null, null, null, null, null, null, null, null, jsonMapper, temporaryFolder.newFolder(),
+        }, null, null, null, null, null, null, null, null, null, null, jsonMapper, temporaryFolder.newFolder(),
             indexMerger, indexIO, null, null, indexMergerV9
         )
     );

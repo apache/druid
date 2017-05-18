@@ -37,6 +37,7 @@ import io.druid.guice.NodeTypeConfig;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.lookup.LookupModule;
+import io.druid.server.http.SegmentListerResource;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerManager;
@@ -86,6 +87,7 @@ public class CliHistorical extends ServerRunnable
             binder.bind(QueryCountStatsProvider.class).to(QueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, HistoricalResource.class);
+            Jerseys.addResource(binder, SegmentListerResource.class);
             LifecycleModule.register(binder, QueryResource.class);
             LifecycleModule.register(binder, ZkCoordinator.class);
 

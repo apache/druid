@@ -122,9 +122,13 @@ import org.joda.time.Interval;
  *  5. Inject and use SearchQueryMetricsFactory instead of {@link GenericQueryMetricsFactory} in {@link
  *  io.druid.query.search.SearchQueryQueryToolChest}.
  *
- *  6. Specify `binder.bind(SearchQueryMetricsFactory.class).to(DefaultSearchQueryMetricsFactory.class)` in
- *  QueryToolChestModule (if the query type belongs to the core druid-processing, e. g. SearchQuery) or in some
- *  extension-specific Guice module otherwise, if the query type is defined in an extension, e. g. ScanQuery.
+ *  6. Establish injection of SearchQueryMetricsFactory using config and provider method in QueryToolChestModule
+ *  (see how it is done in QueryToolChestModule for existing query types with custom metrics, e. g. {@link
+ *  io.druid.query.topn.TopNQueryMetricsFactory}), if the query type belongs to the core druid-processing, e. g.
+ *  SearchQuery. If the query type defined in an extension, you can specify
+ *  `binder.bind(ScanQueryMetricsFactory.class).to(DefaultScanQueryMetricsFactory.class)` in the extension's
+ *  Guice module, if the query type is defined in an extension, e. g. ScanQuery. Or establish similar configuration,
+ *  as for the core query types.
  *
  * This complex procedure is needed to ensure custom {@link GenericQueryMetricsFactory} specified by users still works
  * for the query type when query type decides to create their custom QueryMetrics subclass.

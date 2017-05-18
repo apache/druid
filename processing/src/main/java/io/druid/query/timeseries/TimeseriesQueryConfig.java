@@ -17,11 +17,22 @@
  * under the License.
  */
 
-package io.druid.client;
+package io.druid.query.timeseries;
 
-/**
- * Marker interface for making batch/single/http server inventory view configurable.
- */
-public interface ServerInventoryView extends ServerView, InventoryView
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class TimeseriesQueryConfig
 {
+  @JsonProperty
+  private Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory;
+
+  public Class<? extends TimeseriesQueryMetricsFactory> getQueryMetricsFactory()
+  {
+    return queryMetricsFactory != null ? queryMetricsFactory : DefaultTimeseriesQueryMetricsFactory.class;
+  }
+
+  public void setQueryMetricsFactory(Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
 }

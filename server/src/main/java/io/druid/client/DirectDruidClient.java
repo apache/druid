@@ -375,7 +375,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private long checkQueryTimeout()
         {
           long timeLeft = timeoutAt - System.currentTimeMillis();
-          if (timeLeft >= 0) {
+          if (timeLeft <= 0) {
             String msg = StringUtils.safeFormat("Query[%s] url[%s] timed out.", query.getId(), url);
             setupResponseReadFailure(msg, null);
             throw new RE(msg);

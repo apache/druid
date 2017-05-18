@@ -36,7 +36,6 @@ import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
-import io.druid.curator.inventory.InventoryManagerConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.metadata.MetadataRuleManager;
@@ -238,22 +237,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     loadManagementPeons.put("from", loadQueuePeon);
     loadManagementPeons.put("to", loadQueuePeon);
 
-    EasyMock.expect(serverInventoryView.getInventoryManagerConfig()).andReturn(
-        new InventoryManagerConfig()
-        {
-          @Override
-          public String getContainerPath()
-          {
-            return "";
-          }
-
-          @Override
-          public String getInventoryPath()
-          {
-            return "";
-          }
-        }
-    );
     EasyMock.replay(serverInventoryView);
 
     coordinator.moveSegment(

@@ -24,7 +24,6 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Command;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
@@ -118,6 +117,18 @@ public class CliRealtimeExample extends ServerRunnable
     {
       return ImmutableList.of();
     }
+
+    @Override
+    public boolean isStarted()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
+    {
+      return false;
+    }
   }
 
   private static class NoopDataSegmentPusher implements DataSegmentPusher
@@ -167,12 +178,6 @@ public class CliRealtimeExample extends ServerRunnable
     public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
     {
       // do nothing
-    }
-
-    @Override
-    public boolean isAnnounced(DataSegment segment)
-    {
-      return false;
     }
   }
 }
