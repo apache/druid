@@ -310,7 +310,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     return makeServedSegmentPath(
         UUIDUtils.generateUuid(
             server.getHost(),
-            server.getType(),
+            server.getType().toString(),
             server.getTier(),
             new DateTime().toString()
         )

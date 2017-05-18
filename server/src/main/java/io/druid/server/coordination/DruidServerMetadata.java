@@ -30,7 +30,7 @@ public class DruidServerMetadata
   private final String host;
   private final long maxSize;
   private final String tier;
-  private final String type;
+  private final ServerType type;
   private final int priority;
 
   @JsonCreator
@@ -47,7 +47,7 @@ public class DruidServerMetadata
     this.host = host;
     this.maxSize = maxSize;
     this.tier = tier;
-    this.type = type;
+    this.type = ServerType.fromString(type);
     this.priority = priority;
   }
 
@@ -76,7 +76,7 @@ public class DruidServerMetadata
   }
 
   @JsonProperty
-  public String getType()
+  public ServerType getType()
   {
     return type;
   }
@@ -87,9 +87,9 @@ public class DruidServerMetadata
     return priority;
   }
 
-  public boolean isAssignable()
+  public boolean segmentReplicatable()
   {
-    return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
+    return type.isSegmentReplicationTarget();
   }
 
   @Override

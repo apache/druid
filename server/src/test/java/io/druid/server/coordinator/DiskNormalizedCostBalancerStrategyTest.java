@@ -60,7 +60,7 @@ public class DiskNormalizedCostBalancerStrategyTest
       serverHolderList.add(
           new ServerHolder(
               new ImmutableDruidServer(
-                  new DruidServerMetadata("DruidServer_Name_" + i, "localhost", 10000000L, "hot", "hot", 1),
+                  new DruidServerMetadata("DruidServer_Name_" + i, "localhost", 10000000L, "historical", "hot", 1),
                   3000L,
                   ImmutableMap.of("DUMMY", EasyMock.createMock(ImmutableDruidDataSource.class)),
                   ImmutableMap.copyOf(segments)

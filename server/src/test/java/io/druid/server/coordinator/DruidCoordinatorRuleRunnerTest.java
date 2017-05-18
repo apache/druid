@@ -130,6 +130,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -237,6 +238,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -349,6 +351,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -430,6 +433,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -489,6 +493,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -562,6 +567,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -642,6 +648,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -728,6 +735,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -815,6 +823,7 @@ public class DruidCoordinatorRuleRunnerTest
       server2.addDataSegment(segment.getIdentifier(), segment);
     }
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -916,6 +925,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(anotherMockPeon);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -988,6 +998,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -1112,6 +1123,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -1231,6 +1243,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -1317,6 +1330,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             DruidServer.DEFAULT_TIER,
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(

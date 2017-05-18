@@ -134,6 +134,7 @@ public class DruidCoordinatorBalancerProfiler
         DruidCoordinatorRuntimeParams.newBuilder()
                                 .withDruidCluster(
                                     new DruidCluster(
+                                        null,
                                         ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
                                             "normal",
                                             MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
@@ -161,6 +162,7 @@ public class DruidCoordinatorBalancerProfiler
                                 .withSegmentReplicantLookup(
                                     SegmentReplicantLookup.make(
                                         new DruidCluster(
+                                            null,
                                             ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
                                                 "normal",
                                                 MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
@@ -216,6 +218,7 @@ public class DruidCoordinatorBalancerProfiler
         DruidCoordinatorRuntimeParams.newBuilder()
                                 .withDruidCluster(
                                     new DruidCluster(
+                                        null,
                                         ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
                                             "normal",
                                             MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)

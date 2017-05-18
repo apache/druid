@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
@@ -111,7 +112,7 @@ public class DruidServer implements Comparable
     return metadata.getMaxSize();
   }
 
-  public String getType()
+  public ServerType getType()
   {
     return metadata.getType();
   }
@@ -121,9 +122,9 @@ public class DruidServer implements Comparable
     return metadata.getTier();
   }
 
-  public boolean isAssignable()
+  public boolean segmentReplicatable()
   {
-    return metadata.isAssignable();
+    return metadata.segmentReplicatable();
   }
 
   public int getPriority()

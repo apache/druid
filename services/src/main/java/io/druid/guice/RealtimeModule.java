@@ -40,6 +40,7 @@ import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierC
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.QueryResource;
+import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.http.SegmentListerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.QueryCountStatsProvider;
@@ -109,5 +110,8 @@ public class RealtimeModule implements Module
     Jerseys.addResource(binder, SegmentListerResource.class);
     LifecycleModule.register(binder, QueryResource.class);
     LifecycleModule.register(binder, Server.class);
+
+    binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+    LifecycleModule.register(binder, ZkCoordinator.class);
   }
 }

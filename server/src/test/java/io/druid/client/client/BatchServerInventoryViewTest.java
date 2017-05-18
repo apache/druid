@@ -124,7 +124,7 @@ public class BatchServerInventoryViewTest
         "id",
         "host",
         Long.MAX_VALUE,
-        "type",
+        "historical",
         "tier",
         0
     );
@@ -443,7 +443,7 @@ public class BatchServerInventoryViewTest
                           "id",
                           "host",
                           Long.MAX_VALUE,
-                          "type",
+                          "historical",
                           "tier",
                           0
                       ),

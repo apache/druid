@@ -158,6 +158,7 @@ public class LoadRuleTest
     };
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -282,6 +283,7 @@ public class LoadRuleTest
     );
     server2.addDataSegment(segment.getIdentifier(), segment);
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -374,6 +376,7 @@ public class LoadRuleTest
     };
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -482,6 +485,7 @@ public class LoadRuleTest
     server2.addDataSegment(segment.getIdentifier(), segment);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(

@@ -20,6 +20,7 @@
 package io.druid.segment.realtime;
 
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -84,6 +85,7 @@ public class RealtimeManager implements QuerySegmentWalker
     this(fireDepartments, conglomerate, serverAnnouncer, Maps.newHashMap());
   }
 
+  @VisibleForTesting
   RealtimeManager(
       List<FireDepartment> fireDepartments,
       QueryRunnerFactoryConglomerate conglomerate,
@@ -94,7 +96,7 @@ public class RealtimeManager implements QuerySegmentWalker
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
     this.serverAnnouncer = serverAnnouncer;
-    this.chiefs = chiefs;
+    this.chiefs = chiefs == null ? Maps.newHashMap() : Maps.newHashMap(chiefs);
   }
 
   @LifecycleStart
