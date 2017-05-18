@@ -36,7 +36,7 @@ import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
 /**
- * This is CONCISE: Compressed 'N' Composable Integer Set.
+ * This is CONCISE: COmpressed 'N' Composable Integer SEt.
  * <p/>
  * This class is an instance of {@link IntSet} internally represented by
  * compressed bitmaps though a RLE (Run-Length Encoding) compression algorithm.
