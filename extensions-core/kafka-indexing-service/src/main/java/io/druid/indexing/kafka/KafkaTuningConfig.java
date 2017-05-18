@@ -33,6 +33,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
+  private static final long DEFAULT_PUBLISH_TIMEOUT = 0;
 
   private final int maxRowsInMemory;
   private final int maxRowsPerSegment;
@@ -42,6 +43,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final IndexSpec indexSpec;
   private final boolean buildV9Directly;
   private final boolean reportParseExceptions;
+  private final long publishTimeout;
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
 
@@ -55,6 +57,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
+      @JsonProperty("publishTimeout") Long publishTimeout,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically
   )
@@ -74,6 +77,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaults.isReportParseExceptions()
                                  : reportParseExceptions;
+    this.publishTimeout = publishTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : publishTimeout;
     this.handoffConditionTimeout = handoffConditionTimeout == null
                                    ? defaults.getHandoffConditionTimeout()
                                    : handoffConditionTimeout;
@@ -93,6 +97,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         config.indexSpec,
         config.buildV9Directly,
         config.reportParseExceptions,
+        config.publishTimeout,
         config.handoffConditionTimeout,
         config.resetOffsetAutomatically
     );
@@ -153,6 +158,12 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   }
 
   @JsonProperty
+  public long getPublishTimeout()
+  {
+    return publishTimeout;
+  }
+
+  @JsonProperty
   public long getHandoffConditionTimeout()
   {
     return handoffConditionTimeout;
@@ -175,6 +186,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         indexSpec,
         buildV9Directly,
         reportParseExceptions,
+        publishTimeout,
         handoffConditionTimeout,
         resetOffsetAutomatically
     );
@@ -191,6 +203,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         indexSpec,
         buildV9Directly,
         reportParseExceptions,
+        publishTimeout,
         handoffConditionTimeout,
         resetOffsetAutomatically
     );

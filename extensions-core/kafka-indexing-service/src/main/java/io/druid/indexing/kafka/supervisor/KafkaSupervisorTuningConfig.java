@@ -44,6 +44,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
+      @JsonProperty("publishTimeout") Long publishTimeout,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("workerThreads") Integer workerThreads,
@@ -62,6 +63,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         indexSpec,
         buildV9Directly,
         reportParseExceptions,
+        publishTimeout,
         handoffConditionTimeout,
         resetOffsetAutomatically
     );

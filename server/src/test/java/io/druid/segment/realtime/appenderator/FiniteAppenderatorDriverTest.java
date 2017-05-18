@@ -57,6 +57,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -67,7 +69,8 @@ public class FiniteAppenderatorDriverTest
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
-  private static final long HANDOFF_CONDITION_TIMEOUT = 0;
+  private static final long PUBLISH_TIMEOUT = 1000;
+  private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
 
   private static final List<InputRow> ROWS = Arrays.<InputRow>asList(
       new MapBasedInputRow(
@@ -89,6 +92,7 @@ public class FiniteAppenderatorDriverTest
 
   SegmentAllocator allocator;
   AppenderatorTester appenderatorTester;
+  TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
   FiniteAppenderatorDriver driver;
 
   @Before
@@ -96,13 +100,13 @@ public class FiniteAppenderatorDriverTest
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
+    segmentHandoffNotifierFactory = new TestSegmentHandoffNotifierFactory();
     driver = new FiniteAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
-        new TestSegmentHandoffNotifierFactory(),
+        segmentHandoffNotifierFactory,
         new TestUsedSegmentChecker(),
         OBJECT_MAPPER,
-        MAX_ROWS_PER_SEGMENT,
         HANDOFF_CONDITION_TIMEOUT,
         new FireDepartmentMetrics()
     );
@@ -124,13 +128,16 @@ public class FiniteAppenderatorDriverTest
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertNotNull(driver.add(ROWS.get(i), "dummy", committerSupplier));
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
     }
 
-    final SegmentsAndMetadata segmentsAndMetadata = driver.finish(
+    final SegmentsAndMetadata published = driver.publish(
         makeOkPublisher(),
-        committerSupplier.get()
-    );
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(
@@ -155,19 +162,50 @@ public class FiniteAppenderatorDriverTest
       InputRow row = new MapBasedInputRow(
           new DateTime("2000T01"),
           ImmutableList.of("dim2"),
-          ImmutableMap.<String, Object>of(
+          ImmutableMap.of(
               "dim2",
               String.format("bar-%d", i),
               "met1",
               2.0
           )
       );
-      Assert.assertNotNull(driver.add(row, "dummy", committerSupplier));
+      final AppenderatorDriverAddResult addResult = driver.add(row, "dummy", committerSupplier);
+      Assert.assertTrue(addResult.isOk());
+      if (addResult.getNumRowsInSegment() > MAX_ROWS_PER_SEGMENT) {
+        driver.moveSegmentOut("dummy", ImmutableList.of(addResult.getSegmentIdentifier()));
+      }
     }
 
-    final SegmentsAndMetadata segmentsAndMetadata = driver.finish(makeOkPublisher(), committerSupplier.get());
+    final SegmentsAndMetadata published = driver.publish(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
     Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
     Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndMetadata.getCommitMetadata());
+  }
+
+  @Test(timeout = 5000L, expected = TimeoutException.class)
+  public void testHandoffTimeout() throws Exception
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+    segmentHandoffNotifierFactory.disableHandoff();
+
+    Assert.assertNull(driver.startJob());
+
+    for (int i = 0; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
+    }
+
+    final SegmentsAndMetadata published = driver.publish(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
   }
 
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)
@@ -266,6 +304,13 @@ public class FiniteAppenderatorDriverTest
 
   private static class TestSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
   {
+    private boolean handoffEnabled = true;
+
+    public void disableHandoff()
+    {
+      handoffEnabled = false;
+    }
+
     @Override
     public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
     {
@@ -278,8 +323,10 @@ public class FiniteAppenderatorDriverTest
             final Runnable handOffRunnable
         )
         {
-          // Immediate handoff
-          exec.execute(handOffRunnable);
+          if (handoffEnabled) {
+            // Immediate handoff
+            exec.execute(handOffRunnable);
+          }
           return true;
         }
 

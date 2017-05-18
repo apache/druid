@@ -606,7 +606,8 @@ public class IndexTaskTest
             null,
             true,
             forceExtendableShardSpecs,
-            true
+            true,
+            null
         )
     );
   }
