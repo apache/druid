@@ -23,6 +23,14 @@ public enum ServerType
 {
   HISTORICAL,
   BRIDGE,
+  INDEXER_EXECUTOR {
+    @Override
+    public boolean isSegmentReplicationTarget()
+    {
+      return false;
+    }
+  },
+
   REALTIME {
     @Override
     public boolean isSegmentReplicationTarget()
@@ -55,6 +63,6 @@ public enum ServerType
 
   static ServerType fromString(String type)
   {
-    return ServerType.valueOf(type.toUpperCase());
+    return ServerType.valueOf(type.toUpperCase().replace("-", "_"));
   }
 }
