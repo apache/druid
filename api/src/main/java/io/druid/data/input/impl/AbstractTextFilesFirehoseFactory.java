@@ -29,11 +29,9 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -76,11 +74,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
             }
             final ObjectType object = iterator.next();
             try {
-              return IOUtils.lineIterator(
-                  new BufferedReader(
-                      new InputStreamReader(wrapObjectStream(object, openObjectStream(object)), Charsets.UTF_8)
-                  )
-              );
+              return IOUtils.lineIterator(wrapObjectStream(object, openObjectStream(object)), Charsets.UTF_8);
             }
             catch (Exception e) {
               LOG.error(

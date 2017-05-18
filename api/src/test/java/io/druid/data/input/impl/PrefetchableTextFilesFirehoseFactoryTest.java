@@ -198,6 +198,38 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   }
 
   @Test
+  public void testWithLargeCacheAndSmallFetch() throws IOException
+  {
+    final TestPrefetchableTextFilesFirehoseFactory factory =
+        TestPrefetchableTextFilesFirehoseFactory.with(testDir, 2048, 1024);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+
+    assertResult(rows);
+  }
+
+  @Test
+  public void testWithSmallCacheAndLargeFetch() throws IOException
+  {
+    final TestPrefetchableTextFilesFirehoseFactory factory =
+        TestPrefetchableTextFilesFirehoseFactory.with(testDir, 1024, 2048);
+
+    final List<Row> rows = new ArrayList<>();
+    try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+
+    assertResult(rows);
+  }
+
+  @Test
   public void testRetry() throws IOException
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =

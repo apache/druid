@@ -32,7 +32,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
-import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -295,9 +294,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
               );
 
               return new ResourceCloseableLineIterator(
-                  new BufferedReader(
-                      new InputStreamReader(stream, Charsets.UTF_8)
-                  ),
+                  new InputStreamReader(stream, Charsets.UTF_8),
                   openedObject.resourceCloser
               );
             }

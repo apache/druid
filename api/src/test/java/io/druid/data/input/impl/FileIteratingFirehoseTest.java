@@ -68,6 +68,8 @@ public class FileIteratingFirehoseTest
     return args;
   }
 
+  private static final char[] LINE_CHARS = "\n".toCharArray();
+
   private final StringInputRowParser parser;
   private final List<String> inputs;
   private final List<String> expectedResults;
@@ -133,9 +135,8 @@ public class FileIteratingFirehoseTest
       @Override
       public int read(char[] cbuf, int off, int len) throws IOException
       {
-        final char[] chs = "\n".toCharArray();
-        System.arraycopy(chs, 0, cbuf, 0, chs.length);
-        return chs.length;
+        System.arraycopy(LINE_CHARS, 0, cbuf, 0, LINE_CHARS.length);
+        return LINE_CHARS.length;
       }
 
       @Override
