@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -307,6 +308,16 @@ public class JobHelper
   public static void injectSystemProperties(Job job)
   {
     injectSystemProperties(job.getConfiguration());
+  }
+  public static void injectDruidProprties(Configuration configuration) {
+    String mapJavaOpst = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
+    String reduceJavaOpts = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
+    for (String propName: System.getProperties().stringPropertyNames()){
+      if (propName.startsWith("druid.storage.")) {
+        mapJavaOpst = String.format("%s -D%s=%s", mapJavaOpst, propName, System.getProperty(propName));
+        reduceJavaOpts = String.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+      }
+    }
   }
 
   public static Configuration injectSystemProperties(Configuration conf)
