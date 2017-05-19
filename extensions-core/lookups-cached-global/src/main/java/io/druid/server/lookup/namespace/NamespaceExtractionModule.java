@@ -30,11 +30,11 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
 import io.druid.query.lookup.NamespaceLookupExtractorFactory;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.CachePopulator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
+import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
@@ -59,7 +59,7 @@ public class NamespaceExtractionModule implements DruidModule
     );
   }
 
-  public static MapBinder<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> getNamespaceFactoryMapBinder(
+  public static MapBinder<Class<? extends ExtractionNamespace>, CachePopulator<?>> getNamespaceFactoryMapBinder(
       final Binder binder
   )
   {
@@ -68,7 +68,7 @@ public class NamespaceExtractionModule implements DruidModule
         new TypeLiteral<Class<? extends ExtractionNamespace>>()
         {
         },
-        new TypeLiteral<ExtractionNamespaceCacheFactory<?>>()
+        new TypeLiteral<CachePopulator<?>>()
         {
         }
     );
@@ -92,16 +92,16 @@ public class NamespaceExtractionModule implements DruidModule
         .in(LazySingleton.class);
 
     getNamespaceFactoryMapBinder(binder)
-        .addBinding(JDBCExtractionNamespace.class)
-        .to(JDBCExtractionNamespaceCacheFactory.class)
+        .addBinding(JdbcExtractionNamespace.class)
+        .to(JdbcCachePopulator.class)
         .in(LazySingleton.class);
     getNamespaceFactoryMapBinder(binder)
-        .addBinding(URIExtractionNamespace.class)
-        .to(URIExtractionNamespaceCacheFactory.class)
+        .addBinding(UriExtractionNamespace.class)
+        .to(UriCachePopulator.class)
         .in(LazySingleton.class);
     getNamespaceFactoryMapBinder(binder)
         .addBinding(StaticMapExtractionNamespace.class)
-        .to(StaticMapExtractionNamespaceCacheFactory.class)
+        .to(StaticMapCachePopulator.class)
         .in(LazySingleton.class);
   }
 }

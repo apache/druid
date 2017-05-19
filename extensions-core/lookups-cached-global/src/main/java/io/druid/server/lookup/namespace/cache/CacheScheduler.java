@@ -27,8 +27,8 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.LazySingleton;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.lookup.namespace.CachePopulator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import sun.misc.Cleaner;
 
 import javax.annotation.Nullable;
@@ -70,7 +70,7 @@ public final class CacheScheduler
   {
     private final EntryImpl<T> impl;
 
-    private Entry(final T namespace, final ExtractionNamespaceCacheFactory<T> cachePopulator)
+    private Entry(final T namespace, final CachePopulator<T> cachePopulator)
     {
       impl = new EntryImpl<>(namespace, this, cachePopulator);
     }
@@ -143,11 +143,11 @@ public final class CacheScheduler
     private final AtomicReference<CacheState> cacheStateHolder = new AtomicReference<CacheState>(NoCache.CACHE_NOT_INITIALIZED);
     private final Future<?> updaterFuture;
     private final Cleaner entryCleaner;
-    private final ExtractionNamespaceCacheFactory<T> cachePopulator;
+    private final CachePopulator<T> cachePopulator;
     private final UpdateCounter updateCounter = new UpdateCounter();
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
-    private EntryImpl(final T namespace, final Entry<T> entry, final ExtractionNamespaceCacheFactory<T> cachePopulator)
+    private EntryImpl(final T namespace, final Entry<T> entry, final CachePopulator<T> cachePopulator)
     {
       try {
         this.namespace = namespace;
@@ -408,7 +408,7 @@ public final class CacheScheduler
     }
   }
 
-  private final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespacePopulatorMap;
+  private final Map<Class<? extends ExtractionNamespace>, CachePopulator<?>> namespacePopulatorMap;
   private final NamespaceExtractionCacheManager cacheManager;
   private final AtomicLong updatesStarted = new AtomicLong(0);
   private final AtomicInteger activeEntries = new AtomicInteger();
@@ -416,7 +416,7 @@ public final class CacheScheduler
   @Inject
   public CacheScheduler(
       final ServiceEmitter serviceEmitter,
-      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespacePopulatorMap,
+      final Map<Class<? extends ExtractionNamespace>, CachePopulator<?>> namespacePopulatorMap,
       NamespaceExtractionCacheManager cacheManager
   )
   {
@@ -452,7 +452,7 @@ public final class CacheScheduler
   }
 
   /**
-   * This method should be used from {@link ExtractionNamespaceCacheFactory#populateCache} implementations, to obtain
+   * This method should be used from {@link CachePopulator#populateCache} implementations, to obtain
    * a {@link VersionedCache} to be returned.
    *
    * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry}, for which VersionedCache is
@@ -502,8 +502,7 @@ public final class CacheScheduler
 
   public <T extends ExtractionNamespace> Entry schedule(final T namespace)
   {
-    final ExtractionNamespaceCacheFactory<T> populator =
-        (ExtractionNamespaceCacheFactory<T>) namespacePopulatorMap.get(namespace.getClass());
+    final CachePopulator<T> populator = (CachePopulator<T>) namespacePopulatorMap.get(namespace.getClass());
     if (populator == null) {
       throw new ISE("Cannot find populator for namespace [%s]", namespace);
     }

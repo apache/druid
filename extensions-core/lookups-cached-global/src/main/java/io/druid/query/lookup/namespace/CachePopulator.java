@@ -26,10 +26,10 @@ import javax.annotation.Nullable;
 /**
  *
  */
-public interface ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
+public interface CachePopulator<T extends ExtractionNamespace>
 {
   /**
-   * If the lookup source, encapsulated by this {@code ExtractionNamespaceCacheFactory}, has data newer than identified
+   * If the lookup source, encapsulated by this {@code CachePopulator}, has data newer than identified
    * by the given {@code lastVersion} (which is null at the first run of this method, or the version from the previous
    * run), this method creates a new {@code CacheScheduler.VersionedCache} with {@link
    * CacheScheduler#createVersionedCache}, called on the given {@code scheduler}, with the version string identifying

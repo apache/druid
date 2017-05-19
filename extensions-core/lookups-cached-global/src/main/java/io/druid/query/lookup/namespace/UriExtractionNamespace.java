@@ -58,7 +58,7 @@ import java.util.regex.PatternSyntaxException;
  *
  */
 @JsonTypeName("uri")
-public class URIExtractionNamespace implements ExtractionNamespace
+public class UriExtractionNamespace implements ExtractionNamespace
 {
   @JsonProperty
   private final URI uri;
@@ -72,7 +72,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
   private final Period pollPeriod;
 
   @JsonCreator
-  public URIExtractionNamespace(
+  public UriExtractionNamespace(
       @JsonProperty(value = "uri", required = false)
           URI uri,
       @JsonProperty(value = "uriPrefix", required = false)
@@ -143,7 +143,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
   @Override
   public String toString()
   {
-    return "URIExtractionNamespace{" +
+    return "UriExtractionNamespace{" +
            "uri=" + uri +
            ", uriPrefix=" + uriPrefix +
            ", namespaceParseSpec=" + namespaceParseSpec +
@@ -162,7 +162,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
       return false;
     }
 
-    URIExtractionNamespace that = (URIExtractionNamespace) o;
+    UriExtractionNamespace that = (UriExtractionNamespace) o;
 
     if (getUri() != null ? !getUri().equals(that.getUri()) : that.getUri() != null) {
       return false;
