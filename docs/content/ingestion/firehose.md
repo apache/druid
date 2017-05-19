@@ -36,6 +36,28 @@ A sample local firehose spec is shown below:
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
 |baseDir|directory to search recursively for files to be ingested. |yes|
 
+#### HttpFirehose
+
+This Firehose can be used to read the data from remote sites via HTTP.
+A sample http firehose spec is shown below:
+
+```json
+{
+    "type"    : "http",
+    "uris"  : ["http://example.com/uri1", "http://example2.com/uri2"]
+}
+```
+
+The below configurations are optional for tuning the firehose performance.
+
+|property|description|default|
+|--------|-----------|-------|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache.|1073741824|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch.|1073741824|
+|prefetchTriggerBytes|Threshold to trigger prefetching s3 objects.|maxFetchCapacityBytes / 2|
+|fetchTimeout|Timeout for fetching an s3 object.|60000|
+|maxFetchRetry|Maximum retry for fetching an s3 object.|3|
+
 #### IngestSegmentFirehose
 
 This Firehose can be used to read the data from existing druid segments.
