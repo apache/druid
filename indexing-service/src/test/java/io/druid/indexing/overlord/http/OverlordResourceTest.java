@@ -22,6 +22,7 @@ package io.druid.indexing.overlord.http;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexing.common.TaskLocation;
@@ -79,7 +80,10 @@ public class OverlordResourceTest
         null,
         new AuthConfig(true)
     );
+  }
 
+  public void expectAuthorizationTokenCheck()
+  {
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn(
         new AuthorizationInfo()
         {
@@ -99,8 +103,39 @@ public class OverlordResourceTest
   }
 
   @Test
+  public void testLeader()
+  {
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn("boz").once();
+    EasyMock.replay(taskRunner, taskMaster, tsqa, req);
+
+    final Response response = overlordResource.getLeader();
+    Assert.assertEquals("boz", response.getEntity());
+    Assert.assertEquals(200, response.getStatus());
+  }
+
+  @Test
+  public void testIsLeader()
+  {
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true).once();
+    EasyMock.expect(taskMaster.isLeader()).andReturn(false).once();
+    EasyMock.replay(taskRunner, taskMaster, tsqa, req);
+
+    // true
+    final Response response1 = overlordResource.isLeader();
+    Assert.assertEquals(ImmutableMap.of("leader", true), response1.getEntity());
+    Assert.assertEquals(200, response1.getStatus());
+
+    // false
+    final Response response2 = overlordResource.isLeader();
+    Assert.assertEquals(ImmutableMap.of("leader", false), response2.getEntity());
+    Assert.assertEquals(404, response2.getStatus());
+  }
+
+  @Test
   public void testSecuredGetWaitingTask() throws Exception
   {
+    expectAuthorizationTokenCheck();
+
     EasyMock.expect(tsqa.getActiveTasks()).andReturn(
         ImmutableList.of(
             getTaskWithIdAndDatasource("id_1", "allow"),
@@ -128,6 +163,8 @@ public class OverlordResourceTest
   @Test
   public void testSecuredGetCompleteTasks()
   {
+    expectAuthorizationTokenCheck();
+
     List<String> tasksIds = ImmutableList.of("id_1", "id_2", "id_3");
     EasyMock.expect(tsqa.getRecentlyFinishedTaskStatuses()).andReturn(
         Lists.transform(
@@ -165,6 +202,8 @@ public class OverlordResourceTest
   @Test
   public void testSecuredGetRunningTasks()
   {
+    expectAuthorizationTokenCheck();
+
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
@@ -191,6 +230,8 @@ public class OverlordResourceTest
   @Test
   public void testSecuredTaskPost()
   {
+    expectAuthorizationTokenCheck();
+
     EasyMock.replay(taskRunner, taskMaster, tsqa, req);
     Task task = NoopTask.create();
     Response response = overlordResource.taskPost(task, req);

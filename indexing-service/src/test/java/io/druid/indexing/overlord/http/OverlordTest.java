@@ -198,11 +198,11 @@ public class OverlordTest
     // basic task master lifecycle test
     taskMaster.start();
     announcementLatch.await();
-    while (!taskMaster.isLeading()) {
+    while (!taskMaster.isLeader()) {
       // I believe the control will never reach here and thread will never sleep but just to be on safe side
       Thread.sleep(10);
     }
-    Assert.assertEquals(taskMaster.getLeader(), druidNode.getHostAndPort());
+    Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(
         taskMaster,
@@ -271,7 +271,7 @@ public class OverlordTest
     response = overlordResource.getCompleteTasks(req);
     Assert.assertEquals(2, (((List) response.getEntity()).size()));
     taskMaster.stop();
-    Assert.assertFalse(taskMaster.isLeading());
+    Assert.assertFalse(taskMaster.isLeader());
     EasyMock.verify(taskLockbox, taskActionClientFactory);
   }
 
