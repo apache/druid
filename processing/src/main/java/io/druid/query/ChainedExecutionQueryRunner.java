@@ -94,7 +94,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
     Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
     final Ordering ordering = query.getResultOrdering();
-    final QueryPlus<T> threadSafeQueryPlus = queryPlus.threadSafe();
+    final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {

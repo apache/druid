@@ -51,7 +51,7 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
   {
     final Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
-    final QueryPlus<T> threadSafeQueryPlus = queryPlus.threadSafe();
+    final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
     final ListenableFuture<Sequence<T>> future = executor.submit(new AbstractPrioritizedCallable<Sequence<T>>(priority)
         {
           @Override
