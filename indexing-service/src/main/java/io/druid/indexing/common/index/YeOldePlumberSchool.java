@@ -98,7 +98,7 @@ public class YeOldePlumberSchool implements PlumberSchool
   )
   {
     // There can be only one.
-    final Sink theSink = new Sink(
+    final Sink theSink = config.getSinkFactory().create(
         interval,
         schema,
         config.getShardSpec(),

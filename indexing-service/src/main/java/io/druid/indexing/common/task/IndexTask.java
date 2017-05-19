@@ -83,7 +83,9 @@ import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.plumber.Committers;
+import io.druid.segment.realtime.plumber.DefaultSinkFactory;
 import io.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
+import io.druid.segment.realtime.plumber.SinkFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -593,7 +595,7 @@ public class IndexTask extends AbstractTask
       this.ioConfig = ioConfig;
       this.tuningConfig = tuningConfig == null
                           ?
-                          new IndexTuningConfig(null, null, null, null, null, null, null, null, (File) null)
+                          new IndexTuningConfig(null, null, null, null, null, null, null, null, (File) null, null)
                           : tuningConfig;
     }
 
@@ -660,6 +662,7 @@ public class IndexTask extends AbstractTask
     private static final boolean DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUBLISH_TIMEOUT = 0;
+    private static final SinkFactory DEFAULT_SINK_FACTORY = new DefaultSinkFactory();
 
     static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
 
@@ -672,6 +675,7 @@ public class IndexTask extends AbstractTask
     private final boolean forceExtendableShardSpecs;
     private final boolean reportParseExceptions;
     private final long publishTimeout;
+    private final SinkFactory sinkFactory;
 
     @JsonCreator
     public IndexTuningConfig(
@@ -685,7 +689,8 @@ public class IndexTask extends AbstractTask
         @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
         @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
         @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
-        @JsonProperty("publishTimeout") @Nullable Long publishTimeout
+        @JsonProperty("publishTimeout") @Nullable Long publishTimeout,
+        @JsonProperty("sinkFactory") @Nullable SinkFactory sinkFactory
     )
     {
       this(
@@ -697,7 +702,8 @@ public class IndexTask extends AbstractTask
           forceExtendableShardSpecs,
           reportParseExceptions,
           publishTimeout,
-          null
+          null,
+          sinkFactory
       );
     }
 
@@ -710,7 +716,8 @@ public class IndexTask extends AbstractTask
         @Nullable Boolean forceExtendableShardSpecs,
         @Nullable Boolean reportParseExceptions,
         @Nullable Long publishTimeout,
-        @Nullable File basePersistDirectory
+        @Nullable File basePersistDirectory,
+        @Nullable SinkFactory sinkFactory
     )
     {
       Preconditions.checkArgument(
@@ -735,6 +742,7 @@ public class IndexTask extends AbstractTask
                                    : reportParseExceptions;
       this.publishTimeout = publishTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : publishTimeout;
       this.basePersistDirectory = basePersistDirectory;
+      this.sinkFactory = sinkFactory == null ? DEFAULT_SINK_FACTORY : sinkFactory;
     }
 
     public IndexTuningConfig withBasePersistDirectory(File dir)
@@ -748,7 +756,8 @@ public class IndexTask extends AbstractTask
           forceExtendableShardSpecs,
           reportParseExceptions,
           publishTimeout,
-          dir
+          dir,
+          sinkFactory
       );
     }
 
@@ -782,6 +791,13 @@ public class IndexTask extends AbstractTask
     public File getBasePersistDirectory()
     {
       return basePersistDirectory;
+    }
+
+    @JsonProperty
+    @Override
+    public SinkFactory getSinkFactory()
+    {
+      return sinkFactory;
     }
 
     @JsonProperty

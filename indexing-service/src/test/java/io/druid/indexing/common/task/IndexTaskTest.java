@@ -749,6 +749,7 @@ public class IndexTaskTest
             true,
             forceExtendableShardSpecs,
             reportParseException,
+            null,
             null
         )
     );

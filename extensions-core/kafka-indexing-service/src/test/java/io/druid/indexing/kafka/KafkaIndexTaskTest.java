@@ -1389,7 +1389,8 @@ public class KafkaIndexTaskTest
         true,
         reportParseExceptions,
         handoffConditionTimeout,
-        resetOffsetAutomatically
+        resetOffsetAutomatically,
+        null
     );
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,

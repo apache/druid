@@ -25,9 +25,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
+import io.druid.segment.realtime.plumber.DefaultSinkFactory;
 import io.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
 import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
 import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
+import io.druid.segment.realtime.plumber.SinkFactory;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -50,6 +52,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
   private static final long defaultHandoffConditionTimeout = 0;
   private static final long defaultAlertTimeout = 0;
+  private static final SinkFactory defaultSinkFactory = new DefaultSinkFactory();
 
   private static File createNewBasePersistDirectory()
   {
@@ -74,7 +77,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         0,
         defaultReportParseExceptions,
         defaultHandoffConditionTimeout,
-        defaultAlertTimeout
+        defaultAlertTimeout,
+        defaultSinkFactory
     );
   }
 
@@ -92,6 +96,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
   private final long alertTimeout;
+  private final SinkFactory sinkFactory;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -110,7 +115,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
-      @JsonProperty("alertTimeout") Long alertTimeout
+      @JsonProperty("alertTimeout") Long alertTimeout,
+      @JsonProperty("sinkFactory") SinkFactory sinkFactory
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -138,6 +144,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
     this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
+    this.sinkFactory = sinkFactory == null ? defaultSinkFactory : sinkFactory;
   }
 
   @Override
@@ -240,6 +247,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return alertTimeout;
   }
 
+  @Override
+  @JsonProperty
+  public SinkFactory getSinkFactory()
+  {
+    return sinkFactory;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -257,7 +271,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         mergeThreadPriority,
         reportParseExceptions,
         handoffConditionTimeout,
-        alertTimeout
+        alertTimeout,
+        sinkFactory
     );
   }
 
@@ -278,7 +293,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         mergeThreadPriority,
         reportParseExceptions,
         handoffConditionTimeout,
-        alertTimeout
+        alertTimeout,
+        sinkFactory
     );
   }
 }

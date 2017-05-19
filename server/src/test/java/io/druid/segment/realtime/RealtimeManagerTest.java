@@ -68,9 +68,11 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.segment.realtime.plumber.DefaultSinkFactory;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
+import io.druid.segment.realtime.plumber.SinkFactory;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.utils.Runnables;
@@ -83,11 +85,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -96,6 +101,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class RealtimeManagerTest
 {
   private static QueryRunnerFactory factory;
@@ -108,6 +114,7 @@ public class RealtimeManagerTest
       makeRow(new DateTime().getMillis())
   );
 
+  private SinkFactory sinkFactory;
   private RealtimeManager realtimeManager;
   private RealtimeManager realtimeManager2;
   private RealtimeManager realtimeManager3;
@@ -131,6 +138,19 @@ public class RealtimeManagerTest
         return factory;
       }
     };
+  }
+
+  @Parameterized.Parameters(name = "sinkFactory = {0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    constructors.add(new Object[]{new DefaultSinkFactory()});
+    return constructors;
+  }
+
+  public RealtimeManagerTest(SinkFactory sinkFactory)
+  {
+    this.sinkFactory = sinkFactory;
   }
 
   @Before
@@ -209,9 +229,10 @@ public class RealtimeManagerTest
         0,
         null,
         null,
-        null
+        null,
+        sinkFactory
     );
-    plumber = new TestPlumber(new Sink(
+    plumber = new TestPlumber(tuningConfig.getSinkFactory().create(
         new Interval("0/P5000Y"),
         schema,
         tuningConfig.getShardSpec(),
@@ -231,7 +252,7 @@ public class RealtimeManagerTest
         null,
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class)
     );
-    plumber2 = new TestPlumber(new Sink(
+    plumber2 = new TestPlumber(tuningConfig.getSinkFactory().create(
         new Interval("0/P5000Y"),
         schema2,
         tuningConfig.getShardSpec(),
@@ -267,7 +288,8 @@ public class RealtimeManagerTest
         0,
         null,
         null,
-        null
+        null,
+        sinkFactory
     );
 
     tuningConfig_1 = new RealtimeTuningConfig(
@@ -285,7 +307,8 @@ public class RealtimeManagerTest
         0,
         null,
         null,
-        null
+        null,
+        sinkFactory
     );
 
     schema3 = new DataSchema(

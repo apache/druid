@@ -82,6 +82,7 @@ import java.util.concurrent.TimeUnit;
 public class RealtimePlumberSchoolTest
 {
   private final RejectionPolicyFactory rejectionPolicy;
+  private final SinkFactory sinkFactory;
   private RealtimePlumber plumber;
   private RealtimePlumberSchool realtimePlumberSchool;
   private DataSegmentAnnouncer announcer;
@@ -96,9 +97,10 @@ public class RealtimePlumberSchoolTest
   private FireDepartmentMetrics metrics;
   private File tmpDir;
 
-  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy)
+  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, SinkFactory sinkFactory)
   {
     this.rejectionPolicy = rejectionPolicy;
+    this.sinkFactory = sinkFactory;
   }
 
   @Parameterized.Parameters(name = "rejectionPolicy = {0}")
@@ -111,7 +113,7 @@ public class RealtimePlumberSchoolTest
 
     final List<Object[]> constructors = Lists.newArrayList();
     for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
-      constructors.add(new Object[]{rejectionPolicy});
+      constructors.add(new Object[]{rejectionPolicy, new DefaultSinkFactory()});
     }
     return constructors;
   }
@@ -199,7 +201,8 @@ public class RealtimePlumberSchoolTest
         0,
         false,
         null,
-        null
+        null,
+        sinkFactory
     );
 
     realtimePlumberSchool = new RealtimePlumberSchool(
@@ -255,7 +258,7 @@ public class RealtimePlumberSchoolTest
     plumber.getSinks()
            .put(
                0L,
-               new Sink(
+               tuningConfig.getSinkFactory().create(
                    new Interval(0, TimeUnit.HOURS.toMillis(1)),
                    schema,
                    tuningConfig.getShardSpec(),
@@ -302,7 +305,7 @@ public class RealtimePlumberSchoolTest
     plumber.getSinks()
            .put(
                0L,
-               new Sink(
+               tuningConfig.getSinkFactory().create(
                    new Interval(0, TimeUnit.HOURS.toMillis(1)),
                    schema,
                    tuningConfig.getShardSpec(),
@@ -359,7 +362,7 @@ public class RealtimePlumberSchoolTest
     plumber2.getSinks()
             .put(
                 0L,
-                new Sink(
+                tuningConfig.getSinkFactory().create(
                     testInterval,
                     schema2,
                     tuningConfig.getShardSpec(),

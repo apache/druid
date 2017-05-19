@@ -36,13 +36,33 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class SinkTest
 {
+  private SinkFactory sinkFactory;
+
+  @Parameterized.Parameters(name = "sinkFactory = {0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    constructors.add(new Object[]{new DefaultSinkFactory()});
+    return constructors;
+  }
+
+  public SinkTest(SinkFactory sinkFactory)
+  {
+    this.sinkFactory = sinkFactory;
+  }
+
   @Test
   public void testSwap() throws Exception
   {
@@ -71,9 +91,10 @@ public class SinkTest
         0,
         null,
         null,
-        null
+        null,
+        sinkFactory
     );
-    final Sink sink = new Sink(
+    final Sink sink = tuningConfig.getSinkFactory().create(
         interval,
         schema,
         tuningConfig.getShardSpec(),

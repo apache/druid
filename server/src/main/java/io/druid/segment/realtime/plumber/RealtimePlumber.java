@@ -239,7 +239,7 @@ public class RealtimePlumber implements Plumber
           segmentGranularity.increment(new DateTime(truncatedTime))
       );
 
-      retVal = new Sink(
+      retVal = config.getSinkFactory().create(
           sinkInterval,
           schema,
           config.getShardSpec(),
@@ -700,7 +700,7 @@ public class RealtimePlumber implements Plumber
         );
         continue;
       }
-      final Sink currSink = new Sink(
+      final Sink currSink = config.getSinkFactory().create(
           sinkInterval,
           schema,
           config.getShardSpec(),

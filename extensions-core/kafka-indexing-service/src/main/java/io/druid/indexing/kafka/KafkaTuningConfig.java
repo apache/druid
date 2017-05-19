@@ -25,6 +25,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
+import io.druid.segment.realtime.plumber.SinkFactory;
 import org.joda.time.Period;
 
 import java.io.File;
@@ -44,6 +45,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   @Deprecated
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
+  private final SinkFactory sinkFactory;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -57,7 +59,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
-      @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically
+      @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
+      @JsonProperty("sinkFactory") SinkFactory sinkFactory
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -80,6 +83,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     this.resetOffsetAutomatically = resetOffsetAutomatically == null
                                     ? DEFAULT_RESET_OFFSET_AUTOMATICALLY
                                     : resetOffsetAutomatically;
+    this.sinkFactory = sinkFactory == null ? defaults.getSinkFactory() : sinkFactory;
   }
 
   public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
@@ -94,7 +98,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         true,
         config.reportParseExceptions,
         config.handoffConditionTimeout,
-        config.resetOffsetAutomatically
+        config.resetOffsetAutomatically,
+        config.sinkFactory
     );
   }
 
@@ -123,6 +128,13 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   public File getBasePersistDirectory()
   {
     return basePersistDirectory;
+  }
+
+  @Override
+  @JsonProperty
+  public SinkFactory getSinkFactory()
+  {
+    return sinkFactory;
   }
 
   @Override
@@ -181,7 +193,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         true,
         reportParseExceptions,
         handoffConditionTimeout,
-        resetOffsetAutomatically
+        resetOffsetAutomatically,
+        sinkFactory
     );
   }
 
@@ -197,7 +210,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         true,
         reportParseExceptions,
         handoffConditionTimeout,
-        resetOffsetAutomatically
+        resetOffsetAutomatically,
+        sinkFactory
     );
   }
 
@@ -241,8 +255,10 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         : that.basePersistDirectory != null) {
       return false;
     }
-    return indexSpec != null ? indexSpec.equals(that.indexSpec) : that.indexSpec == null;
-
+    if (indexSpec != null ? !indexSpec.equals(that.indexSpec) : that.indexSpec != null) {
+      return false;
+    }
+    return sinkFactory != null ? sinkFactory.equals(that.sinkFactory) : that.sinkFactory == null;
   }
 
   @Override
@@ -257,6 +273,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     result = 31 * result + (reportParseExceptions ? 1 : 0);
     result = 31 * result + (int) (handoffConditionTimeout ^ (handoffConditionTimeout >>> 32));
     result = 31 * result + (resetOffsetAutomatically ? 1 : 0);
+    result = 31 * result + (sinkFactory != null ? sinkFactory.hashCode() : 0);
     return result;
   }
 
@@ -273,6 +290,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            ", reportParseExceptions=" + reportParseExceptions +
            ", handoffConditionTimeout=" + handoffConditionTimeout +
            ", resetOffsetAutomatically=" + resetOffsetAutomatically +
+           ", sinkFactory=" + sinkFactory +
            '}';
   }
 }

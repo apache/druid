@@ -254,7 +254,7 @@ public class AppenderatorImpl implements Appenderator
     Sink retVal = sinks.get(identifier);
 
     if (retVal == null) {
-      retVal = new Sink(
+      retVal = tuningConfig.getSinkFactory().create(
           identifier.getInterval(),
           schema,
           identifier.getShardSpec(),
@@ -805,7 +805,7 @@ public class AppenderatorImpl implements Appenderator
           throw new ISE("Missing hydrant [%,d] in sinkDir [%s].", hydrants.size(), sinkDir);
         }
 
-        Sink currSink = new Sink(
+        Sink currSink = tuningConfig.getSinkFactory().create(
             identifier.getInterval(),
             schema,
             identifier.getShardSpec(),

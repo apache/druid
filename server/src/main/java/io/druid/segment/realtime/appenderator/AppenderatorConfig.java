@@ -20,6 +20,7 @@
 package io.druid.segment.realtime.appenderator;
 
 import io.druid.segment.IndexSpec;
+import io.druid.segment.realtime.plumber.SinkFactory;
 import org.joda.time.Period;
 
 import java.io.File;
@@ -37,4 +38,6 @@ public interface AppenderatorConfig
   IndexSpec getIndexSpec();
 
   File getBasePersistDirectory();
+
+  SinkFactory getSinkFactory();
 }
