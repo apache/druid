@@ -48,15 +48,15 @@ A sample http firehose spec is shown below:
 }
 ```
 
-The below configurations are optional for tuning the firehose performance.
+The below configurations can be optionally used for tuning the firehose performance.
 
 |property|description|default|
 |--------|-----------|-------|
 |maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache.|1073741824|
 |maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch.|1073741824|
-|prefetchTriggerBytes|Threshold to trigger prefetching s3 objects.|maxFetchCapacityBytes / 2|
-|fetchTimeout|Timeout for fetching an s3 object.|60000|
-|maxFetchRetry|Maximum retry for fetching an s3 object.|3|
+|prefetchTriggerBytes|Threshold to trigger prefetching http objects.|maxFetchCapacityBytes / 2|
+|fetchTimeout|Timeout for fetching a http object.|60000|
+|maxFetchRetry|Maximum retry for fetching a http object.|3|
 
 #### IngestSegmentFirehose
 
