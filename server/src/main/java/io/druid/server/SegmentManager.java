@@ -19,10 +19,10 @@
 
 package io.druid.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.collections.CountingMap;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.loading.SegmentLoader;
@@ -33,18 +33,59 @@ import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
+/**
+ * This class is responsible for managing data sources and their states like timeline, total segment size, and number of
+ * segments.  All public methods of this class must be thread-safe.
+ */
 public class SegmentManager
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentManager.class);
 
-  private final Object lock = new Object();
   private final SegmentLoader segmentLoader;
-  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSources = new HashMap<>();
-  private final CountingMap<String> dataSourceSizes = new CountingMap<>();
-  private final CountingMap<String> dataSourceCounts = new CountingMap<>();
+  private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
+
+  /**
+   * Represent the state of a data source including the timeline, total segment size, and number of segments.
+   */
+  static class DataSourceState
+  {
+    private final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline =
+        new VersionedIntervalTimeline<>(Ordering.natural());
+    private long totalSegmentSize;
+    private long numSegments;
+
+    void addSegment(DataSegment segment)
+    {
+      totalSegmentSize += segment.getSize();
+      numSegments++;
+    }
+
+    void removeSegment(DataSegment segment)
+    {
+      totalSegmentSize -= segment.getSize();
+      numSegments--;
+    }
+
+    VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline()
+    {
+      return timeline;
+    }
+
+    long getTotalSegmentSize()
+    {
+      return totalSegmentSize;
+    }
+
+    long getNumSegments()
+    {
+      return numSegments;
+    }
+  }
 
   @Inject
   public SegmentManager(
@@ -54,18 +95,22 @@ public class SegmentManager
     this.segmentLoader = segmentLoader;
   }
 
+  @VisibleForTesting
+  Map<String, DataSourceState> getDataSources()
+  {
+    return dataSources;
+  }
+
   public Map<String, Long> getDataSourceSizes()
   {
-    synchronized (dataSourceSizes) {
-      return dataSourceSizes.snapshot();
-    }
+    return dataSources.entrySet().stream()
+                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getTotalSegmentSize()));
   }
 
   public Map<String, Long> getDataSourceCounts()
   {
-    synchronized (dataSourceCounts) {
-      return dataSourceCounts.snapshot();
-    }
+    return dataSources.entrySet().stream()
+                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getNumSegments()));
   }
 
   public boolean isSegmentCached(final DataSegment segment) throws SegmentLoadingException
@@ -75,9 +120,7 @@ public class SegmentManager
 
   public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline(String dataSource)
   {
-    synchronized (lock) {
-      return dataSources.get(dataSource);
-    }
+    return dataSources.get(dataSource).getTimeline();
   }
 
   /**
@@ -93,35 +136,33 @@ public class SegmentManager
   {
     final Segment adapter = getAdapter(segment);
 
-    synchronized (lock) {
-      final String dataSource = segment.getDataSource();
-      final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals = dataSources.computeIfAbsent(
-          dataSource,
-          k -> new VersionedIntervalTimeline<>(Ordering.natural())
-      );
+    final DataSourceState computeResult = dataSources.compute(
+        segment.getDataSource(),
+        (k, v) -> {
+          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
+          final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
+              dataSourceState.getTimeline();
+          final PartitionHolder<ReferenceCountingSegment> entry = loadedIntervals.findEntry(
+              segment.getInterval(),
+              segment.getVersion()
+          );
 
-      final PartitionHolder<ReferenceCountingSegment> entry = loadedIntervals.findEntry(
-          segment.getInterval(),
-          segment.getVersion()
-      );
-      if ((entry != null) && (entry.getChunk(segment.getShardSpec().getPartitionNum()) != null)) {
-        log.warn("Told to load a adapter for a segment[%s] that already exists", segment.getIdentifier());
-        return false;
-      }
+          if ((entry != null) && (entry.getChunk(segment.getShardSpec().getPartitionNum()) != null)) {
+            log.warn("Told to load a adapter for a segment[%s] that already exists", segment.getIdentifier());
+            return null;
+          } else {
+            loadedIntervals.add(
+                segment.getInterval(),
+                segment.getVersion(),
+                segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter))
+            );
+            dataSourceState.addSegment(segment);
+            return dataSourceState;
+          }
+        }
+    );
 
-      loadedIntervals.add(
-          segment.getInterval(),
-          segment.getVersion(),
-          segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter))
-      );
-      synchronized (dataSourceSizes) {
-        dataSourceSizes.add(dataSource, segment.getSize());
-      }
-      synchronized (dataSourceCounts) {
-        dataSourceCounts.add(dataSource, 1L);
-      }
-      return true;
-    }
+    return computeResult != null;
   }
 
   private Segment getAdapter(final DataSegment segment) throws SegmentLoadingException
@@ -148,49 +189,54 @@ public class SegmentManager
 
   public void dropSegment(final DataSegment segment) throws SegmentLoadingException
   {
-    String dataSource = segment.getDataSource();
-    synchronized (lock) {
-      VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals = dataSources.get(dataSource);
+    final String dataSource = segment.getDataSource();
 
-      if (loadedIntervals == null) {
-        log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSource);
-        return;
-      }
+    dataSources.compute(
+        dataSource,
+        (k, v) -> {
+          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
 
-      PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
-          segment.getInterval(),
-          segment.getVersion(),
-          segment.getShardSpec().createChunk(null)
-      );
-      ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
+          final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
+              dataSourceState.getTimeline();
 
-      if (oldQueryable != null) {
-        synchronized (dataSourceSizes) {
-          dataSourceSizes.add(dataSource, -segment.getSize());
-        }
-        synchronized (dataSourceCounts) {
-          dataSourceCounts.add(dataSource, -1L);
-        }
+          if (loadedIntervals == null) {
+            log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSource);
+            return null;
+          }
 
-        try {
-          log.info("Attempting to close segment %s", segment.getIdentifier());
-          oldQueryable.close();
+          final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
+              segment.getInterval(),
+              segment.getVersion(),
+              segment.getShardSpec().createChunk(null)
+          );
+          final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
+
+          if (oldQueryable != null) {
+            dataSourceState.removeSegment(segment);
+
+            try {
+              log.info("Attempting to close segment %s", segment.getIdentifier());
+              oldQueryable.close();
+            }
+            catch (IOException e) {
+              log.makeAlert(e, "Exception closing segment")
+                 .addData("dataSource", dataSource)
+                 .addData("segmentId", segment.getIdentifier())
+                 .emit();
+            }
+          } else {
+            log.info(
+                "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
+                dataSource,
+                segment.getInterval(),
+                segment.getVersion()
+            );
+          }
+
+          return dataSourceState;
         }
-        catch (IOException e) {
-          log.makeAlert(e, "Exception closing segment")
-             .addData("dataSource", dataSource)
-             .addData("segmentId", segment.getIdentifier())
-             .emit();
-        }
-      } else {
-        log.info(
-            "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
-            dataSource,
-            segment.getInterval(),
-            segment.getVersion()
-        );
-      }
-    }
+    );
+
     segmentLoader.cleanup(segment);
   }
 }

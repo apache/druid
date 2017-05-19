@@ -19,13 +19,13 @@
 
 package io.druid.timeline;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -87,6 +88,12 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
       timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
     }
     return timeline;
+  }
+
+  @VisibleForTesting
+  public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
+  {
+    return allTimelineEntries;
   }
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
@@ -570,6 +577,40 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     public PartitionHolder<ObjectType> getPartitionHolder()
     {
       return partitionHolder;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      final TimelineEntry that = (TimelineEntry) o;
+
+      if (!this.trueInterval.equals(that.trueInterval)) {
+        return false;
+      }
+
+      if (!this.version.equals(that.version)) {
+        return false;
+      }
+
+      if (!this.partitionHolder.equals(that.partitionHolder)) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(trueInterval, version, partitionHolder);
     }
   }
 }
