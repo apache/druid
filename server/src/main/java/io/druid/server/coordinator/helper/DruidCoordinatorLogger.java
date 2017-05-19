@@ -84,7 +84,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
       for (Map.Entry<String, AtomicLong> entry : assigned.entrySet()) {
         log.info(
             "[%s] : Assigned %s segments among %,d servers",
-            entry.getKey(), entry.getValue().get(), cluster.get(entry.getKey()).size()
+            entry.getKey(), entry.getValue().get(), cluster.getHistoricalsByTier(entry.getKey()).size()
         );
       }
     }
@@ -99,7 +99,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
       for (Map.Entry<String, AtomicLong> entry : dropped.entrySet()) {
         log.info(
             "[%s] : Dropped %s segments among %,d servers",
-            entry.getKey(), entry.getValue().get(), cluster.get(entry.getKey()).size()
+            entry.getKey(), entry.getValue().get(), cluster.getHistoricalsByTier(entry.getKey()).size()
         );
       }
     }
@@ -152,7 +152,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
       for (Map.Entry<String, AtomicLong> entry : unneeded.entrySet()) {
         log.info(
             "[%s] : Removed %s unneeded segments among %,d servers",
-            entry.getKey(), entry.getValue().get(), cluster.get(entry.getKey()).size()
+            entry.getKey(), entry.getValue().get(), cluster.getHistoricalsByTier(entry.getKey()).size()
         );
       }
     }
@@ -187,14 +187,14 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
       }
     }
     log.info("Load Queues:");
-    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
+    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();
         LoadQueuePeon queuePeon = serverHolder.getPeon();
         log.info(
             "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",
             server.getName(),
-            server.getType(),
+            server.getType().toString(),
             server.getTier(),
             queuePeon.getSegmentsToLoad().size(),
             queuePeon.getSegmentsToDrop().size(),

@@ -64,7 +64,7 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
     // This is done to prevent a race condition in which the coordinator would drop all segments if it started running
     // cleanup before it finished polling the metadata storage for available segments for the first time.
     if (!availableSegments.isEmpty()) {
-      for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
+      for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
         for (ServerHolder serverHolder : serverHolders) {
           ImmutableDruidServer server = serverHolder.getServer();
 

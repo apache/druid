@@ -126,8 +126,7 @@ public abstract class AbstractIntSet implements IntSet
   public boolean containsAny(IntSet c)
   {
     IntIterator itr = c.iterator();
-    boolean res = true;
-    while (res && itr.hasNext()) {
+    while (itr.hasNext()) {
       if (contains(itr.next())) {
         return true;
       }

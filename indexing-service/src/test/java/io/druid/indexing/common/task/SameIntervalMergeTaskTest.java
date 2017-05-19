@@ -200,7 +200,7 @@ public class SameIntervalMergeTaskTest
             segments.add(segment);
             return segment;
           }
-        }, null, null, null, null, null, null, null, null, new SegmentLoader()
+        }, null, null, null, null, null, null, null, null, null, new SegmentLoader()
         {
           @Override
           public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException

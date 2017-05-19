@@ -45,7 +45,7 @@ import java.util.concurrent.Executor;
 /**
  */
 @ManageLifecycle
-public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegment>>
+public class BatchServerInventoryView extends AbstractCuratorServerInventoryView<Set<DataSegment>>
     implements FilteredServerInventoryView
 {
   private static final EmittingLogger log = new EmittingLogger(BatchServerInventoryView.class);

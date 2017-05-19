@@ -60,7 +60,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
-  private ServerInventoryView baseView;
+  private BatchServerInventoryView baseView;
   private CoordinatorServerView overlordServerView;
 
   public CoordinatorServerViewTest()

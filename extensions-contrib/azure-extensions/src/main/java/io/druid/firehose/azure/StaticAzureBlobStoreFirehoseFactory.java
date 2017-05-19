@@ -22,106 +22,71 @@ package io.druid.firehose.azure;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
-import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.impl.FileIteratingFirehose;
-import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.azure.AzureByteSource;
 import io.druid.storage.azure.AzureStorage;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.LineIterator;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.Collection;
 import java.util.List;
 
 /**
  * This class is heavily inspired by the StaticS3FirehoseFactory class in the io.druid.firehose.s3 package
  */
-public class StaticAzureBlobStoreFirehoseFactory implements FirehoseFactory<StringInputRowParser> {
-  private static final Logger log = new Logger(StaticAzureBlobStoreFirehoseFactory.class);
-
+public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<AzureBlob>
+{
   private final AzureStorage azureStorage;
   private final List<AzureBlob> blobs;
 
   @JsonCreator
   public StaticAzureBlobStoreFirehoseFactory(
       @JacksonInject("azureStorage") AzureStorage azureStorage,
-      @JsonProperty("blobs") AzureBlob[] blobs
-  ) {
+      @JsonProperty("blobs") List<AzureBlob> blobs,
+      @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
+      @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
+      @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
+      @JsonProperty("fetchTimeout") Long fetchTimeout,
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
+  )
+  {
+    super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
+    this.blobs = blobs;
     this.azureStorage = azureStorage;
-    this.blobs = ImmutableList.copyOf(blobs);
   }
 
   @JsonProperty
-  public List<AzureBlob> getBlobs() {
+  public List<AzureBlob> getBlobs()
+  {
     return blobs;
   }
 
   @Override
-  public Firehose connect(StringInputRowParser stringInputRowParser) throws IOException {
-    Preconditions.checkNotNull(azureStorage, "null azureStorage");
+  protected Collection<AzureBlob> initObjects()
+  {
+    return blobs;
+  }
 
-    final LinkedList<AzureBlob> objectQueue = Lists.newLinkedList(blobs);
+  @Override
+  protected InputStream openObjectStream(AzureBlob object) throws IOException
+  {
+    return makeByteSource(azureStorage, object).openStream();
+  }
 
-    return new FileIteratingFirehose(
-        new Iterator<LineIterator>() {
-          @Override
-          public boolean hasNext() {
-            return !objectQueue.isEmpty();
-          }
+  @Override
+  protected InputStream wrapObjectStream(AzureBlob object, InputStream stream) throws IOException
+  {
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+  }
 
-          @Override
-          public LineIterator next() {
-            final AzureBlob nextURI = objectQueue.poll();
+  private static AzureByteSource makeByteSource(AzureStorage azureStorage, AzureBlob object)
+  {
+    final String container = object.getContainer();
+    final String path = object.getPath().startsWith("/")
+                        ? object.getPath().substring(1)
+                        : object.getPath();
 
-            final String container = nextURI.getContainer();
-            final String path = nextURI.getPath().startsWith("/")
-                ? nextURI.getPath().substring(1)
-                : nextURI.getPath();
-
-            try {
-              final InputStream innerInputStream = new AzureByteSource(azureStorage, container, path).openStream();
-
-
-              final InputStream outerInputStream = path.endsWith(".gz")
-                  ? CompressionUtils.gzipInputStream(innerInputStream)
-                  : innerInputStream;
-
-              return IOUtils.lineIterator(
-                  new BufferedReader(
-                      new InputStreamReader(outerInputStream, Charsets.UTF_8)
-                  )
-              );
-            } catch (Exception e) {
-              log.error(e,
-                  "Exception opening container[%s] blob[%s]",
-                  container,
-                  path
-              );
-
-              throw Throwables.propagate(e);
-            }
-          }
-
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException();
-          }
-        },
-        stringInputRowParser
-    );
+    return new AzureByteSource(azureStorage, container, path);
   }
 }

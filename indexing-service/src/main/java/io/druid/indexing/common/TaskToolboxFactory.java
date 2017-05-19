@@ -40,6 +40,7 @@ import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;
@@ -57,6 +58,7 @@ public class TaskToolboxFactory
   private final DataSegmentMover dataSegmentMover;
   private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentAnnouncer segmentAnnouncer;
+  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final ExecutorService queryExecutorService;
@@ -79,6 +81,7 @@ public class TaskToolboxFactory
       DataSegmentMover dataSegmentMover,
       DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
+      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       @Processing ExecutorService queryExecutorService,
@@ -100,6 +103,7 @@ public class TaskToolboxFactory
     this.dataSegmentMover = dataSegmentMover;
     this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
+    this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
     this.queryExecutorService = queryExecutorService;
@@ -126,6 +130,7 @@ public class TaskToolboxFactory
         dataSegmentMover,
         dataSegmentArchiver,
         segmentAnnouncer,
+        serverAnnouncer,
         handoffNotifierFactory,
         queryRunnerFactoryConglomerate,
         queryExecutorService,

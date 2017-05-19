@@ -41,6 +41,7 @@ import net.jodah.lyra.config.Config;
 import net.jodah.lyra.retry.RetryPolicy;
 import net.jodah.lyra.util.Duration;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.BlockingQueue;
@@ -134,7 +135,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   }
 
   @Override
-  public Firehose connect(final ByteBufferInputRowParser firehoseParser) throws IOException
+  public Firehose connect(final ByteBufferInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
     ConnectionOptions lyraOptions = new ConnectionOptions(this.connectionFactory);
     Config lyraConfig = new Config()

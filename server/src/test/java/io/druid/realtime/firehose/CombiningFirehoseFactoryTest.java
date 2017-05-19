@@ -33,6 +33,7 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -52,7 +53,7 @@ public class CombiningFirehoseFactoryTest
             new ListFirehoseFactory(list2)
         )
     );
-    final Firehose firehose = combiningFactory.connect(null);
+    final Firehose firehose = combiningFactory.connect(null, null);
     for (int i = 1; i < 6; i++) {
       Assert.assertTrue(firehose.hasMore());
       final InputRow inputRow = firehose.nextRow();
@@ -126,7 +127,7 @@ public class CombiningFirehoseFactoryTest
     }
 
     @Override
-    public Firehose connect(InputRowParser inputRowParser) throws IOException, ParseException
+    public Firehose connect(InputRowParser inputRowParser, File temporaryDirectory) throws IOException, ParseException
     {
       final Iterator<InputRow> iterator = rows.iterator();
       return new Firehose()

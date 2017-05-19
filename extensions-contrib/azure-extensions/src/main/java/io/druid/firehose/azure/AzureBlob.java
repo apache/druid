@@ -48,4 +48,13 @@ public class AzureBlob {
   public String getPath() {
     return path;
   }
+
+  @Override
+  public String toString()
+  {
+    return "AzureBlob{"
+        + "container=" + container
+        + ",path=" + path
+        + "}";
+  }
 }

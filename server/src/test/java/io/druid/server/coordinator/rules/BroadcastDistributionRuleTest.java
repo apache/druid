@@ -188,6 +188,7 @@ public class BroadcastDistributionRuleTest
     );
 
     druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(

@@ -179,17 +179,16 @@ public class IncrementalIndexAdapter implements IndexableAdapter
          * iterator() call to ensure the counter starts at 0.
          */
         return Iterators.transform(
-            index.getFacts().entrySet().iterator(),
-            new Function<Map.Entry<IncrementalIndex.TimeAndDims, Integer>, Rowboat>()
+            index.getFacts().keySet().iterator(),
+            new Function<IncrementalIndex.TimeAndDims, Rowboat>()
             {
               int count = 0;
 
               @Override
-              public Rowboat apply(Map.Entry<IncrementalIndex.TimeAndDims, Integer> input)
+              public Rowboat apply(IncrementalIndex.TimeAndDims timeAndDims)
               {
-                final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
                 final Object[] dimValues = timeAndDims.getDims();
-                final int rowOffset = input.getValue();
+                final int rowOffset = timeAndDims.getRowIndex();
 
                 Object[] dims = new Object[dimValues.length];
                 for (IncrementalIndex.DimensionDesc dimension : dimensions) {

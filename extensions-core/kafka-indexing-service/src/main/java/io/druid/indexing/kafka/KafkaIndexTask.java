@@ -90,7 +90,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -286,6 +285,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
         final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
+      toolbox.getDataSegmentServerAnnouncer().announce();
+
       appenderator = appenderator0;
 
       final String topic = ioConfig.getStartPartitions().getTopic();
@@ -567,6 +568,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
     }
 
+    toolbox.getDataSegmentServerAnnouncer().unannounce();
+    
     return success();
   }
 
@@ -834,7 +837,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                              ioConfig.getStartPartitions().getPartitionOffsetMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir())
                     .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
         metrics,
         toolbox.getSegmentPusher(),
