@@ -42,6 +42,15 @@ public class ServerTypeTest
     Assert.assertEquals(ServerType.INDEXER_EXECUTOR, ServerType.fromString("indexer-executor"));
   }
 
+  @Test
+  public void testToString()
+  {
+    Assert.assertEquals(ServerType.HISTORICAL.toString(), "historical");
+    Assert.assertEquals(ServerType.BRIDGE.toString(), "bridge");
+    Assert.assertEquals(ServerType.REALTIME.toString(), "realtime");
+    Assert.assertEquals(ServerType.INDEXER_EXECUTOR.toString(), "indexer-executor");
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidName()
   {

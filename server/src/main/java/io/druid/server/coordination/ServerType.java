@@ -19,6 +19,18 @@
 
 package io.druid.server.coordination;
 
+/**
+ * This enum represents types of druid services that hold segments.
+ *
+ * These types are externally visible (e.g., from the output of /druid/coordinator/v1/servers).
+ *
+ * For backwards compatibility, when presenting these types externally, the toString() representation
+ * of the enum should be used.
+ *
+ * The toString() method converts the enum name() to lowercase and replaces underscores with hyphens,
+ * which is the format expected for the server type string prior to the patch that introduced ServerType:
+ * https://github.com/druid-io/druid/pull/4148
+ */
 public enum ServerType
 {
   HISTORICAL,
@@ -64,5 +76,11 @@ public enum ServerType
   static ServerType fromString(String type)
   {
     return ServerType.valueOf(type.toUpperCase().replace("-", "_"));
+  }
+
+  @Override
+  public String toString()
+  {
+    return name().toLowerCase().replace("_", "-");
   }
 }
