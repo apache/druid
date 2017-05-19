@@ -23,14 +23,17 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
+import com.google.common.collect.MapMaker;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
+import io.druid.client.DirectDruidClient;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DataSource;
+import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
@@ -47,6 +50,7 @@ import io.druid.query.topn.DimensionAndMetricValueExtractor;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.Column;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
@@ -69,14 +73,17 @@ public class QueryMaker
 {
   private final QuerySegmentWalker walker;
   private final PlannerContext plannerContext;
+  private final ServerConfig serverConfig;
 
   public QueryMaker(
       final QuerySegmentWalker walker,
-      final PlannerContext plannerContext
+      final PlannerContext plannerContext,
+      final ServerConfig serverConfig
   )
   {
     this.walker = walker;
     this.plannerContext = plannerContext;
+    this.serverConfig = serverConfig;
   }
 
   public PlannerContext getPlannerContext()
@@ -179,7 +186,7 @@ public class QueryMaker
               @Override
               public Sequence<Object[]> next()
               {
-                final SelectQuery queryWithPagination = baseQuery.withPagingSpec(
+                SelectQuery queryWithPagination = baseQuery.withPagingSpec(
                     new PagingSpec(
                         pagingIdentifiers.get(),
                         plannerContext.getPlannerConfig().getSelectThreshold(),
@@ -192,9 +199,15 @@ public class QueryMaker
                 morePages.set(false);
                 final AtomicBoolean gotResult = new AtomicBoolean();
 
+                queryWithPagination = (SelectQuery) QueryMaker.withDefaultTimeoutAndMaxScatterGatherBytes(
+                    queryWithPagination,
+                    serverConfig
+                );
+
                 return Sequences.concat(
                     Sequences.map(
-                        QueryPlus.wrap(queryWithPagination).run(walker, Maps.<String, Object>newHashMap()),
+                        QueryPlus.wrap(queryWithPagination)
+                                 .run(walker, makeResponseContextForQuery(queryWithPagination)),
                         new Function<Result<SelectResultValue>, Sequence<Object[]>>()
                         {
                           @Override
@@ -255,7 +268,7 @@ public class QueryMaker
 
   private Sequence<Object[]> executeTimeseries(
       final DruidQueryBuilder queryBuilder,
-      final TimeseriesQuery query
+      TimeseriesQuery query
   )
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
@@ -264,8 +277,13 @@ public class QueryMaker
 
     Hook.QUERY_PLAN.run(query);
 
+    query = (TimeseriesQuery) QueryMaker.withDefaultTimeoutAndMaxScatterGatherBytes(
+        query,
+        serverConfig
+    );
+
     return Sequences.map(
-        QueryPlus.wrap(query).run(walker, Maps.<String, Object>newHashMap()),
+        QueryPlus.wrap(query).run(walker, makeResponseContextForQuery(query)),
         new Function<Result<TimeseriesResultValue>, Object[]>()
         {
           @Override
@@ -291,16 +309,21 @@ public class QueryMaker
 
   private Sequence<Object[]> executeTopN(
       final DruidQueryBuilder queryBuilder,
-      final TopNQuery query
+      TopNQuery query
   )
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
 
     Hook.QUERY_PLAN.run(query);
 
+    query = (TopNQuery) QueryMaker.withDefaultTimeoutAndMaxScatterGatherBytes(
+        query,
+        serverConfig
+    );
+
     return Sequences.concat(
         Sequences.map(
-            QueryPlus.wrap(query).run(walker, Maps.<String, Object>newHashMap()),
+            QueryPlus.wrap(query).run(walker, makeResponseContextForQuery(query)),
             new Function<Result<TopNResultValue>, Sequence<Object[]>>()
             {
               @Override
@@ -328,15 +351,20 @@ public class QueryMaker
 
   private Sequence<Object[]> executeGroupBy(
       final DruidQueryBuilder queryBuilder,
-      final GroupByQuery query
+      GroupByQuery query
   )
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
 
     Hook.QUERY_PLAN.run(query);
 
+    query = (GroupByQuery) QueryMaker.withDefaultTimeoutAndMaxScatterGatherBytes(
+        query,
+        serverConfig
+    );
+
     return Sequences.map(
-        QueryPlus.wrap(query).run(walker, Maps.<String, Object>newHashMap()),
+        QueryPlus.wrap(query).run(walker, makeResponseContextForQuery(query)),
         new Function<io.druid.data.input.Row, Object[]>()
         {
           @Override
@@ -353,6 +381,27 @@ public class QueryMaker
           }
         }
     );
+  }
+
+  public static <T> Query<T> withDefaultTimeoutAndMaxScatterGatherBytes(Query<T> query, ServerConfig serverConfig)
+  {
+    query = QueryContexts.withDefaultTimeout(query, serverConfig.getDefaultQueryTimeout());
+    query = QueryContexts.withMaxScatterGatherBytes(query, serverConfig.getMaxScatterGatherBytes());
+    return query;
+  }
+
+  public static Map<String, Object> makeResponseContextForQuery(Query query)
+  {
+    final Map<String, Object> responseContext = new MapMaker().makeMap();
+    responseContext.put(
+        DirectDruidClient.QUERY_FAIL_TIME,
+        System.currentTimeMillis() + QueryContexts.getTimeout(query)
+    );
+    responseContext.put(
+        DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED,
+        new AtomicLong()
+    );
+    return responseContext;
   }
 
   public static ColumnMetaData.Rep rep(final SqlTypeName sqlType)

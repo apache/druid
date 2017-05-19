@@ -21,6 +21,7 @@ package io.druid.sql.calcite.planner;
 
 import com.google.inject.Inject;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
@@ -44,25 +45,28 @@ public class PlannerFactory
   private final QuerySegmentWalker walker;
   private final DruidOperatorTable operatorTable;
   private final PlannerConfig plannerConfig;
+  private final ServerConfig serverConfig;
 
   @Inject
   public PlannerFactory(
       final SchemaPlus rootSchema,
       final QuerySegmentWalker walker,
       final DruidOperatorTable operatorTable,
-      final PlannerConfig plannerConfig
+      final PlannerConfig plannerConfig,
+      final ServerConfig serverConfig
   )
   {
     this.rootSchema = rootSchema;
     this.walker = walker;
     this.operatorTable = operatorTable;
     this.plannerConfig = plannerConfig;
+    this.serverConfig = serverConfig;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
     final PlannerContext plannerContext = PlannerContext.create(plannerConfig, queryContext);
-    final QueryMaker queryMaker = new QueryMaker(walker, plannerContext);
+    final QueryMaker queryMaker = new QueryMaker(walker, plannerContext, serverConfig);
     final FrameworkConfig frameworkConfig = Frameworks
         .newConfigBuilder()
         .parserConfig(

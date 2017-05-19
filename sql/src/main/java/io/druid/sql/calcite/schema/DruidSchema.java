@@ -50,7 +50,9 @@ import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.segment.column.ValueType;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import io.druid.sql.calcite.view.DruidViewMacro;
@@ -82,6 +84,7 @@ public class DruidSchema extends AbstractSchema
   private final ViewManager viewManager;
   private final ExecutorService cacheExec;
   private final ConcurrentMap<String, Table> tables;
+  private final ServerConfig serverConfig;
 
   // For awaitInitialization.
   private final CountDownLatch initializationLatch = new CountDownLatch(1);
@@ -100,7 +103,8 @@ public class DruidSchema extends AbstractSchema
       final QuerySegmentWalker walker,
       final TimelineServerView serverView,
       final PlannerConfig config,
-      final ViewManager viewManager
+      final ViewManager viewManager,
+      final ServerConfig serverConfig
   )
   {
     this.walker = Preconditions.checkNotNull(walker, "walker");
@@ -109,6 +113,7 @@ public class DruidSchema extends AbstractSchema
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
     this.tables = Maps.newConcurrentMap();
+    this.serverConfig = serverConfig;
   }
 
   @LifecycleStart
@@ -295,7 +300,7 @@ public class DruidSchema extends AbstractSchema
 
   private DruidTable computeTable(final String dataSource)
   {
-    final SegmentMetadataQuery segmentMetadataQuery = new SegmentMetadataQuery(
+    SegmentMetadataQuery segmentMetadataQuery = new SegmentMetadataQuery(
         new TableDataSource(dataSource),
         null,
         null,
@@ -306,7 +311,11 @@ public class DruidSchema extends AbstractSchema
         true
     );
 
-    final Sequence<SegmentAnalysis> sequence = QueryPlus.wrap(segmentMetadataQuery).run(walker, Maps.newHashMap());
+    final Sequence<SegmentAnalysis> sequence = QueryPlus.wrap(segmentMetadataQuery)
+                                                        .run(
+                                                            walker,
+                                                            QueryMaker.makeResponseContextForQuery(segmentMetadataQuery)
+                                                        );
     final List<SegmentAnalysis> results = Sequences.toList(sequence, Lists.<SegmentAnalysis>newArrayList());
     if (results.isEmpty()) {
       return null;
