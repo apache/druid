@@ -242,7 +242,7 @@ public class SegmentManagerTest
   public void testDropSegment() throws SegmentLoadingException, ExecutionException, InterruptedException
   {
     for (DataSegment eachSegment : segments) {
-      segmentManager.loadSegment(eachSegment);
+      Assert.assertTrue(segmentManager.loadSegment(eachSegment));
     }
 
     final List<Future<Void>> futures = ImmutableList.of(segments.get(0), segments.get(2)).stream()
@@ -268,8 +268,8 @@ public class SegmentManagerTest
   @Test
   public void testLoadDropSegment() throws SegmentLoadingException, ExecutionException, InterruptedException
   {
-    segmentManager.loadSegment(segments.get(0));
-    segmentManager.loadSegment(segments.get(2));
+    Assert.assertTrue(segmentManager.loadSegment(segments.get(0)));
+    Assert.assertTrue(segmentManager.loadSegment(segments.get(2)));
 
     final List<Future<Boolean>> loadFutures = ImmutableList.of(segments.get(1), segments.get(3), segments.get(4))
                                                            .stream()
@@ -299,6 +299,30 @@ public class SegmentManagerTest
 
     assertResult(
         ImmutableList.of(segments.get(1), segments.get(3), segments.get(4))
+    );
+  }
+
+  @Test
+  public void testLoadDuplicatedSegment() throws SegmentLoadingException
+  {
+    for (DataSegment segment : segments) {
+      Assert.assertTrue(segmentManager.loadSegment(segment));
+    }
+    // try to load an existing segment
+    Assert.assertFalse(segmentManager.loadSegment(segments.get(0)));
+
+    assertResult(segments);
+  }
+
+  @Test
+  public void testNonExistingSegment() throws SegmentLoadingException
+  {
+    Assert.assertTrue(segmentManager.loadSegment(segments.get(0)));
+
+    // try to drop a non-existing segment of different data source
+    segmentManager.dropSegment(segments.get(2));
+    assertResult(
+        ImmutableList.of(segments.get(0))
     );
   }
 

@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.common.guava.SettableSupplier;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.loading.SegmentLoader;
@@ -52,36 +53,36 @@ public class SegmentManager
   /**
    * Represent the state of a data source including the timeline, total segment size, and number of segments.
    */
-  static class DataSourceState
+  public static class DataSourceState
   {
     private final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline =
         new VersionedIntervalTimeline<>(Ordering.natural());
     private long totalSegmentSize;
     private long numSegments;
 
-    void addSegment(DataSegment segment)
+    private void addSegment(DataSegment segment)
     {
       totalSegmentSize += segment.getSize();
       numSegments++;
     }
 
-    void removeSegment(DataSegment segment)
+    private void removeSegment(DataSegment segment)
     {
       totalSegmentSize -= segment.getSize();
       numSegments--;
     }
 
-    VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline()
+    public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline()
     {
       return timeline;
     }
 
-    long getTotalSegmentSize()
+    public long getTotalSegmentSize()
     {
       return totalSegmentSize;
     }
 
-    long getNumSegments()
+    public long getNumSegments()
     {
       return numSegments;
     }
@@ -101,12 +102,24 @@ public class SegmentManager
     return dataSources;
   }
 
+  /**
+   * Returns a map of dataSource to the total byte size of segments managed by this segmentManager.  This method should
+   * be used carefully because the returned map might be different from the actual data source states.
+   *
+   * @return a map of dataSources and their total byte sizes
+   */
   public Map<String, Long> getDataSourceSizes()
   {
     return dataSources.entrySet().stream()
                       .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getTotalSegmentSize()));
   }
 
+  /**
+   * Returns a map of dataSource to the number of segments managed by this segmentManager.  This method should be
+   * carefully because the returned map might be different from the actual data source states.
+   *
+   * @return a map of dataSources and number of segments
+   */
   public Map<String, Long> getDataSourceCounts()
   {
     return dataSources.entrySet().stream()
@@ -136,7 +149,10 @@ public class SegmentManager
   {
     final Segment adapter = getAdapter(segment);
 
-    final DataSourceState computeResult = dataSources.compute(
+    final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
+
+    // compute() is used to ensure that the operation for a data source is executed atomically
+    dataSources.compute(
         segment.getDataSource(),
         (k, v) -> {
           final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
@@ -149,7 +165,7 @@ public class SegmentManager
 
           if ((entry != null) && (entry.getChunk(segment.getShardSpec().getPartitionNum()) != null)) {
             log.warn("Told to load a adapter for a segment[%s] that already exists", segment.getIdentifier());
-            return null;
+            resultSupplier.set(false);
           } else {
             loadedIntervals.add(
                 segment.getInterval(),
@@ -157,12 +173,13 @@ public class SegmentManager
                 segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter))
             );
             dataSourceState.addSegment(segment);
-            return dataSourceState;
+            resultSupplier.set(true);
           }
+          return dataSourceState;
         }
     );
 
-    return computeResult != null;
+    return resultSupplier.get();
   }
 
   private Segment getAdapter(final DataSegment segment) throws SegmentLoadingException
@@ -191,46 +208,44 @@ public class SegmentManager
   {
     final String dataSource = segment.getDataSource();
 
+    // compute() is used to ensure that the operation for a data source is executed atomically
     dataSources.compute(
         dataSource,
-        (k, v) -> {
-          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
-
-          final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
-              dataSourceState.getTimeline();
-
-          if (loadedIntervals == null) {
-            log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSource);
-            return null;
-          }
-
-          final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
-              segment.getInterval(),
-              segment.getVersion(),
-              segment.getShardSpec().createChunk(null)
-          );
-          final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
-
-          if (oldQueryable != null) {
-            dataSourceState.removeSegment(segment);
-
-            try {
-              log.info("Attempting to close segment %s", segment.getIdentifier());
-              oldQueryable.close();
-            }
-            catch (IOException e) {
-              log.makeAlert(e, "Exception closing segment")
-                 .addData("dataSource", dataSource)
-                 .addData("segmentId", segment.getIdentifier())
-                 .emit();
-            }
+        (dataSourceName, dataSourceState) -> {
+          if (dataSourceState == null) {
+            log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSourceName);
           } else {
-            log.info(
-                "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
-                dataSource,
+            final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
+                dataSourceState.getTimeline();
+
+            final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
                 segment.getInterval(),
-                segment.getVersion()
+                segment.getVersion(),
+                segment.getShardSpec().createChunk(null)
             );
+            final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
+
+            if (oldQueryable != null) {
+              dataSourceState.removeSegment(segment);
+
+              try {
+                log.info("Attempting to close segment %s", segment.getIdentifier());
+                oldQueryable.close();
+              }
+              catch (IOException e) {
+                log.makeAlert(e, "Exception closing segment")
+                   .addData("dataSource", dataSourceName)
+                   .addData("segmentId", segment.getIdentifier())
+                   .emit();
+              }
+            } else {
+              log.info(
+                  "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
+                  dataSourceName,
+                  segment.getInterval(),
+                  segment.getVersion()
+              );
+            }
           }
 
           return dataSourceState;
