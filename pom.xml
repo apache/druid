@@ -875,7 +875,7 @@
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                        <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                        <argLine>-Xmx3000m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                         </argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
@@ -1016,7 +1016,7 @@
                             <forceJavacCompilerUse>true</forceJavacCompilerUse>
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
-                            <maxmem>4000m</maxmem>
+                            <maxmem>3000m</maxmem>
                             <source>1.8</source>
                             <target>1.8</target>
                             <showWarnings>false</showWarnings>
