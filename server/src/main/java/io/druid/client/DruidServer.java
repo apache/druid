@@ -58,7 +58,7 @@ public class DruidServer implements Comparable
   public DruidServer(
       DruidNode node,
       DruidServerConfig config,
-      String type
+      ServerType type
   )
   {
     this(
@@ -76,7 +76,7 @@ public class DruidServer implements Comparable
       @JsonProperty("name") String name,
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
-      @JsonProperty("type") String type,
+      @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
       @JsonProperty("priority") int priority
   )
@@ -87,6 +87,7 @@ public class DruidServer implements Comparable
     this.segments = new ConcurrentHashMap<String, DataSegment>();
   }
 
+  @JsonProperty
   public String getName()
   {
     return metadata.getName();
@@ -97,6 +98,7 @@ public class DruidServer implements Comparable
     return metadata;
   }
 
+  @JsonProperty
   public String getHost()
   {
     return metadata.getHost();
@@ -107,16 +109,19 @@ public class DruidServer implements Comparable
     return currSize;
   }
 
+  @JsonProperty
   public long getMaxSize()
   {
     return metadata.getMaxSize();
   }
 
+  @JsonProperty
   public ServerType getType()
   {
     return metadata.getType();
   }
 
+  @JsonProperty
   public String getTier()
   {
     return metadata.getTier();
@@ -127,6 +132,7 @@ public class DruidServer implements Comparable
     return metadata.segmentReplicatable();
   }
 
+  @JsonProperty
   public int getPriority()
   {
     return metadata.getPriority();

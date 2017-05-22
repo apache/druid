@@ -24,6 +24,7 @@ import com.google.common.collect.Sets;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
@@ -51,7 +52,7 @@ public class ImmutableSegmentLoadInfoTest
             null,
             NoneShardSpec.instance(),
             0, 0
-        ), Sets.newHashSet(new DruidServerMetadata("a", "host", 10, "historical", "tier", 1))
+        ), Sets.newHashSet(new DruidServerMetadata("a", "host", 10, ServerType.HISTORICAL, "tier", 1))
     );
 
     ImmutableSegmentLoadInfo serde = mapper.readValue(

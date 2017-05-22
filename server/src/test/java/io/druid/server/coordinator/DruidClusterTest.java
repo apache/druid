@@ -86,7 +86,7 @@ public class DruidClusterTest
 
   private static final ServerHolder newRealtime = new ServerHolder(
       new ImmutableDruidServer(
-          new DruidServerMetadata("name1", "host2", 100L, ServerType.REALTIME.name(), "tier1", 0),
+          new DruidServerMetadata("name1", "host2", 100L, ServerType.REALTIME, "tier1", 0),
           0L,
           ImmutableMap.of(
               "src1",
@@ -102,7 +102,7 @@ public class DruidClusterTest
 
   private static final ServerHolder newHistorical = new ServerHolder(
       new ImmutableDruidServer(
-          new DruidServerMetadata("name1", "host2", 100L, ServerType.HISTORICAL.name(), "tier1", 0),
+          new DruidServerMetadata("name1", "host2", 100L, ServerType.HISTORICAL, "tier1", 0),
           0L,
           ImmutableMap.of(
               "src1",
@@ -125,7 +125,7 @@ public class DruidClusterTest
         ImmutableSet.of(
             new ServerHolder(
                 new ImmutableDruidServer(
-                    new DruidServerMetadata("name1", "host1", 100L, ServerType.REALTIME.name(), "tier1", 0),
+                    new DruidServerMetadata("name1", "host1", 100L, ServerType.REALTIME, "tier1", 0),
                     0L,
                     ImmutableMap.of(
                         "src1",
@@ -145,7 +145,7 @@ public class DruidClusterTest
                 ImmutableList.of(
                     new ServerHolder(
                         new ImmutableDruidServer(
-                            new DruidServerMetadata("name1", "host1", 100L, ServerType.HISTORICAL.name(), "tier1", 0),
+                            new DruidServerMetadata("name1", "host1", 100L, ServerType.HISTORICAL, "tier1", 0),
                             0L,
                             ImmutableMap.of(
                                 "src1",

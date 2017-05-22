@@ -19,14 +19,17 @@
 
 package io.druid.server.coordination;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * This enum represents types of druid services that hold segments.
- *
+ * <p>
  * These types are externally visible (e.g., from the output of /druid/coordinator/v1/servers).
- *
+ * <p>
  * For backwards compatibility, when presenting these types externally, the toString() representation
  * of the enum should be used.
- *
+ * <p>
  * The toString() method converts the enum name() to lowercase and replaces underscores with hyphens,
  * which is the format expected for the server type string prior to the patch that introduced ServerType:
  * https://github.com/druid-io/druid/pull/4148
@@ -53,12 +56,12 @@ public enum ServerType
 
   /**
    * Indicates this type of node is able to be a target of segment replication.
-
+   *
    * @return true if it is available for replication
    *
    * @see io.druid.server.coordinator.rules.LoadRule
    */
-  boolean isSegmentReplicationTarget()
+  public boolean isSegmentReplicationTarget()
   {
     return true;
   }
@@ -68,17 +71,19 @@ public enum ServerType
    *
    * @return true if it is available for broadcast.
    */
-  boolean isSegmentBroadcastTarget()
+  public boolean isSegmentBroadcastTarget()
   {
     return true;
   }
 
-  static ServerType fromString(String type)
+  @JsonCreator
+  public static ServerType fromString(String type)
   {
     return ServerType.valueOf(type.toUpperCase().replace("-", "_"));
   }
 
   @Override
+  @JsonValue
   public String toString()
   {
     return name().toLowerCase().replace("_", "-");

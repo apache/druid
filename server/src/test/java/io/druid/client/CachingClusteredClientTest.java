@@ -122,6 +122,7 @@ import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.TestHelper;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -328,11 +329,11 @@ public class CachingClusteredClientTest
     client = makeClient(MoreExecutors.sameThreadExecutor());
 
     servers = new DruidServer[]{
-        new DruidServer("test1", "test1", 10, "historical", "bye", 0),
-        new DruidServer("test2", "test2", 10, "historical", "bye", 0),
-        new DruidServer("test3", "test3", 10, "historical", "bye", 0),
-        new DruidServer("test4", "test4", 10, "historical", "bye", 0),
-        new DruidServer("test5", "test5", 10, "historical", "bye", 0)
+        new DruidServer("test1", "test1", 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test2", "test2", 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test3", "test3", 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test4", "test4", 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test5", "test5", 10, ServerType.HISTORICAL, "bye", 0)
     };
   }
 

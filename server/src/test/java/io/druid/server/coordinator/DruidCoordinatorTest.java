@@ -42,6 +42,7 @@ import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -215,7 +216,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(metadataRuleManager);
     EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("from", null, 5L, "historical", null, 0),
+            new DruidServerMetadata("from", null, 5L, ServerType.HISTORICAL, null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment", segment)
@@ -226,7 +227,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     druidServer2 = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("to", null, 5L, "historical", null, 0),
+            new DruidServerMetadata("to", null, 5L, ServerType.HISTORICAL, null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment2", segment)
@@ -284,7 +285,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    druidServer = new DruidServer("server1", "localhost", 5L, "historical", tier, 0);
+    druidServer = new DruidServer("server1", "localhost", 5L, ServerType.HISTORICAL, tier, 0);
     loadManagementPeons.put("server1", loadQueuePeon);
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
         ImmutableList.of(druidServer)
