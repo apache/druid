@@ -69,6 +69,8 @@ public class DruidCluster
       case BRIDGE:
         addHistorical(serverHolder);
         break;
+      case INDEXER_EXECUTOR:
+        throw new IAE("unsupported server type[%s]", serverHolder.getServer().getType());
       default:
         throw new IAE("unknown server type[%s]", serverHolder.getServer().getType());
     }
