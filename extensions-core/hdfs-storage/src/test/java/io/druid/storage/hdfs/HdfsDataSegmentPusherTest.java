@@ -326,7 +326,7 @@ public class HdfsDataSegmentPusherTest
       registerModule(new GranularityModule());
     }
 
-    public class TestModule extends SimpleModule
+    public static class TestModule extends SimpleModule
     {
       TestModule()
       {
