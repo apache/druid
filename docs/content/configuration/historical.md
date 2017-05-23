@@ -46,7 +46,7 @@ Druid uses Jetty to serve HTTP requests.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.numThreads`|Number of threads for HTTP requests.|10|
+|`druid.server.http.numThreads`|Number of threads for HTTP requests.|max(10, (Number of cores * 17) / 16 + 2) + 30|
 |`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5m|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 
