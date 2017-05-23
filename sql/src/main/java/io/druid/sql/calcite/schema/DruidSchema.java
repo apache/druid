@@ -31,6 +31,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.client.DirectDruidClient;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
@@ -52,7 +53,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.PlannerConfig;
-import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import io.druid.sql.calcite.view.DruidViewMacro;
@@ -311,10 +311,18 @@ public class DruidSchema extends AbstractSchema
         true
     );
 
+    segmentMetadataQuery = DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(
+        segmentMetadataQuery,
+        serverConfig
+    );
+
     final Sequence<SegmentAnalysis> sequence = QueryPlus.wrap(segmentMetadataQuery)
                                                         .run(
                                                             walker,
-                                                            QueryMaker.makeResponseContextForQuery(segmentMetadataQuery)
+                                                            DirectDruidClient.makeResponseContextForQuery(
+                                                                segmentMetadataQuery,
+                                                                System.currentTimeMillis()
+                                                            )
                                                         );
     final List<SegmentAnalysis> results = Sequences.toList(sequence, Lists.<SegmentAnalysis>newArrayList());
     if (results.isEmpty()) {
