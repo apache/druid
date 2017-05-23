@@ -42,6 +42,7 @@ public class InProcessViewManager implements ViewManager
     this.views = new ConcurrentHashMap<>();
   }
 
+  @Override
   public void createView(final PlannerFactory plannerFactory, final String viewName, final String viewSql)
   {
     final TableMacro oldValue = views.putIfAbsent(viewName, new DruidViewMacro(plannerFactory, viewSql));
@@ -50,6 +51,7 @@ public class InProcessViewManager implements ViewManager
     }
   }
 
+  @Override
   public void alterView(final PlannerFactory plannerFactory, final String viewName, final String viewSql)
   {
     final TableMacro oldValue = views.replace(viewName, new DruidViewMacro(plannerFactory, viewSql));
@@ -58,6 +60,7 @@ public class InProcessViewManager implements ViewManager
     }
   }
 
+  @Override
   public void dropView(final String viewName)
   {
     final TableMacro oldValue = views.remove(viewName);

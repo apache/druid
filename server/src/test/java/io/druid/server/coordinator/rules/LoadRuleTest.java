@@ -34,6 +34,7 @@ import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.CostBalancerStrategyFactory;
@@ -107,6 +108,7 @@ public class LoadRuleTest
   public void tearDown() throws Exception
   {
     EasyMock.verify(mockPeon);
+    emitter.close();
   }
 
   @Test
@@ -157,6 +159,7 @@ public class LoadRuleTest
     };
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -166,7 +169,7 @@ public class LoadRuleTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -182,7 +185,7 @@ public class LoadRuleTest
                             "serverNorm",
                             "hostNorm",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             DruidServer.DEFAULT_TIER,
                             0
                         ).toImmutableDruidServer(),
@@ -210,8 +213,8 @@ public class LoadRuleTest
         segment
     );
 
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 1);
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get(DruidServer.DEFAULT_TIER).get() == 2);
+    Assert.assertTrue(stats.getPerTierStats().get(LoadRule.ASSIGNED_COUNT).get("hot").get() == 1);
+    Assert.assertTrue(stats.getPerTierStats().get(LoadRule.ASSIGNED_COUNT).get(DruidServer.DEFAULT_TIER).get() == 2);
     exec.shutdown();
   }
 
@@ -266,7 +269,7 @@ public class LoadRuleTest
         "serverHot",
         "hostHot",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "hot",
         0
     );
@@ -275,12 +278,13 @@ public class LoadRuleTest
         "serverNorm",
         "hostNorm",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         DruidServer.DEFAULT_TIER,
         0
     );
     server2.addDataSegment(segment.getIdentifier(), segment);
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -373,6 +377,7 @@ public class LoadRuleTest
     };
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -382,7 +387,7 @@ public class LoadRuleTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -410,7 +415,7 @@ public class LoadRuleTest
         segment
     );
 
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 1);
+    Assert.assertTrue(stats.getPerTierStats().get(LoadRule.ASSIGNED_COUNT).get("hot").get() == 1);
     exec.shutdown();
   }
 
@@ -465,7 +470,7 @@ public class LoadRuleTest
         "serverHot",
         "hostHot",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "hot",
         0
     );
@@ -473,7 +478,7 @@ public class LoadRuleTest
         "serverHo2t",
         "hostHot2",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "hot",
         0
     );
@@ -481,6 +486,7 @@ public class LoadRuleTest
     server2.addDataSegment(segment.getIdentifier(), segment);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(

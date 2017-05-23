@@ -26,6 +26,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
@@ -95,64 +96,25 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public SearchQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new SearchQuery(
-        getDataSource(),
-        dimFilter,
-        granularity,
-        limit,
-        spec,
-        dimensions,
-        querySpec,
-        sortSpec,
-        getContext()
-    );
+    return Druids.SearchQueryBuilder.copy(this).intervals(spec).build();
   }
 
   @Override
   public Query<Result<SearchResultValue>> withDataSource(DataSource dataSource)
   {
-    return new SearchQuery(
-        dataSource,
-        dimFilter,
-        granularity,
-        limit,
-        getQuerySegmentSpec(),
-        dimensions,
-        querySpec,
-        sortSpec,
-        getContext()
-    );
+    return Druids.SearchQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   @Override
   public SearchQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new SearchQuery(
-        getDataSource(),
-        dimFilter,
-        granularity,
-        limit,
-        getQuerySegmentSpec(),
-        dimensions,
-        querySpec,
-        sortSpec,
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.SearchQueryBuilder.copy(this).context(newContext).build();
   }
 
   public SearchQuery withDimFilter(DimFilter dimFilter)
   {
-    return new SearchQuery(
-        getDataSource(),
-        dimFilter,
-        granularity,
-        limit,
-        getQuerySegmentSpec(),
-        dimensions,
-        querySpec,
-        sortSpec,
-        getContext()
-    );
+    return Druids.SearchQueryBuilder.copy(this).filters(dimFilter).build();
   }
 
   @JsonProperty("filter")
@@ -193,31 +155,21 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 
   public SearchQuery withLimit(int newLimit)
   {
-    return new SearchQuery(
-        getDataSource(),
-        dimFilter,
-        granularity,
-        newLimit,
-        getQuerySegmentSpec(),
-        dimensions,
-        querySpec,
-        sortSpec,
-        getContext()
-    );
+    return Druids.SearchQueryBuilder.copy(this).limit(newLimit).build();
   }
 
   @Override
   public String toString()
   {
     return "SearchQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", dimFilter=" + dimFilter +
-           ", granularity='" + granularity + '\'' +
-           ", dimensions=" + dimensions +
-           ", querySpec=" + querySpec +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", limit=" + limit +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", dimFilter=" + dimFilter +
+        ", granularity='" + granularity + '\'' +
+        ", dimensions=" + dimensions +
+        ", querySpec=" + querySpec +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", limit=" + limit +
+        '}';
   }
 
   @Override

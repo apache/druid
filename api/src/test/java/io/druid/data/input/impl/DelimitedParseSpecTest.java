@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class DelimitedParseSpecTest
 {
@@ -37,10 +38,12 @@ public class DelimitedParseSpecTest
   {
     DelimitedParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
         "\u0001",
         "\u0002",
-        Arrays.asList("abc")
+        Collections.singletonList("abc"),
+        false,
+        0
     );
     final DelimitedParseSpec serde = jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
@@ -49,10 +52,10 @@ public class DelimitedParseSpecTest
     Assert.assertEquals("abc", serde.getTimestampSpec().getTimestampColumn());
     Assert.assertEquals("iso", serde.getTimestampSpec().getTimestampFormat());
 
-    Assert.assertEquals(Arrays.asList("abc"), serde.getColumns());
+    Assert.assertEquals(Collections.singletonList("abc"), serde.getColumns());
     Assert.assertEquals("\u0001", serde.getDelimiter());
     Assert.assertEquals("\u0002", serde.getListDelimiter());
-    Assert.assertEquals(Arrays.asList("abc"), serde.getDimensionsSpec().getDimensionNames());
+    Assert.assertEquals(Collections.singletonList("abc"), serde.getDimensionsSpec().getDimensionNames());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -71,7 +74,9 @@ public class DelimitedParseSpecTest
         ),
         ",",
         " ",
-        Arrays.asList("a")
+        Collections.singletonList("a"),
+        false,
+        0
     );
   }
 
@@ -91,12 +96,15 @@ public class DelimitedParseSpecTest
         ),
         ",",
         null,
-        Arrays.asList("a")
+        Collections.singletonList("a"),
+        false,
+        0
     );
   }
 
-  @Test(expected = NullPointerException.class)
-  public void testDefaultColumnList(){
+  @Test(expected = IllegalArgumentException.class)
+  public void testDefaultColumnList()
+  {
     final DelimitedParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -110,8 +118,9 @@ public class DelimitedParseSpecTest
         ),
         ",",
         null,
-        // pass null columns not allowed
-        null
+        null,
+        false,
+        0
     );
   }
 }

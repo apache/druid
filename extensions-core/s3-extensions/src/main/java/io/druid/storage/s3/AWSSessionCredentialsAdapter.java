@@ -54,6 +54,7 @@ public class AWSSessionCredentialsAdapter extends AWSSessionCredentials {
     return provider.getCredentials().getAWSSecretKey();
   }
 
+  @Override
   public String getSessionToken() {
     com.amazonaws.auth.AWSSessionCredentials sessionCredentials =
         (com.amazonaws.auth.AWSSessionCredentials) provider.getCredentials();

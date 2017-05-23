@@ -33,7 +33,7 @@ import io.druid.data.input.Row;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.InsufficientResourcesException;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
@@ -46,7 +46,6 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
-import org.bouncycastle.util.Integers;
 import org.hamcrest.CoreMatchers;
 import org.junit.Rule;
 import org.junit.Test;
@@ -155,6 +154,7 @@ public class GroupByQueryRunnerFailureTest
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
+        @Override
         public String getDefaultStrategy()
         {
           return "v2";
@@ -201,7 +201,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.<String, Object>of(QueryContextKeys.TIMEOUT, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -239,7 +239,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.<String, Object>of(QueryContextKeys.TIMEOUT, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -248,7 +248,6 @@ public class GroupByQueryRunnerFailureTest
   @Test(timeout = 10000, expected = InsufficientResourcesException.class)
   public void testInsufficientResourcesOnBroker() throws IOException
   {
-    final ReferenceCountingResourceHolder<List<ByteBuffer>> holder = mergeBufferPool.takeBatch(1, 10);
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(
@@ -265,13 +264,11 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.<String, Object>of(QueryContextKeys.TIMEOUT, Integers.valueOf(500)))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
-    try {
+    try (ReferenceCountingResourceHolder<List<ByteBuffer>> holder = mergeBufferPool.takeBatch(1, 10)) {
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    } finally {
-      holder.close();
     }
   }
 }

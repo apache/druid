@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -36,6 +37,7 @@ import java.util.NoSuchElementException;
 
 public class BufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
 {
+  private static final Logger log = new Logger(BufferGrouper.class);
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
   private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;

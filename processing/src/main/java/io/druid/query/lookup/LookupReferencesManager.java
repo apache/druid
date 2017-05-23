@@ -21,29 +21,32 @@ package io.druid.query.lookup;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.metamx.emitter.EmittingLogger;
+import io.druid.concurrent.Execs;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
-import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.Function;
 
 /**
  * This class provide a basic {@link LookupExtractorFactory} references manager.
@@ -52,333 +55,401 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * It is used by Lookup configuration manager to add/remove or list lookups configuration via HTTP or other protocols.
  * It does periodic snap shot of the list of lookup in order to bootstrap nodes after restart.
  */
-
 @ManageLifecycle
 public class LookupReferencesManager
 {
-  private static final Logger LOGGER = new Logger(LookupReferencesManager.class);
-  private final ConcurrentMap<String, LookupExtractorFactory> lookupMap = new ConcurrentHashMap<>();
-  // This is a lock against the state of the REFERENCE MANAGER (aka start/stop state), NOT of the lookup itself.
-  private final ReadWriteLock startStopLock = new ReentrantReadWriteLock(true);
-  private final AtomicBoolean started = new AtomicBoolean(false);
+  private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
-  private final LookupSnapshotTaker lookupSnapshotTaker;
+  // Lookups state (loaded/to-be-loaded/to-be-dropped etc) is managed by immutable LookupUpdateState instance.
+  // Any update to state is done by creating updated LookupUpdateState instance and atomically setting that
+  // into the ref here.
+  // this allows getAllLookupsState() to provide a consistent view without using locks.
+  @VisibleForTesting
+  final AtomicReference<LookupUpdateState> stateRef = new AtomicReference<>();
+
+  @VisibleForTesting
+  final LookupSnapshotTaker lookupSnapshotTaker;
+
+  @VisibleForTesting
+  final LifecycleLock lifecycleLock = new LifecycleLock();
+
+  @VisibleForTesting
+  Thread mainThread;
+
+  //for unit testing only
+  private final boolean testMode;
 
   @Inject
-  public LookupReferencesManager(LookupConfig lookupConfig, final @Json ObjectMapper objectMapper)
+  public LookupReferencesManager(LookupConfig lookupConfig, @Json ObjectMapper objectMapper)
+  {
+    this(lookupConfig, objectMapper, false);
+  }
+
+  @VisibleForTesting
+  LookupReferencesManager(LookupConfig lookupConfig, ObjectMapper objectMapper, boolean testMode)
   {
     if (Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
       this.lookupSnapshotTaker = null;
     } else {
       this.lookupSnapshotTaker = new LookupSnapshotTaker(objectMapper, lookupConfig.getSnapshotWorkingDir());
     }
+
+    this.testMode = testMode;
   }
 
   @LifecycleStart
   public void start()
   {
-    startStopLock.writeLock().lock();
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("can't start.");
+    }
+
     try {
-      if (!started.getAndSet(true)) {
-        if (lookupSnapshotTaker != null) {
-          final List<LookupBean> lookupBeanList = lookupSnapshotTaker.pullExistingSnapshot();
-          for (LookupBean lookupBean : lookupBeanList) {
-            this.put(lookupBean.name, lookupBean.factory);
-          }
-        }
-        LOGGER.info("Started lookup factory references manager");
+      LOG.info("LookupReferencesManager is starting.");
+
+      loadSnapshotAndInitStateRef();
+
+      if (!testMode) {
+        mainThread = Execs.makeThread(
+            "LookupReferencesManager-MainThread",
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                try {
+
+                  if (!lifecycleLock.awaitStarted()) {
+                    LOG.error("WTF! lifecycle not started, lookup update notices will not be handled.");
+                    return;
+                  }
+
+                  while (!Thread.interrupted() && lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
+                    try {
+                      handlePendingNotices();
+                      LockSupport.parkNanos(LookupReferencesManager.this, TimeUnit.MINUTES.toNanos(1));
+                    }
+                    catch (Throwable t) {
+                      LOG.makeAlert(t, "Error occured while lookup notice handling.").emit();
+                    }
+                  }
+                }
+                catch (Throwable t) {
+                  LOG.error(t, "Error while waiting for lifecycle start. lookup updates notices will not be handled");
+                }
+                finally {
+                  LOG.info("Lookup Management loop exited, Lookup notices are not handled anymore.");
+                }
+              }
+            },
+            true
+        );
+
+        mainThread.start();
       }
+
+      LOG.info("LookupReferencesManager is started.");
+      lifecycleLock.started();
     }
     finally {
-      startStopLock.writeLock().unlock();
+      lifecycleLock.exitStart();
     }
+  }
+
+  @VisibleForTesting
+  void handlePendingNotices()
+  {
+    if (stateRef.get().pendingNotices.isEmpty()) {
+      return;
+    }
+
+    @SuppressWarnings("ArgumentParameterSwap")
+    LookupUpdateState swappedState = atomicallyUpdateStateRef(
+        oldState -> new LookupUpdateState(oldState.lookupMap, ImmutableList.of(), oldState.pendingNotices)
+    );
+
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>(swappedState.lookupMap);
+    for (Notice notice : swappedState.noticesBeingHandled) {
+      try {
+        notice.handle(lookupMap);
+      } catch (Exception ex) {
+        LOG.error(ex, "Exception occured while handling lookup notice [%s].", notice);
+        LOG.makeAlert("Exception occured while handling lookup notice, with message [%s].", ex.getMessage()).emit();
+      }
+    }
+
+    takeSnapshot(lookupMap);
+
+    ImmutableMap<String, LookupExtractorFactoryContainer> immutableLookupMap = ImmutableMap.copyOf(lookupMap);
+
+    atomicallyUpdateStateRef(
+        oldState -> new LookupUpdateState(immutableLookupMap, oldState.pendingNotices, ImmutableList.of())
+    );
   }
 
   @LifecycleStop
   public void stop()
   {
-    startStopLock.writeLock().lock();
-    try {
-      if (started.getAndSet(false)) {
-        if (lookupSnapshotTaker != null) {
-          lookupSnapshotTaker.takeSnapshot(getAllAsList());
-        }
-        LOGGER.info("Stopping lookup factory references manager");
-        for (String lookupName : lookupMap.keySet()) {
-          lookupMap.remove(lookupName).close();
-        }
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("can't stop.");
+    }
+
+    LOG.info("LookupReferencesManager is stopping.");
+
+    if (!testMode) {
+      mainThread.interrupt();
+
+      try {
+        mainThread.join();
+      }
+      catch (InterruptedException ex) {
+        throw new ISE("failed to stop, mainThread couldn't finish.");
       }
     }
-    finally {
-      startStopLock.writeLock().unlock();
+
+    for (Map.Entry<String, LookupExtractorFactoryContainer> e : stateRef.get().lookupMap.entrySet()) {
+      try {
+        LOG.info("Closing lookup [%s]", e.getKey());
+        if (!e.getValue().getLookupExtractorFactory().close()) {
+          LOG.error("Failed to close lookup [%s].", e.getKey());
+        }
+      }
+      catch (Exception ex) {
+        LOG.error(ex, "Failed to close lookup [%s].", e.getKey());
+      }
     }
+
+    LOG.info("LookupReferencesManager is stopped.");
   }
 
-  /**
-   * @param lookupName             name of the lookupExtractorFactory object
-   * @param lookupExtractorFactory {@link LookupExtractorFactory} implementation reference.
-   *
-   * @return true if the lookup is added otherwise false.
-   *
-   * @throws IllegalStateException If the manager is closed or if start of lookup returns false.
-   */
-  public boolean put(String lookupName, final LookupExtractorFactory lookupExtractorFactory)
+  public void add(String lookupName, LookupExtractorFactoryContainer lookupExtractorFactoryContainer)
   {
-    try {
-      startStopLock.readLock().lockInterruptibly();
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
-    try {
-      assertStarted();
-      if (lookupMap.containsKey(lookupName)) {
-        LOGGER.warn("lookup [%s] is not add, another lookup with the same name already exist", lookupName);
-        return false;
-      }
-      if (!lookupExtractorFactory.start()) {
-        throw new ISE("start method returned false for lookup [%s]", lookupName);
-      }
-      final boolean noPrior = null == lookupMap.putIfAbsent(lookupName, lookupExtractorFactory);
-      if (noPrior) {
-        if (lookupSnapshotTaker != null) {
-          lookupSnapshotTaker.takeSnapshot(getAllAsList());
-        }
-      } else {
-        if (!lookupExtractorFactory.close()) {
-          throw new ISE("Error closing [%s] on race condition", lookupName);
-        }
-      }
-      return noPrior;
-    }
-    finally {
-      startStopLock.readLock().unlock();
-    }
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    addNotice(new LoadNotice(lookupName, lookupExtractorFactoryContainer));
   }
 
-  /**
-   * @param lookups {@link Map<String, LookupExtractorFactory>} containing all the lookup as one batch.
-   *
-   * @throws IllegalStateException if the manager is closed or if {@link LookupExtractorFactory#start()} returns false
-   */
-  public void put(Map<String, LookupExtractorFactory> lookups)
+  public void remove(String lookupName)
   {
-    Map<String, LookupExtractorFactory> failedExtractorFactoryMap = new HashMap<>();
-    try {
-      startStopLock.readLock().lockInterruptibly();
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
-    try {
-      assertStarted();
-      for (Map.Entry<String, LookupExtractorFactory> entry : lookups.entrySet()) {
-        final String lookupName = entry.getKey();
-        final LookupExtractorFactory lookupExtractorFactory = entry.getValue();
-        if (lookupMap.containsKey(lookupName)) {
-          // Fail early without bothering to start
-          LOGGER.warn("lookup [%s] is not add, another lookup with the same name already exist", lookupName);
-          continue;
-        }
-        if (!lookupExtractorFactory.start()) {
-          failedExtractorFactoryMap.put(lookupName, lookupExtractorFactory);
-          continue;
-        }
-        if (null != lookupMap.putIfAbsent(lookupName, lookupExtractorFactory)) {
-          // handle race
-          LOGGER.warn("lookup [%s] is not add, another lookup with the same name already exist", lookupName);
-          if (!lookupExtractorFactory.close()) {
-            LOGGER.error("Failed to properly close stale lookup [%s]", lookupExtractorFactory);
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    addNotice(new DropNotice(lookupName));
+  }
+
+  private void addNotice(Notice notice)
+  {
+    atomicallyUpdateStateRef(
+        oldState -> {
+          if (oldState.pendingNotices.size() > 10000) { //don't let pendingNotices grow indefinitely
+            throw new ISE("There are too many [%d] pendingNotices.", oldState.pendingNotices.size());
           }
-          continue;
+
+          ImmutableList.Builder<Notice> builder = ImmutableList.builder();
+          builder.addAll(oldState.pendingNotices);
+          builder.add(notice);
+
+          return new LookupUpdateState(
+              oldState.lookupMap, builder.build(), oldState.noticesBeingHandled
+
+          );
         }
-        if (lookupSnapshotTaker != null) {
-          lookupSnapshotTaker.takeSnapshot(getAllAsList());
+    );
+    LockSupport.unpark(mainThread);
+  }
+
+  @Nullable
+  public LookupExtractorFactoryContainer get(String lookupName)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    return stateRef.get().lookupMap.get(lookupName);
+  }
+
+  // Note that this should ensure that "toLoad" and "toDrop" are disjoint.
+  public LookupsState<LookupExtractorFactoryContainer> getAllLookupsState()
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
+    LookupUpdateState lookupUpdateState = stateRef.get();
+
+    Map<String, LookupExtractorFactoryContainer> lookupsToLoad = new HashMap<>();
+    Set<String> lookupsToDrop = new HashSet<>();
+
+    updateToLoadAndDrop(lookupUpdateState.noticesBeingHandled, lookupsToLoad, lookupsToDrop);
+    updateToLoadAndDrop(lookupUpdateState.pendingNotices, lookupsToLoad, lookupsToDrop);
+
+    return new LookupsState<>(lookupUpdateState.lookupMap, lookupsToLoad, lookupsToDrop);
+  }
+
+  private void updateToLoadAndDrop(List<Notice> notices, Map<String, LookupExtractorFactoryContainer> lookupsToLoad, Set<String> lookupsToDrop)
+  {
+    for (Notice notice : notices) {
+      if (notice instanceof LoadNotice) {
+        LoadNotice loadNotice = (LoadNotice) notice;
+        lookupsToLoad.put(loadNotice.lookupName, loadNotice.lookupExtractorFactoryContainer);
+        lookupsToDrop.remove(loadNotice.lookupName);
+      } else if (notice instanceof DropNotice) {
+        DropNotice dropNotice = (DropNotice) notice;
+        lookupsToDrop.add(dropNotice.lookupName);
+        lookupsToLoad.remove(dropNotice.lookupName);
+      } else {
+        throw new ISE("Unknown Notice type [%s].", notice.getClass().getName());
+      }
+    }
+  }
+
+  private void takeSnapshot(Map<String, LookupExtractorFactoryContainer> lookupMap)
+  {
+    if (lookupSnapshotTaker != null) {
+      List<LookupBean> lookups = new ArrayList<>(lookupMap.size());
+      for (Map.Entry<String, LookupExtractorFactoryContainer> e : lookupMap.entrySet()) {
+        lookups.add(new LookupBean(e.getKey(), null, e.getValue()));
+      }
+
+      lookupSnapshotTaker.takeSnapshot(lookups);
+    }
+  }
+
+  private void loadSnapshotAndInitStateRef()
+  {
+    if (lookupSnapshotTaker != null) {
+      ImmutableMap.Builder<String, LookupExtractorFactoryContainer> builder = ImmutableMap.builder();
+
+      final List<LookupBean> lookupBeanList = lookupSnapshotTaker.pullExistingSnapshot();
+      for (LookupBean lookupBean : lookupBeanList) {
+        LookupExtractorFactoryContainer container = lookupBean.getContainer();
+
+        if (container.getLookupExtractorFactory().start()) {
+          builder.put(lookupBean.getName(), container);
+        } else {
+          throw new ISE("Failed to start lookup [%s]:[%s]", lookupBean.getName(), container);
         }
       }
-      if (!failedExtractorFactoryMap.isEmpty()) {
+
+      stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
+    } else {
+      stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));
+    }
+  }
+
+  private LookupUpdateState atomicallyUpdateStateRef(Function<LookupUpdateState, LookupUpdateState> fn)
+  {
+    while(true) {
+      LookupUpdateState old = stateRef.get();
+      LookupUpdateState newState = fn.apply(old);
+      if (stateRef.compareAndSet(old, newState)) {
+        return newState;
+      }
+    }
+  }
+
+  @VisibleForTesting
+  interface Notice
+  {
+    void handle(Map<String, LookupExtractorFactoryContainer> lookupMap);
+  }
+
+  private static class LoadNotice implements Notice
+  {
+    private final String lookupName;
+    private final LookupExtractorFactoryContainer lookupExtractorFactoryContainer;
+
+    public LoadNotice(String lookupName, LookupExtractorFactoryContainer lookupExtractorFactoryContainer)
+    {
+      this.lookupName = lookupName;
+      this.lookupExtractorFactoryContainer = lookupExtractorFactoryContainer;
+    }
+
+    @Override
+    public void handle(Map<String, LookupExtractorFactoryContainer> lookupMap)
+    {
+      LookupExtractorFactoryContainer old = lookupMap.get(lookupName);
+      if (old != null && !lookupExtractorFactoryContainer.replaces(old)) {
+        LOG.warn(
+            "got notice to load lookup [%s] that can't replace existing [%s].",
+            lookupExtractorFactoryContainer,
+            old
+        );
+        return;
+      }
+
+      if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().start()) {
         throw new ISE(
-            "was not able to start the following lookup(s) [%s]",
-            failedExtractorFactoryMap.keySet().toString()
+            "start method returned false for lookup [%s]:[%s]",
+            lookupName,
+            lookupExtractorFactoryContainer
         );
       }
-    }
-    finally {
-      startStopLock.readLock().unlock();
-    }
-  }
 
-  /**
-   * Add or update a lookup factory
-   *
-   * @param lookupName             The name of the lookup
-   * @param lookupExtractorFactory The factory of the lookup
-   *
-   * @return True if the lookup was updated, false otherwise
-   *
-   * @throws IllegalStateException if start of the factory fails
-   */
-  public boolean updateIfNew(String lookupName, final LookupExtractorFactory lookupExtractorFactory)
-  {
-    boolean update = false;
-    try {
-      startStopLock.readLock().lockInterruptibly();
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
-    try {
-      assertStarted();
-      LookupExtractorFactory prior = lookupMap.get(lookupName);
-      update = lookupExtractorFactory.replaces(prior);
-      if (update) {
-        if (!lookupExtractorFactory.start()) {
-          throw new ISE("Could not start [%s]", lookupName);
-        }
-        boolean racy;
-        do {
-          if (prior == null) {
-            racy = null != lookupMap.putIfAbsent(lookupName, lookupExtractorFactory);
-          } else {
-            racy = !lookupMap.replace(lookupName, prior, lookupExtractorFactory);
-          }
+      old = lookupMap.put(lookupName, lookupExtractorFactoryContainer);
 
-          if (racy) {
-            prior = lookupMap.get(lookupName);
-            update = lookupExtractorFactory.replaces(prior);
-          }
-        } while (racy && update);
+      LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
-        if (prior != null && update) {
-          if (!prior.close()) {
-            LOGGER.error("Error closing [%s]:[%s]", lookupName, prior);
-          }
-        }
-
-        if (!update) {
-          // We started the lookup, failed a race, and now need to cleanup
-          if (!lookupExtractorFactory.close()) {
-            LOGGER.error("Error closing [%s]:[%s]", lookupExtractorFactory);
-          }
+      if (old != null) {
+        if (!old.getLookupExtractorFactory().close()) {
+          throw new ISE("close method returned false for lookup [%s]:[%s]", lookupName, old);
         }
       }
     }
-    finally {
-      startStopLock.readLock().unlock();
+
+    @Override
+    public String toString()
+    {
+      return "LoadNotice{" +
+             "lookupName='" + lookupName + '\'' +
+             ", lookupExtractorFactoryContainer=" + lookupExtractorFactoryContainer +
+             '}';
     }
-    return update;
   }
 
-  /**
-   * @param lookupName name of {@link LookupExtractorFactory} to delete from the reference registry.
-   *                   this function does call the cleaning method {@link LookupExtractorFactory#close()}
-   *
-   * @return true only if {@code lookupName} is removed and the lookup correctly stopped
-   */
-  public boolean remove(String lookupName)
+  private static class DropNotice implements Notice
   {
-    try {
-      startStopLock.readLock().lockInterruptibly();
+    private final String lookupName;
+
+    public DropNotice(String lookupName)
+    {
+      this.lookupName = lookupName;
     }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
-    try {
-      final LookupExtractorFactory lookupExtractorFactory = lookupMap.remove(lookupName);
-      if (lookupExtractorFactory != null) {
-        LOGGER.debug("Removed lookup [%s]", lookupName);
-        if (lookupSnapshotTaker != null) {
-          lookupSnapshotTaker.takeSnapshot(getAllAsList());
+
+    @Override
+    public void handle(Map<String, LookupExtractorFactoryContainer> lookupMap)
+    {
+      final LookupExtractorFactoryContainer lookupExtractorFactoryContainer = lookupMap.remove(lookupName);
+
+      if (lookupExtractorFactoryContainer != null) {
+        LOG.debug("Removed lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
+
+        if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().close()) {
+          throw new ISE(
+              "close method returned false for lookup [%s]:[%s]",
+              lookupName,
+              lookupExtractorFactoryContainer
+          );
         }
-        return lookupExtractorFactory.close();
       }
     }
-    finally {
-      startStopLock.readLock().unlock();
-    }
-    return false;
-  }
 
-  /**
-   * @param lookupName key to fetch the reference of the object {@link LookupExtractor}
-   *
-   * @return reference of {@link LookupExtractorFactory} that correspond the {@code lookupName} or null if absent
-   *
-   * @throws IllegalStateException if the {@link LookupReferencesManager} is closed or did not start yet
-   */
-  @Nullable
-  public LookupExtractorFactory get(String lookupName)
-  {
-    try {
-      startStopLock.readLock().lockInterruptibly();
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
-    try {
-      final LookupExtractorFactory lookupExtractorFactory = lookupMap.get(lookupName);
-      assertStarted();
-      return lookupExtractorFactory;
-    }
-    finally {
-      startStopLock.readLock().unlock();
+    @Override
+    public String toString()
+    {
+      return "DropNotice{" +
+             "lookupName='" + lookupName + '\'' +
+             '}';
     }
   }
 
-  /**
-   * @return Returns {@link Map} containing a copy of the current state.
-   *
-   * @throws ISE if the is is closed or did not start yet.
-   */
-  public Map<String, LookupExtractorFactory> getAll()
+  private static class LookupUpdateState
   {
-    try {
-      startStopLock.readLock().lockInterruptibly();
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
-    try {
-      assertStarted();
-      return Maps.newHashMap(lookupMap);
-    }
-    finally {
-      startStopLock.readLock().unlock();
-    }
-  }
+    private final ImmutableMap<String, LookupExtractorFactoryContainer> lookupMap;
+    private final ImmutableList<Notice> pendingNotices;
+    private final ImmutableList<Notice> noticesBeingHandled;
 
-  private void assertStarted() throws ISE
-  {
-    if (isClosed()) {
-      throw new ISE("lookup manager is closed");
+    LookupUpdateState(
+        ImmutableMap<String, LookupExtractorFactoryContainer> lookupMap,
+        ImmutableList<Notice> pendingNotices,
+        ImmutableList<Notice> noticesBeingHandled
+    )
+    {
+      this.lookupMap = lookupMap;
+      this.pendingNotices = pendingNotices;
+      this.noticesBeingHandled = noticesBeingHandled;
     }
-  }
-
-  public boolean isClosed()
-  {
-    return !started.get();
-  }
-
-  private List<LookupBean> getAllAsList()
-  {
-    return Lists.newArrayList(
-        Collections2.transform(
-            lookupMap.entrySet(),
-            new Function<Map.Entry<String, LookupExtractorFactory>, LookupBean>()
-            {
-              @Nullable
-              @Override
-              public LookupBean apply(
-                  @Nullable
-                      Map.Entry<String, LookupExtractorFactory> input
-              )
-              {
-                final LookupBean lookupBean = new LookupBean();
-                lookupBean.factory = input.getValue();
-                lookupBean.name = input.getKey();
-                return lookupBean;
-              }
-            }
-        ));
   }
 }

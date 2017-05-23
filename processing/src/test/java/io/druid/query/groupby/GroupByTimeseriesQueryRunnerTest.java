@@ -30,7 +30,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
@@ -76,9 +76,9 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                 return new QueryRunner()
                 {
                   @Override
-                  public Sequence run(Query query, Map responseContext)
+                  public Sequence run(QueryPlus queryPlus, Map responseContext)
                   {
-                    TimeseriesQuery tsQuery = (TimeseriesQuery) query;
+                    TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
                     QueryRunner<Row> newRunner = factory.mergeRunners(
                         MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(input)
                     );
@@ -99,6 +99,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                                         .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
                                         .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
                                         .setVirtualColumns(tsQuery.getVirtualColumns())
+                                        .setContext(tsQuery.getContext())
                                         .build(),
                             responseContext
                         ),
@@ -135,6 +136,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
+  @Override
   @Test
   public void testFullOnTimeseriesMaxMin()
   {

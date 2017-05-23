@@ -89,11 +89,12 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
-    final int priority = BaseQuery.getContextPriority(query, 0);
+    Query<T> query = queryPlus.getQuery();
+    final int priority = QueryContexts.getPriority(query);
     final Ordering ordering = query.getResultOrdering();
-
+    final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
@@ -121,7 +122,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   public Iterable<T> call() throws Exception
                                   {
                                     try {
-                                      Sequence<T> result = input.run(query, responseContext);
+                                      Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
                                       if (result == null) {
                                         throw new ISE("Got a null result! Segments are missing!");
                                       }
@@ -132,11 +133,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                       }
 
                                       return retVal;
-                                    }
-                                    catch (QueryInterruptedException e) {
+                                    } catch (QueryInterruptedException e) {
                                       throw Throwables.propagate(e);
-                                    }
-                                    catch (Exception e) {
+                                    } catch (Exception e) {
                                       log.error(e, "Exception with one of the sequences!");
                                       throw Throwables.propagate(e);
                                     }
@@ -152,28 +151,23 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQuery(query, futures);
 
             try {
-              final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
               return new MergeIterable<>(
                   ordering.nullsFirst(),
-                  timeout == null ?
-                  futures.get() :
-                  futures.get(timeout.longValue(), TimeUnit.MILLISECONDS)
+                  QueryContexts.hasTimeout(query) ?
+                      futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
+                      futures.get()
               ).iterator();
-            }
-            catch (InterruptedException e) {
+            } catch (InterruptedException e) {
               log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException(e);
-            }
-            catch (CancellationException e) {
+            } catch (CancellationException e) {
               throw new QueryInterruptedException(e);
-            }
-            catch (TimeoutException e) {
+            } catch (TimeoutException e) {
               log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException(e);
-            }
-            catch (ExecutionException e) {
+            } catch (ExecutionException e) {
               throw Throwables.propagate(e.getCause());
             }
           }

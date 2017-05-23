@@ -20,7 +20,6 @@
 package io.druid.segment.loading;
 
 import com.google.common.io.ByteStreams;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.storage.hdfs.HdfsDataSegmentPuller;
@@ -165,12 +164,10 @@ public class HdfsDataSegmentPullerTest
 
     final URI uri = URI.create(uriBase.toString() + zipPath.toString());
 
-    try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath)) {
-      try (final OutputStream gzStream = new GZIPOutputStream(outputStream)) {
-        try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-          ByteStreams.copy(inputStream, gzStream);
-        }
-      }
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath);
+         final OutputStream gzStream = new GZIPOutputStream(outputStream);
+         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+      ByteStreams.copy(inputStream, gzStream);
     }
     try {
       Assert.assertFalse(outFile.exists());
@@ -201,10 +198,9 @@ public class HdfsDataSegmentPullerTest
 
     final URI uri = URI.create(uriBase.toString() + perTestPath.toString());
 
-    try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath)) {
-      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-        ByteStreams.copy(inputStream, outputStream);
-      }
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath);
+         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+      ByteStreams.copy(inputStream, outputStream);
     }
     try {
       Assert.assertFalse(outFile.exists());

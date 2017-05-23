@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ParquetExtensionsModule implements DruidModule
@@ -34,8 +34,8 @@ public class ParquetExtensionsModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.asList(
-        new SimpleModule("ParuqetInputRowParserModule")
+    return Collections.singletonList(
+        new SimpleModule("ParquetInputRowParserModule")
             .registerSubtypes(
                 new NamedType(ParquetHadoopInputRowParser.class, "parquet")
             )

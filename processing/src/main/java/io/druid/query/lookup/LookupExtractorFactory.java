@@ -50,12 +50,12 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    * @return Returns false if not successfully closed the {@link LookupExtractor} otherwise returns true
    */
   public boolean close();
+
   /**
-   * Determine if this LookupExtractorFactory should replace some other LookupExtractorFactory.
-   * This is used to implement no-down-time
-   * @param other Some other LookupExtractorFactory which might need replaced
-   * @return `true` if the other should be replaced by this one. `false` if this one should not replace the other factory
+   * This method is deprecated and is not removed only to allow 0.10.0 to 0.10.1 transition. It is not used
+   * on a cluster that is running 0.10.1. It will be removed in a later release.
    */
+  @Deprecated
   boolean replaces(@Nullable LookupExtractorFactory other);
 
   /**

@@ -31,7 +31,7 @@ import io.druid.segment.IdLookup;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 import javax.annotation.Nullable;
 import java.util.BitSet;
@@ -40,14 +40,18 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
 {
   private final DimensionSelector selector;
   private final IdLookup baseIdLookup;
-  private final Int2IntMap forwardMapping;
+  private final Int2IntOpenHashMap forwardMapping;
   private final int[] reverseMapping;
 
   /**
    * @param selector must return true from {@link DimensionSelector#nameLookupPossibleInAdvance()}
-   * @param forwardMapping must have {@link Int2IntMap#defaultReturnValue(int)} configured to -1.
+   * @param forwardMapping must have {@link Int2IntOpenHashMap#defaultReturnValue(int)} configured to -1.
    */
-  ForwardingFilteredDimensionSelector(DimensionSelector selector, Int2IntMap forwardMapping, int[] reverseMapping)
+  ForwardingFilteredDimensionSelector(
+      DimensionSelector selector,
+      Int2IntOpenHashMap forwardMapping,
+      int[] reverseMapping
+  )
   {
     this.selector = Preconditions.checkNotNull(selector);
     if (!selector.nameLookupPossibleInAdvance()) {
@@ -106,6 +110,12 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
             // null should match empty rows in multi-value columns
             return nullRow && value == null;
           }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("selector", selector);
+          }
         };
       } else {
         return BooleanValueMatcher.of(false);
@@ -140,6 +150,12 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
         }
         // null should match empty rows in multi-value columns
         return nullRow && matchNull;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
       }
     };
   }
@@ -179,6 +195,5 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("selector", selector);
-    inspector.visit("forwardMapping", forwardMapping);
   }
 }

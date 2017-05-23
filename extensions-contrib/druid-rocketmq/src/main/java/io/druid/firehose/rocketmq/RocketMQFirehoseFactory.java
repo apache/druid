@@ -42,6 +42,7 @@ import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -137,7 +138,10 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   }
 
   @Override
-  public Firehose connect(ByteBufferInputRowParser byteBufferInputRowParser) throws IOException, ParseException
+  public Firehose connect(
+      ByteBufferInputRowParser byteBufferInputRowParser,
+      File temporaryDirectory
+  ) throws IOException, ParseException
   {
 
     Set<String> newDimExclus = Sets.union(
@@ -308,7 +312,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   /**
    * Pull request.
    */
-  final class DruidPullRequest
+  static final class DruidPullRequest
   {
     private final MessageQueue messageQueue;
     private final String tag;

@@ -35,6 +35,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -158,7 +159,7 @@ public class CachingClusteredClientFunctionalityTest {
               @Override
               public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment) {
                 return new QueryableDruidServer(
-                    new DruidServer("localhost", "localhost", 100, "historical", "a", 10),
+                    new DruidServer("localhost", "localhost", 100, ServerType.HISTORICAL, "a", 10),
                     EasyMock.createNiceMock(DirectDruidClient.class)
                 );
               }

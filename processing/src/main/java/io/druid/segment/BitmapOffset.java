@@ -36,7 +36,7 @@ import java.util.HashSet;
 
 /**
  */
-public class BitmapOffset implements Offset
+public class BitmapOffset extends Offset
 {
   private static final int INVALID_VALUE = -1;
   private static final BitmapFactory ROARING_BITMAP_FACTORY = new RoaringBitmapSerdeFactory(false).getBitmapFactory();

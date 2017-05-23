@@ -201,7 +201,7 @@ public enum GranularityType
       case 0:
         return GranularityType.YEAR;
       case 1:
-        if (vals[index] == 4) {
+        if (vals[index] == 3) {
           return GranularityType.QUARTER;
         }
         else if (vals[index] == 1) {

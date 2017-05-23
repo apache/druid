@@ -26,7 +26,7 @@ import com.metamx.metrics.AbstractMonitor;
 import io.druid.client.DruidServerConfig;
 import io.druid.java.util.common.collect.CountingMap;
 import io.druid.query.DruidMetrics;
-import io.druid.server.coordination.ServerManager;
+import io.druid.server.SegmentManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.timeline.DataSegment;
 
@@ -35,18 +35,18 @@ import java.util.Map;
 public class HistoricalMetricsMonitor extends AbstractMonitor
 {
   private final DruidServerConfig serverConfig;
-  private final ServerManager serverManager;
+  private final SegmentManager segmentManager;
   private final ZkCoordinator zkCoordinator;
 
   @Inject
   public HistoricalMetricsMonitor(
       DruidServerConfig serverConfig,
-      ServerManager serverManager,
+      SegmentManager segmentManager,
       ZkCoordinator zkCoordinator
   )
   {
     this.serverConfig = serverConfig;
-    this.serverManager = serverManager;
+    this.segmentManager = segmentManager;
     this.zkCoordinator = zkCoordinator;
   }
 
@@ -73,7 +73,7 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
       );
     }
 
-    for (Map.Entry<String, Long> entry : serverManager.getDataSourceSizes().entrySet()) {
+    for (Map.Entry<String, Long> entry : segmentManager.getDataSourceSizes().entrySet()) {
       String dataSource = entry.getKey();
       long used = entry.getValue();
 
@@ -88,7 +88,7 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.build("segment/usedPercent", usedPercent));
     }
 
-    for (Map.Entry<String, Long> entry : serverManager.getDataSourceCounts().entrySet()) {
+    for (Map.Entry<String, Long> entry : segmentManager.getDataSourceCounts().entrySet()) {
       String dataSource = entry.getKey();
       long count = entry.getValue();
       final ServiceMetricEvent.Builder builder =

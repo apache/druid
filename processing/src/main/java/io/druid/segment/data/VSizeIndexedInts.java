@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
@@ -220,7 +221,12 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   @Override
   public void close() throws IOException
   {
+  }
 
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("buffer", buffer);
   }
 
   public WritableSupplier<IndexedInts> asWritableSupplier() {

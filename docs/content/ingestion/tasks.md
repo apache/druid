@@ -104,7 +104,6 @@ See [Ingestion](../ingestion/index.html)
 |type|The task type, this should always be "index".|none|yes|
 |firehose|Specify a [Firehose](../ingestion/firehose.html) here.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs (which can be forced by setting 'forceExtendableShardSpecs' in the tuning config).|false|no|
-|skipFirehoseCaching|By default the IndexTask will fully read the supplied firehose to disk before processing the data. This prevents the task from doing multiple remote fetches and enforces determinism if more than one pass through the data is required. It also allows the task to retry fetching the data if the firehose throws an exception during reading. This requires sufficient disk space for the temporary cache.|false|no|
 
 #### TuningConfig
 

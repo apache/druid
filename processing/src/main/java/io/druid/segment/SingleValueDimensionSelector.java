@@ -17,48 +17,18 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.segment;
 
-import it.unimi.dsi.fastutil.ints.IntIterator;
-
-import java.io.IOException;
-import java.util.List;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 
 /**
+ * Specialization for {@link DimensionSelector}s, always having a single value in {@link #getRow()}.
  */
-public class ListBasedIndexedInts implements IndexedInts
+public interface SingleValueDimensionSelector extends DimensionSelector
 {
-  private final List<Integer> expansion;
-
-  public ListBasedIndexedInts(List<Integer> expansion) {this.expansion = expansion;}
-
-  @Override
-  public int size()
-  {
-    return expansion.size();
-  }
-
-  @Override
-  public int get(int index)
-  {
-    return expansion.get(index);
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return new IndexedIntsIterator(this);
-  }
-
-  @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-
-  }
+  /**
+   * Returns a single value of {@link #getRow()}.
+   */
+  @CalledFromHotLoop
+  int getRowValue();
 }

@@ -23,7 +23,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 /**
  */
-public class IntersectingOffset implements Offset {
+public class IntersectingOffset extends Offset {
   private final Offset lhs;
   private final Offset rhs;
 

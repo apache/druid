@@ -69,3 +69,11 @@ ConciseSet to use IntBuffers.
     * Apache License, Version 2.0
   * HOMEPAGE:
     * https://sourceforge.net/projects/concise/
+
+This product contains a modified version of The Guava Authors's Closer class from Guava library:
+ * LICENSE:
+   * https://github.com/google/guava/blob/c462d69329709f72a17a64cb229d15e76e72199c/COPYING (Apache License, Version 2.0)
+ * HOMEPAGE:
+   * https://github.com/google/guava
+ * COMMIT TAG:
+   * https://github.com/google/guava/blob/c462d69329709f72a17a64cb229d15e76e72199c

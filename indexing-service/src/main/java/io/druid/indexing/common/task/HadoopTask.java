@@ -25,7 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
-
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.TaskToolbox;
@@ -142,10 +141,13 @@ public abstract class HadoopTask extends AbstractTask
         Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs())
     );
 
+    final List<URL> extensionURLs = Lists.newArrayList();
     for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
       final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension);
-      jobURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
+      extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
     }
+
+    jobURLs.addAll(extensionURLs);
 
     final List<URL> localClassLoaderURLs = new ArrayList<>(jobURLs);
 
@@ -169,11 +171,16 @@ public abstract class HadoopTask extends AbstractTask
       hadoopContainerDruidClasspathJars = Joiner.on(File.pathSeparator).join(jobURLs);
 
     } else {
-      hadoopContainerDruidClasspathJars =
-          Joiner.on(File.pathSeparator)
-                .join(
-                    Initialization.getURLsForClasspath(extensionsConfig.getHadoopContainerDruidClasspath())
-                );
+      List<URL> hadoopContainerURLs = Lists.newArrayList(
+          Initialization.getURLsForClasspath(extensionsConfig.getHadoopContainerDruidClasspath())
+      );
+
+      if (extensionsConfig.getAddExtensionsToHadoopContainer()) {
+        hadoopContainerURLs.addAll(extensionURLs);
+      }
+
+      hadoopContainerDruidClasspathJars = Joiner.on(File.pathSeparator)
+                                                .join(hadoopContainerURLs);
     }
 
     log.info("Hadoop Container Druid Classpath is set to [%s]", hadoopContainerDruidClasspathJars);

@@ -56,7 +56,7 @@ public class JodaUtilsTest
   @Test
   public void testUmbrellaIntervalsNull() throws Exception
   {
-    List<Interval> intervals = Arrays.asList();
+    List<Interval> intervals = Collections.emptyList();
     Throwable thrown = null;
     try {
       Interval res = JodaUtils.umbrellaInterval(intervals);

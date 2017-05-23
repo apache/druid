@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.10.0-SNAPSHOT</version>
+    <version>0.10.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,7 +54,7 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.10.0-SNAPSHOT</tag>
+        <tag>0.10.1-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -128,6 +128,9 @@
         <module>extensions-contrib/ambari-metrics-emitter</module>
         <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
+        <module>extensions-contrib/kafka-emitter</module>
+        <!-- distribution packaging -->
+        <module>distribution</module>
     </modules>
 
     <dependencyManagement>
@@ -872,7 +875,7 @@
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                        <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                        <argLine>-Xmx3000m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                         </argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
@@ -992,8 +995,8 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                          <source>1.8</source>
-                          <target>1.8</target>
+                        <source>1.8</source>
+                        <target>1.8</target>
                     </configuration>
                 </plugin>
             </plugins>
@@ -1004,38 +1007,71 @@
         <profile>
             <id>strict</id>
             <build>
-                <pluginManagement>
-                    <plugins>
-                        <plugin>
-                            <groupId>org.apache.maven.plugins</groupId>
-                            <artifactId>maven-compiler-plugin</artifactId>
-                            <configuration>
-                                <compilerId>javac-with-errorprone</compilerId>
-                                <forceJavacCompilerUse>true</forceJavacCompilerUse>
-                            </configuration>
-                            <dependencies>
-                                <dependency>
-                                    <groupId>org.codehaus.plexus</groupId>
-                                    <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                                    <version>2.5</version>
-                                </dependency>
-                            </dependencies>
-                        </plugin>
-                    </plugins>
-                </pluginManagement>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <compilerId>javac-with-errorprone</compilerId>
+                            <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                            <fork>true</fork>
+                            <meminitial>1024m</meminitial>
+                            <maxmem>3000m</maxmem>
+                            <source>1.8</source>
+                            <target>1.8</target>
+                            <showWarnings>false</showWarnings>
+                            <compilerArgs>
+                                <arg>-XepDisableWarningsInGeneratedCode</arg>
+
+                                <arg>-Xep:ClassCanBeStatic:ERROR</arg>
+                                <arg>-Xep:PreconditionsInvalidPlaceholder:ERROR</arg>
+                                <arg>-Xep:MissingOverride:ERROR</arg>
+
+                                <arg>-Xep:ArgumentParameterSwap</arg>
+                                <arg>-Xep:AssistedInjectAndInjectOnSameConstructor</arg>
+                                <arg>-Xep:AutoFactoryAtInject</arg>
+                                <arg>-Xep:ClassName</arg>
+                                <arg>-Xep:ComparisonContractViolated</arg>
+                                <arg>-Xep:DepAnn</arg>
+                                <arg>-Xep:DivZero</arg>
+                                <arg>-Xep:EmptyIf</arg>
+                                <arg>-Xep:InjectInvalidTargetingOnScopingAnnotation</arg>
+                                <arg>-Xep:InjectMoreThanOneQualifier</arg>
+                                <arg>-Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass</arg>
+                                <arg>-Xep:InjectScopeOrQualifierAnnotationRetention</arg>
+                                <arg>-Xep:InjectedConstructorAnnotations</arg>
+                                <arg>-Xep:InsecureCryptoUsage</arg>
+                                <arg>-Xep:JMockTestWithoutRunWithOrRuleAnnotation</arg>
+                                <arg>-Xep:JavaxInjectOnFinalField</arg>
+                                <arg>-Xep:LockMethodChecker</arg>
+                                <arg>-Xep:LongLiteralLowerCaseSuffix</arg>
+                                <arg>-Xep:NoAllocation</arg>
+                                <arg>-Xep:NonRuntimeAnnotation</arg>
+                                <arg>-Xep:NumericEquality</arg>
+                                <arg>-Xep:ParameterPackage</arg>
+                                <arg>-Xep:ProtoStringFieldReferenceEquality</arg>
+                                <arg>-Xep:QualifierOnMethodWithoutProvides</arg>
+                                <arg>-Xep:UnlockMethod</arg>
+                            </compilerArgs>
+                        </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.codehaus.plexus</groupId>
+                                <artifactId>plexus-compiler-javac-errorprone</artifactId>
+                                <version>2.8.1</version>
+                            </dependency>
+                            <!-- override plexus-compiler-javac-errorprone's dependency on
+                                 Error Prone with the latest version -->
+                            <dependency>
+                                <groupId>com.google.errorprone</groupId>
+                                <artifactId>error_prone_core</artifactId>
+                                <version>2.0.19</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
             </build>
         </profile>
-        <profile>
-            <id>java8</id>
-            <activation>
-                <jdk>1.8</jdk>
-            </activation>
-            <modules>
-                <!-- distribution packaging -->
-                <module>distribution</module>
-            </modules>
-        </profile>
-
         <profile>
             <id>parallel-test</id>
             <activation>

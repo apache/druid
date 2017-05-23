@@ -19,34 +19,57 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.FloatColumnSelector;
 
 import java.nio.ByteBuffer;
 
-public abstract class DoubleBufferAggregator implements BufferAggregator
+public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
 {
   protected final FloatColumnSelector selector;
 
-  DoubleBufferAggregator(FloatColumnSelector selector)
+  SimpleDoubleBufferAggregator(FloatColumnSelector selector)
   {
     this.selector = selector;
   }
 
+  public FloatColumnSelector getSelector()
+  {
+    return selector;
+  }
+
+  /**
+   * Faster equivalent to
+   * aggregator.init(buf, position);
+   * aggregator.aggregate(buf, position, value);
+   */
+  @CalledFromHotLoop
+  public abstract void putFirst(ByteBuffer buf, int position, double value);
+
+  @CalledFromHotLoop
+  public abstract void aggregate(ByteBuffer buf, int position, double value);
+
   @Override
-  public Object get(ByteBuffer buf, int position)
+  public final void aggregate(ByteBuffer buf, int position)
+  {
+    aggregate(buf, position, (double) selector.get());
+  }
+
+  @Override
+  public final Object get(ByteBuffer buf, int position)
   {
     return buf.getDouble(position);
   }
 
   @Override
-  public float getFloat(ByteBuffer buf, int position)
+  public final float getFloat(ByteBuffer buf, int position)
   {
     return (float) buf.getDouble(position);
   }
 
   @Override
-  public long getLong(ByteBuffer buf, int position)
+  public final long getLong(ByteBuffer buf, int position)
   {
     return (long) buf.getDouble(position);
   }

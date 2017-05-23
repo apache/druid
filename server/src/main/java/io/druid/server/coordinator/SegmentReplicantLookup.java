@@ -38,7 +38,7 @@ public class SegmentReplicantLookup
     final Table<String, String, Integer> segmentsInCluster = HashBasedTable.create();
     final Table<String, String, Integer> loadingSegments = HashBasedTable.create();
 
-    for (MinMaxPriorityQueue<ServerHolder> serversByType : cluster.getSortedServersByTier()) {
+    for (MinMaxPriorityQueue<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serversByType) {
         ImmutableDruidServer server = serverHolder.getServer();
 

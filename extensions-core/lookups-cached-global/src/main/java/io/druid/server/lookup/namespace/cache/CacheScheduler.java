@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.guice.LazySingleton;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
@@ -60,6 +61,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * entry.close(); // close the last VersionedCache and unschedule future updates
  * }</pre>
  */
+@LazySingleton
 public final class CacheScheduler
 {
   private static final Logger log = new Logger(CacheScheduler.class);

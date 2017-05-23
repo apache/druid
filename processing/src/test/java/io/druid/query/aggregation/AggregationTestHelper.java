@@ -50,6 +50,7 @@ import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -535,10 +536,10 @@ public class AggregationTestHelper
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> map)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(query, Maps.<String, Object>newHashMap());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.<String, Object>newHashMap());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()
@@ -559,7 +560,7 @@ public class AggregationTestHelper
           List resultRows = Lists.transform(
               readQueryResultArrayFromString(resultStr),
               toolChest.makePreComputeManipulatorFn(
-                  query,
+                  queryPlus.getQuery(),
                   MetricManipulatorFns.deserializing()
               )
           );

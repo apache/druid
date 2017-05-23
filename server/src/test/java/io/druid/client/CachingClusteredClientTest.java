@@ -71,6 +71,7 @@ import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
@@ -121,6 +122,7 @@ import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.TestHelper;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -327,11 +329,11 @@ public class CachingClusteredClientTest
     client = makeClient(MoreExecutors.sameThreadExecutor());
 
     servers = new DruidServer[]{
-        new DruidServer("test1", "test1", 10, "historical", "bye", 0),
-        new DruidServer("test2", "test2", 10, "historical", "bye", 0),
-        new DruidServer("test3", "test3", 10, "historical", "bye", 0),
-        new DruidServer("test4", "test4", 10, "historical", "bye", 0),
-        new DruidServer("test5", "test5", 10, "historical", "bye", 0)
+        new DruidServer("test1", "test1", 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test2", "test2", 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test3", "test3", 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test4", "test4", 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test5", "test5", 10, ServerType.HISTORICAL, "bye", 0)
     };
   }
 
@@ -398,6 +400,7 @@ public class CachingClusteredClientTest
                (ListenableFuture<T>) delegate.submit((Runnable) task);
       }
 
+      @SuppressWarnings("ParameterPackage")
       @Override
       public <T> ListenableFuture<T> submit(Callable<T> task)
       {
@@ -1781,7 +1784,7 @@ public class CachingClusteredClientTest
     timeline.add(interval2, "v", new StringPartitionChunk<>("d", null, 5, selector5));
     timeline.add(interval3, "v", new StringPartitionChunk<>(null, null, 6, selector6));
 
-    final Capture<TimeseriesQuery> capture = Capture.newInstance();
+    final Capture<QueryPlus> capture = Capture.newInstance();
     final Capture<Map<String, List>> contextCap = Capture.newInstance();
 
     QueryRunner mockRunner = EasyMock.createNiceMock(QueryRunner.class);
@@ -1801,12 +1804,9 @@ public class CachingClusteredClientTest
     descriptors.add(new SegmentDescriptor(interval3, "v", 6));
     MultipleSpecificSegmentSpec expected = new MultipleSpecificSegmentSpec(descriptors);
 
-    Sequences.toList(runner.run(
-        query,
-        context
-    ), Lists.newArrayList());
+    Sequences.toList(runner.run(QueryPlus.wrap(query), context), Lists.newArrayList());
 
-    Assert.assertEquals(expected, capture.getValue().getQuerySegmentSpec());
+    Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
   }
 
   private ServerSelector makeMockSingleDimensionSelector(
@@ -1923,7 +1923,7 @@ public class CachingClusteredClientTest
                 .andReturn(expectations.getQueryRunner())
                 .times(0, 1);
 
-        final Capture<? extends Query> capture = new Capture();
+        final Capture<? extends QueryPlus> capture = new Capture();
         final Capture<? extends Map> context = new Capture();
         QueryRunner queryable = expectations.getQueryRunner();
 
@@ -1940,7 +1940,7 @@ public class CachingClusteredClientTest
                     @Override
                     public Sequence answer() throws Throwable
                     {
-                      return toFilteredQueryableTimeseriesResults((TimeseriesQuery)capture.getValue(), segmentIds, queryIntervals, results);
+                      return toFilteredQueryableTimeseriesResults((TimeseriesQuery)capture.getValue().getQuery(), segmentIds, queryIntervals, results);
                     }
                   })
                   .times(0, 1);
@@ -1965,10 +1965,12 @@ public class CachingClusteredClientTest
                 TestHelper.assertExpectedResults(
                     expected,
                     runner.run(
-                        query.withQuerySegmentSpec(
-                            new MultipleIntervalSegmentSpec(
-                                ImmutableList.of(
-                                    actualQueryInterval
+                        QueryPlus.wrap(
+                            query.withQuerySegmentSpec(
+                                new MultipleIntervalSegmentSpec(
+                                    ImmutableList.of(
+                                        actualQueryInterval
+                                    )
                                 )
                             )
                         ),
@@ -2062,7 +2064,7 @@ public class CachingClusteredClientTest
                 .andReturn(expectations.getQueryRunner())
                 .once();
 
-        final Capture<? extends Query> capture = new Capture();
+        final Capture<? extends QueryPlus> capture = new Capture();
         final Capture<? extends Map> context = new Capture();
         queryCaptures.add(capture);
         QueryRunner queryable = expectations.getQueryRunner();
@@ -2210,7 +2212,8 @@ public class CachingClusteredClientTest
 
       // make sure all the queries were sent down as 'bySegment'
       for (Capture queryCapture : queryCaptures) {
-        Query capturedQuery = (Query) queryCapture.getValue();
+        QueryPlus capturedQueryPlus = (QueryPlus) queryCapture.getValue();
+        Query capturedQuery = capturedQueryPlus.getQuery();
         if (expectBySegment) {
           Assert.assertEquals(true, capturedQuery.getContextValue("bySegment"));
         } else {

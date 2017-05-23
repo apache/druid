@@ -44,6 +44,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -118,7 +119,7 @@ public class DistinctCountTopNQueryTest
         Lists.<Result<TopNResultValue>>newLinkedList()
     );
 
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             time,
             new TopNResultValue(

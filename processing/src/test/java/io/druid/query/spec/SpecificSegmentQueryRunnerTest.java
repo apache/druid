@@ -32,7 +32,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.query.Druids;
-import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
@@ -48,7 +48,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -68,7 +68,7 @@ public class SpecificSegmentQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, Map responseContext)
           {
             return new Sequence()
             {
@@ -151,10 +151,10 @@ public class SpecificSegmentQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, Map responseContext)
           {
             return Sequences.withEffect(
-                Sequences.simple(Arrays.asList(value)),
+                Sequences.simple(Collections.singletonList(value)),
                 new Runnable()
                 {
                   @Override

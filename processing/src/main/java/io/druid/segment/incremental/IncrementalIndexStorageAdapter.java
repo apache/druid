@@ -240,14 +240,16 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
             return new Cursor()
             {
               private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this);
-              private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
-              private Iterable<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> cursorIterable;
+              private final int maxRowIndex;
+              private Iterator<IncrementalIndex.TimeAndDims> baseIter;
+              private Iterable<IncrementalIndex.TimeAndDims> cursorIterable;
               private boolean emptyRange;
               final DateTime time;
               int numAdvanced = -1;
               boolean done;
 
               {
+                maxRowIndex = index.getLastRowIndex();
                 cursorIterable = index.getFacts().timeRangeIterable(
                     descending,
                     timeStart,
@@ -276,16 +278,19 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 while (baseIter.hasNext()) {
                   BaseQuery.checkInterrupted();
 
-                  currEntry.set(baseIter.next());
+                  IncrementalIndex.TimeAndDims entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getRowIndex())) {
+                    continue;
+                  }
+
+                  currEntry.set(entry);
 
                   if (filterMatcher.matches()) {
                     return;
                   }
                 }
 
-                if (!filterMatcher.matches()) {
-                  done = true;
-                }
+                done = true;
               }
 
               @Override
@@ -301,16 +306,19 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     return;
                   }
 
-                  currEntry.set(baseIter.next());
+                  IncrementalIndex.TimeAndDims entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getRowIndex())) {
+                    continue;
+                  }
+
+                  currEntry.set(entry);
 
                   if (filterMatcher.matches()) {
                     return;
                   }
                 }
 
-                if (!filterMatcher.matches()) {
-                  done = true;
-                }
+                done = true;
               }
 
               @Override
@@ -350,7 +358,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 boolean foundMatched = false;
                 while (baseIter.hasNext()) {
-                  currEntry.set(baseIter.next());
+                  IncrementalIndex.TimeAndDims entry = baseIter.next();
+                  if (beyondMaxRowIndex(entry.getRowIndex())) {
+                    numAdvanced++;
+                    continue;
+                  }
+                  currEntry.set(entry);
                   if (filterMatcher.matches()) {
                     foundMatched = true;
                     break;
@@ -360,6 +373,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 done = !foundMatched && (emptyRange || !baseIter.hasNext());
+              }
+
+              private boolean beyondMaxRowIndex(int rowIndex) {
+                // ignore rows whose rowIndex is beyond the maxRowIndex
+                // rows are order by timestamp, not rowIndex,
+                // so we still need to go through all rows to skip rows added after cursor created
+                return rowIndex > maxRowIndex;
               }
 
               @Override
@@ -470,6 +490,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
                     {
+                      // nothing to inspect
                     }
                   }
                   return new TimeLongColumnSelector();
@@ -621,26 +642,26 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
   public static class EntryHolder
   {
-    Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry = null;
+    IncrementalIndex.TimeAndDims currEntry = null;
 
-    public Map.Entry<IncrementalIndex.TimeAndDims, Integer> get()
+    public IncrementalIndex.TimeAndDims get()
     {
       return currEntry;
     }
 
-    public void set(Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry)
+    public void set(IncrementalIndex.TimeAndDims currEntry)
     {
       this.currEntry = currEntry;
     }
 
     public IncrementalIndex.TimeAndDims getKey()
     {
-      return currEntry.getKey();
+      return currEntry;
     }
 
-    public Integer getValue()
+    public int getValue()
     {
-      return currEntry.getValue();
+      return currEntry.getRowIndex();
     }
   }
 

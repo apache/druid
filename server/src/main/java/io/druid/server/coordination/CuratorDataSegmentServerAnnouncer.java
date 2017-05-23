@@ -22,19 +22,17 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-
+import com.google.inject.Inject;
 import io.druid.curator.announcement.Announcer;
-import io.druid.java.util.common.lifecycle.LifecycleStart;
-import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 
 /**
  */
-public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnouncer
+public class CuratorDataSegmentServerAnnouncer implements DataSegmentServerAnnouncer
 {
-  private static final Logger log = new Logger(AbstractDataSegmentAnnouncer.class);
+  private static final Logger log = new Logger(CuratorDataSegmentServerAnnouncer.class);
 
   private final DruidServerMetadata server;
   private final ZkPathsConfig config;
@@ -43,9 +41,10 @@ public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnounc
 
   private final Object lock = new Object();
 
-  private volatile boolean started = false;
+  private volatile boolean announced = false;
 
-  protected AbstractDataSegmentAnnouncer(
+  @Inject
+  public CuratorDataSegmentServerAnnouncer(
       DruidServerMetadata server,
       ZkPathsConfig config,
       Announcer announcer,
@@ -58,11 +57,11 @@ public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnounc
     this.jsonMapper = jsonMapper;
   }
 
-  @LifecycleStart
-  public void start()
+  @Override
+  public void announce()
   {
     synchronized (lock) {
-      if (started) {
+      if (announced) {
         return;
       }
 
@@ -75,22 +74,23 @@ public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnounc
         throw Throwables.propagate(e);
       }
 
-      started = true;
+      announced = true;
     }
   }
 
-  @LifecycleStop
-  public void stop()
+  @Override
+  public void unannounce()
   {
     synchronized (lock) {
-      if (!started) {
+      if (!announced) {
         return;
       }
 
-      log.info("Stopping %s with config[%s]", getClass(), config);
-      announcer.unannounce(makeAnnouncementPath());
+      final String path = makeAnnouncementPath();
+      log.info("Unannouncing self[%s] at [%s]", server, path);
+      announcer.unannounce(path);
 
-      started = false;
+      announced = false;
     }
   }
 

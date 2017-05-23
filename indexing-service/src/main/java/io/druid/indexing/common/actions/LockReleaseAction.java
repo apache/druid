@@ -45,6 +45,7 @@ public class LockReleaseAction implements TaskAction<Void>
     return interval;
   }
 
+  @Override
   public TypeReference<Void> getReturnTypeReference()
   {
     return new TypeReference<Void>() {};

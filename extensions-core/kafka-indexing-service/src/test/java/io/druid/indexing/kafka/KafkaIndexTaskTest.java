@@ -112,6 +112,7 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -304,7 +305,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -346,7 +348,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -400,7 +403,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            new DateTime("2010")
+            new DateTime("2010"),
+            false
         ),
         null,
         null
@@ -461,7 +465,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -502,7 +507,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -554,7 +560,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -605,7 +612,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -638,7 +646,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -652,7 +661,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -706,7 +716,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -720,7 +731,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -775,7 +787,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             false,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -789,7 +802,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             false,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -849,7 +863,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -906,7 +921,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -920,7 +936,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -976,7 +993,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1011,7 +1029,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1063,7 +1082,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1146,7 +1166,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             true,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1233,7 +1254,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         null
@@ -1271,7 +1293,8 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            null
+            null,
+            false
         ),
         null,
         true
@@ -1500,6 +1523,7 @@ public class KafkaIndexTaskTest
         null, // DataSegmentMover
         null, // DataSegmentArchiver
         new TestDataSegmentAnnouncer(),
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         makeTimeseriesOnlyConglomerate(),
         MoreExecutors.sameThreadExecutor(), // queryExecutorService

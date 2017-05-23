@@ -19,13 +19,20 @@
 
 package io.druid.sql.avatica;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.Pair;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -57,11 +64,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 public class DruidAvaticaHandlerTest
 {
@@ -76,7 +85,7 @@ public class DruidAvaticaHandlerTest
     @Override
     public int getMaxStatementsPerConnection()
     {
-      return 2;
+      return 4;
     }
   };
 
@@ -108,7 +117,10 @@ public class DruidAvaticaHandlerTest
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        new DruidMeta(new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig), AVATICA_CONFIG),
+        new DruidMeta(
+            new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig, new ServerConfig()),
+            AVATICA_CONFIG
+        ),
         new DruidNode("dummy", "dummy", 1),
         new AvaticaMonitor()
     );
@@ -353,20 +365,58 @@ public class DruidAvaticaHandlerTest
     );
   }
 
+  @Test(timeout = 30000)
+  public void testConcurrentQueries() throws Exception
+  {
+    final List<ListenableFuture<Integer>> futures = new ArrayList<>();
+    final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+        Executors.newFixedThreadPool(AVATICA_CONFIG.getMaxStatementsPerConnection())
+    );
+    for (int i = 0; i < 2000; i++) {
+      final String query = String.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
+      futures.add(
+          exec.submit(() -> {
+            try (
+                final Statement statement = client.createStatement();
+                final ResultSet resultSet = statement.executeQuery(query)
+            ) {
+              final List<Map<String, Object>> rows = getRows(resultSet);
+              return ((Number) Iterables.getOnlyElement(rows).get("ci")).intValue();
+            }
+            catch (SQLException e) {
+              throw Throwables.propagate(e);
+            }
+          })
+      );
+    }
+
+    final List<Integer> integers = Futures.allAsList(futures).get();
+    for (int i = 0; i < 2000; i++) {
+      Assert.assertEquals(i + 6, (int) integers.get(i));
+    }
+  }
+
   @Test
   public void testTooManyStatements() throws Exception
   {
     final Statement statement1 = client.createStatement();
     final Statement statement2 = client.createStatement();
+    final Statement statement3 = client.createStatement();
+    final Statement statement4 = client.createStatement();
 
     expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many open statements, limit is[2]");
-    final Statement statement3 = client.createStatement();
+    expectedException.expectMessage("Too many open statements, limit is[4]");
+    final Statement statement5 = client.createStatement();
   }
 
   @Test
   public void testNotTooManyStatementsWhenYouCloseThem() throws Exception
   {
+    client.createStatement().close();
+    client.createStatement().close();
+    client.createStatement().close();
+    client.createStatement().close();
+    client.createStatement().close();
     client.createStatement().close();
     client.createStatement().close();
     client.createStatement().close();

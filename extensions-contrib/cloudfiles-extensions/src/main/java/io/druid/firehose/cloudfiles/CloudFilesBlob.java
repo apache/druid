@@ -62,4 +62,14 @@ public class CloudFilesBlob
   {
     return region;
   }
+
+  @Override
+  public String toString()
+  {
+    return "CloudFilesBlob{"
+        + "container=" + container
+        + ",path=" + path
+        + ",region=" + region
+        + "}";
+  }
 }

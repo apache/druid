@@ -141,8 +141,11 @@ on-heap by default, but it can optionally store aggregated values off-heap.
 Query API and results are compatible between the two engines; however, there are some differences from a cluster
 configuration perspective:
 
-- groupBy v1 merges results in heap, whereas groupBy v2 merges results off-heap. As a result, optimal configuration for
-your Druid nodes may involve less heap (-Xmx, -Xms) and more direct memory (-XX:MaxDirectMemorySize).
+- groupBy v1 controls resource usage using a row-based limit (maxResults) whereas groupBy v2 uses bytes-based limits.
+In addition, groupBy v1 merges results on-heap, whereas groupBy v2 merges results off-heap. These factors mean that
+memory tuning and resource limits behave differently between v1 and v2. In particular, due to this, some queries
+that can complete successfully in one engine may exceed resource limits and fail with the other engine. See the
+"Memory tuning and resource limits" section for more details.
 - groupBy v1 imposes no limit on the number of concurrently running queries, whereas groupBy v2 controls memory usage
 by using a finite-sized merge buffer pool. By default, the number of merge buffers is 1/4 the number of processing
 threads. You can adjust this as necessary to balance concurrency and memory usage.
@@ -150,6 +153,37 @@ threads. You can adjust this as necessary to balance concurrency and memory usag
 historical nodes.
 - groupBy v1 supports using [chunkPeriod](query-context.html) to parallelize merging on the broker, whereas groupBy v2
 ignores chunkPeriod.
+
+#### Memory tuning and resource limits
+
+When using groupBy v2, three parameters control resource usage and limits:
+
+- druid.processing.buffer.sizeBytes: size of the off-heap hash table used for aggregation, per query, in bytes. At
+most druid.processing.numMergeBuffers of these will be created at once, which also serves as an upper limit on the
+number of concurrently running groupBy queries.
+- druid.query.groupBy.maxMergingDictionarySize: size of the on-heap dictionary used when grouping on strings, per query,
+in bytes. Note that this is based on a rough estimate of the dictionary size, not the actual size.
+- druid.query.groupBy.maxOnDiskStorage: amount of space on disk used for aggregation, per query, in bytes. By default,
+this is 0, which means aggregation will not use disk.
+
+If maxOnDiskStorage is 0 (the default) then a query that exceeds either the on-heap dictionary limit, or the off-heap
+aggregation table limit, will fail with a "Resource limit exceeded" error describing the limit that was exceeded.
+
+If maxOnDiskStorage is greater than 0, queries that exceed the in-memory limits will start using disk for aggregation.
+In this case, when either the on-heap dictionary or off-heap hash table fills up, partially aggregated records will be
+sorted and flushed to disk. Then, both in-memory structures will be cleared out for further aggregation. Queries that
+then go on to exceed maxOnDiskStorage will fail with a "Resource limit exceeded" error indicating that they ran out of
+disk space.
+
+With groupBy v2, cluster operators should make sure that the off-heap hash tables and on-heap merging dictionaries
+will not exceed available memory for the maximum possible concurrent query load (given by
+druid.processing.numMergeBuffers).
+
+When using groupBy v1, all aggregation is done on-heap, and resource limits are done through the parameter
+druid.query.groupBy.maxResults. This is a cap on the maximum number of results in a result set. Queries that exceed
+this limit will fail with a "Resource limit exceeded" error indicating they exceeded their row limit. Cluster
+operators should make sure that the on-heap aggregations will not exceed available JVM heap space for the expected
+concurrent query load.
 
 #### Alternatives
 

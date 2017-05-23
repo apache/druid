@@ -30,6 +30,17 @@ import java.nio.ByteBuffer;
 
 public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
 {
+  private static final AggregateResult DICTIONARY_FULL = AggregateResult.failure(
+      "Not enough dictionary space to execute this query. Try increasing "
+      + "druid.query.groupBy.maxMergingDictionarySize or enable disk spilling by setting "
+      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
+  );
+  private static final AggregateResult HASHTABLE_FULL = AggregateResult.failure(
+      "Not enough aggregation table space to execute this query. Try increasing "
+      + "druid.processing.buffer.sizeBytes or enable disk spilling by setting "
+      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
+  );
+
   protected static final int HASH_SIZE = Ints.BYTES;
   protected static final Logger log = new Logger(AbstractBufferGrouper.class);
 
@@ -114,11 +125,13 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public boolean aggregate(KeyType key, int keyHash)
+  public AggregateResult aggregate(KeyType key, int keyHash)
   {
     final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
     if (keyBuffer == null) {
-      return false;
+      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
+      // be correct.
+      return DICTIONARY_FULL;
     }
 
     if (keyBuffer.remaining() != keySize) {
@@ -132,7 +145,9 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
     // find and try to expand if table is full and find again
     int bucket = hashTable.findBucketWithAutoGrowth(keyBuffer, keyHash);
     if (bucket < 0) {
-      return false;
+      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
+      // be correct.
+      return HASHTABLE_FULL;
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
@@ -150,7 +165,7 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
     }
 
     if (canSkipAggregate(bucketWasUsed, bucketStartOffset)) {
-      return true;
+      return AggregateResult.ok();
     }
 
     // Aggregate the current row.
@@ -160,11 +175,11 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
 
     afterAggregateHook(bucketStartOffset);
 
-    return true;
+    return AggregateResult.ok();
   }
 
   @Override
-  public boolean aggregate(final KeyType key)
+  public AggregateResult aggregate(final KeyType key)
   {
     return aggregate(key, Groupers.hash(key));
   }

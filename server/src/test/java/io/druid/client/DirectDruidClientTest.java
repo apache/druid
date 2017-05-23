@@ -42,6 +42,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -51,6 +52,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -60,9 +62,20 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class DirectDruidClientTest
 {
+  private final Map<String, Object> defaultContext;
+
+  public DirectDruidClientTest()
+  {
+    defaultContext = new HashMap<>();
+    defaultContext.put(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE);
+    defaultContext.put(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+  }
+
   @Test
   public void testRun() throws Exception
   {
@@ -74,7 +87,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(futureResult)
@@ -84,7 +98,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(futureException)
@@ -93,7 +108,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(SettableFuture.create())
@@ -134,34 +150,34 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client2
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer2, serverSelector.getSegment());
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-    HashMap<String, List> context = Maps.newHashMap();
-    Sequence s1 = client1.run(query, context);
+
+    Sequence s1 = client1.run(query, defaultContext);
     Assert.assertTrue(capturedRequest.hasCaptured());
     Assert.assertEquals(url, capturedRequest.getValue().getUrl());
     Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout
-    Sequence s2 = client1.run(query, context);
+    Sequence s2 = client1.run(query, defaultContext);
     Assert.assertEquals(2, client1.getNumOpenConnections());
     futureException.setException(new ReadTimeoutException());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // subsequent connections should work
-    Sequence s3 = client1.run(query, context);
-    Sequence s4 = client1.run(query, context);
-    Sequence s5 = client1.run(query, context);
+    Sequence s3 = client1.run(query, defaultContext);
+    Sequence s4 = client1.run(query, defaultContext);
+    Sequence s5 = client1.run(query, defaultContext);
 
     Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
@@ -172,8 +188,8 @@ public class DirectDruidClientTest
     Assert.assertEquals(new DateTime("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
     Assert.assertEquals(3, client1.getNumOpenConnections());
 
-    client2.run(query, context);
-    client2.run(query, context);
+    client2.run(query, defaultContext);
+    client2.run(query, defaultContext);
 
     Assert.assertTrue(client2.getNumOpenConnections() == 2);
 
@@ -194,7 +210,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(cancelledFuture)
@@ -203,7 +220,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(cancellationFuture)
@@ -236,15 +254,14 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-    HashMap<String, List> context = Maps.newHashMap();
     cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
-    Sequence results = client1.run(query, context);
+    Sequence results = client1.run(query, defaultContext);
     Assert.assertEquals(HttpMethod.DELETE, capturedRequest.getValue().getMethod());
     Assert.assertEquals(0, client1.getNumOpenConnections());
 
@@ -271,7 +288,8 @@ public class DirectDruidClientTest
     EasyMock.expect(
         httpClient.go(
             EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject()
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
         )
     )
             .andReturn(interruptionFuture)
@@ -305,16 +323,15 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer = new QueryableDruidServer(
-        new DruidServer("test1", hostName, 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", hostName, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
 
     serverSelector.addServerAndUpdateSegment(queryableDruidServer, dataSegment);
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-    HashMap<String, List> context = Maps.newHashMap();
     interruptionFuture.set(new ByteArrayInputStream("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}".getBytes()));
-    Sequence results = client1.run(query, context);
+    Sequence results = client1.run(query, defaultContext);
 
     QueryInterruptedException actualException = null;
     try {

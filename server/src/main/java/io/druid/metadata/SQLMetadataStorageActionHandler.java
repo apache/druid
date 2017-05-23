@@ -87,6 +87,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     this.lockTable = lockTable;
   }
 
+  @Override
   public void insert(
       final String id,
       final DateTime timestamp,
@@ -144,6 +145,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     }
   }
 
+  @Override
   public boolean setStatus(final String entryId, final boolean active, final StatusType status)
   {
     return connector.retryWithHandle(
@@ -167,6 +169,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     );
   }
 
+  @Override
   public Optional<EntryType> getEntry(final String entryId)
   {
     return connector.retryWithHandle(
@@ -191,6 +194,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
 
   }
 
+  @Override
   public Optional<StatusType> getStatus(final String entryId)
   {
     return connector.retryWithHandle(
@@ -214,6 +218,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     );
   }
 
+  @Override
   public List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus()
   {
     return connector.retryWithHandle(
@@ -261,6 +266,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
 
   }
 
+  @Override
   public List<StatusType> getInactiveStatusesSince(final DateTime timestamp)
   {
     return connector.retryWithHandle(
@@ -302,6 +308,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     );
   }
 
+  @Override
   public boolean addLock(final String entryId, final LockType lock)
   {
     return connector.retryWithHandle(
@@ -324,6 +331,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     );
   }
 
+  @Override
   public void removeLock(final long lockId)
   {
     connector.retryWithHandle(
@@ -342,6 +350,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     );
   }
 
+  @Override
   public boolean addLog(final String entryId, final LogType log)
   {
     return connector.retryWithHandle(
@@ -364,6 +373,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     );
   }
 
+  @Override
   public List<LogType> getLogs(final String entryId)
   {
     return connector.retryWithHandle(
@@ -413,6 +423,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     );
   }
 
+  @Override
   public Map<Long, LockType> getLocks(final String entryId)
   {
     return connector.retryWithHandle(

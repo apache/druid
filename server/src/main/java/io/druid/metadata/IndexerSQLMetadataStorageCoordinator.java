@@ -275,6 +275,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return set of segments actually added
    */
+  @Override
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
     final SegmentPublishResult result = announceHistoricalSegments(segments, null, null);
@@ -315,7 +316,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = Sets.newHashSet();
     for (TimelineObjectHolder<String, DataSegment> holder : VersionedIntervalTimeline.forSegments(segments)
-                                                                                     .lookup(JodaUtils.ETERNITY)) {
+                                                                                     .lookupWithIncompletePartitions(JodaUtils.ETERNITY)) {
       for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
         usedSegments.add(chunk.getObject());
       }
@@ -657,6 +658,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   /**
    * Read dataSource metadata. Returns null if there is no metadata.
    */
+  @Override
   public DataSourceMetadata getDataSourceMetadata(final String dataSource)
   {
     final byte[] bytes = connector.lookup(
@@ -798,6 +800,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return retVal;
   }
 
+  @Override
   public boolean deleteDataSourceMetadata(final String dataSource)
   {
     return connector.retryWithHandle(
@@ -853,6 +856,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  @Override
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
   {
     connector.getDBI().inTransaction(
@@ -871,6 +875,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  @Override
   public void deleteSegments(final Set<DataSegment> segments) throws IOException
   {
     connector.getDBI().inTransaction(

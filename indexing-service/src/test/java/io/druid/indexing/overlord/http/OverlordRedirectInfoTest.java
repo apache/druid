@@ -40,18 +40,33 @@ public class OverlordRedirectInfoTest
   }
 
   @Test
-  public void testDoLocal()
+  public void testDoLocalWhenLeading()
   {
-    EasyMock.expect(taskMaster.isLeading()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
     EasyMock.replay(taskMaster);
     Assert.assertTrue(redirectInfo.doLocal(null));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
+    EasyMock.verify(taskMaster);
+  }
+
+  @Test
+  public void testDoLocalWhenNotLeading()
+  {
+    EasyMock.expect(taskMaster.isLeader()).andReturn(false).anyTimes();
+    EasyMock.replay(taskMaster);
+    Assert.assertFalse(redirectInfo.doLocal(null));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    Assert.assertFalse(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
     EasyMock.verify(taskMaster);
   }
 
   @Test
   public void testGetRedirectURLNull()
   {
-    EasyMock.expect(taskMaster.getLeader()).andReturn(null).anyTimes();
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(null).anyTimes();
     EasyMock.replay(taskMaster);
     URL url = redirectInfo.getRedirectURL("query", "/request");
     Assert.assertNull(url);
@@ -61,7 +76,7 @@ public class OverlordRedirectInfoTest
   @Test
   public void testGetRedirectURLEmpty()
   {
-    EasyMock.expect(taskMaster.getLeader()).andReturn("").anyTimes();
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn("").anyTimes();
     EasyMock.replay(taskMaster);
     URL url = redirectInfo.getRedirectURL("query", "/request");
     Assert.assertNull(url);
@@ -74,7 +89,7 @@ public class OverlordRedirectInfoTest
     String host = "localhost";
     String query = "foo=bar&x=y";
     String request = "/request";
-    EasyMock.expect(taskMaster.getLeader()).andReturn(host).anyTimes();
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
     EasyMock.replay(taskMaster);
     URL url = redirectInfo.getRedirectURL(query, request);
     Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());

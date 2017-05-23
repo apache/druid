@@ -23,6 +23,7 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -59,6 +60,12 @@ public class NotFilter implements Filter
       public boolean matches()
       {
         return !baseMatcher.matches();
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("baseMatcher", baseMatcher);
       }
     };
   }

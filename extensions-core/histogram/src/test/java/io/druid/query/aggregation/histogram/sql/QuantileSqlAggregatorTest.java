@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryContexts;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -42,6 +43,7 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlExtractionOperator;
 import io.druid.sql.calcite.filtration.Filtration;
@@ -134,7 +136,7 @@ public class QuantileSqlAggregatorTest
         ImmutableSet.<SqlAggregator>of(new QuantileSqlAggregator()),
         ImmutableSet.<SqlExtractionOperator>of()
     );
-    plannerFactory = new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig);
+    plannerFactory = new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig, new ServerConfig());
   }
 
   @After
@@ -200,7 +202,11 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f),
                     new QuantilePostAggregator("a7", "a7:agg", 0.50f)
                 ))
-                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
+                .context(ImmutableMap.<String, Object>of(
+                    "skipEmptyBuckets", true,
+                    QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+                    QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+                ))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
@@ -260,7 +266,11 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a5", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 ))
-                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
+                .context(ImmutableMap.<String, Object>of(
+                    "skipEmptyBuckets", true,
+                    QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+                    QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+                ))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );

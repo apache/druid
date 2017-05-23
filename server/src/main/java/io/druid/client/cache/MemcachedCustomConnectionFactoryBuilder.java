@@ -113,6 +113,7 @@ class MemcachedCustomConnectionFactoryBuilder extends ConnectionFactoryBuilder
         return hashAlg == null ? super.getHashAlg() : hashAlg;
       }
 
+      @Override
       public Collection<ConnectionObserver> getInitialObservers() {
         return initialObservers;
       }

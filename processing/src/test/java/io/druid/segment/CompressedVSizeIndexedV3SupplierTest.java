@@ -36,6 +36,7 @@ import java.util.Arrays;
 
 public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexedSupplierTest
 {
+  @Override
   @Before
   public void setUpSimple(){
     vals = Arrays.asList(
@@ -61,6 +62,7 @@ public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexed
     );
   }
 
+  @Override
   @After
   public void teardown(){
     indexedSupplier = null;

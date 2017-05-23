@@ -501,9 +501,9 @@ public class QueryRunnerTestHelper
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+      public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
       {
-        return qr.run(query, responseContext);
+        return qr.run(queryPlus, responseContext);
       }
 
       @Override
@@ -526,8 +526,9 @@ public class QueryRunnerTestHelper
             new QueryRunner<T>()
             {
               @Override
-              public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+              public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
               {
+                Query<T> query = queryPlus.getQuery();
                 List<TimelineObjectHolder> segments = Lists.newArrayList();
                 for (Interval interval : query.getIntervals()) {
                   segments.addAll(timeline.lookup(interval));
@@ -535,7 +536,7 @@ public class QueryRunnerTestHelper
                 List<Sequence<T>> sequences = Lists.newArrayList();
                 for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
                   Segment segment = holder.getObject().getChunk(0).getObject();
-                  Query running = query.withQuerySegmentSpec(
+                  QueryPlus queryPlusRunning = queryPlus.withQuerySegmentSpec(
                       new SpecificSegmentSpec(
                           new SegmentDescriptor(
                               holder.getInterval(),
@@ -544,7 +545,7 @@ public class QueryRunnerTestHelper
                           )
                       )
                   );
-                  sequences.add(factory.createRunner(segment).run(running, responseContext));
+                  sequences.add(factory.createRunner(segment).run(queryPlusRunning, responseContext));
                 }
                 return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
               }
@@ -568,9 +569,9 @@ public class QueryRunnerTestHelper
         return new QueryRunner<T>()
         {
           @Override
-          public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
           {
-            return delegate.run(query, responseContext);
+            return delegate.run(queryPlus, responseContext);
           }
         };
       }

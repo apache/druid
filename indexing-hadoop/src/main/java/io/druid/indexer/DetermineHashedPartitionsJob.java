@@ -75,6 +75,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     this.config = config;
   }
 
+  @Override
   public boolean run()
   {
     try {
@@ -82,7 +83,7 @@ public class DetermineHashedPartitionsJob implements Jobby
        * Group by (timestamp, dimensions) so we can correctly count dimension values as they would appear
        * in the final segment.
        */
-      long startTime = System.currentTimeMillis();
+      final long startTime = System.currentTimeMillis();
       final Job groupByJob = Job.getInstance(
           new Configuration(),
           String.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())

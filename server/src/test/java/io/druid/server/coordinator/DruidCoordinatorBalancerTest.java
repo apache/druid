@@ -179,6 +179,7 @@ public class DruidCoordinatorBalancerTest
         DruidCoordinatorRuntimeParams.newBuilder()
                                 .withDruidCluster(
                                     new DruidCluster(
+                                        null,
                                         ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
                                             "normal",
                                             MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
@@ -260,6 +261,7 @@ public class DruidCoordinatorBalancerTest
         DruidCoordinatorRuntimeParams.newBuilder()
                                 .withDruidCluster(
                                     new DruidCluster(
+                                        null,
                                         ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
                                             "normal",
                                             MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
@@ -354,6 +356,7 @@ public class DruidCoordinatorBalancerTest
         DruidCoordinatorRuntimeParams.newBuilder()
                                 .withDruidCluster(
                                     new DruidCluster(
+                                        null,
                                         ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
                                             "normal",
                                             MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)

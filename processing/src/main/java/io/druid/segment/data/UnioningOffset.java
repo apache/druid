@@ -23,7 +23,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 /**
  */
-public class UnioningOffset implements Offset
+public class UnioningOffset extends Offset
 {
   private final Offset[] offsets = new Offset[2];
   private final int[] offsetVals = new int[2];

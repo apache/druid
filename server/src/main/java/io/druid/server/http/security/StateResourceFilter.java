@@ -82,6 +82,7 @@ public class StateResourceFilter extends AbstractResourceFilter
     return request;
   }
 
+  @Override
   public boolean isApplicable(String requestPath)
   {
     return requestPath.startsWith("druid/broker/v1") ||

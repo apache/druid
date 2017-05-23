@@ -53,6 +53,9 @@ import java.util.List;
 public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
   private final Grouper<KeyType> grouper;
+  private static final AggregateResult DISK_FULL = AggregateResult.failure(
+      "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
+  );
   private final KeySerde<KeyType> keySerde;
   private final LimitedTemporaryStorage temporaryStorage;
   private final ObjectMapper spillMapper;
@@ -127,29 +130,31 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public boolean aggregate(KeyType key, int keyHash)
+  public AggregateResult aggregate(KeyType key, int keyHash)
   {
-    if (grouper.aggregate(key, keyHash)) {
-      return true;
-    } else if (spillingAllowed) {
+    final AggregateResult result = grouper.aggregate(key, keyHash);
+
+    if (result.isOk() || temporaryStorage.maxSize() <= 0 || !spillingAllowed) {
+      return result;
+    } else {
       // Warning: this can potentially block up a processing thread for a while.
       try {
         spill();
       }
       catch (TemporaryStorageFullException e) {
-        return false;
+        return DISK_FULL;
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
       }
+
+      // Try again.
       return grouper.aggregate(key, keyHash);
-    } else {
-      return false;
     }
   }
 
   @Override
-  public boolean aggregate(KeyType key)
+  public AggregateResult aggregate(KeyType key)
   {
     return aggregate(key, Groupers.hash(key));
   }

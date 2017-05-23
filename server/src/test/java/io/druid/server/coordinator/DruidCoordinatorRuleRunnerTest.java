@@ -33,6 +33,7 @@ import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.client.DruidServer;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.segment.IndexIO;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.IntervalDropRule;
@@ -130,6 +131,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -139,7 +141,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -155,7 +157,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverNorm",
                             "hostNorm",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "normal",
                             0
                         ).toImmutableDruidServer(),
@@ -171,7 +173,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverCold",
                             "hostCold",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "cold",
                             0
                         ).toImmutableDruidServer(),
@@ -237,6 +239,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -246,7 +249,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -257,7 +260,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverHot2",
                             "hostHot2",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -273,7 +276,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverCold",
                             "hostCold",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "cold",
                             0
                         ).toImmutableDruidServer(),
@@ -340,7 +343,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm",
         "hostNorm",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -349,6 +352,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -358,7 +362,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -430,6 +434,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -439,7 +444,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverNorm",
                             "hostNorm",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "normal",
                             0
                         ).toImmutableDruidServer(),
@@ -489,6 +494,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -498,7 +504,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverNorm",
                             "hostNorm",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "normal",
                             0
                         ).toImmutableDruidServer(),
@@ -553,7 +559,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm",
         "hostNorm",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -562,6 +568,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -623,7 +630,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm",
         "hostNorm",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -633,7 +640,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm2",
         "hostNorm2",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -642,6 +649,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -710,7 +718,7 @@ public class DruidCoordinatorRuleRunnerTest
         "server1",
         "host1",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "hot",
         0
     );
@@ -719,7 +727,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm2",
         "hostNorm2",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -728,6 +736,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -799,7 +808,7 @@ public class DruidCoordinatorRuleRunnerTest
         "server1",
         "host1",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "hot",
         0
     );
@@ -807,7 +816,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm2",
         "hostNorm2",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -815,6 +824,7 @@ public class DruidCoordinatorRuleRunnerTest
       server2.addDataSegment(segment.getIdentifier(), segment);
     }
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -879,7 +889,7 @@ public class DruidCoordinatorRuleRunnerTest
         "server1",
         "host1",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -888,7 +898,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm2",
         "hostNorm2",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -897,7 +907,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm3",
         "hostNorm3",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -916,6 +926,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(anotherMockPeon);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -988,6 +999,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -997,7 +1009,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -1008,7 +1020,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverHot2",
                             "hostHot2",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -1112,6 +1124,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -1121,7 +1134,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -1137,7 +1150,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverNorm",
                             "hostNorm",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             DruidServer.DEFAULT_TIER,
                             0
                         ).toImmutableDruidServer(),
@@ -1211,7 +1224,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm1",
         "hostNorm1",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -1222,7 +1235,7 @@ public class DruidCoordinatorRuleRunnerTest
         "serverNorm2",
         "hostNorm2",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "normal",
         0
     );
@@ -1231,6 +1244,7 @@ public class DruidCoordinatorRuleRunnerTest
     }
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "normal",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -1317,6 +1331,7 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             DruidServer.DEFAULT_TIER,
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
@@ -1326,7 +1341,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             DruidServer.DEFAULT_TIER,
                             0
                         ).toImmutableDruidServer(),

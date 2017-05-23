@@ -57,6 +57,7 @@ import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.DruidMetrics;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -89,13 +90,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -284,6 +285,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
         final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
+      toolbox.getDataSegmentServerAnnouncer().announce();
+
       appenderator = appenderator0;
 
       final String topic = ioConfig.getStartPartitions().getTopic();
@@ -403,12 +406,21 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
             if (record.offset() < endOffsets.get(record.partition())) {
               if (record.offset() != nextOffsets.get(record.partition())) {
-                throw new ISE(
-                    "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
-                    record.offset(),
-                    nextOffsets.get(record.partition()),
-                    record.partition()
-                );
+                if (ioConfig.isSkipOffsetGaps()) {
+                  log.warn(
+                      "Skipped to offset[%,d] after offset[%,d] in partition[%d].",
+                      record.offset(),
+                      nextOffsets.get(record.partition()),
+                      record.partition()
+                  );
+                } else {
+                  throw new ISE(
+                      "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
+                      record.offset(),
+                      nextOffsets.get(record.partition()),
+                      record.partition()
+                  );
+                }
               }
 
               try {
@@ -556,6 +568,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
     }
 
+    toolbox.getDataSegmentServerAnnouncer().unannounce();
+    
     return success();
   }
 
@@ -625,9 +639,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
-        return query.run(appenderator, responseContext);
+        return queryPlus.run(appenderator, responseContext);
       }
     };
   }
@@ -823,7 +837,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                              ioConfig.getStartPartitions().getPartitionOffsetMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir())
                     .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
         metrics,
         toolbox.getSegmentPusher(),
@@ -1008,7 +1022,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         final TopicPartition topicPartition = outOfRangePartition.getKey();
         final long nextOffset = outOfRangePartition.getValue();
         // seek to the beginning to get the least available offset
-        consumer.seekToBeginning(topicPartition);
+        consumer.seekToBeginning(Collections.singletonList(topicPartition));
         final long leastAvailableOffset = consumer.position(topicPartition);
         // reset the seek
         consumer.seek(topicPartition, nextOffset);
@@ -1062,10 +1076,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
          .emit();
       // wait for being killed by supervisor
       try {
-        Thread.sleep(Long.MAX_VALUE);
+        pause(-1);
       }
       catch (InterruptedException e) {
-        throw new RuntimeException("Got interrupted while waiting to be killed");
+        throw new RuntimeException("Got interrupted while pausing task");
       }
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();

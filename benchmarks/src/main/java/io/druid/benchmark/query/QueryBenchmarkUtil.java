@@ -25,6 +25,7 @@ import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -58,9 +59,9 @@ public class QueryBenchmarkUtil
                                          QueryToolChest<T, ? extends Query<T>> toolChest) {
         return new QueryRunner<T>() {
           @Override
-          public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
           {
-            return delegate.run(query, responseContext);
+            return delegate.run(queryPlus, responseContext);
           }
         };
       }

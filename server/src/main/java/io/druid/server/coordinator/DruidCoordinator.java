@@ -68,6 +68,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
@@ -116,7 +117,7 @@ public class DruidCoordinator
   private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
   private final MetadataSegmentManager metadataSegmentManager;
-  private final ServerInventoryView<Object> serverInventoryView;
+  private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
   private final CuratorFramework curator;
   private final ServiceEmitter emitter;
@@ -133,6 +134,7 @@ public class DruidCoordinator
   private volatile boolean leader = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
   private final BalancerStrategyFactory factory;
+  private final LookupCoordinatorManager lookupCoordinatorManager;
 
   @Inject
   public DruidCoordinator(
@@ -150,7 +152,8 @@ public class DruidCoordinator
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
       @CoordinatorIndexingServiceHelper Set<DruidCoordinatorHelper> indexingServiceHelpers,
-      BalancerStrategyFactory factory
+      BalancerStrategyFactory factory,
+      LookupCoordinatorManager lookupCoordinatorManager
   )
   {
     this(
@@ -169,7 +172,8 @@ public class DruidCoordinator
         self,
         Maps.<String, LoadQueuePeon>newConcurrentMap(),
         indexingServiceHelpers,
-        factory
+        factory,
+        lookupCoordinatorManager
     );
   }
 
@@ -189,7 +193,8 @@ public class DruidCoordinator
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
       Set<DruidCoordinatorHelper> indexingServiceHelpers,
-      BalancerStrategyFactory factory
+      BalancerStrategyFactory factory,
+      LookupCoordinatorManager lookupCoordinatorManager
   )
   {
     this.config = config;
@@ -212,6 +217,7 @@ public class DruidCoordinator
     this.leaderLatch = new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
     this.factory = factory;
+    this.lookupCoordinatorManager = lookupCoordinatorManager;
   }
 
   public boolean isLeader()
@@ -356,9 +362,9 @@ public class DruidCoordinator
   }
 
   public void moveSegment(
-      ImmutableDruidServer fromServer,
-      ImmutableDruidServer toServer,
-      String segmentName,
+      final ImmutableDruidServer fromServer,
+      final ImmutableDruidServer toServer,
+      final String segmentName,
       final LoadPeonCallback callback
   )
   {
@@ -399,10 +405,6 @@ public class DruidCoordinator
               toServer.getName()
           ), segmentName
       );
-      final String toServedSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(serverInventoryView.getInventoryManagerConfig().getInventoryPath(), toServer.getName()),
-          segmentName
-      );
 
       loadPeon.loadSegment(
           segment,
@@ -412,7 +414,7 @@ public class DruidCoordinator
             public void execute()
             {
               try {
-                if (curator.checkExists().forPath(toServedSegPath) != null &&
+                if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
                     curator.checkExists().forPath(toLoadQueueSegPath) == null &&
                     !dropPeon.getSegmentsToDrop().contains(segment)) {
                   dropPeon.dropSegment(segment, callback);
@@ -599,6 +601,8 @@ public class DruidCoordinator
               }
           );
         }
+
+        lookupCoordinatorManager.start();
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to become leader")
@@ -636,6 +640,8 @@ public class DruidCoordinator
         serviceAnnouncer.unannounce(self);
         metadataRuleManager.stop();
         metadataSegmentManager.stop();
+        lookupCoordinatorManager.stop();
+
         leader = false;
       }
       catch (Exception e) {
@@ -745,7 +751,7 @@ public class DruidCoordinator
                                 DruidServer input
                             )
                             {
-                              return input.isAssignable();
+                              return input.segmentReplicatable();
                             }
                           }
                       ).transform(

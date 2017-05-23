@@ -79,6 +79,13 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
         // null should match empty rows in multi-value columns
         return nullRow && value == null;
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // PredicateFilteredDimensionSelector.this inspects selector and predicate as well.
+        inspector.visit("selector", PredicateFilteredDimensionSelector.this);
+      }
     };
   }
 
@@ -105,6 +112,14 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
         }
         // null should match empty rows in multi-value columns
         return nullRow && matchNull;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // PredicateFilteredDimensionSelector.this inspects selector and predicate as well.
+        inspector.visit("selector", PredicateFilteredDimensionSelector.this);
+        inspector.visit("matcherPredicate", matcherPredicate);
       }
     };
   }

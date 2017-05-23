@@ -86,36 +86,37 @@ public class InputRowSerde
         String k = aggFactory.getName();
         writeString(k, out);
 
-        Aggregator agg = aggFactory.factorize(
+        try (Aggregator agg = aggFactory.factorize(
             IncrementalIndex.makeColumnSelectorFactory(
                 VirtualColumns.EMPTY,
                 aggFactory,
                 supplier,
                 true
             )
-        );
-        try {
-          agg.aggregate();
-        }
-        catch (ParseException e) {
-          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          if (reportParseExceptions) {
-            throw new ParseException(e, "Encountered parse error for aggregator[%s]", k);
+        )) {
+          try {
+            agg.aggregate();
           }
-          log.debug(e, "Encountered parse error, skipping aggregator[%s].", k);
-        }
+          catch (ParseException e) {
+            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+            if (reportParseExceptions) {
+              throw new ParseException(e, "Encountered parse error for aggregator[%s]", k);
+            }
+            log.debug(e, "Encountered parse error, skipping aggregator[%s].", k);
+          }
 
-        String t = aggFactory.getTypeName();
+          String t = aggFactory.getTypeName();
 
-        if (t.equals("float")) {
-          out.writeFloat(agg.getFloat());
-        } else if (t.equals("long")) {
-          WritableUtils.writeVLong(out, agg.getLong());
-        } else {
-          //its a complex metric
-          Object val = agg.get();
-          ComplexMetricSerde serde = getComplexMetricSerde(t);
-          writeBytes(serde.toBytes(val), out);
+          if (t.equals("float")) {
+            out.writeFloat(agg.getFloat());
+          } else if (t.equals("long")) {
+            WritableUtils.writeVLong(out, agg.getLong());
+          } else {
+            //its a complex metric
+            Object val = agg.get();
+            ComplexMetricSerde serde = getComplexMetricSerde(t);
+            writeBytes(serde.toBytes(val), out);
+          }
         }
       }
 

@@ -54,6 +54,7 @@ public class DruidSemiJoinRule extends RelOptRule
   private static final Predicate<Join> IS_LEFT_OR_INNER =
       new Predicate<Join>()
       {
+        @Override
         public boolean apply(Join join)
         {
           final JoinRelType joinType = join.getJoinType();
@@ -64,6 +65,7 @@ public class DruidSemiJoinRule extends RelOptRule
   private static final Predicate<DruidRel> IS_GROUP_BY =
       new Predicate<DruidRel>()
       {
+        @Override
         public boolean apply(DruidRel druidRel)
         {
           return druidRel.getQueryBuilder().getGrouping() != null;

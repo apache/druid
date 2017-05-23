@@ -44,5 +44,6 @@ public final class ZeroLongColumnSelector implements LongColumnSelector
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

@@ -66,26 +66,26 @@ public class DataSchema
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null. Please provide a dataSource.");
     this.parser = parser;
 
-    if (aggregators == null || aggregators.length == 0) {
-      log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
-    } else {
-      //validate for no duplication
-      Set<String> names = new HashSet<>();
-      for (AggregatorFactory factory : aggregators) {
-        if (!names.add(factory.getName())) {
-          throw new IAE("duplicate aggregators found with name [%s].", factory.getName());
-        }
-      }
-    }
-
-    this.aggregators = aggregators;
-
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
       this.granularitySpec = new UniformGranularitySpec(null, null, null);
     } else {
       this.granularitySpec = granularitySpec;
     }
+
+    if (aggregators != null && aggregators.length != 0) {
+      // validate for no duplication
+      Set<String> names = new HashSet<>();
+      for (AggregatorFactory factory : aggregators) {
+        if (!names.add(factory.getName())) {
+          throw new IAE("duplicate aggregators found with name [%s].", factory.getName());
+        }
+      }
+    } else if (this.granularitySpec.isRollup()) {
+      log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
+    }
+
+    this.aggregators = aggregators;
   }
 
   @JsonProperty

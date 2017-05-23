@@ -30,7 +30,6 @@ import com.google.inject.Inject;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
@@ -46,8 +45,9 @@ import io.druid.query.DruidProcessingConfig;
 import io.druid.query.InsufficientResourcesException;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
@@ -61,6 +61,7 @@ import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import io.druid.query.groupby.orderby.NoopLimitSpec;
 import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
@@ -140,10 +141,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();
       } else {
-        final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
-        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders = mergeBufferPool.takeBatch(
-            requiredMergeBufferNum, timeout.longValue()
-        );
+        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
+        if (QueryContexts.hasTimeout(query)) {
+          mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
+        } else {
+          mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
+        }
         if (mergeBufferHolders == null) {
           throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         } else {
@@ -250,7 +253,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
     Sequence<Row> rowSequence = Sequences.map(
         mergingQueryRunner.run(
-            newQuery,
+            QueryPlus.wrap(newQuery),
             responseContext
         ),
         new Function<Row, Row>()
@@ -287,7 +290,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
     // Don't apply limit here for inner results, that will be pushed down to the BufferGrouper
     if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
-      return query.applyLimit(rowSequence);
+      return query.postProcess(rowSequence);
     } else {
       return rowSequence;
     }
@@ -313,7 +316,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     return mergeResults(new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
       {
         return results;
       }

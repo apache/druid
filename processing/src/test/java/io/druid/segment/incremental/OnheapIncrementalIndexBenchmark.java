@@ -169,11 +169,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && getFacts().getPriorIndex(key) == null) {
+        if (numEntries.get() >= maxRowCount && getFacts().getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
           throw new IndexSizeExceededException("Maximum number of rows reached");
         }
-        final Integer prev = getFacts().putIfAbsent(key, rowIndex);
-        if (null == prev) {
+        final int prev = getFacts().putIfAbsent(key, rowIndex);
+        if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
         } else {
           // We lost a race
@@ -204,6 +204,12 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
 
       return numEntries.get();
+    }
+
+    @Override
+    public int getLastRowIndex()
+    {
+      return indexIncrement.get() - 1;
     }
   }
 

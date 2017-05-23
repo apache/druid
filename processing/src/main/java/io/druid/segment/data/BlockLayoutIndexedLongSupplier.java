@@ -87,6 +87,7 @@ public class BlockLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
             return longBuffer.get(longBuffer.position() + bufferIndex);
           }
 
+          @Override
           protected void loadBuffer(int bufferNum)
           {
             CloseQuietly.close(holder);

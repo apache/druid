@@ -37,7 +37,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
-import com.google.common.io.Closer;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -64,6 +63,7 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
@@ -310,8 +310,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                     waitingFor.decrement();
                     waitingForMonitor.notifyAll();
                   }
-                default:
                   break;
+                case CONNECTION_SUSPENDED:
+                case CONNECTION_RECONNECTED:
+                case CONNECTION_LOST:
+                  // do nothing
               }
             }
           }
@@ -425,12 +428,14 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return ImmutableList.copyOf(pendingTasks.values());
   }
 
+  @Override
   public Collection<Task> getPendingTaskPayloads()
   {
     // return a snapshot of current pending task payloads.
     return ImmutableList.copyOf(pendingTaskPayloads.values());
   }
 
+  @Override
   public RemoteTaskRunnerConfig getConfig()
   {
     return config;
@@ -1001,6 +1006,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                         retVal.setException(new IllegalStateException(message));
                       }
                       runPendingTasks();
+                      break;
+                    case CONNECTION_SUSPENDED:
+                    case CONNECTION_RECONNECTED:
+                    case CONNECTION_LOST:
+                      // do nothing
                   }
                 }
                 catch (Exception e) {

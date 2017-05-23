@@ -26,11 +26,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -53,6 +53,9 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -64,10 +67,10 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class IndexMergerV9 extends IndexMerger
 {
@@ -452,16 +455,21 @@ public class IndexMergerV9 extends IndexMerger
         merger.processMergedRow(dims[i]);
       }
 
-      for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
-        final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRow.getKey());
+      Iterator<Int2ObjectMap.Entry<IntSortedSet>> rowsIterator = theRow.getComprisedRows().int2ObjectEntrySet().fastIterator();
+      while (rowsIterator.hasNext()) {
+        Int2ObjectMap.Entry<IntSortedSet> comprisedRow = rowsIterator.next();
 
-        for (Integer rowNum : comprisedRow.getValue()) {
+        final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRow.getIntKey());
+
+        for (IntIterator setIterator = comprisedRow.getValue().iterator(); setIterator.hasNext(); /* NOP */) {
+          int rowNum = setIterator.nextInt();
           while (conversionBuffer.position() < rowNum) {
             conversionBuffer.put(INVALID_ROW);
           }
           conversionBuffer.put(rowCount);
         }
       }
+
       if ((++rowCount % 500000) == 0) {
         log.info("walked 500,000/%d rows in %,d millis.", rowCount, System.currentTimeMillis() - time);
         time = System.currentTimeMillis();

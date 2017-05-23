@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -72,7 +73,7 @@ public class ImmutableDruidServer
     return metadata.getMaxSize();
   }
 
-  public String getType()
+  public ServerType getType()
   {
     return metadata.getType();
   }
@@ -97,8 +98,24 @@ public class ImmutableDruidServer
     return dataSources.values();
   }
 
+  public ImmutableDruidDataSource getDataSource(String name)
+  {
+    return dataSources.get(name);
+  }
+
   public Map<String, DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @Override
+  public String toString()
+  {
+    // segments is intentionally ignored because it is usually large
+    return "ImmutableDruidServer{"
+           + "meta='" + metadata
+           + "', size='" + currSize
+           + "', sources='" + dataSources
+           + "'}";
   }
 }

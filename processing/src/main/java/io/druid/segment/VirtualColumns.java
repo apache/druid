@@ -226,6 +226,7 @@ public class VirtualColumns implements Cacheable
     return new VirtualizedColumnSelectorFactory(baseFactory, this);
   }
 
+  @Override
   public byte[] getCacheKey()
   {
     // id doesn't matter as there is only one kind of "VirtualColumns", so use 0.

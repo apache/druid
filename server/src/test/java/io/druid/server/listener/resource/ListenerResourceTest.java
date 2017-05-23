@@ -495,4 +495,10 @@ class ExceptionalAbstractListenerHandler extends AbstractListenerHandler<SomeBea
   {
     throw new UnsupportedOperationException("should not have called post");
   }
+
+  @Override
+  public Response handleUpdates(InputStream inputStream, ObjectMapper mapper)
+  {
+    throw new UnsupportedOperationException("should not have called handleUpdates");
+  }
 }

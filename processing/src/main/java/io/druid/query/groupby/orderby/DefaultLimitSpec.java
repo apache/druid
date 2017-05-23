@@ -236,9 +236,8 @@ public class DefaultLimitSpec implements LimitSpec
         throw new ISE("Unknown column in order clause[%s]", columnSpec);
       }
 
-      switch (columnSpec.getDirection()) {
-        case DESCENDING:
-          nextOrdering = nextOrdering.reverse();
+      if (columnSpec.getDirection() == OrderByColumnSpec.Direction.DESCENDING) {
+        nextOrdering = nextOrdering.reverse();
       }
 
       ordering = ordering.compound(nextOrdering);

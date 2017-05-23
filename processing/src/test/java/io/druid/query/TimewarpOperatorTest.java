@@ -81,7 +81,7 @@ public class TimewarpOperatorTest
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
-              Query<Result<TimeseriesResultValue>> query,
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
               Map<String, Object> responseContext
           )
           {
@@ -96,7 +96,7 @@ public class TimewarpOperatorTest
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
                     ),
                     new Result<>(
-                        query.getIntervals().get(0).getEnd(),
+                        queryPlus.getQuery().getIntervals().get(0).getEnd(),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
                     )
                 )
@@ -143,7 +143,7 @@ public class TimewarpOperatorTest
         {
           @Override
           public Sequence<Result<TimeBoundaryResultValue>> run(
-              Query<Result<TimeBoundaryResultValue>> query,
+              QueryPlus<Result<TimeBoundaryResultValue>> queryPlus,
               Map<String, Object> responseContext
           )
           {
@@ -193,10 +193,11 @@ public class TimewarpOperatorTest
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
-              Query<Result<TimeseriesResultValue>> query,
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
               Map<String, Object> responseContext
           )
           {
+            final Query<Result<TimeseriesResultValue>> query = queryPlus.getQuery();
             return Sequences.simple(
                 ImmutableList.of(
                     new Result<>(
