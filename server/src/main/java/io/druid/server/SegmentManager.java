@@ -256,6 +256,7 @@ public class SegmentManager
             }
           }
 
+          // Returning null removes the entry of dataSource from the map
           return dataSourceState == null || dataSourceState.isEmpty() ? null : dataSourceState;
         }
     );
