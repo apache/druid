@@ -61,7 +61,6 @@ import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
-import io.druid.query.groupby.orderby.NoopLimitSpec;
 import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;

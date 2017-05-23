@@ -51,7 +51,7 @@ public class LimitedBufferGrouperTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < numRows; i++) {
-      Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase));
+      Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase).isOk());
     }
 
     // bucket size is hash(int) + key(int) + aggs(2 longs) + heap offset(int) = 28 bytes
@@ -74,7 +74,7 @@ public class LimitedBufferGrouperTest
     // First 100 of these new rows will be the expected results.
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
     for (int i = 0; i < numRows; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
 
     // we added another 1000 unique keys
@@ -114,7 +114,7 @@ public class LimitedBufferGrouperTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < numRows; i++) {
-      Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase));
+      Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase).isOk());
     }
 
     // With minimum buffer size, after the first swap, every new key added will result in a swap
@@ -129,7 +129,7 @@ public class LimitedBufferGrouperTest
     // First 100 of these new rows will be the expected results.
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
     for (int i = 0; i < numRows; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
 
     Assert.assertEquals(1899, grouper.getGrowthCount());

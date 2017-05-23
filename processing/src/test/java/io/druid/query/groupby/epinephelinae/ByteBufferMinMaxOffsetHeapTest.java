@@ -55,11 +55,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     for (int i = 0; i < values.size(); i++){
       heap.addOffset(values.get(i));
     }
-
-    /*
-    [1, 15, 13, 2, 3, 5, 4, 7, 14, 10, 9, 8, 6, 12, 11, ]
-     */
-
+    
     int x = heap.removeAt(8);
     heap.addOffset(x);
 
@@ -211,9 +207,7 @@ public class ByteBufferMinMaxOffsetHeapTest
       Assert.assertTrue(heap.isIntact());
     }
 
-    //heap.print();
     heap.removeOffset(12);
-    //heap.print();
 
     Assert.assertTrue(heap.isIntact());
 
@@ -245,12 +239,9 @@ public class ByteBufferMinMaxOffsetHeapTest
     for (int i = 0; i < values.size(); i++){
       heap.addOffset(values.get(i));
     }
-    //heap.printAsTree();
     Assert.assertTrue(heap.isIntact());
 
-    //heap.printAsTree();
     heap.removeOffset(2);
-    //heap.printAsTree();
     Assert.assertTrue(heap.isIntact());
 
     Collections.sort(values);
