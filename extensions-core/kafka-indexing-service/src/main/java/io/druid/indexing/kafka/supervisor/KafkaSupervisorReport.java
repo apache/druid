@@ -21,13 +21,12 @@ package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.java.util.common.IAE;
-
 import org.joda.time.DateTime;
 
 import java.util.List;
+import java.util.Map;
 
 public class KafkaSupervisorReport extends SupervisorReport
 {
@@ -41,12 +40,19 @@ public class KafkaSupervisorReport extends SupervisorReport
     private final List<TaskReportData> activeTasks;
     private final List<TaskReportData> publishingTasks;
 
+    private Map<Integer, Long> latestOffsets;
+    private Map<Integer, Long> minimumLag;
+    private Long aggregateLag;
+
     public KafkaSupervisorReportPayload(
         String dataSource,
         String topic,
         Integer partitions,
         Integer replicas,
-        Long durationSeconds
+        Long durationSeconds,
+        Map<Integer, Long> latestOffsets,
+        Map<Integer, Long> minimumLag,
+        Long aggregateLag
     )
     {
       this.dataSource = dataSource;
@@ -56,6 +62,10 @@ public class KafkaSupervisorReport extends SupervisorReport
       this.durationSeconds = durationSeconds;
       this.activeTasks = Lists.newArrayList();
       this.publishingTasks = Lists.newArrayList();
+
+      this.latestOffsets = latestOffsets;
+      this.minimumLag = minimumLag;
+      this.aggregateLag = aggregateLag;
     }
 
     @JsonProperty
@@ -100,6 +110,24 @@ public class KafkaSupervisorReport extends SupervisorReport
       return publishingTasks;
     }
 
+    @JsonProperty
+    public Map<Integer, Long> getLatestOffsets()
+    {
+      return latestOffsets;
+    }
+
+    @JsonProperty
+    public Map<Integer, Long> getMinimumLag()
+    {
+      return minimumLag;
+    }
+
+    @JsonProperty
+    public Long getAggregateLag()
+    {
+      return aggregateLag;
+    }
+
     @Override
     public String toString()
     {
@@ -111,6 +139,9 @@ public class KafkaSupervisorReport extends SupervisorReport
              ", durationSeconds=" + durationSeconds +
              ", active=" + activeTasks +
              ", publishing=" + publishingTasks +
+             (latestOffsets != null ? ", latestOffsets=" + latestOffsets : "") +
+             (minimumLag != null ? ", minimumLag=" + minimumLag : "") +
+             (aggregateLag != null ? ", aggregateLag=" + aggregateLag : "") +
              '}';
     }
   }
@@ -127,7 +158,16 @@ public class KafkaSupervisorReport extends SupervisorReport
   )
   {
     super(dataSource, generationTime);
-    this.payload = new KafkaSupervisorReportPayload(dataSource, topic, partitions, replicas, durationSeconds);
+    this.payload = new KafkaSupervisorReportPayload(
+        dataSource,
+        topic,
+        partitions,
+        replicas,
+        durationSeconds,
+        null,
+        null,
+        null
+    );
   }
 
   @Override
@@ -145,6 +185,21 @@ public class KafkaSupervisorReport extends SupervisorReport
     } else {
       throw new IAE("Unknown task type [%s]", data.getType().name());
     }
+  }
+
+  public void setLatestOffsets(Map<Integer, Long> latestOffsets)
+  {
+    payload.latestOffsets = latestOffsets;
+  }
+
+  public void setMinimumLag(Map<Integer, Long> minimumLag)
+  {
+    payload.minimumLag = minimumLag;
+  }
+
+  public void setAggregateLag(Long aggregateLag)
+  {
+    payload.aggregateLag = aggregateLag;
   }
 
   @Override

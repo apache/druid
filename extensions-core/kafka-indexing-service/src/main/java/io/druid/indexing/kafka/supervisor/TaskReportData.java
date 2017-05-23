@@ -37,6 +37,7 @@ public class TaskReportData
   private final Long remainingSeconds;
   private final TaskType type;
   private Map<Integer, Long> currentOffsets;
+  private Map<Integer, Long> lag;
 
   public TaskReportData(
       String id,
@@ -44,7 +45,8 @@ public class TaskReportData
       Map<Integer, Long> currentOffsets,
       DateTime startTime,
       Long remainingSeconds,
-      TaskType type
+      TaskType type,
+      Map<Integer, Long> lag
   )
   {
     this.id = id;
@@ -53,6 +55,7 @@ public class TaskReportData
     this.startTime = startTime;
     this.remainingSeconds = remainingSeconds;
     this.type = type;
+    this.lag = lag;
   }
 
   @JsonProperty
@@ -96,6 +99,16 @@ public class TaskReportData
     return type;
   }
 
+  @JsonProperty
+  public Map<Integer, Long> getLag()
+  {
+    return lag;
+  }
+
+  public void setLag(Map<Integer, Long> lag) {
+    this.lag = lag;
+  }
+
   @Override
   public String toString()
   {
@@ -105,6 +118,7 @@ public class TaskReportData
            (currentOffsets != null ? ", currentOffsets=" + currentOffsets : "") +
            ", startTime=" + startTime +
            ", remainingSeconds=" + remainingSeconds +
+           (lag != null ? ", lag=" + lag : "") +
            '}';
   }
 }
