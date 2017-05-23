@@ -55,7 +55,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     for (int i = 0; i < values.size(); i++){
       heap.addOffset(values.get(i));
     }
-    
+
     int x = heap.removeAt(8);
     heap.addOffset(x);
 
