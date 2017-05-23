@@ -33,6 +33,7 @@ import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -86,6 +87,11 @@ public class SegmentManager
     {
       return numSegments;
     }
+
+    public boolean isEmpty()
+    {
+      return numSegments == 0;
+    }
   }
 
   @Inject
@@ -131,9 +137,11 @@ public class SegmentManager
     return segmentLoader.isSegmentLoaded(segment);
   }
 
+  @Nullable
   public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline(String dataSource)
   {
-    return dataSources.get(dataSource).getTimeline();
+    final DataSourceState dataSourceState = dataSources.get(dataSource);
+    return dataSourceState == null ? null : dataSourceState.getTimeline();
   }
 
   /**
@@ -248,7 +256,7 @@ public class SegmentManager
             }
           }
 
-          return dataSourceState;
+          return dataSourceState == null || dataSourceState.isEmpty() ? null : dataSourceState;
         }
     );
 

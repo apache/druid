@@ -374,6 +374,22 @@ public class SegmentManagerTest
     assertResult(ImmutableList.of(segments.get(0)));
   }
 
+  @Test
+  public void testRemoveEmptyTimeline() throws SegmentLoadingException
+  {
+    segmentManager.loadSegment(segments.get(0));
+    assertResult(ImmutableList.of(segments.get(0)));
+    Assert.assertEquals(1, segmentManager.getDataSources().size());
+    segmentManager.dropSegment(segments.get(0));
+    Assert.assertEquals(0, segmentManager.getDataSources().size());
+  }
+
+  @Test
+  public void testGetNonExistingTimeline()
+  {
+    Assert.assertNull(segmentManager.getTimeline("nonExisting"));
+  }
+
   private void assertResult(List<DataSegment> expectedExistingSegments) throws SegmentLoadingException
   {
     final Map<String, Long> expectedDataSourceSizes = expectedExistingSegments.stream()
