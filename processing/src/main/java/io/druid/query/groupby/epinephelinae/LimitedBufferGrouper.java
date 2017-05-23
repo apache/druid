@@ -224,7 +224,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
     return limit;
   }
 
-  public class BufferGrouperOffsetHeapIndexUpdater
+  public static class BufferGrouperOffsetHeapIndexUpdater
   {
     private ByteBuffer hashTableBuffer;
     private final int indexPosition;

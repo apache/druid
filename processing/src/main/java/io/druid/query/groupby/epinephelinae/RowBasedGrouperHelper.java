@@ -694,6 +694,7 @@ public class RowBasedGrouperHelper
       } else {
         return new Comparator<Grouper.Entry<RowBasedKey>>()
         {
+          @Override
           public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
           {
             return compareDimsInRows(entry1.getKey(), entry2.getKey(), 0);

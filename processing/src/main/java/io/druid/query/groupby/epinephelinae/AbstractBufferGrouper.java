@@ -51,10 +51,13 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
   protected final int[] aggregatorOffsets;
   protected final int bufferGrouperMaxSize; // Integer.MAX_VALUE in production, only used for unit tests
 
+  // The load factor and bucket configurations are not final, to allow subclasses to set their own values
   protected float maxLoadFactor;
   protected int initialBuckets;
   protected int bucketSize;
 
+  // The hashTable and its buffer are not final, these are set during init() for buffer management purposes
+  // See PR 3863 for details: https://github.com/druid-io/druid/pull/3863
   protected ByteBufferHashTable hashTable;
   protected ByteBuffer hashTableBuffer; // buffer for the entire hash table (total space, not individual growth)
 
