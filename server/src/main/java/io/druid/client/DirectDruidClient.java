@@ -179,14 +179,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
       {
-        private QueryMetrics<? super Query<T>> queryMetrics;
-        private long responseStartTimeNs;
         private final AtomicLong byteCount = new AtomicLong(0);
         private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
 
-        QueryMetrics<? super Query<T>> acquireQueryMetrics()
+        private QueryMetrics<? super Query<T>> queryMetrics;
+        private long responseStartTimeNs;
+
+        private QueryMetrics<? super Query<T>> acquireResponseMetrics()
         {
           if (queryMetrics == null) {
             queryMetrics = toolChest.makeMetrics(query);
@@ -203,7 +204,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
-          acquireQueryMetrics().reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
+          acquireResponseMetrics().reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
 
           try {
             final String responseContext = response.headers().get("X-Druid-Response-Context");
@@ -322,10 +323,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               nodeTimeMs,
               byteCount.get() / (0.001 * nodeTimeMs) // Floating math; division by zero will yield Inf, not exception
           );
-          QueryMetrics<? super Query<T>> queryMetrics = acquireQueryMetrics();
-          queryMetrics.reportNodeTime(nodeTimeNs);
-          queryMetrics.reportNodeBytes(byteCount.get());
-          queryMetrics.emit(emitter);
+          QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
+          responseMetrics.reportNodeTime(nodeTimeNs);
+          responseMetrics.reportNodeBytes(byteCount.get());
+          responseMetrics.emit(emitter);
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
