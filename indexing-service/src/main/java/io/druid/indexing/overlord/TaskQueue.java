@@ -402,7 +402,8 @@ public class TaskQueue
         if (tasks.get(i).getId().equals(task.getId())) {
           removed++;
           removeTaskInternal(tasks.get(i));
-          break;
+          // Remove break because it stop the for-loop when it find the task at first time.
+          // when there are multiple copies of this task, it will not remove the copies.
         }
       }
       if (removed == 0) {
