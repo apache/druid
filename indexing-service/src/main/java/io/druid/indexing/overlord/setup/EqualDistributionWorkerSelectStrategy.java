@@ -47,7 +47,8 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
               ImmutableWorkerInfo zkWorker, ImmutableWorkerInfo zkWorker2
           )
           {
-            int retVal = -Ints.compare(zkWorker2.getCurrCapacityUsed(), zkWorker.getCurrCapacityUsed());
+            int retVal = Ints.compare(zkWorker2.getWorker().getCapacity() - zkWorker2.getCurrCapacityUsed(),
+                    zkWorker.getWorker().getCapacity() - zkWorker.getCurrCapacityUsed());
             // the version sorting is needed because if the workers have the same currCapacityUsed only one of them is
             // returned. Exists the possibility that this worker is disabled and doesn't have valid version so can't
             // run new tasks, so in this case the workers are sorted using version to ensure that if exists enable

@@ -43,14 +43,14 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("lhost", "lhost", 1, "v1"), 0,
+                new Worker("lhost", "lhost", 5, "v1"), 5,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
                 DateTime.now()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("localhost", "localhost", 1, "v1"), 1,
+                new Worker("localhost", "localhost", 10, "v1"), 5,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
                 DateTime.now()
@@ -66,7 +66,7 @@ public class EqualDistributionWorkerSelectStrategyTest
         }
     );
     ImmutableWorkerInfo worker = optional.get();
-    Assert.assertEquals("lhost", worker.getWorker().getHost());
+    Assert.assertEquals("localhost", worker.getWorker().getHost());
   }
 
   @Test
