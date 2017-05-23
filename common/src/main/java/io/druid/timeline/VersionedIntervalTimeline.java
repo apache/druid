@@ -20,6 +20,7 @@
 package io.druid.timeline;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -559,9 +560,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
     public TimelineEntry(Interval trueInterval, VersionType version, PartitionHolder<ObjectType> partitionHolder)
     {
-      this.trueInterval = trueInterval;
-      this.version = version;
-      this.partitionHolder = partitionHolder;
+      this.trueInterval = Preconditions.checkNotNull(trueInterval);
+      this.version = Preconditions.checkNotNull(version);
+      this.partitionHolder = Preconditions.checkNotNull(partitionHolder);
     }
 
     public Interval getTrueInterval()
