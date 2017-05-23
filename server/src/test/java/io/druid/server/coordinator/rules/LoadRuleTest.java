@@ -34,6 +34,7 @@ import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.CostBalancerStrategyFactory;
@@ -168,7 +169,7 @@ public class LoadRuleTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -184,7 +185,7 @@ public class LoadRuleTest
                             "serverNorm",
                             "hostNorm",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             DruidServer.DEFAULT_TIER,
                             0
                         ).toImmutableDruidServer(),
@@ -268,7 +269,7 @@ public class LoadRuleTest
         "serverHot",
         "hostHot",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "hot",
         0
     );
@@ -277,7 +278,7 @@ public class LoadRuleTest
         "serverNorm",
         "hostNorm",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         DruidServer.DEFAULT_TIER,
         0
     );
@@ -386,7 +387,7 @@ public class LoadRuleTest
                             "serverHot",
                             "hostHot",
                             1000,
-                            "historical",
+                            ServerType.HISTORICAL,
                             "hot",
                             0
                         ).toImmutableDruidServer(),
@@ -469,7 +470,7 @@ public class LoadRuleTest
         "serverHot",
         "hostHot",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "hot",
         0
     );
@@ -477,7 +478,7 @@ public class LoadRuleTest
         "serverHo2t",
         "hostHot2",
         1000,
-        "historical",
+        ServerType.HISTORICAL,
         "hot",
         0
     );

@@ -30,6 +30,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
@@ -64,6 +65,7 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.server.initialization.ServerConfig;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -113,6 +115,31 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private final AtomicInteger openConnections;
   private final boolean isSmile;
+
+  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(final QueryType query, ServerConfig serverConfig)
+  {
+    return (QueryType) QueryContexts.withMaxScatterGatherBytes(
+        QueryContexts.withDefaultTimeout(
+            (Query) query,
+            serverConfig.getDefaultQueryTimeout()
+        ),
+        serverConfig.getMaxScatterGatherBytes()
+    );
+  }
+
+  public static Map<String, Object> makeResponseContextForQuery(Query query, long startTimeMillis)
+  {
+    final Map<String, Object> responseContext = new MapMaker().makeMap();
+    responseContext.put(
+        DirectDruidClient.QUERY_FAIL_TIME,
+        startTimeMillis + QueryContexts.getTimeout(query)
+    );
+    responseContext.put(
+        DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED,
+        new AtomicLong()
+    );
+    return responseContext;
+  }
 
   public DirectDruidClient(
       QueryToolChestWarehouse warehouse,

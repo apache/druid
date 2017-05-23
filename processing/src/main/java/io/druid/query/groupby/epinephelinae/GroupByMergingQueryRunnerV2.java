@@ -119,9 +119,11 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
-    final QueryPlus<Row> queryPlusForRunners = queryPlus.withQuery(
-        query.withOverriddenContext(ImmutableMap.<String, Object>of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
-    );
+    final QueryPlus<Row> queryPlusForRunners = queryPlus
+        .withQuery(
+            query.withOverriddenContext(ImmutableMap.<String, Object>of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
+        )
+        .withoutThreadUnsafeState();
 
     if (QueryContexts.isBySegment(query) || forceChainedExecution) {
       ChainedExecutionQueryRunner<Row> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
