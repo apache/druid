@@ -23,13 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import io.druid.query.Druids;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.Filters;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -89,6 +92,18 @@ public class AndDimFilter implements DimFilter
       }
     }
     return retSet;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    final Set<String> retVal = new HashSet<>();
+    for (DimFilter field : fields) {
+      for (String column : field.requiredColumns()) {
+        retVal.add(column);
+      }
+    }
+    return ImmutableList.copyOf(retVal);
   }
 
   @Override

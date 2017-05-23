@@ -31,7 +31,9 @@ import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.OrDimFilter;
-import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.segment.VirtualColumn;
+import io.druid.segment.virtual.ExtractionFnVirtualColumn;
+import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
@@ -50,7 +52,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 {
   private final DruidRel<?> left;
   private final DruidRel<?> right;
-  private final List<RowExtraction> leftRowExtractions;
+  private final List<SimpleExtraction> leftSimpleExtractions;
   private final List<Integer> rightKeys;
   private final int maxSemiJoinRowsInMemory;
 
@@ -59,7 +61,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
       final RelTraitSet traitSet,
       final DruidRel left,
       final DruidRel right,
-      final List<RowExtraction> leftRowExtractions,
+      final List<SimpleExtraction> leftSimpleExtractions,
       final List<Integer> rightKeys,
       final int maxSemiJoinRowsInMemory
   )
@@ -67,7 +69,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
     super(cluster, traitSet, left.getQueryMaker());
     this.left = left;
     this.right = right;
-    this.leftRowExtractions = ImmutableList.copyOf(leftRowExtractions);
+    this.leftSimpleExtractions = ImmutableList.copyOf(leftSimpleExtractions);
     this.rightKeys = ImmutableList.copyOf(rightKeys);
     this.maxSemiJoinRowsInMemory = maxSemiJoinRowsInMemory;
   }
@@ -80,14 +82,27 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
       final PlannerConfig plannerConfig
   )
   {
-    final ImmutableList.Builder<RowExtraction> listBuilder = ImmutableList.builder();
+    final ImmutableList.Builder<SimpleExtraction> listBuilder = ImmutableList.builder();
     for (Integer key : leftKeys) {
-      final RowExtraction rex = RowExtraction.fromQueryBuilder(left.getQueryBuilder(), key);
-      if (rex == null) {
-        // Can't figure out what to filter the left-hand side on...
-        return null;
+      final String columnName = left.getQueryBuilder().getRowOrder().get(key);
+
+      final VirtualColumn leftVirtualColumn = left.getQueryBuilder().getVirtualColumnRegistry().get(columnName);
+      if (leftVirtualColumn != null) {
+        // VirtualColumns not allowed to remain in "left" since we have no way of forcing later rules to include them.
+        // See if we can get rid of this virtual column reference, otherwise give up.
+        if (leftVirtualColumn instanceof ExtractionFnVirtualColumn) {
+          final ExtractionFnVirtualColumn extractionColumn = (ExtractionFnVirtualColumn) leftVirtualColumn;
+          if (left.getSourceRowSignature().getColumnType(extractionColumn.getFieldName()) != null) {
+            listBuilder.add(SimpleExtraction.of(extractionColumn.getFieldName(), extractionColumn.getExtractionFn()));
+          } else {
+            return null;
+          }
+        } else {
+          return null;
+        }
+      } else {
+        listBuilder.add(SimpleExtraction.of(columnName, null));
       }
-      listBuilder.add(rex);
     }
 
     return new DruidSemiJoin(
@@ -121,7 +136,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
         left.withQueryBuilder(newQueryBuilder),
         right,
-        leftRowExtractions,
+        leftSimpleExtractions,
         rightKeys,
         maxSemiJoinRowsInMemory
     );
@@ -142,7 +157,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         getTraitSet().replace(BindableConvention.INSTANCE),
         left,
         right,
-        leftRowExtractions,
+        leftSimpleExtractions,
         rightKeys,
         maxSemiJoinRowsInMemory
     );
@@ -156,7 +171,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         getTraitSet().replace(DruidConvention.instance()),
         left,
         right,
-        leftRowExtractions,
+        leftSimpleExtractions,
         rightKeys,
         maxSemiJoinRowsInMemory
     );
@@ -189,7 +204,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   public RelWriter explainTerms(RelWriter pw)
   {
     return pw
-        .item("leftRowExtractions", leftRowExtractions)
+        .item("leftSimpleExtractions", leftSimpleExtractions)
         .item("leftQuery", left.getQueryBuilder())
         .item("rightKeys", rightKeys)
         .item("rightQuery", right.getQueryBuilder());
@@ -235,14 +250,14 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
               for (int i = 0; i < values.size(); i++) {
                 bounds.add(
                     new BoundDimFilter(
-                        leftRowExtractions.get(i).getColumn(),
+                        leftSimpleExtractions.get(i).getColumn(),
                         values.get(i),
                         values.get(i),
                         false,
                         false,
                         null,
-                        leftRowExtractions.get(i).getExtractionFn(),
-                        getSourceRowSignature().naturalStringComparator(leftRowExtractions.get(i))
+                        leftSimpleExtractions.get(i).getExtractionFn(),
+                        getSourceRowSignature().naturalStringComparator(leftSimpleExtractions.get(i))
                     )
                 );
               }

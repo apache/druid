@@ -22,9 +22,9 @@ package io.druid.segment.virtual;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -35,9 +35,7 @@ import io.druid.segment.VirtualColumn;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
-import org.apache.commons.codec.Charsets;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 
 public class ExpressionVirtualColumn implements VirtualColumn
@@ -135,17 +133,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] nameBytes = name.getBytes(Charsets.UTF_8);
-    final byte[] expressionBytes = expression.getBytes(Charsets.UTF_8);
-
-    return ByteBuffer
-        .allocate(1 + Ints.BYTES * 2 + nameBytes.length + expressionBytes.length)
-        .put(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
-        .putInt(nameBytes.length)
-        .put(nameBytes)
-        .putInt(expressionBytes.length)
-        .put(expressionBytes)
-        .array();
+    return new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
+        .appendString(name)
+        .appendString(expression)
+        .build();
   }
 
   @Override

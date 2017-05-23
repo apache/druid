@@ -21,13 +21,16 @@ package io.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.DataSource;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
@@ -46,13 +49,16 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
+import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.expression.ExtractionFns;
+import io.druid.sql.calcite.expression.VirtualColumnRegistry;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -60,11 +66,18 @@ import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class DruidQueryBuilder
 {
+  // VirtualColumnRegistry is mutable, and not thread-safe. It's used to empower sharing of equivalent virtual columns
+  // by filter, projection, and grouping constructs used by this query builder.
+  private final VirtualColumnRegistry virtualColumnRegistry;
+
+  // Other fields are immutable.
   private final DimFilter filter;
-  private final SelectProjection selectProjection;
+  private final Project selectProjection;
   private final Grouping grouping;
   private final DimFilter having;
   private final DefaultLimitSpec limitSpec;
@@ -72,8 +85,9 @@ public class DruidQueryBuilder
   private final RowSignature outputRowSignature;
 
   private DruidQueryBuilder(
+      final VirtualColumnRegistry virtualColumnRegistry,
       final DimFilter filter,
-      final SelectProjection selectProjection,
+      final Project selectProjection,
       final Grouping grouping,
       final DimFilter having,
       final DefaultLimitSpec limitSpec,
@@ -81,6 +95,7 @@ public class DruidQueryBuilder
       final List<String> rowOrder
   )
   {
+    this.virtualColumnRegistry = virtualColumnRegistry;
     this.filter = filter;
     this.selectProjection = selectProjection;
     this.grouping = grouping;
@@ -110,16 +125,36 @@ public class DruidQueryBuilder
     this.outputRowSignature = rowSignatureBuilder.build();
   }
 
-  public static DruidQueryBuilder fullScan(final RowSignature rowSignature, final RelDataTypeFactory relDataTypeFactory)
+  public static DruidQueryBuilder fullScan(
+      final RowSignature rowSignature,
+      final RelDataTypeFactory relDataTypeFactory,
+      final VirtualColumnRegistry virtualColumnRegistry
+  )
   {
     final RelDataType rowType = rowSignature.getRelDataType(relDataTypeFactory);
     final List<String> rowOrder = rowSignature.getRowOrder();
-    return new DruidQueryBuilder(null, null, null, null, null, rowType, rowOrder);
+    Preconditions.checkArgument(virtualColumnRegistry.getSourceRowSignature().equals(rowSignature));
+    return new DruidQueryBuilder(
+        virtualColumnRegistry,
+        null,
+        null,
+        null,
+        null,
+        null,
+        rowType,
+        rowOrder
+    );
+  }
+
+  public static DruidQueryBuilder fullScan(final RowSignature rowSignature, final RelDataTypeFactory relDataTypeFactory)
+  {
+    return fullScan(rowSignature, relDataTypeFactory, new VirtualColumnRegistry(rowSignature));
   }
 
   public DruidQueryBuilder withFilter(final DimFilter newFilter)
   {
     return new DruidQueryBuilder(
+        virtualColumnRegistry,
         newFilter,
         selectProjection,
         grouping,
@@ -130,24 +165,25 @@ public class DruidQueryBuilder
     );
   }
 
-  public DruidQueryBuilder withSelectProjection(final SelectProjection newProjection, final List<String> newRowOrder)
+  public DruidQueryBuilder withSelectProjection(final Project newProjection, final List<String> newRowOrder)
   {
     Preconditions.checkState(selectProjection == null, "cannot project twice");
     Preconditions.checkState(grouping == null, "cannot project after grouping");
     Preconditions.checkNotNull(newProjection, "newProjection");
     Preconditions.checkState(
-        newProjection.getProject().getChildExps().size() == newRowOrder.size(),
+        newProjection.getChildExps().size() == newRowOrder.size(),
         "project size[%,d] != rowOrder size[%,d]",
-        newProjection.getProject().getChildExps().size(),
+        newProjection.getChildExps().size(),
         newRowOrder.size()
     );
     return new DruidQueryBuilder(
+        virtualColumnRegistry,
         filter,
         newProjection,
         grouping,
         having,
         limitSpec,
-        newProjection.getProject().getRowType(),
+        newProjection.getRowType(),
         newRowOrder
     );
   }
@@ -163,7 +199,16 @@ public class DruidQueryBuilder
     Preconditions.checkState(limitSpec == null, "cannot add grouping after limitSpec");
     Preconditions.checkNotNull(newGrouping, "newGrouping");
     // Set selectProjection to null now that we're grouping. Grouping subsumes select projection.
-    return new DruidQueryBuilder(filter, null, newGrouping, having, limitSpec, newRowType, newRowOrder);
+    return new DruidQueryBuilder(
+        virtualColumnRegistry,
+        filter,
+        null,
+        newGrouping,
+        having,
+        limitSpec,
+        newRowType,
+        newRowOrder
+    );
   }
 
   public DruidQueryBuilder withAdjustedGrouping(
@@ -175,7 +220,16 @@ public class DruidQueryBuilder
     // Like withGrouping, but without any sanity checks. It's assumed that callers will pass something that makes sense.
     // This is used when adjusting the Grouping while pushing down a post-Aggregate Project or Sort.
     Preconditions.checkNotNull(newGrouping, "newGrouping");
-    return new DruidQueryBuilder(filter, null, newGrouping, having, limitSpec, newRowType, newRowOrder);
+    return new DruidQueryBuilder(
+        virtualColumnRegistry,
+        filter,
+        null,
+        newGrouping,
+        having,
+        limitSpec,
+        newRowType,
+        newRowOrder
+    );
   }
 
   public DruidQueryBuilder withHaving(final DimFilter newHaving)
@@ -185,6 +239,7 @@ public class DruidQueryBuilder
     Preconditions.checkState(grouping != null, "cannot add having before grouping");
     Preconditions.checkNotNull(newHaving, "newHaving");
     return new DruidQueryBuilder(
+        virtualColumnRegistry,
         filter,
         selectProjection,
         grouping,
@@ -200,6 +255,7 @@ public class DruidQueryBuilder
     Preconditions.checkState(limitSpec == null, "cannot add limitSpec twice");
     Preconditions.checkNotNull(newLimitSpec, "newLimitSpec");
     return new DruidQueryBuilder(
+        virtualColumnRegistry,
         filter,
         selectProjection,
         grouping,
@@ -210,12 +266,41 @@ public class DruidQueryBuilder
     );
   }
 
+  public VirtualColumns getVirtualColumns()
+  {
+    final Set<String> requiredColumns = new TreeSet<>();
+
+    if (filter != null) {
+      requiredColumns.addAll(filter.requiredColumns());
+    }
+
+    if (grouping != null) {
+      for (DimensionSpec dimensionSpec : grouping.getDimensions()) {
+        requiredColumns.add(dimensionSpec.getDimension());
+      }
+
+      for (Aggregation aggregation : grouping.getAggregations()) {
+        requiredColumns.addAll(aggregation.getRequiredColumns());
+      }
+    } else {
+      // grouping != null means this will become a select query, and output row names are equal to source row names.
+      requiredColumns.addAll(getRowOrder());
+    }
+
+    return virtualColumnRegistry.subset(ImmutableList.copyOf(requiredColumns));
+  }
+
+  public VirtualColumnRegistry getVirtualColumnRegistry()
+  {
+    return virtualColumnRegistry;
+  }
+
   public DimFilter getFilter()
   {
     return filter;
   }
 
-  public SelectProjection getSelectProjection()
+  public Project getSelectProjection()
   {
     return selectProjection;
   }
@@ -342,7 +427,7 @@ public class DruidQueryBuilder
         dataSource,
         filtration.getQuerySegmentSpec(),
         descending,
-        VirtualColumns.EMPTY,
+        getVirtualColumns(),
         filtration.getDimFilter(),
         queryGranularity,
         grouping.getAggregatorFactories(),
@@ -416,7 +501,7 @@ public class DruidQueryBuilder
 
     return new TopNQuery(
         dataSource,
-        VirtualColumns.EMPTY,
+        getVirtualColumns(),
         Iterables.getOnlyElement(grouping.getDimensions()),
         topNMetricSpec,
         limitSpec.getLimit(),
@@ -453,7 +538,7 @@ public class DruidQueryBuilder
     return new GroupByQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
-        VirtualColumns.EMPTY,
+        getVirtualColumns(),
         filtration.getDimFilter(),
         Granularities.ALL,
         grouping.getDimensions(),
@@ -502,78 +587,39 @@ public class DruidQueryBuilder
       descending = false;
     }
 
+    // We need to ask for dummy columns to prevent Select from returning all of them.
+    String dummyColumn = "dummy";
+    while (sourceRowSignature.getColumnType(dummyColumn) != null
+           || virtualColumnRegistry.get(dummyColumn) != null) {
+      dummyColumn = dummyColumn + "_";
+    }
+
     return new SelectQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
         descending,
         filtration.getDimFilter(),
         Granularities.ALL,
-        selectProjection != null ? selectProjection.getDimensions() : ImmutableList.<DimensionSpec>of(),
-        selectProjection != null ? selectProjection.getMetrics() : ImmutableList.<String>of(),
-        null,
+        ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec(dummyColumn, null)),
+        getRowOrder().isEmpty() ? ImmutableList.of(dummyColumn)
+                                : Ordering.natural().sortedCopy(ImmutableSortedSet.copyOf(getRowOrder())),
+        getVirtualColumns(),
         new PagingSpec(null, 0) /* dummy -- will be replaced */,
         context
     );
   }
 
   @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    DruidQueryBuilder that = (DruidQueryBuilder) o;
-
-    if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
-      return false;
-    }
-    if (selectProjection != null ? !selectProjection.equals(that.selectProjection) : that.selectProjection != null) {
-      return false;
-    }
-    if (grouping != null ? !grouping.equals(that.grouping) : that.grouping != null) {
-      return false;
-    }
-    if (having != null ? !having.equals(that.having) : that.having != null) {
-      return false;
-    }
-    if (limitSpec != null ? !limitSpec.equals(that.limitSpec) : that.limitSpec != null) {
-      return false;
-    }
-    if (rowType != null ? !rowType.equals(that.rowType) : that.rowType != null) {
-      return false;
-    }
-    return outputRowSignature != null
-           ? outputRowSignature.equals(that.outputRowSignature)
-           : that.outputRowSignature == null;
-
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = filter != null ? filter.hashCode() : 0;
-    result = 31 * result + (selectProjection != null ? selectProjection.hashCode() : 0);
-    result = 31 * result + (grouping != null ? grouping.hashCode() : 0);
-    result = 31 * result + (having != null ? having.hashCode() : 0);
-    result = 31 * result + (limitSpec != null ? limitSpec.hashCode() : 0);
-    result = 31 * result + (rowType != null ? rowType.hashCode() : 0);
-    result = 31 * result + (outputRowSignature != null ? outputRowSignature.hashCode() : 0);
-    return result;
-  }
-
-  @Override
   public String toString()
   {
     return "DruidQueryBuilder{" +
-           "filter=" + filter +
+           "virtualColumnRegistry=" + virtualColumnRegistry +
+           ", filter=" + filter +
            ", selectProjection=" + selectProjection +
            ", grouping=" + grouping +
            ", having=" + having +
            ", limitSpec=" + limitSpec +
+           ", rowType=" + rowType +
            ", outputRowSignature=" + outputRowSignature +
            '}';
   }

@@ -58,4 +58,10 @@ public class StrlenExtractionFn extends DimExtractionFn
   {
     return new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_STRLEN};
   }
+
+  @Override
+  public String toString()
+  {
+    return "strlen()";
+  }
 }

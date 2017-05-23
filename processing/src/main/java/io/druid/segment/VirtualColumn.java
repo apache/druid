@@ -25,6 +25,7 @@ import io.druid.java.util.common.Cacheable;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
+import io.druid.segment.virtual.ExtractionFnVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -38,7 +39,8 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "expression", value = ExpressionVirtualColumn.class)
+    @JsonSubTypes.Type(name = "expression", value = ExpressionVirtualColumn.class),
+    @JsonSubTypes.Type(name = "extraction", value = ExtractionFnVirtualColumn.class)
 })
 public interface VirtualColumn extends Cacheable
 {

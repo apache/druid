@@ -53,11 +53,15 @@ public class DruidFilterRule extends RelOptRule
         operatorTable,
         druidRel.getPlannerContext(),
         druidRel.getSourceRowSignature(),
+        druidRel.getQueryBuilder().getVirtualColumnRegistry(),
         filter.getCondition()
     );
     if (dimFilter != null) {
       call.transformTo(
-          druidRel.withQueryBuilder(druidRel.getQueryBuilder().withFilter(dimFilter))
+          druidRel.withQueryBuilder(
+              druidRel.getQueryBuilder()
+                      .withFilter(dimFilter)
+          )
       );
     }
   }

@@ -21,36 +21,38 @@ package io.druid.sql.calcite.expression;
 
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
-
-import java.util.List;
 
 public interface SqlExtractionOperator
 {
   /**
-   * Returns the SQL operator corresponding to this aggregation function. Should be a singleton.
+   * Returns the SQL operator corresponding to this function. Should be a singleton.
    *
    * @return operator
    */
   SqlFunction calciteFunction();
 
   /**
-   * Returns the Druid {@link RowExtraction} corresponding to a SQL {@code RexNode}.
+   * Translate a Calcite {@code RexNode} to a Druid column. The returned column may be a real column (from
+   * rowSignature) or may be a virtual column (registered in virtualColumnRegistry).
    *
-   * @param operatorTable  Operator table that can be used to convert sub-expressions
-   * @param plannerContext SQL planner context
-   * @param rowOrder       order of fields in the Druid rows to be extracted from
-   * @param expression     expression meant to be applied on top of the table
+   * @param operatorTable         Operator table that can be used to convert sub-expressions
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          signature of the rows to be extracted from
+   * @param virtualColumnRegistry virtual columns registry for this conversion
+   * @param expression            expression meant to be applied on top of the rows
    *
-   * @return (columnName, extractionFn) or null
+   * @return column name, or null if not possible
    *
-   * @see ExpressionConversion#convert(ExpressionConverter, PlannerContext, List, RexNode)
+   * @see Expressions#toDruidColumn(DruidOperatorTable, PlannerContext, RowSignature, VirtualColumnRegistry, RexNode)
    */
-  RowExtraction convert(
+  String convert(
       DruidOperatorTable operatorTable,
       PlannerContext plannerContext,
-      List<String> rowOrder,
+      RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
       RexNode expression
   );
 }

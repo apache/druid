@@ -24,14 +24,13 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-
-import java.util.List;
 
 public class ExtractExtractionOperator implements SqlExtractionOperator
 {
@@ -42,10 +41,11 @@ public class ExtractExtractionOperator implements SqlExtractionOperator
   }
 
   @Override
-  public RowExtraction convert(
+  public String convert(
       final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
-      final List<String> rowOrder,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
   )
   {
@@ -55,7 +55,13 @@ public class ExtractExtractionOperator implements SqlExtractionOperator
     final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
     final RexNode expr = call.getOperands().get(1);
 
-    final RowExtraction rex = Expressions.toRowExtraction(operatorTable, plannerContext, rowOrder, expr);
+    final SimpleExtraction rex = Expressions.toSimpleExtraction(
+        operatorTable,
+        plannerContext,
+        rowSignature,
+        virtualColumnRegistry,
+        expr
+    );
     if (rex == null) {
       return null;
     }
@@ -80,19 +86,22 @@ public class ExtractExtractionOperator implements SqlExtractionOperator
       final Granularity queryGranularity = ExtractionFns.toQueryGranularity(baseTimeFormatFn);
       if (queryGranularity != null) {
         // Combine EXTRACT(X FROM FLOOR(Y TO Z)) into a single extractionFn.
-        return RowExtraction.of(
-            rex.getColumn(),
-            new TimeFormatExtractionFn(dateTimeFormat, plannerContext.getTimeZone(), null, queryGranularity, true)
-        );
+        return virtualColumnRegistry.register(
+            expression,
+            SimpleExtraction.of(
+                rex.getColumn(),
+                new TimeFormatExtractionFn(dateTimeFormat, plannerContext.getTimeZone(), null, queryGranularity, true)
+            )
+        ).getOutputName();
       }
     }
 
-    return RowExtraction.of(
-        rex.getColumn(),
-        ExtractionFns.compose(
-            new TimeFormatExtractionFn(dateTimeFormat, plannerContext.getTimeZone(), null, null, true),
-            baseExtractionFn
+    return virtualColumnRegistry.register(
+        expression,
+        SimpleExtraction.of(
+            rex.getColumn(),
+            new TimeFormatExtractionFn(dateTimeFormat, plannerContext.getTimeZone(), null, null, true)
         )
-    );
+    ).getOutputName();
   }
 }

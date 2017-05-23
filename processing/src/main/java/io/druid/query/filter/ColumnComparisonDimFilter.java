@@ -29,6 +29,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.filter.ColumnComparisonFilter;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -101,6 +102,12 @@ public class ColumnComparisonDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return dimensions.stream().map(DimensionSpec::getDimension).collect(Collectors.toList());
   }
 
   @Override
