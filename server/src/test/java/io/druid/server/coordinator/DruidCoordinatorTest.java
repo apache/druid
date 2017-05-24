@@ -348,8 +348,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    Map<String, ? extends Object2LongMap<String>> replicationStatus =
-        coordinator.getReplicationStatus();
+    Map<String, ? extends Object2LongMap<String>> replicationStatus = coordinator.getReplicationStatus();
     Assert.assertNotNull(replicationStatus);
     Assert.assertEquals(1, replicationStatus.entrySet().size());
 
