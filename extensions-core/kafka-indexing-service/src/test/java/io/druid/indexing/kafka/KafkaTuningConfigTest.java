@@ -113,7 +113,6 @@ public class KafkaTuningConfigTest
         new IndexSpec(),
         true,
         true,
-        null,
         5L,
         null
     );

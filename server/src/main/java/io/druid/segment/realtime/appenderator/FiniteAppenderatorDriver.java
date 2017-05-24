@@ -35,6 +35,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
@@ -44,7 +45,6 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
-import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -60,6 +60,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -91,17 +92,15 @@ public class FiniteAppenderatorDriver implements Closeable
   // sequenceName -> start of segment interval -> segment we're currently adding data to
   private final Map<String, NavigableMap<Long, SegmentIdentifier>> activeSegments = new TreeMap<>();
 
-  // sequenceName -> list of segmentIdentifiers
+  // sequenceName -> list of identifiers of segments waiting for being published
+  // publishPendingSegments is always a super set of activeSegments because there can be some segments to which data
+  // are not added anymore, but not published yet.
   private final Map<String, List<SegmentIdentifier>> publishPendingSegments = new HashMap<>();
 
   // sequenceName -> most recently allocated segment
   private final Map<String, String> lastSegmentIds = Maps.newHashMap();
 
-  // Notified when segments are dropped.
-  private final Object handoffMonitor = new Object();
-
   private final ListeningExecutorService publishExecutor;
-  private final ListeningExecutorService handoffExecutor;
 
   /**
    * Create a driver.
@@ -132,7 +131,6 @@ public class FiniteAppenderatorDriver implements Closeable
     this.handoffConditionTimeout = handoffConditionTimeout;
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.publishExecutor = MoreExecutors.listeningDecorator(Execs.singleThreaded("publish-%d"));
-    this.handoffExecutor = MoreExecutors.listeningDecorator(Execs.singleThreaded("handoff-%d"));
   }
 
   /**
@@ -265,9 +263,12 @@ public class FiniteAppenderatorDriver implements Closeable
    * Register the segments in the given {@link SegmentsAndMetadata} to be handed off and execute a background task which
    * waits until the hand off completes.
    *
-   * @param segmentsAndMetadata
-   * @return
-   * @throws InterruptedException
+   * @param segmentsAndMetadata the result segments and metadata of
+   *                            {@link #publish(TransactionalSegmentPublisher, Committer, Collection)}
+   *
+   * @return null if the input segmentsAndMetadata is null. Otherwise, a {@link ListenableFuture} for the submitted task
+   *         which returns {@link SegmentsAndMetadata} containing the segments successfully handed off and the metadata
+   *         of the caller of {@link FiniteAppenderatorDriverMetadata}
    */
   public ListenableFuture<SegmentsAndMetadata> registerHandoff(SegmentsAndMetadata segmentsAndMetadata)
       throws InterruptedException
@@ -276,52 +277,38 @@ public class FiniteAppenderatorDriver implements Closeable
       return Futures.immediateFuture(null);
 
     } else {
-      final Object waitForHandoffMonitorStart = new Object();
+      final List<SegmentIdentifier> waitingSegmentIdList = segmentsAndMetadata.getSegments().stream()
+                                                                              .map(SegmentIdentifier::fromDataSegment)
+                                                                              .collect(Collectors.toList());
 
-      final ListenableFuture<SegmentsAndMetadata> future = handoffExecutor.submit(
-          () -> {
-            final List<SegmentIdentifier> waitingSegmentIdList = segmentsAndMetadata.getSegments().stream()
-                                                                                    .map(SegmentIdentifier::fromDataSegment)
-                                                                                    .collect(Collectors.toList());
-            log.info("Awaiting handoff of segments: [%s]", waitingSegmentIdList);
-
-            synchronized (waitForHandoffMonitorStart) {
-              waitForHandoffMonitorStart.notify();
-            }
-            synchronized (handoffMonitor) {
-              while (waitingSegmentIdList.stream().anyMatch(appenderator::containsSegment)) {
-                handoffMonitor.wait();
-              }
-            }
-
-            log.info("All segments handed off.");
-
-            return new SegmentsAndMetadata(
+      if (waitingSegmentIdList.isEmpty()) {
+        return Futures.immediateFuture(
+            new SegmentsAndMetadata(
                 segmentsAndMetadata.getSegments(),
-                ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata()).getCallerMetadata()
-            );
-          }
-      );
-
-      // wait for handoffMonitor starts
-      log.info("Waiting handoff monitor starts");
-      synchronized (waitForHandoffMonitorStart) {
-        waitForHandoffMonitorStart.wait(handoffConditionTimeout);
+                ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata())
+                    .getCallerMetadata()
+            )
+        );
       }
 
-      for (final DataSegment dataSegment : segmentsAndMetadata.getSegments()) {
+      log.info("Register handoff of segments: [%s]", waitingSegmentIdList);
+
+      final SettableFuture<SegmentsAndMetadata> resultFuture = SettableFuture.create();
+      final AtomicInteger numRemainingHandoffSegments = new AtomicInteger(waitingSegmentIdList.size());
+
+      for (final SegmentIdentifier segmentIdentifier : waitingSegmentIdList) {
         handoffNotifier.registerSegmentHandoffCallback(
             new SegmentDescriptor(
-                dataSegment.getInterval(),
-                dataSegment.getVersion(),
-                dataSegment.getShardSpec().getPartitionNum()
+                segmentIdentifier.getInterval(),
+                segmentIdentifier.getVersion(),
+                segmentIdentifier.getShardSpec().getPartitionNum()
             ),
             MoreExecutors.sameThreadExecutor(),
             () -> {
-              final SegmentIdentifier identifier = SegmentIdentifier.fromDataSegment(dataSegment);
-              log.info("Segment[%s] successfully handed off, dropping.", identifier);
+              log.info("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
               metrics.incrementHandOffCount();
-              final ListenableFuture<?> dropFuture = appenderator.drop(identifier);
+
+              final ListenableFuture<?> dropFuture = appenderator.drop(segmentIdentifier);
               Futures.addCallback(
                   dropFuture,
                   new FutureCallback<Object>()
@@ -329,18 +316,24 @@ public class FiniteAppenderatorDriver implements Closeable
                     @Override
                     public void onSuccess(Object result)
                     {
-                      synchronized (handoffMonitor) {
-                        handoffMonitor.notifyAll();
+                      if (numRemainingHandoffSegments.decrementAndGet() == 0) {
+                        log.info("All segments handed off.");
+                        resultFuture.set(
+                            new SegmentsAndMetadata(
+                                segmentsAndMetadata.getSegments(),
+                                ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata())
+                                    .getCallerMetadata()
+                            )
+                        );
                       }
                     }
 
                     @Override
                     public void onFailure(Throwable e)
                     {
-                      log.warn(e, "Failed to drop segment[%s]?!", identifier);
-                      synchronized (handoffMonitor) {
-                        handoffMonitor.notifyAll();
-                      }
+                      log.warn(e, "Failed to drop segment[%s]?!", segmentIdentifier);
+                      numRemainingHandoffSegments.decrementAndGet();
+                      resultFuture.setException(e);
                     }
                   }
               );
@@ -348,7 +341,7 @@ public class FiniteAppenderatorDriver implements Closeable
         );
       }
 
-      return future;
+      return resultFuture;
     }
   }
 
@@ -359,7 +352,6 @@ public class FiniteAppenderatorDriver implements Closeable
   public void close()
   {
     publishExecutor.shutdownNow();
-    handoffExecutor.shutdownNow();
     handoffNotifier.close();
   }
 
@@ -489,7 +481,13 @@ public class FiniteAppenderatorDriver implements Closeable
           {
             if (result != null) {
               synchronized (activeSegments) {
-                sequenceNames.forEach(publishPendingSegments::remove);
+                // Remove sequenceName from both publishPendingSemgments and activeSegments
+                sequenceNames.forEach(
+                    sequenceName -> {
+                      activeSegments.remove(sequenceName);
+                      publishPendingSegments.remove(sequenceName);
+                    }
+                );
               }
             }
           }

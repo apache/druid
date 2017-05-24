@@ -526,20 +526,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         return toolbox.getTaskActionClient().submit(action).isSuccess();
       };
 
-      final SegmentsAndMetadata published;
-      if (tuningConfig.getPublishTimeout() == 0) {
-        published = driver.publish(
-            publisher,
-            committerSupplier.get(),
-            sequenceNames.values()
-        ).get();
-      } else {
-        published = driver.publish(
-            publisher,
-            committerSupplier.get(),
-            sequenceNames.values()
-        ).get(tuningConfig.getPublishTimeout(), TimeUnit.MILLISECONDS);
-      }
+      // Supervised kafka tasks are killed by KafkaSupervisor if they are stuck during publishing segments or waiting
+      // for hand off. See KafkaSupervisorIOConfig.completionTimeout.
+      final SegmentsAndMetadata published = driver.publish(
+          publisher,
+          committerSupplier.get(),
+          sequenceNames.values()
+      ).get();
 
       final SegmentsAndMetadata handedOff;
       if (tuningConfig.getHandoffConditionTimeout() == 0) {

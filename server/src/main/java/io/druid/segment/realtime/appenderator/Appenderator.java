@@ -81,14 +81,6 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   List<SegmentIdentifier> getSegments();
 
   /**
-   * Indicates that the given segment exists.
-   *
-   * @param identifier segment to examine
-   * @return true if exists.
-   */
-  boolean containsSegment(SegmentIdentifier identifier);
-
-  /**
    * Returns the number of rows in a particular pending segment.
    *
    * @param identifier segment to examine

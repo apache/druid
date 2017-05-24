@@ -231,12 +231,6 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public boolean containsSegment(SegmentIdentifier identifier)
-  {
-    return sinks.containsKey(identifier);
-  }
-
-  @Override
   public int getRowCount(final SegmentIdentifier identifier)
   {
     final Sink sink = sinks.get(identifier);

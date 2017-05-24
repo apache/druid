@@ -56,6 +56,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -206,6 +207,78 @@ public class FiniteAppenderatorDriverTest
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
     driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void testIncrementalHandoff() throws IOException, InterruptedException, TimeoutException, ExecutionException
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+
+    Assert.assertNull(driver.startJob());
+
+    // Add the first row and publish immediately
+    {
+      committerSupplier.setMetadata(1);
+      Assert.assertTrue(driver.add(ROWS.get(0), "dummy", committerSupplier).isOk());
+
+      final SegmentsAndMetadata published = driver.publish(
+          makeOkPublisher(),
+          committerSupplier.get(),
+          ImmutableList.of("dummy")
+      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                            .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+      Assert.assertEquals(
+          ImmutableSet.of(
+              new SegmentIdentifier(DATA_SOURCE, new Interval("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0))
+          ),
+          asIdentifiers(segmentsAndMetadata.getSegments())
+      );
+
+      Assert.assertEquals(1, segmentsAndMetadata.getCommitMetadata());
+    }
+
+    // Add the second and third rows and publish immediately
+    for (int i = 1; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
+
+      final SegmentsAndMetadata published = driver.publish(
+          makeOkPublisher(),
+          committerSupplier.get(),
+          ImmutableList.of("dummy")
+      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                            .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+      Assert.assertEquals(
+          ImmutableSet.of(
+              // The second and third rows have the same dataSource, interval, and version, but different shardSpec of
+              // different partitionNum
+              new SegmentIdentifier(DATA_SOURCE, new Interval("2000T01/PT1H"), VERSION, new NumberedShardSpec(i - 1, 0))
+          ),
+          asIdentifiers(segmentsAndMetadata.getSegments())
+      );
+
+      Assert.assertEquals(i + 1, segmentsAndMetadata.getCommitMetadata());
+    }
+
+    driver.persist(committerSupplier.get());
+
+    // There is no remaining rows in the driver, and thus the result must be empty
+    final SegmentsAndMetadata published = driver.publish(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(
+        ImmutableSet.of(),
+        asIdentifiers(segmentsAndMetadata.getSegments())
+    );
+
+    Assert.assertEquals(3, segmentsAndMetadata.getCommitMetadata());
   }
 
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)
