@@ -70,16 +70,19 @@ public abstract class PagingOffset
       super(offset, threshold);
     }
 
+    @Override
     public final boolean isDescending()
     {
       return false;
     }
 
+    @Override
     public final int startDelta()
     {
       return startOffset;
     }
 
+    @Override
     public final int current()
     {
       return startOffset + counter;
@@ -93,16 +96,19 @@ public abstract class PagingOffset
       super(offset, threshold);
     }
 
+    @Override
     public final boolean isDescending()
     {
       return true;
     }
 
+    @Override
     public final int startDelta()
     {
       return -startOffset - 1;
     }
 
+    @Override
     public final int current()
     {
       return startOffset - counter;

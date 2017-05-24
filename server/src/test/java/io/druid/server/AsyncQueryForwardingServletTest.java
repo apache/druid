@@ -78,6 +78,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   private static int port1;
   private static int port2;
 
+  @Override
   @Before
   public void setup() throws Exception
   {

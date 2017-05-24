@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import io.druid.client.DruidServer;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -107,7 +108,7 @@ public class BroadcastDistributionRuleTest
             "serverHot2",
             "hostHot2",
             1000,
-            "historical",
+            ServerType.HISTORICAL,
             "hot",
             0
         ).addDataSegment(smallSegment.getIdentifier(), smallSegment)
@@ -121,7 +122,7 @@ public class BroadcastDistributionRuleTest
                 "serverHot1",
                 "hostHot1",
                 1000,
-                "historical",
+                ServerType.HISTORICAL,
                 "hot",
                 0
             ).addDataSegment(largeSegments.get(0).getIdentifier(), largeSegments.get(0))
@@ -135,7 +136,7 @@ public class BroadcastDistributionRuleTest
                 "serverNorm1",
                 "hostNorm1",
                 1000,
-                "historical",
+                ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
             ).addDataSegment(largeSegments.get(1).getIdentifier(), largeSegments.get(1))
@@ -149,7 +150,7 @@ public class BroadcastDistributionRuleTest
                 "serverNorm2",
                 "hostNorm2",
                 100,
-                "historical",
+                ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
             ).addDataSegment(largeSegments.get(2).getIdentifier(), largeSegments.get(2))
@@ -164,7 +165,7 @@ public class BroadcastDistributionRuleTest
                 "serverHot3",
                 "hostHot3",
                 1000,
-                "historical",
+                ServerType.HISTORICAL,
                 "hot",
                 0
             ).addDataSegment(largeSegments2.get(0).getIdentifier(), largeSegments2.get(0))
@@ -178,7 +179,7 @@ public class BroadcastDistributionRuleTest
                 "serverNorm3",
                 "hostNorm3",
                 100,
-                "historical",
+                ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
             ).addDataSegment(largeSegments2.get(1).getIdentifier(), largeSegments2.get(1))
@@ -188,6 +189,7 @@ public class BroadcastDistributionRuleTest
     );
 
     druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of(
             "hot",
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(

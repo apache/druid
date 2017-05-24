@@ -172,6 +172,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     );
   }
 
+  @Override
   @LifecycleStart
   public void start()
   {
@@ -206,6 +207,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     }
   }
 
+  @Override
   @LifecycleStop
   public void stop()
   {
@@ -224,6 +226,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     }
   }
 
+  @Override
   public void poll()
   {
     try {
@@ -314,17 +317,20 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     }
   }
 
+  @Override
   public Map<String, List<Rule>> getAllRules()
   {
     return rules.get();
   }
 
+  @Override
   public List<Rule> getRules(final String dataSource)
   {
     List<Rule> retVal = rules.get().get(dataSource);
     return retVal == null ? Lists.<Rule>newArrayList() : retVal;
   }
 
+  @Override
   public List<Rule> getRulesWithDefault(final String dataSource)
   {
     List<Rule> retVal = Lists.newArrayList();
@@ -338,6 +344,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     return retVal;
   }
 
+  @Override
   public boolean overrideRule(final String dataSource, final List<Rule> newRules, final AuditInfo auditInfo)
   {
     final String ruleString;

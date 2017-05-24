@@ -51,7 +51,10 @@ import io.druid.segment.Segment;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+<<<<<<< HEAD
 import java.util.Arrays;
+=======
+>>>>>>> b578adacae978747e15f91acd3b560a40f40a3c5
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -112,12 +115,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
             columns.put(columnName, column);
           }
         }
-        List<Interval> retIntervals;
-        if (updatedQuery.analyzingInterval()) {
-          retIntervals = Collections.singletonList(segment.getDataInterval());
-        } else {
-          retIntervals = null;
-        }
+        List<Interval> retIntervals = query.analyzingInterval() ?
+                                      Collections.singletonList(segment.getDataInterval()) : null;
 
         final Map<String, AggregatorFactory> aggregators;
         Metadata metadata = null;
@@ -169,7 +168,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
 
         return Sequences.simple(
-            Arrays.asList(
+            Collections.singletonList(
                 new SegmentAnalysis(
                     segment.getIdentifier(),
                     retIntervals,
@@ -211,14 +210,18 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   {
                     final Query<SegmentAnalysis> query = queryPlus.getQuery();
                     final int priority = QueryContexts.getPriority(query);
-                    ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
+                    final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
+                    final ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
                         new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
                         {
                           @Override
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
                             return Sequences.simple(
-                                Sequences.toList(input.run(queryPlus, responseContext), new ArrayList<>())
+                                Sequences.toList(
+                                    input.run(threadSafeQueryPlus, responseContext),
+                                    new ArrayList<>()
+                                )
                             );
                           }
                         }
@@ -236,7 +239,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       future.cancel(true);
                       throw new QueryInterruptedException(e);
                     }
-                    catch(CancellationException e) {
+                    catch (CancellationException e) {
                       throw new QueryInterruptedException(e);
                     }
                     catch (TimeoutException e) {

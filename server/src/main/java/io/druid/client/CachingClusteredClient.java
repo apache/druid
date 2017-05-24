@@ -272,7 +272,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (Pair<ServerSelector, SegmentDescriptor> p : segments) {
-        if (!p.lhs.pick().getServer().isAssignable()) {
+        if (!p.lhs.pick().getServer().segmentReplicatable()) {
           hasOnlyHistoricalSegments = false;
           break;
         }
@@ -429,7 +429,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               final MultipleSpecificSegmentSpec segmentSpec = new MultipleSpecificSegmentSpec(descriptors);
 
               final Sequence<T> resultSeqToAdd;
-              if (!server.isAssignable() || !populateCache || isBySegment) { // Direct server queryable
+              if (!server.segmentReplicatable() || !populateCache || isBySegment) { // Direct server queryable
                 if (!isBySegment) {
                   resultSeqToAdd = clientQueryable.run(queryPlus.withQuerySegmentSpec(segmentSpec), responseContext);
                 } else {

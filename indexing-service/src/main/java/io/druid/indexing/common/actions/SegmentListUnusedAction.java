@@ -60,6 +60,7 @@ public class SegmentListUnusedAction implements TaskAction<List<DataSegment>>
     return interval;
   }
 
+  @Override
   public TypeReference<List<DataSegment>> getReturnTypeReference()
   {
     return new TypeReference<List<DataSegment>>() {};

@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class CSVParseSpecTest
 {
@@ -41,7 +42,9 @@ public class CSVParseSpecTest
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
-        Arrays.asList("a")
+        Collections.singletonList("a"),
+        false,
+        0
     );
   }
 
@@ -60,7 +63,9 @@ public class CSVParseSpecTest
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
-        Arrays.asList("a")
+        Collections.singletonList("a"),
+        false,
+        0
     );
   }
 }

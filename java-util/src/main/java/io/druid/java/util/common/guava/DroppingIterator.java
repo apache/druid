@@ -38,6 +38,7 @@ public class DroppingIterator<T> implements Iterator<T>
     this.numToDrop = numToDrop;
   }
 
+  @Override
   public boolean hasNext()
   {
     if (! dropped) {
@@ -50,6 +51,7 @@ public class DroppingIterator<T> implements Iterator<T>
     return delegate.hasNext();
   }
 
+  @Override
   public T next()
   {
     if (! dropped) {
@@ -61,6 +63,7 @@ public class DroppingIterator<T> implements Iterator<T>
     return delegate.next();
   }
 
+  @Override
   public void remove()
   {
     throw new UnsupportedOperationException();

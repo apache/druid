@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -41,7 +43,7 @@ public class ServersResourceTest {
   @Before
   public void setUp()
   {
-    DruidServer dummyServer = new DruidServer("dummy", "host", 1234L, "type", "tier", 0);
+    DruidServer dummyServer = new DruidServer("dummy", "host", 1234L, ServerType.HISTORICAL, "tier", 0);
     DataSegment segment = DataSegment.builder()
                                      .dataSource("dataSource")
                                      .interval(new Interval("2016-03-22T14Z/2016-03-22T15Z"))
@@ -65,7 +67,7 @@ public class ServersResourceTest {
     String result = objectMapper.writeValueAsString(res.getEntity());
     String expected = "[{\"host\":\"host\","
                       + "\"maxSize\":1234,"
-                      + "\"type\":\"type\","
+                      + "\"type\":\"historical\","
                       + "\"tier\":\"tier\","
                       + "\"priority\":0,"
                       + "\"segments\":{\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\":"
@@ -80,7 +82,7 @@ public class ServersResourceTest {
   {
     Response res = serversResource.getClusterServers(null, "simple");
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = "[{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"type\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}]";
+    String expected = "[{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}]";
     Assert.assertEquals(expected, result);
   }
 
@@ -91,7 +93,7 @@ public class ServersResourceTest {
     String result = objectMapper.writeValueAsString(res.getEntity());
     String expected = "{\"host\":\"host\","
                       + "\"maxSize\":1234,"
-                      + "\"type\":\"type\","
+                      + "\"type\":\"historical\","
                       + "\"tier\":\"tier\","
                       + "\"priority\":0,"
                       + "\"segments\":{\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\":"
@@ -106,8 +108,29 @@ public class ServersResourceTest {
   {
     Response res = serversResource.getServer(server.getName(), "simple");
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = "{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"type\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}";
+    String expected = "{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}";
     Assert.assertEquals(expected, result);
   }
 
+  @Test
+  public void testDruidServerSerde() throws Exception
+  {
+    DruidServer server = new DruidServer("dummy", "dummyHost", 1234, ServerType.HISTORICAL, "dummyTier", 1);
+    String serverJson = objectMapper.writeValueAsString(server);
+    String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1}";
+    Assert.assertEquals(expected, serverJson);
+    DruidServer deserializedServer = objectMapper.readValue(serverJson, DruidServer.class);
+    Assert.assertEquals(server, deserializedServer);
+  }
+
+  @Test
+  public void testDruidServerMetadataSerde() throws Exception
+  {
+    DruidServerMetadata metadata = new DruidServerMetadata("dummy", "host", 1234, ServerType.HISTORICAL, "tier", 1);
+    String metadataJson = objectMapper.writeValueAsString(metadata);
+    String expected = "{\"name\":\"dummy\",\"host\":\"host\",\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"tier\",\"priority\":1}";
+    Assert.assertEquals(expected, metadataJson);
+    DruidServerMetadata deserializedMetadata = objectMapper.readValue(metadataJson, DruidServerMetadata.class);
+    Assert.assertEquals(metadata, deserializedMetadata);
+  }
 }

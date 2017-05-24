@@ -19,6 +19,9 @@
 
 package io.druid.query.timeseries;
 
+/**
+ * Implementations of this interface could be injected using {@link TimeseriesQueryConfig#queryMetricsFactory} option.
+ */
 public interface TimeseriesQueryMetricsFactory
 {
 

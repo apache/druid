@@ -80,14 +80,12 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
     DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
     try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
-    }
-    catch (EOFException eof) {
+    } catch (EOFException eof) {
       // waiting for avro v1.9.0 (#AVRO-813)
       throw new ParseException(
           eof, "Avro's unnecessary EOFException, detail: [%s]", "https://issues.apache.org/jira/browse/AVRO-813"
       );
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       throw new ParseException(e, "Fail to decode avro message!");
     }
   }
@@ -110,8 +108,8 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
       return false;
     }
     return !(schemaRepository != null
-             ? !schemaRepository.equals(that.schemaRepository)
-             : that.schemaRepository != null);
+        ? !schemaRepository.equals(that.schemaRepository)
+        : that.schemaRepository != null);
   }
 
   @Override

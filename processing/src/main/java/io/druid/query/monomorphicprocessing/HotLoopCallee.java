@@ -37,7 +37,7 @@ public interface HotLoopCallee
    *        this instance (the instance on which inspectRuntimeShape() is called) is configured.
    *     d. ByteBuffer or similar objects, where byte order matters
    *     e. boolean flags, affecting branch taking
-   *     f. Arrays of objects, meeting conditions any of conditions a-e.
+   *     f. Arrays of objects, meeting any of conditions a-e.
    */
   void inspectRuntimeShape(RuntimeShapeInspector inspector);
 }

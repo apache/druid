@@ -44,25 +44,25 @@ public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> impl
   @Override
   public void threshold(TopNQuery query)
   {
-    builder.setDimension("threshold", String.valueOf(query.getThreshold()));
+    setDimension("threshold", String.valueOf(query.getThreshold()));
   }
 
   @Override
   public void dimension(TopNQuery query)
   {
-    builder.setDimension("dimension", query.getDimensionSpec().getDimension());
+    setDimension("dimension", query.getDimensionSpec().getDimension());
   }
 
   @Override
   public void numMetrics(TopNQuery query)
   {
-    builder.setDimension("numMetrics", String.valueOf(query.getAggregatorSpecs().size()));
+    setDimension("numMetrics", String.valueOf(query.getAggregatorSpecs().size()));
   }
 
   @Override
   public void numComplexMetrics(TopNQuery query)
   {
     int numComplexAggs = DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs());
-    builder.setDimension("numComplexMetrics", String.valueOf(numComplexAggs));
+    setDimension("numComplexMetrics", String.valueOf(numComplexAggs));
   }
 }

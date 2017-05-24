@@ -37,6 +37,7 @@ public class DroppingIterable<T> implements Iterable<T>
     this.numToDrop = numToDrop;
   }
 
+  @Override
   public Iterator<T> iterator()
   {
     return new DroppingIterator<>(delegate.iterator(), numToDrop);

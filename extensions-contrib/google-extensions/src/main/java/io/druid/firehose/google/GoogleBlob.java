@@ -41,5 +41,14 @@ public class GoogleBlob {
   public String getPath() {
     return path;
   }
+
+  @Override
+  public String toString()
+  {
+    return "GoogleBlob {"
+        + "bucket=" + bucket
+        + ",path=" + path
+        + "}";
+  }
 }
 

@@ -20,26 +20,34 @@
 package io.druid.server.http;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.druid.server.coordinator.DruidCoordinator;
 
 import java.net.URL;
+import java.util.Set;
 
 /**
-*/
+ */
 public class CoordinatorRedirectInfo implements RedirectInfo
 {
+  private static final Set<String> LOCAL_PATHS = ImmutableSet.of(
+      "/druid/coordinator/v1/leader",
+      "/druid/coordinator/v1/isLeader"
+  );
+
   private final DruidCoordinator coordinator;
 
   @Inject
-  public CoordinatorRedirectInfo(DruidCoordinator coordinator) {
+  public CoordinatorRedirectInfo(DruidCoordinator coordinator)
+  {
     this.coordinator = coordinator;
   }
 
   @Override
   public boolean doLocal(String requestURI)
   {
-    return coordinator.isLeader();
+    return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || coordinator.isLeader();
   }
 
   @Override

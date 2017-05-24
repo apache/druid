@@ -37,6 +37,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -367,7 +368,7 @@ public class OrderedMergeSequenceTest
         )
     );
 
-    SequenceTestHelper.testAll(finalMerged, Arrays.asList(1));
+    SequenceTestHelper.testAll(finalMerged, Collections.singletonList(1));
   }
 
   @Test
@@ -379,6 +380,6 @@ public class OrderedMergeSequenceTest
         )
     );
 
-    SequenceTestHelper.testAll(seq1, Arrays.asList(1));
+    SequenceTestHelper.testAll(seq1, Collections.singletonList(1));
   }
 }

@@ -22,7 +22,6 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-
 import io.druid.TestObjectMapper;
 import io.druid.java.util.common.parsers.Parser;
 import io.druid.js.JavaScriptConfig;
@@ -32,7 +31,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -55,7 +54,7 @@ public class JavaScriptParseSpecTest
     );
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
         "abc",
         JavaScriptConfig.getEnabledInstance()
     );
@@ -67,7 +66,7 @@ public class JavaScriptParseSpecTest
     Assert.assertEquals("iso", serde.getTimestampSpec().getTimestampFormat());
 
     Assert.assertEquals("abc", serde.getFunction());
-    Assert.assertEquals(Arrays.asList("abc"), serde.getDimensionsSpec().getDimensionNames());
+    Assert.assertEquals(Collections.singletonList("abc"), serde.getDimensionsSpec().getDimensionNames());
   }
 
   @Test
@@ -76,7 +75,7 @@ public class JavaScriptParseSpecTest
     final JavaScriptConfig config = JavaScriptConfig.getEnabledInstance();
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
         "function(str) { var parts = str.split(\"-\"); return { one: parts[0], two: parts[1] } }",
         config
     );
@@ -92,7 +91,7 @@ public class JavaScriptParseSpecTest
     final JavaScriptConfig config = new JavaScriptConfig(false);
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
         "abc",
         config
     );

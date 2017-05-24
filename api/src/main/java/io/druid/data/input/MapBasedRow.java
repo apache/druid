@@ -76,6 +76,7 @@ public class MapBasedRow implements Row
     return timestamp.getMillis();
   }
 
+  @Override
   @JsonProperty
   public DateTime getTimestamp()
   {

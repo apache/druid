@@ -19,6 +19,9 @@
 
 package io.druid.query.groupby;
 
+/**
+ * Implementations of this interface could be injected using {@link GroupByQueryConfig#queryMetricsFactory} option.
+ */
 public interface GroupByQueryMetricsFactory
 {
 

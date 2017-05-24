@@ -4923,12 +4923,6 @@ public class GroupByQueryRunnerTest
               {
                 return (row.getFloatMetric("idx_subpostagg") < 3800);
               }
-
-              @Override
-              public byte[] getCacheKey()
-              {
-                return new byte[0];
-              }
             }
         )
         .addOrderByColumn("alias")
@@ -5193,12 +5187,6 @@ public class GroupByQueryRunnerTest
               public boolean eval(Row row)
               {
                 return (row.getFloatMetric("idx_subpostagg") < 3800);
-              }
-
-              @Override
-              public byte[] getCacheKey()
-              {
-                return new byte[0];
               }
             }
         )

@@ -31,7 +31,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -83,8 +82,8 @@ public class OnheapIncrementalIndexTest
       public void run()
       {
         while (!Thread.interrupted()) {
-          for (Map.Entry<IncrementalIndex.TimeAndDims, Integer> row : index.getFacts().entrySet()) {
-            if (index.getMetricLongValue(row.getValue(), 0) != 1) {
+          for (IncrementalIndex.TimeAndDims row : index.getFacts().keySet()) {
+            if (index.getMetricLongValue(row.getRowIndex(), 0) != 1) {
               checkFailedCount.addAndGet(1);
             }
           }

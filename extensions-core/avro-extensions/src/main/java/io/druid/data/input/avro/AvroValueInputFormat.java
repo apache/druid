@@ -55,7 +55,7 @@ public class AvroValueInputFormat extends FileInputFormat<NullWritable, GenericR
       if (StringUtils.isNotBlank(schemaFilePath)) {
         log.info("Using file: %s as reader schema.", schemaFilePath);
         try (FSDataInputStream inputStream =
-                 FileSystem.get(context.getConfiguration()).open(new Path(schemaFilePath))) {
+            FileSystem.get(context.getConfiguration()).open(new Path(schemaFilePath))) {
           readerSchema = new Schema.Parser().parse(inputStream);
         }
       }

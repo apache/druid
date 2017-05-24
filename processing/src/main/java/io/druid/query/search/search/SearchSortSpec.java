@@ -70,6 +70,7 @@ public class SearchSortSpec
     return ordering.getCacheKey();
   }
 
+  @Override
   public String toString()
   {
     return String.format("%sSort", ordering.toString());

@@ -70,8 +70,10 @@ import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.utils.Runnables;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -81,6 +83,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -143,7 +146,7 @@ public class RealtimeManagerTest
         new FirehoseFactory()
         {
           @Override
-          public Firehose connect(InputRowParser parser) throws IOException
+          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
           {
             return new TestFirehose(rows.iterator());
           }
@@ -215,7 +218,8 @@ public class RealtimeManagerTest
                 tuningConfig
             )
         ),
-        null
+        null,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class)
     );
     plumber2 = new TestPlumber(new Sink(
         new Interval("0/P5000Y"),
@@ -234,7 +238,8 @@ public class RealtimeManagerTest
                 tuningConfig
             )
         ),
-        null
+        null,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class)
     );
 
     tuningConfig_0 = new RealtimeTuningConfig(
@@ -319,6 +324,7 @@ public class RealtimeManagerTest
     realtimeManager3 = new RealtimeManager(
         Arrays.asList(department_0, department_1),
         conglomerate,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         ImmutableMap.<String, Map<Integer, RealtimeManager.FireChief>>of(
             "testing",
             ImmutableMap.of(
