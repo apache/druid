@@ -110,7 +110,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
     }
     this.totalBuffer = bufferSupplier.get();
 
-    LimitedBufferGrouper.validateBufferCapacity(
+    validateBufferCapacity(
         limit,
         maxLoadFactor,
         totalBuffer,
@@ -377,7 +377,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
   }
 
 
-  public static void validateBufferCapacity(
+  private void validateBufferCapacity(
       int limit,
       float maxLoadFactor,
       ByteBuffer buffer,
@@ -428,8 +428,8 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       this.growthCount = 0;
 
       int subHashTableSize = tableArenaSize / 2;
-      buckets = subHashTableSize / bucketSize;
-      maxSize = maxSizeForBuckets(buckets);
+      maxBuckets = subHashTableSize / bucketSize;
+      regrowthThreshold = maxSizeForBuckets(maxBuckets);
 
       // split the hashtable into 2 sub tables that we rotate between
       ByteBuffer subHashTable1Buffer = totalHashTableBuffer.duplicate();
@@ -447,7 +447,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       subHashTables = new ByteBufferHashTable[2];
       subHashTables[0] = new ByteBufferHashTable(
           maxLoadFactor,
-          buckets,
+          maxBuckets,
           bucketSizeWithHash,
           subHashTableBuffers[0],
           keySize,
@@ -456,7 +456,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       );
       subHashTables[1] = new ByteBufferHashTable(
           maxLoadFactor,
-          buckets,
+          maxBuckets,
           bucketSizeWithHash,
           subHashTableBuffers[1],
           keySize,
@@ -501,7 +501,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
 
           // Put the entry in the new hash table
           final int keyHash = entryBuffer.getInt(entryBuffer.position()) & 0x7fffffff;
-          final int newBucket =  newHashTable.findBucket(true, buckets, newTableBuffer, keyBuffer, keyHash);
+          final int newBucket =  newHashTable.findBucket(true, maxBuckets, newTableBuffer, keyBuffer, keyHash);
 
           if (newBucket < 0) {
             throw new ISE("WTF?! Couldn't find a bucket while resizing?!");

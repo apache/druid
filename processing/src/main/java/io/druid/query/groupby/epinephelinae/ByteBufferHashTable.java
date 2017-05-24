@@ -51,10 +51,10 @@ public class ByteBufferHashTable
 
   protected final float maxLoadFactor;
   protected final int initialBuckets;
-  protected ByteBuffer buffer;
-  protected int bucketSizeWithHash;
-  protected int tableArenaSize;
-  protected int keySize;
+  protected final ByteBuffer buffer;
+  protected final int bucketSizeWithHash;
+  protected final int tableArenaSize;
+  protected final int keySize;
 
   protected int tableStart;
 
@@ -65,10 +65,12 @@ public class ByteBufferHashTable
   protected int size;
 
   // Maximum number of elements in the table before it must be resized
-  protected int maxSize;
+  // This value changes when the table is resized.
+  protected int regrowthThreshold;
 
   // current number of available/used buckets in the table
-  protected int buckets;
+  // This value changes when the table is resized.
+  protected int maxBuckets;
 
   // how many times the table buffer has filled/readjusted (through adjustTableWhenFull())
   protected int growthCount;
@@ -101,10 +103,10 @@ public class ByteBufferHashTable
   {
     size = 0;
 
-    buckets = Math.min(tableArenaSize / bucketSizeWithHash, initialBuckets);
-    maxSize = maxSizeForBuckets(buckets);
+    maxBuckets = Math.min(tableArenaSize / bucketSizeWithHash, initialBuckets);
+    regrowthThreshold = maxSizeForBuckets(maxBuckets);
 
-    if (buckets < 1) {
+    if (maxBuckets < 1) {
       throw new IAE(
           "Not enough capacity for even one row! Need[%,d] but have[%,d].",
           bucketSizeWithHash + Ints.BYTES,
@@ -113,8 +115,8 @@ public class ByteBufferHashTable
     }
 
     // Start table part-way through the buffer so the last growth can start from zero and thereby use more space.
-    tableStart = tableArenaSize - buckets * bucketSizeWithHash;
-    int nextBuckets = buckets * 2;
+    tableStart = tableArenaSize - maxBuckets * bucketSizeWithHash;
+    int nextBuckets = maxBuckets * 2;
     while (true) {
       final int nextTableStart = tableStart - nextBuckets * bucketSizeWithHash;
       if (nextTableStart > tableArenaSize / 2) {
@@ -131,11 +133,11 @@ public class ByteBufferHashTable
 
     final ByteBuffer bufferDup = buffer.duplicate();
     bufferDup.position(tableStart);
-    bufferDup.limit(tableStart + buckets * bucketSizeWithHash);
+    bufferDup.limit(tableStart + maxBuckets * bucketSizeWithHash);
     tableBuffer = bufferDup.slice();
 
     // Clear used bits of new table
-    for (int i = 0; i < buckets; i++) {
+    for (int i = 0; i < maxBuckets; i++) {
       tableBuffer.put(i * bucketSizeWithHash, (byte) 0);
     }
   }
@@ -151,19 +153,19 @@ public class ByteBufferHashTable
     final int newMaxSize;
     final int newTableStart;
 
-    if ((tableStart + buckets * 3 * bucketSizeWithHash) > tableArenaSize) {
+    if ((tableStart + maxBuckets * 3 * bucketSizeWithHash) > tableArenaSize) {
       // Not enough space to grow upwards, start back from zero
       newTableStart = 0;
       newBuckets = tableStart / bucketSizeWithHash;
       newMaxSize = maxSizeForBuckets(newBuckets);
     } else {
       newTableStart = tableStart + tableBuffer.limit();
-      newBuckets = buckets * 2;
+      newBuckets = maxBuckets * 2;
       newMaxSize = maxSizeForBuckets(newBuckets);
     }
 
-    if (newBuckets < buckets) {
-      throw new ISE("WTF?! newBuckets[%,d] < buckets[%,d]", newBuckets, buckets);
+    if (newBuckets < maxBuckets) {
+      throw new ISE("WTF?! newBuckets[%,d] < maxBuckets[%,d]", newBuckets, maxBuckets);
     }
 
     ByteBuffer newTableBuffer = buffer.duplicate();
@@ -182,7 +184,7 @@ public class ByteBufferHashTable
     final ByteBuffer entryBuffer = tableBuffer.duplicate();
     final ByteBuffer keyBuffer = tableBuffer.duplicate();
 
-    int oldBuckets = buckets;
+    int oldBuckets = maxBuckets;
 
     if (bucketUpdateHandler != null) {
       bucketUpdateHandler.handlePreTableSwap();
@@ -216,8 +218,8 @@ public class ByteBufferHashTable
       }
     }
 
-    buckets = newBuckets;
-    maxSize = newMaxSize;
+    maxBuckets = newBuckets;
+    regrowthThreshold = newMaxSize;
     tableBuffer = newTableBuffer;
     tableStart = newTableStart;
 
@@ -257,12 +259,12 @@ public class ByteBufferHashTable
       final int keyHash
   )
   {
-    int bucket = findBucket(canAllowNewBucket(), buckets, tableBuffer, keyBuffer, keyHash);
+    int bucket = findBucket(canAllowNewBucket(), maxBuckets, tableBuffer, keyBuffer, keyHash);
 
     if (bucket < 0) {
       if (size < maxSizeForTesting) {
         adjustTableWhenFull();
-        bucket = findBucket(size < maxSize, buckets, tableBuffer, keyBuffer, keyHash);
+        bucket = findBucket(size < regrowthThreshold, maxBuckets, tableBuffer, keyBuffer, keyHash);
       }
     }
 
@@ -308,7 +310,7 @@ outer:
 
           if (bucket == startBucket) {
             // Came back around to the start without finding a free slot, that was a long trip!
-            // Should never happen unless buckets == maxSize.
+            // Should never happen unless buckets == regrowthThreshold.
             return -1;
           }
 
@@ -323,7 +325,7 @@ outer:
 
   protected boolean canAllowNewBucket()
   {
-    return size < Math.min(maxSize, maxSizeForTesting);
+    return size < Math.min(regrowthThreshold, maxSizeForTesting);
   }
 
   protected int getOffsetForBucket(int bucket)
@@ -356,14 +358,14 @@ outer:
     return size;
   }
 
-  public int getMaxSize()
+  public int getRegrowthThreshold()
   {
-    return maxSize;
+    return regrowthThreshold;
   }
 
-  public int getBuckets()
+  public int getMaxBuckets()
   {
-    return buckets;
+    return maxBuckets;
   }
 
   public int getGrowthCount()

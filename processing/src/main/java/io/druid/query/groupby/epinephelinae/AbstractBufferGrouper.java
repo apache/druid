@@ -118,13 +118,13 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
   // Current number of available/used buckets in the table
   public int getBuckets()
   {
-    return hashTable.getBuckets();
+    return hashTable.getMaxBuckets();
   }
 
   // Maximum number of elements in the table before it must be resized
   public int getMaxSize()
   {
-    return hashTable.getMaxSize();
+    return hashTable.getRegrowthThreshold();
   }
 
   @Override
