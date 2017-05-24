@@ -39,10 +39,10 @@ public class KafkaSupervisorReport extends SupervisorReport
     private final Long durationSeconds;
     private final List<TaskReportData> activeTasks;
     private final List<TaskReportData> publishingTasks;
-
-    private Map<Integer, Long> latestOffsets;
-    private Map<Integer, Long> minimumLag;
-    private Long aggregateLag;
+    private final Map<Integer, Long> latestOffsets;
+    private final Map<Integer, Long> minimumLag;
+    private final Long aggregateLag;
+    private final DateTime offsetsLastUpdated;
 
     public KafkaSupervisorReportPayload(
         String dataSource,
@@ -52,7 +52,8 @@ public class KafkaSupervisorReport extends SupervisorReport
         Long durationSeconds,
         Map<Integer, Long> latestOffsets,
         Map<Integer, Long> minimumLag,
-        Long aggregateLag
+        Long aggregateLag,
+        DateTime offsetsLastUpdated
     )
     {
       this.dataSource = dataSource;
@@ -62,10 +63,10 @@ public class KafkaSupervisorReport extends SupervisorReport
       this.durationSeconds = durationSeconds;
       this.activeTasks = Lists.newArrayList();
       this.publishingTasks = Lists.newArrayList();
-
       this.latestOffsets = latestOffsets;
       this.minimumLag = minimumLag;
       this.aggregateLag = aggregateLag;
+      this.offsetsLastUpdated = offsetsLastUpdated;
     }
 
     @JsonProperty
@@ -128,6 +129,12 @@ public class KafkaSupervisorReport extends SupervisorReport
       return aggregateLag;
     }
 
+    @JsonProperty
+    public DateTime getOffsetsLastUpdated()
+    {
+      return offsetsLastUpdated;
+    }
+
     @Override
     public String toString()
     {
@@ -142,6 +149,7 @@ public class KafkaSupervisorReport extends SupervisorReport
              (latestOffsets != null ? ", latestOffsets=" + latestOffsets : "") +
              (minimumLag != null ? ", minimumLag=" + minimumLag : "") +
              (aggregateLag != null ? ", aggregateLag=" + aggregateLag : "") +
+             (offsetsLastUpdated != null ? ", offsetsLastUpdated=" + offsetsLastUpdated : "") +
              '}';
     }
   }
@@ -154,7 +162,11 @@ public class KafkaSupervisorReport extends SupervisorReport
       String topic,
       Integer partitions,
       Integer replicas,
-      Long durationSeconds
+      Long durationSeconds,
+      Map<Integer, Long> latestOffsets,
+      Map<Integer, Long> minimumLag,
+      Long aggregateLag,
+      DateTime offsetsLastUpdated
   )
   {
     super(dataSource, generationTime);
@@ -164,9 +176,10 @@ public class KafkaSupervisorReport extends SupervisorReport
         partitions,
         replicas,
         durationSeconds,
-        null,
-        null,
-        null
+        latestOffsets,
+        minimumLag,
+        aggregateLag,
+        offsetsLastUpdated
     );
   }
 
@@ -185,21 +198,6 @@ public class KafkaSupervisorReport extends SupervisorReport
     } else {
       throw new IAE("Unknown task type [%s]", data.getType().name());
     }
-  }
-
-  public void setLatestOffsets(Map<Integer, Long> latestOffsets)
-  {
-    payload.latestOffsets = latestOffsets;
-  }
-
-  public void setMinimumLag(Map<Integer, Long> minimumLag)
-  {
-    payload.minimumLag = minimumLag;
-  }
-
-  public void setAggregateLag(Long aggregateLag)
-  {
-    payload.aggregateLag = aggregateLag;
   }
 
   @Override

@@ -19,6 +19,7 @@
 
 package io.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
@@ -36,8 +37,8 @@ public class TaskReportData
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
-  private Map<Integer, Long> currentOffsets;
-  private Map<Integer, Long> lag;
+  private final Map<Integer, Long> currentOffsets;
+  private final Map<Integer, Long> lag;
 
   public TaskReportData(
       String id,
@@ -71,14 +72,10 @@ public class TaskReportData
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<Integer, Long> getCurrentOffsets()
   {
     return currentOffsets;
-  }
-
-  public void setCurrentOffsets(Map<Integer, Long> currentOffsets)
-  {
-    this.currentOffsets = currentOffsets;
   }
 
   @JsonProperty
@@ -100,13 +97,10 @@ public class TaskReportData
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<Integer, Long> getLag()
   {
     return lag;
-  }
-
-  public void setLag(Map<Integer, Long> lag) {
-    this.lag = lag;
   }
 
   @Override
