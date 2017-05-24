@@ -74,6 +74,11 @@ public class ImmutableWorkerInfo
     return availabilityGroups;
   }
 
+  @JsonProperty("availableCapacity")
+  public int getAvailableCapacity() {
+    return getWorker().getCapacity() - getCurrCapacityUsed();
+  }
+
   @JsonProperty("runningTasks")
   public Set<String> getRunningTasks()
   {

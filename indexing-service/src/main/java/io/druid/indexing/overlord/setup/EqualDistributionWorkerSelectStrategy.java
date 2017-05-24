@@ -40,28 +40,8 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
   )
   {
     final TreeSet<ImmutableWorkerInfo> sortedWorkers = Sets.newTreeSet(
-        new Comparator<ImmutableWorkerInfo>()
-        {
-          @Override
-          public int compare(
-              ImmutableWorkerInfo zkWorker, ImmutableWorkerInfo zkWorker2
-          )
-          {
-            int retVal = Ints.compare(zkWorker2.getWorker().getCapacity() - zkWorker2.getCurrCapacityUsed(),
-                    zkWorker.getWorker().getCapacity() - zkWorker.getCurrCapacityUsed());
-            // the version sorting is needed because if the workers have the same currCapacityUsed only one of them is
-            // returned. Exists the possibility that this worker is disabled and doesn't have valid version so can't
-            // run new tasks, so in this case the workers are sorted using version to ensure that if exists enable
-            // workers the comparator return one of them.
-
-            if(retVal == 0) {
-              retVal = zkWorker2.getWorker().getVersion().compareTo(zkWorker.getWorker().getVersion());
-            }
-
-            return retVal;
-          }
-        }
-    );
+        Comparator.comparing(ImmutableWorkerInfo::getAvailableCapacity).reversed()
+                                              .thenComparing(zkWorker -> zkWorker.getWorker().getVersion()));
     sortedWorkers.addAll(zkWorkers.values());
     final String minWorkerVer = config.getMinWorkerVersion();
 
