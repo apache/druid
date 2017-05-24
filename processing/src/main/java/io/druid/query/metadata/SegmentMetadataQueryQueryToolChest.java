@@ -236,6 +236,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(SegmentMetadataQuery query, List<T> segments)
   {
+    if (!query.isUsingDefaultInterval()) {
+      return segments;
+    }
     if (segments.size() <= 1) {
       return segments;
     }
@@ -243,20 +246,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     final T max = segments.get(segments.size() - 1);
 
     DateTime targetEnd = max.getInterval().getEnd();
-    List<Interval> intervals = query.getIntervals();
-
-    DateTime queryEndTime = intervals.stream().map(Interval::getEnd)
-                                     .max(Ordering.natural()).orElseThrow(IllegalStateException::new);
-    DateTime queryStartTime = intervals.stream().map(Interval::getStart)
-                                       .min(Ordering.natural()).orElseThrow(IllegalStateException::new);
-
-    Interval targetInterval;
-    if (!query.isUsingDefaultInterval()) {
-      targetInterval = new Interval(queryStartTime, queryEndTime);
-    } else {
-      DateTime finalEndTime = queryEndTime.isBefore(targetEnd) ? queryEndTime : targetEnd;
-      targetInterval = new Interval(config.getDefaultHistory(), finalEndTime);
-    }
+    final Interval targetInterval = new Interval(config.getDefaultHistory(), targetEnd);
 
     return Lists.newArrayList(
         Iterables.filter(

@@ -117,8 +117,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     if (querySegmentSpec == null) {
       this.usingDefaultInterval = true;
     } else {
-      this.usingDefaultInterval = (querySegmentSpec.getIntervals().size() == 1 &&
-                                   querySegmentSpec.getIntervals().get(0).equals(DEFAULT_INTERVAL));
+      this.usingDefaultInterval = useDefaultInterval == null ? false : useDefaultInterval;
     }
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;

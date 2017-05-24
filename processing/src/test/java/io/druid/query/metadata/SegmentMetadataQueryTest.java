@@ -1081,32 +1081,6 @@ public class SegmentMetadataQueryTest
     for (int i = 0; i < filteredSegments2.size(); i++) {
       Assert.assertEquals(expectedSegments2.get(i).getInterval(), filteredSegments2.get(i).getInterval());
     }
-
-    SegmentMetadataQuery testQuery2 = Druids.newSegmentMetadataQueryBuilder()
-                                            .dataSource("testing")
-                                            .intervals("2009/2010")
-                                            .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                                            .merge(true)
-                                            .build();
-
-    List<LogicalSegment> filteredSegments3 = new SegmentMetadataQueryQueryToolChest(
-        twoYearPeriodCfg
-    ).filterSegments(
-        testQuery2,
-        testSegments
-    );
-
-    List<LogicalSegment> expectedSegments3 = Arrays.asList();
-
-    Assert.assertEquals(filteredSegments3, expectedSegments3);
-    Assert.assertEquals(filteredSegments3.size(), 0);
-    for (int i = 0; i < filteredSegments3.size(); i++) {
-      Assert.assertEquals(expectedSegments3.get(i).getInterval(), filteredSegments2.get(i).getInterval());
-    }
-
-    Assert.assertTrue(testQuery.isUsingDefaultInterval());
-    Assert.assertFalse(testQuery2.isUsingDefaultInterval());
-
   }
 
   @Test
