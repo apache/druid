@@ -115,7 +115,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
             columns.put(columnName, column);
           }
         }
-        List<Interval> retIntervals = query.analyzingInterval() ?
+        List<Interval> retIntervals = updatedQuery.analyzingInterval() ?
                                       Collections.singletonList(segment.getDataInterval()) : null;
 
         final Map<String, AggregatorFactory> aggregators;
