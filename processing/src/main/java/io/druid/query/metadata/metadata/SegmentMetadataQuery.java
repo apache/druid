@@ -101,7 +101,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("merge") Boolean merge,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("analysisTypes") EnumSet<AnalysisType> analysisTypes,
-      // useDefaultInterval will be removed, but is left for now for compatibility
       @JsonProperty("usingDefaultInterval") Boolean useDefaultInterval,
       @JsonProperty("lenientAggregatorMerge") Boolean lenientAggregatorMerge
   )
