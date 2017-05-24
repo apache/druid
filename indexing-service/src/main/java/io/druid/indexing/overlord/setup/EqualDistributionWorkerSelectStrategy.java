@@ -22,7 +22,6 @@ package io.druid.indexing.overlord.setup;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
@@ -45,7 +44,7 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
     // workers the comparator return one of them.
     final TreeSet<ImmutableWorkerInfo> sortedWorkers = Sets.newTreeSet(
         Comparator.comparing(ImmutableWorkerInfo::getAvailableCapacity).reversed()
-                                              .thenComparing(zkWorker -> zkWorker.getWorker().getVersion()));
+                  .thenComparing(zkWorker -> zkWorker.getWorker().getVersion()));
     sortedWorkers.addAll(zkWorkers.values());
     final String minWorkerVer = config.getMinWorkerVersion();
 
