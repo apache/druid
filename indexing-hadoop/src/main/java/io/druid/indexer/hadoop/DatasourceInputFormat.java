@@ -68,7 +68,10 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   {
     Configuration conf = context.getConfiguration();
 
-    String segmentsStr = Preconditions.checkNotNull(conf.get(CONF_INPUT_SEGMENTS), "No segments found to read");
+    String segmentsStr = Preconditions.checkNotNull(
+        conf.get(CONF_INPUT_SEGMENTS),
+        "No segments found to read"
+    );
     List<WindowedDataSegment> segments = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         segmentsStr,
         new TypeReference<List<WindowedDataSegment>>()
@@ -87,7 +90,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       for (WindowedDataSegment segment : segments) {
         totalSize += segment.getSegment().getSize();
       }
-      int mapTask = ((JobConf)conf).getNumMapTasks();
+      int mapTask = ((JobConf) conf).getNumMapTasks();
       if (mapTask > 0) {
         maxSize = totalSize / mapTask;
       }
@@ -155,7 +158,8 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
         //and not consider the splitting.
         //also without this, isSplitable(..) fails with NPE because compressionCodecs is not properly setup.
         @Override
-        protected boolean isSplitable(FileSystem fs, Path file) {
+        protected boolean isSplitable(FileSystem fs, Path file)
+        {
           return false;
         }
 
@@ -187,18 +191,19 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       JobConf conf
   )
   {
-    String[] locations = getFrequentLocations(segments, fio, conf);
+    String[] locations = getFrequentLocations(getLocations(segments, fio, conf));
 
     return new DatasourceInputSplit(segments, locations);
   }
 
-  private String[] getFrequentLocations(
+  @VisibleForTesting
+  static Stream<String> getLocations(
       final List<WindowedDataSegment> segments,
       final org.apache.hadoop.mapred.InputFormat fio,
       final JobConf conf
   )
   {
-    final Stream<String> locations = segments.stream().flatMap(
+    return segments.stream().sequential().flatMap(
         (final WindowedDataSegment segment) -> {
           FileInputFormat.setInputPaths(
               conf,
@@ -223,7 +228,11 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
           }
         }
     );
+  }
 
+  @VisibleForTesting
+  static String[] getFrequentLocations(final Stream<String> locations)
+  {
     final Map<String, Long> locationCountMap = locations.collect(
         Collectors.groupingBy(location -> location, Collectors.counting())
     );
