@@ -67,7 +67,6 @@ import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.metadata.EntryExistsException;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -150,7 +149,7 @@ public class KafkaSupervisor implements Supervisor
 
     Set<String> taskIds()
     {
-      return JavaCompatUtils.keySet(tasks);
+      return tasks.keySet();
     }
   }
 
@@ -566,7 +565,7 @@ public class KafkaSupervisor implements Supervisor
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
       log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
-      killTaskGroupForPartitions(JavaCompatUtils.keySet(taskGroups));
+      killTaskGroupForPartitions(taskGroups.keySet());
     } else if (!(dataSourceMetadata instanceof KafkaDataSourceMetadata)) {
       throw new IAE("Expected KafkaDataSourceMetadata but found instance of [%s]", dataSourceMetadata.getClass());
     } else {
@@ -622,12 +621,7 @@ public class KafkaSupervisor implements Supervisor
           }
         }
         if (metadataUpdateSuccess) {
-          killTaskGroupForPartitions(
-              JavaCompatUtils.keySet(
-                  resetKafkaMetadata.getKafkaPartitions()
-                                    .getPartitionOffsetMap()
-              )
-          );
+          killTaskGroupForPartitions(resetKafkaMetadata.getKafkaPartitions().getPartitionOffsetMap().keySet());
         } else {
           throw new ISE("Unable to reset metadata");
         }
@@ -647,7 +641,7 @@ public class KafkaSupervisor implements Supervisor
       TaskGroup taskGroup = taskGroups.get(getTaskGroupIdForPartition(partition));
       if (taskGroup != null) {
         // kill all tasks in this task group
-        for (String taskId : JavaCompatUtils.keySet(taskGroup.tasks)) {
+        for (String taskId : taskGroup.tasks.keySet()) {
           log.info("Reset dataSource[%s] - killing task [%s]", dataSource, taskId);
           killTask(taskId);
         }
@@ -1356,13 +1350,9 @@ public class KafkaSupervisor implements Supervisor
   void createNewTasks()
   {
     // check that there is a current task group for each group of partitions in [partitionGroups]
-    for (Integer groupId : JavaCompatUtils.keySet(partitionGroups)) {
+    for (Integer groupId : partitionGroups.keySet()) {
       if (!taskGroups.containsKey(groupId)) {
-        log.info(
-            "Creating new task group [%d] for partitions %s",
-            groupId,
-            JavaCompatUtils.keySet(partitionGroups.get(groupId))
-        );
+        log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
 
         Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
             DateTime.now().minus(ioConfig.getLateMessageRejectionPeriod().get())
