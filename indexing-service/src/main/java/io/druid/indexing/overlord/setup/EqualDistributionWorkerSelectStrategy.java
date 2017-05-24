@@ -39,6 +39,10 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
       WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task
   )
   {
+    // the version sorting is needed because if the workers have the same currCapacityUsed only one of them is
+    // returned. Exists the possibility that this worker is disabled and doesn't have valid version so can't
+    // run new tasks, so in this case the workers are sorted using version to ensure that if exists enable
+    // workers the comparator return one of them.
     final TreeSet<ImmutableWorkerInfo> sortedWorkers = Sets.newTreeSet(
         Comparator.comparing(ImmutableWorkerInfo::getAvailableCapacity).reversed()
                                               .thenComparing(zkWorker -> zkWorker.getWorker().getVersion()));
