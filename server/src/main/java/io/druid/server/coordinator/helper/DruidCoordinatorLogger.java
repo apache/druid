@@ -37,6 +37,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  */
@@ -258,14 +259,12 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     );
 
     // Emit segment metrics
-    final List<DataSegment> allSegments = params
+    final Stream<DataSegment> allSegments = params
         .getDataSources()
         .stream()
-        .flatMap((final DruidDataSource dataSource) -> dataSource.getSegments().stream())
-        .collect(Collectors.toList());
+        .flatMap((final DruidDataSource dataSource) -> dataSource.getSegments().stream());
 
     allSegments
-        .stream()
         .collect(Collectors.groupingBy(DataSegment::getDataSource))
         .forEach(
             (final String name, final List<DataSegment> segments) -> {
