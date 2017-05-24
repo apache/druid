@@ -51,10 +51,6 @@ import io.druid.segment.Segment;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-<<<<<<< HEAD
-import java.util.Arrays;
-=======
->>>>>>> b578adacae978747e15f91acd3b560a40f40a3c5
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
