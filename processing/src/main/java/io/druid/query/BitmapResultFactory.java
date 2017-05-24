@@ -36,6 +36,13 @@ import io.druid.collections.bitmap.ImmutableBitmap;
  * Emitting of query metric dimension(s) should be done from {@link #toImmutableBitmap(Object)}, the "unwrapping"
  * method, called only once to obtain the final preFilter bitmap.
  *
+ * Implementors expectations
+ * -------------------------
+ * BitmapResultFactory is a part of the {@link QueryMetrics} subsystem, so this interface could be changed often, in
+ * every Druid release (including "patch" releases). Users who create their custom implementations of
+ * BitmapResultFactory should be ready to fix the code of their code to accommodate interface changes (e. g. implement
+ * new methods) when they update Druid. See {@link QueryMetrics} Javadoc for more info.
+ *
  * @param <T> the bitmap result (wrapper) type
  * @see QueryMetrics#makeBitmapResultFactory(BitmapFactory)
  * @see QueryMetrics#reportBitmapConstructionTime(long)
