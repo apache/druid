@@ -277,6 +277,8 @@ public class DruidCoordinator
     for (DataSegment segment : getAvailableDataSegments()) {
       if (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0) {
         retVal.addTo(segment.getDataSource(), 1);
+      } else {
+        retVal.addTo(segment.getDataSource(), 0);
       }
     }
 
