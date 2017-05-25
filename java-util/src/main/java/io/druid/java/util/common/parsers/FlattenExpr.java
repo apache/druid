@@ -34,19 +34,23 @@ public class FlattenExpr
   private JsonQuery jsonQueryExpr;
 
 
-  FlattenExpr(JsonPath jsonPathExpr) {
+  FlattenExpr(JsonPath jsonPathExpr)
+  {
     this.jsonPathExpr = jsonPathExpr;
   }
 
-  FlattenExpr(JsonQuery jsonQueryExpr) {
+  FlattenExpr(JsonQuery jsonQueryExpr)
+  {
     this.jsonQueryExpr = jsonQueryExpr;
   }
 
-  public Object read(Map<String, Object> document, Configuration jsonConfig) {
+  public Object read(Map<String, Object> document, Configuration jsonConfig)
+  {
     return this.jsonPathExpr.read(document, jsonConfig);
   }
 
-  public JsonNode read(JsonNode document) {
+  public JsonNode read(JsonNode document)
+  {
     try {
       return this.jsonQueryExpr.apply(document).get(0);
     }
@@ -55,6 +59,4 @@ public class FlattenExpr
     }
     return null;
   }
-
-
 }
