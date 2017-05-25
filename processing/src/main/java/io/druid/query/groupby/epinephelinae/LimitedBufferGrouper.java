@@ -450,10 +450,9 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
     {
       size = 0;
       growthCount = 0;
-      // clear the used bits of both buffers
+      // clear the used bits of the first buffer
       for (int i = 0; i < maxBuckets; i++) {
         subHashTableBuffers[0].put(i * bucketSizeWithHash, (byte) 0);
-        subHashTableBuffers[1].put(i * bucketSizeWithHash, (byte) 0);
       }
       tableBuffer = subHashTableBuffers[0];
     }
