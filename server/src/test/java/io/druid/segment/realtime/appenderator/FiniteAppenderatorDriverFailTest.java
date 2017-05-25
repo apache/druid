@@ -251,7 +251,7 @@ public class FiniteAppenderatorDriverFailTest
     driver.registerHandoff(published).get();
   }
 
-  private class NoopUsedSegmentChecker implements UsedSegmentChecker
+  private static class NoopUsedSegmentChecker implements UsedSegmentChecker
   {
     @Override
     public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers) throws IOException
