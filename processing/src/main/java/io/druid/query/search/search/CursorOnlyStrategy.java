@@ -95,7 +95,8 @@ public class CursorOnlyStrategy extends SearchStrategy
           interval,
           VirtualColumns.EMPTY,
           query.getGranularity(),
-          query.isDescending()
+          query.isDescending(),
+          null
       );
 
       final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());

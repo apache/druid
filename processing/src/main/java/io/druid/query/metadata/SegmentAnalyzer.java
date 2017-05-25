@@ -254,7 +254,8 @@ public class SegmentAnalyzer
               new Interval(start, end),
               VirtualColumns.EMPTY,
               Granularities.ALL,
-              false
+              false,
+              null
           );
 
       size = cursors.accumulate(

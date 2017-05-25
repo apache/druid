@@ -20,7 +20,11 @@
 package io.druid.query;
 
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
+
+import java.util.List;
 
 /**
  * Abstraction wrapping {@link com.metamx.emitter.service.ServiceMetricEvent.Builder} and allowing to control what
@@ -196,6 +200,18 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void chunkInterval(Interval interval);
 
+  void preFilters(List<Filter> preFilters);
+
+  void postFilters(List<Filter> postFilters);
+
+  /**
+   * Creates a {@link BitmapResultFactory} which may record some information along bitmap construction from {@link
+   * #preFilters(List)}. The returned BitmapResultFactory may add some dimensions to this QueryMetrics from it's {@link
+   * BitmapResultFactory#toImmutableBitmap(Object)} method. See {@link BitmapResultFactory} Javadoc for more
+   * information.
+   */
+  BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory);
+
   /**
    * Registers "query time" metric.
    */
@@ -245,6 +261,23 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Registers "node bytes" metric.
    */
   QueryMetrics<QueryType> reportNodeBytes(long byteCount);
+
+  /**
+   * Reports the time spent constructing bitmap from {@link #preFilters(List)} of the query. Not reported, if there are
+   * no preFilters.
+   */
+  QueryMetrics<QueryType> reportBitmapConstructionTime(long timeNs);
+
+  /**
+   * Reports the total number of rows in the processed segment.
+   */
+  QueryMetrics<QueryType> reportSegmentRows(long numRows);
+
+  /**
+   * Reports the number of rows to scan in the segment after applying {@link #preFilters(List)}. If the are no
+   * preFilters, this metric is equal to {@link #reportSegmentRows(long)}.
+   */
+  QueryMetrics<QueryType> reportPreFilteredRows(long numRows);
 
   /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.

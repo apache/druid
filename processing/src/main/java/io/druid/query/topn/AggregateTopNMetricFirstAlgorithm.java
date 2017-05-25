@@ -29,6 +29,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -67,7 +68,10 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
   @Override
   public void run(
-      TopNParams params, TopNResultBuilder resultBuilder, int[] ints
+      TopNParams params,
+      TopNResultBuilder resultBuilder,
+      int[] ints,
+      @Nullable TopNQueryMetrics queryMetrics
   )
   {
     final String metric = query.getTopNMetricSpec().getMetricName(query.getDimensionSpec());
@@ -95,7 +99,8 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       singleMetricAlgo.run(
           singleMetricParam,
           singleMetricResultBuilder,
-          null
+          null,
+          null // Don't collect metrics during the preparation run.
       );
 
       // Get only the topN dimension values
@@ -113,7 +118,8 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       allMetricAlgo.run(
           allMetricsParam,
           resultBuilder,
-          dimValSelector
+          dimValSelector,
+          queryMetrics
       );
     }
     finally {
