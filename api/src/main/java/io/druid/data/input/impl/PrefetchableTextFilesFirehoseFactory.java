@@ -57,20 +57,51 @@ import java.util.concurrent.atomic.AtomicLong;
  * by this class provides three key functionalities.
  *
  * <ul>
- * <li>Caching: for the first call of {@link #connect(StringInputRowParser, File)}, it caches objects in a local disk
- * up to {@link #maxCacheCapacityBytes}.  These caches are NOT deleted until the process terminates,
- * and thus can be used for future reads.</li>
- * <li>Fetching: when it reads all cached data, it fetches remaining objects into a local disk and reads data from
- * them.  For the performance reason, prefetch technique is used, that is, when the size of remaining cached or
- * fetched data is smaller than {@link #prefetchTriggerBytes}, a background prefetch thread automatically starts to
- * fetch remaining objects.</li>
- * <li>Retry: if an exception occurs while downloading an object, it retries again up to
- * {@link #maxFetchRetry}.</li>
+ *   <li>
+ *     Caching: for the first call of {@link #connect(StringInputRowParser, File)}, it caches objects in a local disk
+ *     up to {@link #maxCacheCapacityBytes}.  These caches are NOT deleted until the process terminates,
+ *     and thus can be used for future reads.
+ *   </li>
+ *   <li>
+ *     Fetching: when it reads all cached data, it fetches remaining objects into a local disk and reads data from
+ *     them.  For the performance reason, prefetch technique is used, that is, when the size of remaining cached or
+ *     fetched data is smaller than {@link #prefetchTriggerBytes}, a background prefetch thread automatically starts to
+ *     fetch remaining objects.
+ *   </li>
+ *   <li>
+ *     Retry: if an exception occurs while downloading an object, it retries again up to {@link #maxFetchRetry}.
+ *   </li>
  * </ul>
  *
  * This implementation can be useful when the cost for reading input objects is large as reading from AWS S3 because
  * IndexTask can read the whole data twice for determining partition specs and generating segments if the intervals of
  * GranularitySpec is not specified.
+ *
+ * Prefetching can be turned on/off by setting {@link #maxFetchCapacityBytes}.  Depending on prefetching is enabled or
+ * disabled, the behavior of the firehose is different like below.
+ *
+ * <ol>
+ *   <li>
+ *     If prefetch is enabled, PrefetchableTextFilesFirehose can fetch input objects in background.
+ *   </li>
+ *   <li> When next() is called, it first checks that there are already fetched files in local storage.
+ *     <ol>
+ *       <li>
+ *         If exists, it simply chooses a fetched file and returns a {@link LineIterator} reading that file.
+ *       </li>
+ *       <li>
+ *         If there is no fetched files in local storage but some objects are still remained to be read, the firehose
+ *         fetches one of input objects in background immediately. If an IOException occurs while downloading the object,
+ *         it retries up to the maximum retry count. Finally, the firehose returns a {@link LineIterator} only when the
+ *         download operation is successfully finished.
+ *         </li>
+ *     </ol>
+ *   </li>
+ *   <li>
+ *     If prefetch is disabled, the firehose returns a {@link LineIterator} which directly reads the stream opened by
+ *     {@link #openObjectStream}. If there is an IOException, it will throw it and the read will fail.
+ *   </li>
+ * </ol>
  */
 public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
     extends AbstractTextFilesFirehoseFactory<ObjectType>
