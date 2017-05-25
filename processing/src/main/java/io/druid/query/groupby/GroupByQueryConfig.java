@@ -70,6 +70,7 @@ public class GroupByQueryConfig
   @JsonProperty
   private boolean forcePushDownLimit = false;
 
+  @JsonProperty
   private Class<? extends GroupByQueryMetricsFactory> queryMetricsFactory;
 
   public String getDefaultStrategy()
