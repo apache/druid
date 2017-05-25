@@ -49,6 +49,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class DruidOrcInputFormatTest
@@ -129,15 +130,15 @@ public class DruidOrcInputFormatTest
     );
     VectorizedRowBatch batch = schema.createRowBatch();
     batch.size = 1;
-    ((BytesColumnVector) batch.cols[0]).setRef(0, timestamp.getBytes(), 0, timestamp.length());
-    ((BytesColumnVector) batch.cols[1]).setRef(0, col1.getBytes(), 0, col1.length());
+    ((BytesColumnVector) batch.cols[0]).setRef(0, timestamp.getBytes(StandardCharsets.UTF_8), 0, timestamp.length());
+    ((BytesColumnVector) batch.cols[1]).setRef(0, col1.getBytes(StandardCharsets.UTF_8), 0, col1.length());
 
     ListColumnVector listColumnVector = (ListColumnVector) batch.cols[2];
     listColumnVector.childCount = col2.length;
     listColumnVector.lengths[0] = 3;
     for (int idx = 0; idx < col2.length; idx++)
     {
-      ((BytesColumnVector) listColumnVector.child).setRef(idx, col2[idx].getBytes(), 0, col2[idx].length());
+      ((BytesColumnVector) listColumnVector.child).setRef(idx, col2[idx].getBytes(StandardCharsets.UTF_8), 0, col2[idx].length());
     }
 
     ((DoubleColumnVector) batch.cols[3]).vector[0] = val1;

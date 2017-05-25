@@ -73,6 +73,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -154,8 +155,8 @@ public class OrcIndexGeneratorJobTest
     for (int idx = 0; idx < data.size(); idx++) {
       String line = data.get(idx);
       String[] lineSplit = line.split(",");
-      ((BytesColumnVector) batch.cols[0]).setRef(idx, lineSplit[0].getBytes(), 0, lineSplit[0].length());
-      ((BytesColumnVector) batch.cols[1]).setRef(idx, lineSplit[1].getBytes(), 0, lineSplit[1].length());
+      ((BytesColumnVector) batch.cols[0]).setRef(idx, lineSplit[0].getBytes(StandardCharsets.UTF_8), 0, lineSplit[0].length());
+      ((BytesColumnVector) batch.cols[1]).setRef(idx, lineSplit[1].getBytes(StandardCharsets.UTF_8), 0, lineSplit[1].length());
       ((LongColumnVector) batch.cols[2]).vector[idx] = Long.parseLong(lineSplit[2]);
     }
     writer.addRowBatch(batch);

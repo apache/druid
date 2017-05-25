@@ -21,6 +21,7 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.ParseSpec;
@@ -63,9 +64,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -117,11 +119,11 @@ public class IndexTaskTest
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("2014-01-01T00:00:10Z,a,1");
-    writer.println("2014-01-01T01:00:20Z,b,1");
-    writer.println("2014-01-01T02:00:30Z,c,1");
-    writer.close();
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -155,11 +157,11 @@ public class IndexTaskTest
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("2014-01-01T00:00:10Z,a,1");
-    writer.println("2014-01-01T01:00:20Z,b,1");
-    writer.println("2014-01-01T02:00:30Z,c,1");
-    writer.close();
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -193,11 +195,11 @@ public class IndexTaskTest
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("2014-01-01T00:00:10Z,a,1");
-    writer.println("2014-01-01T01:00:20Z,b,1");
-    writer.println("2014-01-01T02:00:30Z,c,1");
-    writer.close();
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -230,10 +232,10 @@ public class IndexTaskTest
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("2015-03-01T07:59:59.977Z,a,1");
-    writer.println("2015-03-01T08:00:00.000Z,b,1");
-    writer.close();
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2015-03-01T07:59:59.977Z,a,1\n");
+      writer.write("2015-03-01T08:00:00.000Z,b,1\n");
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -266,11 +268,11 @@ public class IndexTaskTest
     File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("2014-01-01T00:00:10Z,a,1");
-    writer.println("2014-01-01T01:00:20Z,b,1");
-    writer.println("2014-01-01T02:00:30Z,c,1");
-    writer.close();
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -297,11 +299,11 @@ public class IndexTaskTest
     File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("2014-01-01T00:00:10Z,a,1");
-    writer.println("2014-01-01T01:00:20Z,b,1");
-    writer.println("2014-01-01T02:00:30Z,c,1");
-    writer.close();
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -333,11 +335,11 @@ public class IndexTaskTest
     File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("2014-01-01T00:00:10Z,a,1");
-    writer.println("2014-01-01T01:00:20Z,b,1");
-    writer.println("2014-01-01T02:00:30Z,c,1");
-    writer.close();
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -386,11 +388,10 @@ public class IndexTaskTest
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("time,d,val");
-    writer.println("2014-01-01T00:00:10Z,a,1");
-
-    writer.close();
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("time,d,val\n");
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -439,11 +440,11 @@ public class IndexTaskTest
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-    PrintWriter writer = new PrintWriter(tmpFile);
-    writer.println("time,d,val");
-    writer.println("2014-01-01T00:00:10Z,a,1");
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("time,d,val\n");
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+    }
 
-    writer.close();
 
     IndexTask indexTask = new IndexTask(
         null,

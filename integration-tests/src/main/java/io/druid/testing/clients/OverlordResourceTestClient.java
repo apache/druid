@@ -42,6 +42,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -98,7 +99,7 @@ public class OverlordResourceTestClient
                   new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
                       .setContent(
                           "application/json",
-                          task.getBytes()
+                          task.getBytes(StandardCharsets.UTF_8)
                       ),
                   responseHandler
               ).get();
@@ -245,7 +246,7 @@ public class OverlordResourceTestClient
           new Request(HttpMethod.POST, new URL(getIndexerURL() + "supervisor"))
               .setContent(
                   "application/json",
-                  spec.getBytes()
+                  spec.getBytes(StandardCharsets.UTF_8)
               ),
           responseHandler
       ).get();

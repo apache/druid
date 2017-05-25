@@ -45,6 +45,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -121,8 +122,8 @@ public class IndexGeneratorCombinerTest
     context.write(EasyMock.capture(captureKey), EasyMock.capture(captureVal));
     EasyMock.replay(context);
 
-    BytesWritable key = new BytesWritable("dummy_key".getBytes());
-    BytesWritable val = new BytesWritable("dummy_row".getBytes());
+    BytesWritable key = new BytesWritable("dummy_key".getBytes(StandardCharsets.UTF_8));
+    BytesWritable val = new BytesWritable("dummy_row".getBytes(StandardCharsets.UTF_8));
 
     combiner.reduce(key, Lists.newArrayList(val), context);
 

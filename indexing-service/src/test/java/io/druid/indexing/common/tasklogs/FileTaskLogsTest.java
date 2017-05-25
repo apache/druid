@@ -34,6 +34,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class FileTaskLogsTest
@@ -59,7 +60,7 @@ public class FileTaskLogsTest
       final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
       for (Map.Entry<Long, String> entry : expected.entrySet()) {
         final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get().getInput());
-        final String string = new String(bytes);
+        final String string = new String(bytes, StandardCharsets.UTF_8);
         Assert.assertEquals(String.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
       }
     }

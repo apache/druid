@@ -38,6 +38,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -164,7 +165,7 @@ public class KafkaEmitter implements Emitter
 
       try {
         String resultJson = jsonMapper.writeValueAsString(result);
-        ObjectContainer<String> objectContainer = new ObjectContainer<>(resultJson, resultJson.getBytes().length);
+        ObjectContainer<String> objectContainer = new ObjectContainer<>(resultJson, resultJson.getBytes(StandardCharsets.UTF_8).length);
         if (event instanceof ServiceMetricEvent) {
           if (!metricQueue.offer(objectContainer)) {
             metricLost.incrementAndGet();

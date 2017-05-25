@@ -36,6 +36,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+
 
 public class MetadataSegmentManagerTest
 {
@@ -132,7 +134,7 @@ public class MetadataSegmentManagerTest
         true,
         "corrupt-version",
         true,
-        "corrupt-payload".getBytes()
+        "corrupt-payload".getBytes(StandardCharsets.UTF_8)
     );
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());

@@ -29,6 +29,7 @@ import io.druid.java.util.common.Cacheable;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -228,7 +229,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test".getBytes();
+        return "test".getBytes(StandardCharsets.UTF_8);
       }
     };
 
@@ -237,7 +238,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "testtest".getBytes();
+        return "testtest".getBytes(StandardCharsets.UTF_8);
       }
     };
 
@@ -358,7 +359,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "te".getBytes();
+        return "te".getBytes(StandardCharsets.UTF_8);
       }
     };
 
@@ -367,7 +368,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test1".getBytes();
+        return "test1".getBytes(StandardCharsets.UTF_8);
       }
     };
 
@@ -376,7 +377,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test2".getBytes();
+        return "test2".getBytes(StandardCharsets.UTF_8);
       }
     };
 

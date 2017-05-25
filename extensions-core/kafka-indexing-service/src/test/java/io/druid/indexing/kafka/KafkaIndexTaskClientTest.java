@@ -54,6 +54,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -547,7 +548,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
-    Assert.assertEquals("{\"0\":15,\"1\":120}", new String(request.getContent().array()));
+    Assert.assertEquals("{\"0\":15,\"1\":120}", new String(request.getContent().array(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -572,7 +573,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
-    Assert.assertEquals("{\"0\":15,\"1\":120}", new String(request.getContent().array()));
+    Assert.assertEquals("{\"0\":15,\"1\":120}", new String(request.getContent().array(), StandardCharsets.UTF_8));
   }
 
   @Test

@@ -35,8 +35,8 @@ import org.junit.Test;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
@@ -62,7 +62,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
 
     try {
       final File logFile = new File(tmpDir, "log");
-      BufferedWriter output = new BufferedWriter(new FileWriter(logFile));
+      BufferedWriter output = java.nio.file.Files.newBufferedWriter(logFile.toPath(), StandardCharsets.UTF_8);
       output.write("test");
       output.close();
 

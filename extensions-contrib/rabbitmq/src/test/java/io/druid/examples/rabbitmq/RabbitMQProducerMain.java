@@ -30,6 +30,7 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -197,7 +198,7 @@ public class RabbitMQProducerMain
 
       String line = String.format(msg_template, sdf.format(timer.getTime()), wp, gender, age);
 
-      channel.basicPublish(exchange, routingKey, null, line.getBytes());
+      channel.basicPublish(exchange, routingKey, null, line.getBytes(StandardCharsets.UTF_8));
 
       System.out.println("Sent message: " + line);
 

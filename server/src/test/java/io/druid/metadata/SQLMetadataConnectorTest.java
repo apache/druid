@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
 
@@ -94,16 +95,16 @@ public class SQLMetadataConnectorTest
 
     Assert.assertNull(connector.lookup(tableName, "name", "payload", "emperor"));
 
-    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin".getBytes());
+    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin".getBytes(StandardCharsets.UTF_8));
     Assert.assertArrayEquals(
-        "penguin".getBytes(),
+        "penguin".getBytes(StandardCharsets.UTF_8),
         connector.lookup(tableName, "name", "payload", "emperor")
     );
 
-    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin chick".getBytes());
+    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin chick".getBytes(StandardCharsets.UTF_8));
 
     Assert.assertArrayEquals(
-        "penguin chick".getBytes(),
+        "penguin chick".getBytes(StandardCharsets.UTF_8),
         connector.lookup(tableName, "name", "payload", "emperor")
     );
 

@@ -60,6 +60,7 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +183,11 @@ public class DirectDruidClientTest
     Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
     // produce result for first connection
-    futureResult.set(new ByteArrayInputStream("[{\"timestamp\":\"2014-01-01T01:02:03Z\", \"result\": 42.0}]".getBytes()));
+    futureResult.set(
+        new ByteArrayInputStream(
+            "[{\"timestamp\":\"2014-01-01T01:02:03Z\", \"result\": 42.0}]".getBytes(StandardCharsets.UTF_8)
+        )
+    );
     List<Result> results = Sequences.toList(s1, Lists.<Result>newArrayList());
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(new DateTime("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
@@ -330,7 +335,11 @@ public class DirectDruidClientTest
     serverSelector.addServerAndUpdateSegment(queryableDruidServer, dataSegment);
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-    interruptionFuture.set(new ByteArrayInputStream("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}".getBytes()));
+    interruptionFuture.set(
+        new ByteArrayInputStream(
+            "{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}".getBytes(StandardCharsets.UTF_8)
+        )
+    );
     Sequence results = client1.run(query, defaultContext);
 
     QueryInterruptedException actualException = null;

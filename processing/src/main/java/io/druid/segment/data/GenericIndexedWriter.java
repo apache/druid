@@ -45,6 +45,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 
@@ -90,7 +91,7 @@ public class GenericIndexedWriter<T> implements Closeable
     this.filenameBase = filenameBase;
     this.strategy = strategy;
     this.fileSizeLimit = fileSizeLimit;
-    fileNameByteArray = filenameBase.getBytes();
+    fileNameByteArray = filenameBase.getBytes(StandardCharsets.UTF_8);
     buf = ByteBuffer.allocate(Ints.BYTES);
   }
 

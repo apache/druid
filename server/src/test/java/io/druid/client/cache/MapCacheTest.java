@@ -24,12 +24,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  */
 public class MapCacheTest
 {
-  private static final byte[] HI = "hi".getBytes();
-  private static final byte[] HO = "ho".getBytes();
+  private static final byte[] HI = "hi".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] HO = "ho".getBytes(StandardCharsets.UTF_8);
   private ByteCountingLRUMap baseMap;
   private MapCache cache;
 

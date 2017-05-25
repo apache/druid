@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
@@ -101,7 +102,7 @@ public class HyperLogLogCollectorTest
 
     int count;
     for (count = 0; count < 100_000_000; ++count) {
-      md.update(Integer.toString(count).getBytes());
+      md.update(Integer.toString(count).getBytes(StandardCharsets.UTF_8));
 
       byte[] hashed = fn.hashBytes(md.digest()).asBytes();
 
@@ -555,7 +556,7 @@ public class HyperLogLogCollectorTest
 
       int numThings = 500000;
       for (int i = 0; i < numThings; i++) {
-        md.update(Integer.toString(random.nextInt()).getBytes());
+        md.update(Integer.toString(random.nextInt()).getBytes(StandardCharsets.UTF_8));
         byte[] hashedVal = fn.hashBytes(md.digest()).asBytes();
 
         if (i % 2 == 0) {

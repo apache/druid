@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class SerializerUtilsTest
 {
@@ -58,7 +59,7 @@ public class SerializerUtilsTest
     for (int i = 0;i < strings.length;i++) {
       byte [] stringBytes = strings[i].getBytes(UTF8);
       out.writeInt(stringBytes.length);
-      out.write(strings[i].getBytes());
+      out.write(strings[i].getBytes(StandardCharsets.UTF_8));
     }
     out.close();
     stringsByte = bos.toByteArray();

@@ -34,6 +34,7 @@ import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -122,7 +123,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
     for (int i = 0; i < reps; ++i) {
       for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        cache.put(new Cache.NamedKey(NAMESPACE, key.getBytes()), randBytes);
+        cache.put(new Cache.NamedKey(NAMESPACE, key.getBytes(StandardCharsets.UTF_8)), randBytes);
       }
       // make sure the write queue is empty
       client.waitForQueues(1, TimeUnit.HOURS);
@@ -136,7 +137,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
     for (int i = 0; i < reps; i++) {
       for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        bytes = cache.get(new Cache.NamedKey(NAMESPACE, key.getBytes()));
+        bytes = cache.get(new Cache.NamedKey(NAMESPACE, key.getBytes(StandardCharsets.UTF_8)));
         count += bytes.length;
       }
     }
@@ -150,7 +151,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
       List<Cache.NamedKey> keys = Lists.newArrayList();
       for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        keys.add(new Cache.NamedKey(NAMESPACE, key.getBytes()));
+        keys.add(new Cache.NamedKey(NAMESPACE, key.getBytes(StandardCharsets.UTF_8)));
       }
       Map<Cache.NamedKey, byte[]> results = cache.getBulk(keys);
       for (Cache.NamedKey key : keys) {

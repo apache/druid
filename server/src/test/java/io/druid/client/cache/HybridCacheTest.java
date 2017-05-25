@@ -34,12 +34,13 @@ import io.druid.initialization.Initialization;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Map;
 
 public class HybridCacheTest
 {
-  private static final byte[] HI = "hi".getBytes();
+  private static final byte[] HI = "hi".getBytes(StandardCharsets.UTF_8);
 
   @Test
   public void testInjection() throws Exception

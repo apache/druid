@@ -48,6 +48,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -154,7 +155,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     );
     tmpFile = Files.createTempFile(tmpDir, "druidTestURIExtractionNS", ".dat").toFile();
     try (OutputStream ostream = new FileOutputStream(tmpFile)) {
-      try (OutputStreamWriter out = new OutputStreamWriter(ostream)) {
+      try (OutputStreamWriter out = new OutputStreamWriter(ostream, StandardCharsets.UTF_8)) {
         // Since Travis sucks with disk related stuff, we override the disk reading part above.
         // This is safe and should shake out any problem areas that accidentally read the file.
         out.write("SHOULDN'T TRY TO PARSE");

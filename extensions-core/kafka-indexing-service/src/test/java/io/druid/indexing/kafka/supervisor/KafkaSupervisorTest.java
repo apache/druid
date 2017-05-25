@@ -88,6 +88,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1688,7 +1689,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                   KAFKA_TOPIC,
                   i,
                   null,
-                  String.format("event-%d", j).getBytes()
+                  String.format("event-%d", j).getBytes(StandardCharsets.UTF_8)
               )
           ).get();
         }

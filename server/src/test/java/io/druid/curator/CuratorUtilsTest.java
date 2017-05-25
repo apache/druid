@@ -25,6 +25,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+
 public class CuratorUtilsTest extends CuratorTestBase
 {
   @Before
@@ -49,19 +51,19 @@ public class CuratorUtilsTest extends CuratorTestBase
         curator,
         "/foo/bar",
         CreateMode.PERSISTENT,
-        "baz".getBytes(),
+        "baz".getBytes(StandardCharsets.UTF_8),
         CuratorUtils.DEFAULT_MAX_ZNODE_BYTES
     );
-    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar")));
+    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar"), StandardCharsets.UTF_8));
 
     CuratorUtils.createIfNotExists(
         curator,
         "/foo/bar",
         CreateMode.PERSISTENT,
-        "qux".getBytes(),
+        "qux".getBytes(StandardCharsets.UTF_8),
         CuratorUtils.DEFAULT_MAX_ZNODE_BYTES
     );
-    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar")));
+    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar"), StandardCharsets.UTF_8));
   }
 
   @Test(timeout = 10_000L)
@@ -72,7 +74,7 @@ public class CuratorUtilsTest extends CuratorTestBase
 
     Exception thrown = null;
     try {
-      CuratorUtils.createIfNotExists(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(), 2);
+      CuratorUtils.createIfNotExists(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(StandardCharsets.UTF_8), 2);
     }
     catch (Exception e) {
       thrown = e;
@@ -90,11 +92,11 @@ public class CuratorUtilsTest extends CuratorTestBase
 
     Assert.assertNull(curator.checkExists().forPath("/foo/bar"));
 
-    CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(), 3);
-    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar")));
+    CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(StandardCharsets.UTF_8), 3);
+    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar"), StandardCharsets.UTF_8));
 
-    CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "qux".getBytes(), 3);
-    Assert.assertEquals("qux", new String(curator.getData().forPath("/foo/bar")));
+    CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "qux".getBytes(StandardCharsets.UTF_8), 3);
+    Assert.assertEquals("qux", new String(curator.getData().forPath("/foo/bar"), StandardCharsets.UTF_8));
   }
 
   @Test(timeout = 10_000L)
@@ -105,7 +107,7 @@ public class CuratorUtilsTest extends CuratorTestBase
 
     Exception thrown = null;
     try {
-      CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(), 2);
+      CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(StandardCharsets.UTF_8), 2);
     }
     catch (Exception e) {
       thrown = e;

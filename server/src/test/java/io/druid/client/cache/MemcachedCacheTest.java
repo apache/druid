@@ -63,6 +63,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -82,8 +83,8 @@ import java.util.concurrent.TimeoutException;
 public class MemcachedCacheTest
 {
   private static final Logger log = new Logger(MemcachedCacheTest.class);
-  private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
-  private static final byte[] HO = "hooooooooooooooooooo".getBytes();
+  private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] HO = "hooooooooooooooooooo".getBytes(StandardCharsets.UTF_8);
   protected static final AbstractMonitor NOOP_MONITOR = new AbstractMonitor()
   {
     @Override

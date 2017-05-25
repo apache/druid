@@ -26,6 +26,7 @@ import org.apache.avro.util.Utf8;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -106,7 +107,7 @@ public class GenericRecordAsMap implements Map<String, Object>
     }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {
-        return new String(((ByteBuffer) field).array());
+        return new String(((ByteBuffer) field).array(), StandardCharsets.UTF_8);
       } else {
         return Arrays.toString(((ByteBuffer) field).array());
       }

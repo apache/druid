@@ -40,6 +40,7 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -49,8 +50,8 @@ import java.util.concurrent.ForkJoinPool;
 public class CaffeineCacheTest
 {
   private static final int RANDOM_SEED = 3478178;
-  private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
-  private static final byte[] HO = "hooooooooooooooooooo".getBytes();
+  private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] HO = "hooooooooooooooooooo".getBytes(StandardCharsets.UTF_8);
 
   private CaffeineCache cache;
   private final CaffeineCacheConfig cacheConfig = new CaffeineCacheConfig()

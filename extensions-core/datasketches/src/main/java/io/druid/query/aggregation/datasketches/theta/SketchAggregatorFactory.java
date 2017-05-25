@@ -31,6 +31,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -131,7 +132,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = fieldName.getBytes();
+    byte[] fieldNameBytes = fieldName.getBytes(StandardCharsets.UTF_8);
     return ByteBuffer.allocate(1 + Ints.BYTES + fieldNameBytes.length)
                      .put(cacheId)
                      .putInt(size)

@@ -132,6 +132,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -173,7 +174,7 @@ public class KafkaIndexTaskTest
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2010", "c", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2011", "d", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2011", "e", "y", 1.0f)),
-      new ProducerRecord<byte[], byte[]>("topic0", 0, null, "unparseable".getBytes()),
+      new ProducerRecord<byte[], byte[]>("topic0", 0, null, "unparseable".getBytes(StandardCharsets.UTF_8)),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, null),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2013", "f", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 1, null, JB("2012", "g", "y", 1.0f)),
