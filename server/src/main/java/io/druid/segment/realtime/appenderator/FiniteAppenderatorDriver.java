@@ -268,7 +268,6 @@ public class FiniteAppenderatorDriver implements Closeable
    *         of the caller of {@link FiniteAppenderatorDriverMetadata}
    */
   public ListenableFuture<SegmentsAndMetadata> registerHandoff(SegmentsAndMetadata segmentsAndMetadata)
-      throws InterruptedException
   {
     if (segmentsAndMetadata == null) {
       return Futures.immediateFuture(null);
@@ -446,13 +445,14 @@ public class FiniteAppenderatorDriver implements Closeable
    * @param committer committer
    * @param sequenceNames a collection of sequence names to be published
    *
-   * @return a {@link ListenableFuture} for the submitted task
+   * @return a {@link ListenableFuture} for the submitted task which removes published {@code sequenceNames} from
+   *         {@code activeSegments} and {@code publishPendingSegments}.
    */
   public ListenableFuture<SegmentsAndMetadata> publish(
       final TransactionalSegmentPublisher publisher,
       final Committer committer,
       final Collection<String> sequenceNames
-  ) throws InterruptedException
+  )
   {
     final List<SegmentIdentifier> theSegments;
     synchronized (activeSegments) {
@@ -492,6 +492,8 @@ public class FiniteAppenderatorDriver implements Closeable
           @Override
           public void onFailure(Throwable t)
           {
+            // The throwable is propagated anyway when get() is called on the future.
+            // See FiniteAppenderatorFailTest.testInterruptDuringPush().
             log.error(t, "Failed to publish segments[%s]", theSegments);
           }
         }
@@ -504,8 +506,7 @@ public class FiniteAppenderatorDriver implements Closeable
    * Execute a task in background to publish the given segments.  The task blocks until complete.
    * Retries forever on transient failures, but may exit early on permanent failures.
    *
-   * Should be called after all data has been added and persisted through {@link #add(InputRow, String, Supplier)} and
-   * {@link #persist(Committer)}.
+   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier)}.
    *
    * @param publisher publisher to use for this set of segments
    * @param wrappedCommitter committer representing all data that has been added so far
@@ -517,7 +518,7 @@ public class FiniteAppenderatorDriver implements Closeable
       final TransactionalSegmentPublisher publisher,
       final WrappedCommitter wrappedCommitter,
       final List<SegmentIdentifier> segmentIdentifiers
-  ) throws InterruptedException
+  )
   {
     return publishExecutor.submit(
         () -> {
@@ -575,11 +576,23 @@ public class FiniteAppenderatorDriver implements Closeable
             }
             catch (Exception e) {
               final long sleepMillis = computeNextRetrySleep(++nTry);
-              log.warn(e, "Failed publishAll (try %d), retrying in %,dms.", nTry, sleepMillis);
+              log.warn(e, "Failed publish (try %d), retrying in %,dms.", nTry, sleepMillis);
               Thread.sleep(sleepMillis);
             }
           }
         }
+    );
+  }
+
+  public ListenableFuture<SegmentsAndMetadata> publishAndRegisterHandoff(
+      final TransactionalSegmentPublisher publisher,
+      final Committer committer,
+      final Collection<String> sequenceNames
+  )
+  {
+    return Futures.transform(
+        publish(publisher, committer, sequenceNames),
+        this::registerHandoff
     );
   }
 

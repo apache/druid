@@ -29,6 +29,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -209,7 +212,7 @@ public class FiniteAppenderatorDriverTest
   }
 
   @Test
-  public void testIncrementalHandoff() throws IOException, InterruptedException, TimeoutException, ExecutionException
+  public void testPublishPerRow() throws IOException, InterruptedException, TimeoutException, ExecutionException
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
 
@@ -280,6 +283,60 @@ public class FiniteAppenderatorDriverTest
     Assert.assertEquals(3, segmentsAndMetadata.getCommitMetadata());
   }
 
+  @Test
+  public void testIncrementalHandoff() throws Exception
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+
+    Assert.assertNull(driver.startJob());
+
+    committerSupplier.setMetadata(1);
+    Assert.assertTrue(driver.add(ROWS.get(0), "sequence_0", committerSupplier).isOk());
+
+    for (int i = 1; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "sequence_1", committerSupplier).isOk());
+    }
+
+    final ListenableFuture<SegmentsAndMetadata> futureForSequence0 = driver.publishAndRegisterHandoff(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("sequence_0")
+    );
+
+    final ListenableFuture<SegmentsAndMetadata> futureForSequence1 = driver.publishAndRegisterHandoff(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("sequence_1")
+    );
+
+    final SegmentsAndMetadata handedoffFromSequence0 = futureForSequence0.get(
+        HANDOFF_CONDITION_TIMEOUT,
+        TimeUnit.MILLISECONDS
+    );
+    final SegmentsAndMetadata handedoffFromSequence1 = futureForSequence1.get(
+        HANDOFF_CONDITION_TIMEOUT,
+        TimeUnit.MILLISECONDS
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            new SegmentIdentifier(DATA_SOURCE, new Interval("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0))
+        ),
+        asIdentifiers(handedoffFromSequence0.getSegments())
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            new SegmentIdentifier(DATA_SOURCE, new Interval("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0))
+        ),
+        asIdentifiers(handedoffFromSequence1.getSegments())
+    );
+
+    Assert.assertEquals(3, handedoffFromSequence0.getCommitMetadata());
+    Assert.assertEquals(3, handedoffFromSequence1.getCommitMetadata());
+  }
+
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)
   {
     return ImmutableSet.copyOf(
@@ -297,7 +354,7 @@ public class FiniteAppenderatorDriverTest
     );
   }
 
-  private TransactionalSegmentPublisher makeOkPublisher()
+  static TransactionalSegmentPublisher makeOkPublisher()
   {
     return new TransactionalSegmentPublisher()
     {
@@ -309,7 +366,7 @@ public class FiniteAppenderatorDriverTest
     };
   }
 
-  private static class TestCommitterSupplier<T> implements Supplier<Committer>
+  static class TestCommitterSupplier<T> implements Supplier<Committer>
   {
     private final AtomicReference<T> metadata = new AtomicReference<>();
 
@@ -339,7 +396,7 @@ public class FiniteAppenderatorDriverTest
     }
   }
 
-  private static class TestSegmentAllocator implements SegmentAllocator
+  static class TestSegmentAllocator implements SegmentAllocator
   {
     private final String dataSource;
     private final Granularity granularity;
@@ -374,13 +431,19 @@ public class FiniteAppenderatorDriverTest
     }
   }
 
-  private static class TestSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
+  static class TestSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
   {
     private boolean handoffEnabled = true;
+    private long handoffDelay;
 
     public void disableHandoff()
     {
       handoffEnabled = false;
+    }
+
+    public void setHandoffDelay(long delay)
+    {
+      handoffDelay = delay;
     }
 
     @Override
@@ -396,7 +459,16 @@ public class FiniteAppenderatorDriverTest
         )
         {
           if (handoffEnabled) {
-            // Immediate handoff
+
+            if (handoffDelay > 0) {
+              try {
+                Thread.sleep(handoffDelay);
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+            }
+
             exec.execute(handOffRunnable);
           }
           return true;
