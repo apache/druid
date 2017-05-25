@@ -373,7 +373,7 @@ public class GroupByQuery extends BaseQuery<Row>
       // If the sorting order only uses columns in the grouping key, we can always push the limit down
       // to the buffer grouper without affecting result accuracy
       boolean sortHasNonGroupingFields = DefaultLimitSpec.sortingOrderHasNonGroupingFields(
-          limitSpec,
+          (DefaultLimitSpec) limitSpec,
           getDimensions()
       );
 
@@ -383,6 +383,11 @@ public class GroupByQuery extends BaseQuery<Row>
     return false;
   }
 
+  /**
+   * When limit push down is applied, the partial results would be sorted by the ordering specified by the
+   * limit/order spec (unlike non-push down case where the results always use the default natural ascending order),
+   * so when merging these partial result streams, the merge needs to use the same ordering to get correct results.
+   */
   private Ordering<Row> getRowOrderingForPushDown(
       final boolean granular,
       final DefaultLimitSpec limitSpec
@@ -493,7 +498,7 @@ public class GroupByQuery extends BaseQuery<Row>
   public Ordering<Row> getRowOrdering(final boolean granular)
   {
     if (applyLimitPushDown) {
-      if (!DefaultLimitSpec.sortingOrderHasNonGroupingFields(limitSpec, dimensions)) {
+      if (!DefaultLimitSpec.sortingOrderHasNonGroupingFields((DefaultLimitSpec) limitSpec, dimensions)) {
         return getRowOrderingForPushDown(granular, (DefaultLimitSpec) limitSpec);
       }
     }

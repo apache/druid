@@ -44,8 +44,6 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
   private final AggregatorFactory[] aggregatorFactories;
 
   // Limit to apply to results.
-  // If limit > 0, track hash table entries in a binary heap with size of limit.
-  // If -1, no limit is applied, hash table entry offsets are tracked with an unordered list with no limit.
   private int limit;
 
   // Indicates if the sorting order has fields not in the grouping key, used when pushing down limit/sorting.
@@ -402,9 +400,11 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
 
   private class AlternatingByteBufferHashTable extends ByteBufferHashTable
   {
+    // The base buffer is split into two alternating halves, with one sub-buffer in use at a given time.
+    // When the current sub-buffer fills, the used bits of the other sub-buffer are cleared, entries up to the limit
+    // are copied from the current full sub-buffer to the new buffer, and the active buffer (referenced by tableBuffer)
+    // is swapped to the new buffer.
     private ByteBuffer[] subHashTableBuffers;
-    private ByteBufferHashTable[] subHashTables;
-    private ByteBufferHashTable activeHashTable;
 
     public AlternatingByteBufferHashTable(
         float maxLoadFactor,
@@ -428,7 +428,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       this.growthCount = 0;
 
       int subHashTableSize = tableArenaSize / 2;
-      maxBuckets = subHashTableSize / bucketSize;
+      maxBuckets = subHashTableSize / bucketSizeWithHash;
       regrowthThreshold = maxSizeForBuckets(maxBuckets);
 
       // split the hashtable into 2 sub tables that we rotate between
@@ -443,26 +443,6 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       subHashTable2Buffer = subHashTable2Buffer.slice();
 
       subHashTableBuffers = new ByteBuffer[] {subHashTable1Buffer, subHashTable2Buffer};
-
-      subHashTables = new ByteBufferHashTable[2];
-      subHashTables[0] = new ByteBufferHashTable(
-          maxLoadFactor,
-          maxBuckets,
-          bucketSizeWithHash,
-          subHashTableBuffers[0],
-          keySize,
-          maxSizeForTesting,
-          null
-      );
-      subHashTables[1] = new ByteBufferHashTable(
-          maxLoadFactor,
-          maxBuckets,
-          bucketSizeWithHash,
-          subHashTableBuffers[1],
-          keySize,
-          maxSizeForTesting,
-          null
-      );
     }
 
     @Override
@@ -470,19 +450,24 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
     {
       size = 0;
       growthCount = 0;
-      subHashTables[0].reset();
-      subHashTables[1].reset();
+      // clear the used bits of both buffers
+      for (int i = 0; i < maxBuckets; i++) {
+        subHashTableBuffers[0].put(i * bucketSizeWithHash, (byte) 0);
+        subHashTableBuffers[1].put(i * bucketSizeWithHash, (byte) 0);
+      }
       tableBuffer = subHashTableBuffers[0];
-      activeHashTable = subHashTables[0];
     }
 
     @Override
     public void adjustTableWhenFull()
     {
-      int tableIdx = (growthCount % 2 == 0) ? 1 : 0;
-      ByteBuffer newTableBuffer = subHashTableBuffers[tableIdx];
-      ByteBufferHashTable newHashTable = subHashTables[tableIdx];
-      newHashTable.reset();
+      int newTableIdx = (growthCount % 2 == 0) ? 1 : 0;
+      ByteBuffer newTableBuffer = subHashTableBuffers[newTableIdx];
+
+      // clear the used bits of the buffer we're swapping to
+      for (int i = 0; i < maxBuckets; i++) {
+        newTableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+      }
 
       // Get the offsets of the top N buckets from the heap and copy the buckets to new table
       final ByteBuffer entryBuffer = tableBuffer.duplicate();
@@ -492,22 +477,22 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       for (int i = 0; i < offsetHeap.getHeapSize(); i++) {
         final int oldBucketOffset = offsetHeap.getAt(i);
 
-        if (activeHashTable.isOffsetUsed(oldBucketOffset)) {
+        if (isOffsetUsed(oldBucketOffset)) {
           // Read the entry from the old hash table
-          entryBuffer.limit(oldBucketOffset + bucketSize);
+          entryBuffer.limit(oldBucketOffset + bucketSizeWithHash);
           entryBuffer.position(oldBucketOffset);
           keyBuffer.limit(entryBuffer.position() + HASH_SIZE + keySize);
           keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
           // Put the entry in the new hash table
           final int keyHash = entryBuffer.getInt(entryBuffer.position()) & 0x7fffffff;
-          final int newBucket =  newHashTable.findBucket(true, maxBuckets, newTableBuffer, keyBuffer, keyHash);
+          final int newBucket = findBucket(true, maxBuckets, newTableBuffer, keyBuffer, keyHash);
 
           if (newBucket < 0) {
             throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
           }
 
-          final int newBucketOffset = newBucket * bucketSize;
+          final int newBucketOffset = newBucket * bucketSizeWithHash;
           newTableBuffer.position(newBucketOffset);
           newTableBuffer.put(entryBuffer);
           numCopied++;
@@ -529,7 +514,6 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
 
       size = numCopied;
       tableBuffer = newTableBuffer;
-      activeHashTable = newHashTable;
       growthCount++;
     }
   }
