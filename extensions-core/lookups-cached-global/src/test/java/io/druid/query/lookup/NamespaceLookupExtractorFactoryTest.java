@@ -94,10 +94,13 @@ public class NamespaceLookupExtractorFactoryTest
               Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
           )
           {
-            if ("io.druid.server.lookup.namespace.cache.CacheScheduler".equals(valueId)) {
+            if (CacheScheduler.class.getName().equals(valueId)) {
               return scheduler;
+            } else if (ObjectMapper.class.getName().equals(valueId)) {
+              return mapper;
+            } else {
+              return null;
             }
-            return null;
           }
         }
     );
