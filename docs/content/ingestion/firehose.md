@@ -52,8 +52,8 @@ The below configurations can be optionally used for tuning the firehose performa
 
 |property|description|default|
 |--------|-----------|-------|
-|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache.|1073741824|
-|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch.|1073741824|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|
 |prefetchTriggerBytes|Threshold to trigger prefetching http objects.|maxFetchCapacityBytes / 2|
 |fetchTimeout|Timeout for fetching a http object.|60000|
 |maxFetchRetry|Maximum retry for fetching a http object.|3|
