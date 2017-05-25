@@ -556,7 +556,6 @@ public class IndexTask extends AbstractTask
         new NoopSegmentHandoffNotifierFactory(), // don't wait for handoff since we don't serve queries
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getObjectMapper(),
-        0,
         metrics
     );
   }

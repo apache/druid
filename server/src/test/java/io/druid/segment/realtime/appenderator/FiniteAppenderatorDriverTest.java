@@ -108,7 +108,6 @@ public class FiniteAppenderatorDriverTest
         segmentHandoffNotifierFactory,
         new TestUsedSegmentChecker(),
         OBJECT_MAPPER,
-        HANDOFF_CONDITION_TIMEOUT,
         new FireDepartmentMetrics()
     );
   }

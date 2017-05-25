@@ -83,7 +83,6 @@ public class FiniteAppenderatorDriver implements Closeable
   private final SegmentHandoffNotifier handoffNotifier;
   private final UsedSegmentChecker usedSegmentChecker;
   private final ObjectMapper objectMapper;
-  private final long handoffConditionTimeout;
   private final FireDepartmentMetrics metrics;
 
   // All access to "activeSegments", "publishPendingSegments", and "lastSegmentId" must be synchronized on
@@ -118,7 +117,6 @@ public class FiniteAppenderatorDriver implements Closeable
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       UsedSegmentChecker usedSegmentChecker,
       ObjectMapper objectMapper,
-      long handoffConditionTimeout,
       FireDepartmentMetrics metrics
   )
   {
@@ -128,7 +126,6 @@ public class FiniteAppenderatorDriver implements Closeable
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
     this.usedSegmentChecker = Preconditions.checkNotNull(usedSegmentChecker, "usedSegmentChecker");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
-    this.handoffConditionTimeout = handoffConditionTimeout;
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.publishExecutor = MoreExecutors.listeningDecorator(Execs.singleThreaded("publish-%d"));
   }
