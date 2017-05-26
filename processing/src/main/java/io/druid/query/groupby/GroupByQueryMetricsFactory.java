@@ -20,7 +20,8 @@
 package io.druid.query.groupby;
 
 /**
- * Implementations of this interface could be injected using {@link GroupByQueryConfig#queryMetricsFactory} option.
+ * Implementations could be injected using {@link io.druid.guice.PolyBind#createChoice} with
+ * QueryToolChestModule.GROUPBY_QUERY_METRICS_FACTORY_PROPERTY as property name.
  */
 public interface GroupByQueryMetricsFactory
 {

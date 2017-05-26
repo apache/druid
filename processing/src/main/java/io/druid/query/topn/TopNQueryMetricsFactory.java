@@ -20,7 +20,8 @@
 package io.druid.query.topn;
 
 /**
- * Implementations of this interface could be injected using {@link TopNQueryConfig#queryMetricsFactory} option.
+ * Implementations could be injected using {@link io.druid.guice.PolyBind#createChoice} with
+ * QueryToolChestModule.TOPN_QUERY_METRICS_FACTORY_PROPERTY as property name.
  */
 public interface TopNQueryMetricsFactory
 {
