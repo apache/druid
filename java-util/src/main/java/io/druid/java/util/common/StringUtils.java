@@ -26,6 +26,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.IllegalFormatException;
+import java.util.Locale;
 
 /**
  */
@@ -103,7 +104,7 @@ public class StringUtils
       return message;
     }
     try {
-      return String.format(message, formatArgs);
+      return String.format(Locale.ENGLISH, message, formatArgs);
     }
     catch (IllegalFormatException e) {
       StringBuilder bob = new StringBuilder(message);
