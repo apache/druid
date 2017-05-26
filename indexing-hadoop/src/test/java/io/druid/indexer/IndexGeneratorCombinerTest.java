@@ -22,6 +22,7 @@ package io.druid.indexer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -45,7 +46,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -122,8 +122,8 @@ public class IndexGeneratorCombinerTest
     context.write(EasyMock.capture(captureKey), EasyMock.capture(captureVal));
     EasyMock.replay(context);
 
-    BytesWritable key = new BytesWritable("dummy_key".getBytes(StandardCharsets.UTF_8));
-    BytesWritable val = new BytesWritable("dummy_row".getBytes(StandardCharsets.UTF_8));
+    BytesWritable key = new BytesWritable(StringUtils.toUtf8("dummy_key"));
+    BytesWritable val = new BytesWritable(StringUtils.toUtf8("dummy_row"));
 
     combiner.reduce(key, Lists.newArrayList(val), context);
 

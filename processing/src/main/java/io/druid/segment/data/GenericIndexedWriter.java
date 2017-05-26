@@ -30,6 +30,7 @@ import com.google.common.primitives.Longs;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 
@@ -45,7 +46,6 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 
@@ -91,7 +91,7 @@ public class GenericIndexedWriter<T> implements Closeable
     this.filenameBase = filenameBase;
     this.strategy = strategy;
     this.fileSizeLimit = fileSizeLimit;
-    fileNameByteArray = filenameBase.getBytes(StandardCharsets.UTF_8);
+    fileNameByteArray = StringUtils.toUtf8(filenameBase);
     buf = ByteBuffer.allocate(Ints.BYTES);
   }
 

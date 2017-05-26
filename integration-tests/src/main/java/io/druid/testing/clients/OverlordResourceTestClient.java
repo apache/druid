@@ -33,6 +33,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
@@ -42,7 +43,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -99,7 +99,7 @@ public class OverlordResourceTestClient
                   new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
                       .setContent(
                           "application/json",
-                          task.getBytes(StandardCharsets.UTF_8)
+                          StringUtils.toUtf8(task)
                       ),
                   responseHandler
               ).get();
@@ -246,7 +246,7 @@ public class OverlordResourceTestClient
           new Request(HttpMethod.POST, new URL(getIndexerURL() + "supervisor"))
               .setContent(
                   "application/json",
-                  spec.getBytes(StandardCharsets.UTF_8)
+                  StringUtils.toUtf8(spec)
               ),
           responseHandler
       ).get();

@@ -26,6 +26,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -34,7 +35,6 @@ import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -123,7 +123,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
     for (int i = 0; i < reps; ++i) {
       for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        cache.put(new Cache.NamedKey(NAMESPACE, key.getBytes(StandardCharsets.UTF_8)), randBytes);
+        cache.put(new Cache.NamedKey(NAMESPACE, StringUtils.toUtf8(key)), randBytes);
       }
       // make sure the write queue is empty
       client.waitForQueues(1, TimeUnit.HOURS);
@@ -137,7 +137,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
     for (int i = 0; i < reps; i++) {
       for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        bytes = cache.get(new Cache.NamedKey(NAMESPACE, key.getBytes(StandardCharsets.UTF_8)));
+        bytes = cache.get(new Cache.NamedKey(NAMESPACE, StringUtils.toUtf8(key)));
         count += bytes.length;
       }
     }
@@ -151,7 +151,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
       List<Cache.NamedKey> keys = Lists.newArrayList();
       for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        keys.add(new Cache.NamedKey(NAMESPACE, key.getBytes(StandardCharsets.UTF_8)));
+        keys.add(new Cache.NamedKey(NAMESPACE, StringUtils.toUtf8(key)));
       }
       Map<Cache.NamedKey, byte[]> results = cache.getBulk(keys);
       for (Cache.NamedKey key : keys) {

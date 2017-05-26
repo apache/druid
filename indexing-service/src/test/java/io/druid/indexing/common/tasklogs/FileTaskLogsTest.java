@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import io.druid.indexing.common.config.FileTaskLogsConfig;
+import io.druid.java.util.common.StringUtils;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
@@ -34,7 +35,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class FileTaskLogsTest
@@ -60,7 +60,7 @@ public class FileTaskLogsTest
       final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
       for (Map.Entry<Long, String> entry : expected.entrySet()) {
         final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get().getInput());
-        final String string = new String(bytes, StandardCharsets.UTF_8);
+        final String string = StringUtils.fromUtf8(bytes);
         Assert.assertEquals(String.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
       }
     }
@@ -121,9 +121,6 @@ public class FileTaskLogsTest
 
   private String readLog(TaskLogs taskLogs, String logFile, long offset) throws IOException
   {
-    return new String(
-        ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()),
-        Charsets.UTF_8
-    );
+    return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()));
   }
 }

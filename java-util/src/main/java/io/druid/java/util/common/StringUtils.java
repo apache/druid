@@ -28,13 +28,40 @@ import java.nio.charset.Charset;
 import java.util.IllegalFormatException;
 
 /**
- * As of right now (Dec 2014) the JVM is optimized around String charset variablse instead of Charset passing.
  */
 public class StringUtils
 {
+  public static final byte[] EMPTY_BYTES = new byte[0];
   @Deprecated // Charset parameters to String are currently slower than the charset's string name
   public static final Charset UTF8_CHARSET = Charsets.UTF_8;
-  public static final String UTF8_STRING = com.google.common.base.Charsets.UTF_8.toString();
+  public static final String UTF8_STRING = Charsets.UTF_8.toString();
+
+  // should be used only for estimation
+  // returns the same result with StringUtils.fromUtf8(value).length for valid string values
+  // does not check validity of format and returns over-estimated result for invalid string (see UT)
+  public static int estimatedBinaryLengthAsUTF8(String value)
+  {
+    int length = 0;
+    for (int i = 0; i < value.length(); i++) {
+      char var10 = value.charAt(i);
+      if (var10 < 0x80) {
+        length += 1;
+      } else if (var10 < 0x800) {
+        length += 2;
+      } else if (Character.isSurrogate(var10)) {
+        length += 4;
+        i++;
+      } else {
+        length += 3;
+      }
+    }
+    return length;
+  }
+
+  public static byte[] toUtf8WithNullToEmpty(final String string)
+  {
+    return string == null ? EMPTY_BYTES : toUtf8(string);
+  }
 
   public static String fromUtf8(final byte[] bytes)
   {
@@ -51,12 +78,12 @@ public class StringUtils
   {
     final byte[] bytes = new byte[numBytes];
     buffer.get(bytes);
-    return fromUtf8(bytes);
+    return StringUtils.fromUtf8(bytes);
   }
 
   public static String fromUtf8(final ByteBuffer buffer)
   {
-    return fromUtf8(buffer, buffer.remaining());
+    return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 
   public static byte[] toUtf8(final String string)

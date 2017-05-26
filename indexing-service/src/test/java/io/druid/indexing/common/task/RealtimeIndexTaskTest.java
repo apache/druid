@@ -20,7 +20,6 @@
 package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -67,6 +66,7 @@ import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.parsers.ParseException;
@@ -811,7 +811,7 @@ public class RealtimeIndexTaskTest
         )
     );
 
-    Files.write(smooshFile.toPath(), "oops!".getBytes(Charsets.UTF_8));
+    Files.write(smooshFile.toPath(), StringUtils.toUtf8("oops!"));
 
     // Second run:
     {

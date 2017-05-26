@@ -24,12 +24,11 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.Cacheable;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -229,7 +228,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test".getBytes(StandardCharsets.UTF_8);
+        return StringUtils.toUtf8("test");
       }
     };
 
@@ -238,7 +237,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "testtest".getBytes(StandardCharsets.UTF_8);
+        return StringUtils.toUtf8("testtest");
       }
     };
 
@@ -359,7 +358,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "te".getBytes(StandardCharsets.UTF_8);
+        return StringUtils.toUtf8("te");
       }
     };
 
@@ -368,7 +367,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test1".getBytes(StandardCharsets.UTF_8);
+        return StringUtils.toUtf8("test1");
       }
     };
 
@@ -377,7 +376,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test2".getBytes(StandardCharsets.UTF_8);
+        return StringUtils.toUtf8("test2");
       }
     };
 

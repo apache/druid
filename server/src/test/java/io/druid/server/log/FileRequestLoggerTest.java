@@ -49,7 +49,7 @@ public class FileRequestLoggerTest
     ObjectMapper objectMapper = new ObjectMapper();
     DateTime dateTime = new DateTime();
     File logDir = temporaryFolder.newFolder();
-    String actualLogString = new String(dateTime.toString()+"\t"+HOST);
+    String actualLogString = dateTime.toString() + "\t" + HOST;
 
     FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir);
     fileRequestLogger.start();

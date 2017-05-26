@@ -23,6 +23,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMockSupport;
@@ -126,7 +127,7 @@ public class AzureTaskLogsTest extends EasyMockSupport {
     expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
     expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
     expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8)));
+        new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
 
     replayAll();

@@ -18,6 +18,7 @@
  */
 package io.druid.metadata;
 
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -25,7 +26,6 @@ import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
 
@@ -95,16 +95,28 @@ public class SQLMetadataConnectorTest
 
     Assert.assertNull(connector.lookup(tableName, "name", "payload", "emperor"));
 
-    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin".getBytes(StandardCharsets.UTF_8));
+    connector.insertOrUpdate(
+        tableName,
+        "name",
+        "payload",
+        "emperor",
+        StringUtils.toUtf8("penguin")
+    );
     Assert.assertArrayEquals(
-        "penguin".getBytes(StandardCharsets.UTF_8),
+        StringUtils.toUtf8("penguin"),
         connector.lookup(tableName, "name", "payload", "emperor")
     );
 
-    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin chick".getBytes(StandardCharsets.UTF_8));
+    connector.insertOrUpdate(
+        tableName,
+        "name",
+        "payload",
+        "emperor",
+        StringUtils.toUtf8("penguin chick")
+    );
 
     Assert.assertArrayEquals(
-        "penguin chick".getBytes(StandardCharsets.UTF_8),
+        StringUtils.toUtf8("penguin chick"),
         connector.lookup(tableName, "name", "payload", "emperor")
     );
 

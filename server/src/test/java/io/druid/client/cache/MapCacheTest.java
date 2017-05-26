@@ -20,18 +20,17 @@
 package io.druid.client.cache;
 
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  */
 public class MapCacheTest
 {
-  private static final byte[] HI = "hi".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] HO = "ho".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] HI = StringUtils.toUtf8("hi");
+  private static final byte[] HO = StringUtils.toUtf8("ho");
   private ByteCountingLRUMap baseMap;
   private MapCache cache;
 

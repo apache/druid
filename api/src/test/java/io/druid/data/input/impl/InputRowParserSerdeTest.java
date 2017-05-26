@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import io.druid.TestObjectMapper;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -57,9 +58,7 @@ public class InputRowParserSerdeTest
         ByteBufferInputRowParser.class
     );
     final InputRow parsed = parser2.parse(
-        ByteBuffer.wrap(
-            "{\"foo\":\"x\",\"bar\":\"y\",\"qux\":\"z\",\"timestamp\":\"2000\"}".getBytes(Charsets.UTF_8)
-        )
+        ByteBuffer.wrap(StringUtils.toUtf8("{\"foo\":\"x\",\"bar\":\"y\",\"qux\":\"z\",\"timestamp\":\"2000\"}"))
     );
     Assert.assertEquals(ImmutableList.of("foo", "bar"), parsed.getDimensions());
     Assert.assertEquals(ImmutableList.of("x"), parsed.getDimension("foo"));
