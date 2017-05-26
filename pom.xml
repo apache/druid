@@ -186,7 +186,9 @@
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk</artifactId>
-                <version>1.11.132</version>
+                <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
+                     Need to update Druid to use Jackson 2.6+ -->
+                <version>1.10.77</version>
                 <exclusions>
                     <exclusion>
                         <groupId>javax.mail</groupId>
