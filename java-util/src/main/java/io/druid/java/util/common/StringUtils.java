@@ -29,6 +29,8 @@ import java.util.IllegalFormatException;
 import java.util.Locale;
 
 /**
+ * As of OpenJDK / Oracle JDK 8, the JVM is optimized around String charset variable instead of Charset passing, that
+ * is exploited in {@link #toUtf8(String)} and {@link #fromUtf8(byte[])}.
  */
 public class StringUtils
 {
