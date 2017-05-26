@@ -45,6 +45,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -60,7 +61,7 @@ public class CompressionUtilsTest
   static {
     final StringBuilder builder = new StringBuilder();
     try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("loremipsum.txt")) {
-      final Iterator<String> it = new java.util.Scanner(stream).useDelimiter(Pattern.quote("|"));
+      final Iterator<String> it = new Scanner(stream).useDelimiter(Pattern.quote("|"));
       while (it.hasNext()) {
         builder.append(it.next());
       }
@@ -303,7 +304,7 @@ public class CompressionUtilsTest
   }
 
   // If this ever passes, er... fails to fail... then the bug is fixed
-  @Test(expected = java.lang.AssertionError.class)
+  @Test(expected = AssertionError.class)
   // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
   public void testGunzipBug() throws IOException
   {

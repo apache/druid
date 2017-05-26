@@ -26,6 +26,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.ProvisionException;
 import com.google.inject.name.Names;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.IndexingServiceModuleHelper;
@@ -143,19 +144,19 @@ public class ForkingTaskRunnerConfigTest
     );
   }
 
-  @Test(expected = com.google.inject.ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testExceptionalJavaOptArray() throws JsonProcessingException
   {
     buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY, "not an array");
   }
 
-  @Test(expected = com.google.inject.ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testExceptionalJavaOpt() throws JsonProcessingException
   {
     buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, "[\"not a string\"]");
   }
 
-  @Test(expected = com.google.inject.ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testExceptionalJavaOpt2() throws JsonProcessingException
   {
     buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, "{\"not a string\":\"someVal\"}");

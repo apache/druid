@@ -51,6 +51,7 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -224,7 +225,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               jsonMapper,
               injector.getInstance(Key.get(ObjectMapper.class, Smile.class)),
               hostFinder,
-              injector.getProvider(org.eclipse.jetty.client.HttpClient.class),
+              injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
               new RequestLogger()

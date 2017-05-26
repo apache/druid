@@ -23,6 +23,7 @@ package io.druid.extendedset.intset;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,7 +60,7 @@ import java.util.SortedSet;
  * @author Alessandro Colantonio
  * @version $Id$
  */
-public class ConciseSet extends AbstractIntSet implements java.io.Serializable
+public class ConciseSet extends AbstractIntSet implements Serializable
 {
   /**
    * generated serial ID

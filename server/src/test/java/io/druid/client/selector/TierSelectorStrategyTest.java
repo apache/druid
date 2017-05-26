@@ -20,6 +20,7 @@
 package io.druid.client.selector;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.client.DirectDruidClient;
 import io.druid.client.DruidServer;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -119,7 +120,7 @@ public class TierSelectorStrategyTest
             "test",
             new Interval("2013-01-01/2013-01-02"),
             new DateTime("2013-01-01").toString(),
-            com.google.common.collect.Maps.<String, Object>newHashMap(),
+            Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),
             NoneShardSpec.instance(),

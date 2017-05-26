@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.SettableFuture;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -128,7 +129,7 @@ public class LookupCoordinatorManagerTest
         super.emit(event);
       }
     };
-    com.metamx.emitter.EmittingLogger.registerEmitter(SERVICE_EMITTER);
+    EmittingLogger.registerEmitter(SERVICE_EMITTER);
   }
 
   @Before

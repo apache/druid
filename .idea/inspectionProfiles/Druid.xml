@@ -17,6 +17,12 @@
       <option name="processComments" value="true" />
     </inspection_tool>
     <inspection_tool class="SyntaxError" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="UnnecessaryFullyQualifiedName" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
+        <option name="m_ignoreJavadoc" value="true" />
+      </scope>
+      <option name="m_ignoreJavadoc" value="true" />
+    </inspection_tool>
     <inspection_tool class="XmlHighlighting" enabled="true" level="WARNING" enabled_by_default="true" />
   </profile>
 </component>
