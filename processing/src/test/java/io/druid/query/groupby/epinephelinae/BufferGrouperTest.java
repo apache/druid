@@ -20,24 +20,34 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.MapBasedRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.Comparator;
 import java.util.List;
 
 public class BufferGrouperTest
 {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
   public void testSimple()
   {
@@ -117,6 +127,34 @@ public class BufferGrouperTest
   }
 
   @Test
+  public void testGrowing2()
+  {
+    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 2_000_000_000, 2);
+    final int expectedMaxSize = 40988516;
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    for (int i = 0; i < expectedMaxSize; i++) {
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
+    }
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
+  }
+
+  @Test
+  public void testGrowing3()
+  {
+    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, Integer.MAX_VALUE, 2);
+    final int expectedMaxSize = 44938972;
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    for (int i = 0; i < expectedMaxSize; i++) {
+      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
+    }
+    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
+  }
+
+  @Test
   public void testNoGrowing()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
@@ -144,14 +182,23 @@ public class BufferGrouperTest
     Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
   }
 
-  private static BufferGrouper<Integer> makeGrouper(
+  private BufferGrouper<Integer> makeGrouper(
       TestColumnSelectorFactory columnSelectorFactory,
       int bufferSize,
       int initialBuckets
   )
   {
+    final MappedByteBuffer buffer;
+
+    try {
+      buffer = Files.map(temporaryFolder.newFile(), FileChannel.MapMode.READ_WRITE, bufferSize);
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+
     final BufferGrouper<Integer> grouper = new BufferGrouper<>(
-        Suppliers.ofInstance(ByteBuffer.allocate(bufferSize)),
+        Suppliers.ofInstance(buffer),
         GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,
         new AggregatorFactory[]{
