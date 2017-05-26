@@ -411,7 +411,7 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
     final int newMaxSize;
     final int newTableStart;
 
-    if ((tableStart + buckets * 3 * bucketSize) > tableArenaSize) {
+    if ((long) buckets * 3 * bucketSize > (long) tableArenaSize - tableStart) {
       // Not enough space to grow upwards, start back from zero
       newTableStart = 0;
       newBuckets = tableStart / bucketSize;
