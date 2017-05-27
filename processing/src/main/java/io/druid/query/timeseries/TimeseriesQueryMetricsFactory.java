@@ -20,8 +20,12 @@
 package io.druid.query.timeseries;
 
 /**
- * Implementations could be injected using {@link io.druid.guice.PolyBind#createChoice} with
- * QueryToolChestModule.TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY as property name.
+ * Implementations could be injected using
+ *
+ * PolyBind
+ *    .optionBinder(binder, Key.get(TimeseriesQueryMetricsFactory.class))
+ *    .addBinding("myCustomTimeseriesQueryMetricsFactory")
+ *    .to(MyCustomTimeseriesQueryMetricsFactory.class);
  */
 public interface TimeseriesQueryMetricsFactory
 {

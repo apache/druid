@@ -99,33 +99,48 @@ public class QueryToolChestModule implements Module
     JsonConfigProvider.bind(binder, "druid.query.segmentMetadata", SegmentMetadataQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.select", SelectQueryConfig.class);
 
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoice(
         binder,
         GENERIC_QUERY_METRICS_FACTORY_PROPERTY,
         Key.get(GenericQueryMetricsFactory.class),
-        Key.get(DefaultGenericQueryMetricsFactory.class),
-        "default"
+        Key.get(DefaultGenericQueryMetricsFactory.class)
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind
+        .optionBinder(binder, Key.get(GenericQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultGenericQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
         binder,
         GROUPBY_QUERY_METRICS_FACTORY_PROPERTY,
         Key.get(GroupByQueryMetricsFactory.class),
-        Key.get(DefaultGroupByQueryMetricsFactory.class),
-        "default"
+        Key.get(DefaultGroupByQueryMetricsFactory.class)
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind
+        .optionBinder(binder, Key.get(GroupByQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultGroupByQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
         binder,
         TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY,
         Key.get(TimeseriesQueryMetricsFactory.class),
-        Key.get(DefaultTimeseriesQueryMetricsFactory.class),
-        "default"
+        Key.get(DefaultTimeseriesQueryMetricsFactory.class)
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind
+        .optionBinder(binder, Key.get(TimeseriesQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultTimeseriesQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
         binder,
         TOPN_QUERY_METRICS_FACTORY_PROPERTY,
         Key.get(TopNQueryMetricsFactory.class),
-        Key.get(DefaultTopNQueryMetricsFactory.class),
-        "default"
+        Key.get(DefaultTopNQueryMetricsFactory.class)
     );
+    PolyBind
+        .optionBinder(binder, Key.get(TopNQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultTopNQueryMetricsFactory.class);
   }
 }

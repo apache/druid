@@ -20,8 +20,12 @@
 package io.druid.query.groupby;
 
 /**
- * Implementations could be injected using {@link io.druid.guice.PolyBind#createChoice} with
- * QueryToolChestModule.GROUPBY_QUERY_METRICS_FACTORY_PROPERTY as property name.
+ * Implementations could be injected using
+ *
+ * PolyBind
+ *    .optionBinder(binder, Key.get(GroupByQueryMetricsFactory.class))
+ *    .addBinding("myCustomGroupByQueryMetricsFactory")
+ *    .to(MyCustomGroupByQueryMetricsFactory.class);
  */
 public interface GroupByQueryMetricsFactory
 {
