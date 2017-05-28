@@ -1509,7 +1509,7 @@ public class KafkaSupervisor implements Supervisor
   {
     TopicPartition topicPartition = new TopicPartition(ioConfig.getTopic(), partition);
     if (!consumer.assignment().contains(topicPartition)) {
-      consumer.assign(Collections.singletonList(topicPartition));
+      consumer.assign(Lists.newArrayList(topicPartition));
     }
 
     if (useEarliestOffset) {
