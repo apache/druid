@@ -27,6 +27,7 @@ import io.druid.java.util.common.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
+import java.util.Objects;
 
 public class StringComparators
 {
@@ -61,7 +62,7 @@ public class StringComparators
     public int compare(String s, String s2)
     {
       // Avoid conversion to bytes for equal references
-      if(s == s2){
+      if(Objects.equals(s, s2)){
         return 0;
       }
 
@@ -374,7 +375,7 @@ public class StringComparators
     public int compare(String o1, String o2)
     {
       // return if o1 and o2 are the same object
-      if (o1 == o2) {
+      if (Objects.equals(o1, o2)) {
         return 0;
       }
       // we know o1 != o2

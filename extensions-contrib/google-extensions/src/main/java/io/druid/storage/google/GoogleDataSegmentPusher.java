@@ -144,7 +144,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
 
   public String buildPath(final String path)
   {
-    if (config.getPrefix() != "") {
+    if (!"".equals(config.getPrefix())) {
       return config.getPrefix() + "/" + path;
     } else {
       return path;

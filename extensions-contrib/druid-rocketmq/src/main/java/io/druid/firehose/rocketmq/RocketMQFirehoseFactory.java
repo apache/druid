@@ -517,7 +517,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
     @Override
     public int compare(MessageExt lhs, MessageExt rhs)
     {
-      return Long.compare(lhs.getQueueOffset(), lhs.getQueueOffset());
+      return Long.compare(lhs.getQueueOffset(), rhs.getQueueOffset());
     }
   }
 
