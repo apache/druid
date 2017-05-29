@@ -19,21 +19,19 @@
 
 package io.druid.java.util.common.parsers;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
+import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
 
-import java.math.BigInteger;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -69,7 +67,7 @@ public class JSONPathParser implements Parser<String, Object>
 
     // Avoid using defaultConfiguration, as this depends on json-smart which we are excluding.
     this.jsonPathConfig = Configuration.builder()
-                                       .jsonProvider(new JacksonJsonProvider())
+                                       .jsonProvider(new JacksonJsonNodeJsonProvider())
                                        .mappingProvider(new JacksonMappingProvider())
                                        .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                        .build();
@@ -98,13 +96,7 @@ public class JSONPathParser implements Parser<String, Object>
   {
     try {
       Map<String, Object> map = new LinkedHashMap<>();
-      Map<String, Object> document = mapper.readValue(
-          input,
-          new TypeReference<Map<String, Object>>()
-          {
-          }
-      );
-      JsonNode jsonNode = mapper.readValue(input, JsonNode.class);
+      JsonNode document = mapper.readValue(input, JsonNode.class);
 
       for (Map.Entry<String, Pair<FieldType, FlattenExpr>> entry : fieldPathMap.entrySet()) {
         String fieldName = entry.getKey();
@@ -116,7 +108,7 @@ public class JSONPathParser implements Parser<String, Object>
         } else if (pair.lhs == FieldType.PATH) {
           parsedVal = valueConversionFunction(path.read(document, jsonPathConfig));
         } else if (pair.lhs == FieldType.JQ) {
-          parsedVal = jsonNodeValueConversionFunction(path.read(jsonNode));
+          parsedVal = valueConversionFunction(path.read(document));
         } else {
           throw new ParseException("Unknown FieldType", pair.lhs);
         }
@@ -160,69 +152,36 @@ public class JSONPathParser implements Parser<String, Object>
     return map;
   }
 
-  private void discoverFields(Map<String, Object> map, Map<String, Object> document)
+  private void discoverFields(Map<String, Object> map, JsonNode document)
   {
-    for (Map.Entry<String, Object> e : document.entrySet()) {
+    for (Iterator<Map.Entry<String, JsonNode>> it = document.fields(); it.hasNext(); ) {
+      Map.Entry<String, JsonNode> e = it.next();
       String field = e.getKey();
       if (!map.containsKey(field)) {
-        Object val = e.getValue();
-        if (val == null) {
+        JsonNode val = e.getValue();
+        if (val.isNull()) {
           continue;
         }
-        if (val instanceof Map) {
+        if (val.isObject()) {
           continue;
         }
-        if (val instanceof List) {
-          if (!isFlatList((List) val)) {
+        if (val.isArray()) {
+          if (!isFlatList(val)) {
             continue;
           }
         }
-        val = valueConversionFunction(val);
-        map.put(field, val);
+        Object val2 = valueConversionFunction(val);
+        map.put(field, val2);
       }
     }
   }
 
-  private Object valueConversionFunction(Object val)
+  private Object valueConversionFunction(JsonNode val)
   {
     if (val == null) {
       return null;
     }
 
-    if (val instanceof Integer) {
-      return Long.valueOf((Integer) val);
-    }
-
-    if (val instanceof BigInteger) {
-      return Double.valueOf(((BigInteger) val).doubleValue());
-    }
-
-    if (val instanceof String) {
-      return charsetFix((String) val);
-    }
-
-    if (val instanceof List) {
-      List<Object> newList = new ArrayList<>();
-      for (Object entry : ((List) val)) {
-        newList.add(valueConversionFunction(entry));
-      }
-      return newList;
-    }
-
-    if (val instanceof Map) {
-      Map<String, Object> newMap = new LinkedHashMap<>();
-      Map<String, Object> valMap = (Map<String, Object>) val;
-      for (Map.Entry<String, Object> entry : valMap.entrySet()) {
-        newMap.put(entry.getKey(), valueConversionFunction(entry.getValue()));
-      }
-      return newMap;
-    }
-
-    return val;
-  }
-
-  private Object jsonNodeValueConversionFunction(JsonNode val)
-  {
     if (val.isInt() || val.isLong()) {
       return val.asLong();
     }
@@ -239,17 +198,16 @@ public class JSONPathParser implements Parser<String, Object>
       List<Object> newList = new ArrayList<>();
       for (Iterator<JsonNode> it = val.iterator(); it.hasNext(); ) {
         JsonNode entry = it.next();
-        newList.add(jsonNodeValueConversionFunction(entry));
+        newList.add(valueConversionFunction(entry));
       }
       return newList;
     }
 
     if (val.isObject()) {
       Map<String, Object> newMap = new LinkedHashMap<>();
-      Map<String, Object> valMap = (Map<String, Object>) val;
       for (Iterator<Map.Entry<String, JsonNode>> it = val.fields(); it.hasNext(); ) {
         Map.Entry<String, JsonNode> entry = it.next();
-        newMap.put(entry.getKey(), jsonNodeValueConversionFunction(entry.getValue()));
+        newMap.put(entry.getKey(), valueConversionFunction(entry.getValue()));
       }
       return newMap;
     }
@@ -269,10 +227,10 @@ public class JSONPathParser implements Parser<String, Object>
     }
   }
 
-  private boolean isFlatList(List<Object> list)
+  private boolean isFlatList(JsonNode list)
   {
-    for (Object obj : list) {
-      if ((obj instanceof Map) || (obj instanceof List)) {
+    for (JsonNode obj : list) {
+      if (obj.isObject() || obj.isArray()) {
         return false;
       }
     }

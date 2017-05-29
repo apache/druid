@@ -25,8 +25,6 @@ import com.jayway.jsonpath.JsonPath;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
 
-import java.util.Map;
-
 
 public class FlattenExpr
 {
@@ -44,7 +42,7 @@ public class FlattenExpr
     this.jsonQueryExpr = jsonQueryExpr;
   }
 
-  public Object read(Map<String, Object> document, Configuration jsonConfig)
+  public JsonNode read(JsonNode document, Configuration jsonConfig)
   {
     return this.jsonPathExpr.read(document, jsonConfig);
   }
