@@ -25,9 +25,7 @@ import com.jayway.jsonpath.JsonPath;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
 
-/*
- *  Flatten expr adapter class
- */
+
 public class FlattenExpr
 {
   private JsonPath jsonPathExpr;
