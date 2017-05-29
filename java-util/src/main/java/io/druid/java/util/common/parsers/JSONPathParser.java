@@ -102,20 +102,20 @@ public class JSONPathParser implements Parser<String, Object>
         String fieldName = entry.getKey();
         Pair<FieldType, FlattenExpr> pair = entry.getValue();
         FlattenExpr path = pair.rhs;
-        Object parsedVal;
+        JsonNode parsedVal;
         if (pair.lhs == FieldType.ROOT) {
-          parsedVal = valueConversionFunction(document.get(fieldName));
+          parsedVal = document.get(fieldName);
         } else if (pair.lhs == FieldType.PATH) {
-          parsedVal = valueConversionFunction(path.readPath(document, jsonPathConfig));
+          parsedVal = path.readPath(document, jsonPathConfig);
         } else if (pair.lhs == FieldType.JQ) {
-          parsedVal = valueConversionFunction(path.readJq(document));
+          parsedVal = path.readJq(document);
         } else {
           throw new ParseException("Unknown FieldType", pair.lhs);
         }
         if (parsedVal == null) {
           continue;
         }
-        map.put(fieldName, parsedVal);
+        map.put(fieldName, valueConversionFunction(parsedVal));
       }
       if (useFieldDiscovery) {
         discoverFields(map, document);
