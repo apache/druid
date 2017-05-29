@@ -106,9 +106,9 @@ public class JSONPathParser implements Parser<String, Object>
         if (pair.lhs == FieldType.ROOT) {
           parsedVal = valueConversionFunction(document.get(fieldName));
         } else if (pair.lhs == FieldType.PATH) {
-          parsedVal = valueConversionFunction(path.read(document, jsonPathConfig));
+          parsedVal = valueConversionFunction(path.readPath(document, jsonPathConfig));
         } else if (pair.lhs == FieldType.JQ) {
-          parsedVal = valueConversionFunction(path.read(document));
+          parsedVal = valueConversionFunction(path.readJq(document));
         } else {
           throw new ParseException("Unknown FieldType", pair.lhs);
         }
@@ -143,7 +143,7 @@ public class JSONPathParser implements Parser<String, Object>
           path = new FlattenExpr(JsonQuery.compile(fieldSpec.getExpr()));
         }
         catch (JsonQueryException e) {
-          throw new ParseException(e, "Unable to flatten expression row [%s]", fieldSpec.getExpr());
+          throw new ParseException(e, "Unable to compile JQ expression [%s]", fieldSpec.getExpr());
         }
       }
       Pair<FieldType, FlattenExpr> pair = new Pair<>(fieldSpec.getType(), path);
@@ -170,8 +170,7 @@ public class JSONPathParser implements Parser<String, Object>
             continue;
           }
         }
-        Object val2 = valueConversionFunction(val);
-        map.put(field, val2);
+        map.put(field, valueConversionFunction(val));
       }
     }
   }

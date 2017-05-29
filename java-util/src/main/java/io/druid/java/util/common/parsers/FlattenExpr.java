@@ -25,7 +25,9 @@ import com.jayway.jsonpath.JsonPath;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
 
-
+/*
+ *  Flatten expr adapter class
+ */
 public class FlattenExpr
 {
   private JsonPath jsonPathExpr;
@@ -42,12 +44,12 @@ public class FlattenExpr
     this.jsonQueryExpr = jsonQueryExpr;
   }
 
-  public JsonNode read(JsonNode document, Configuration jsonConfig)
+  public JsonNode readPath(JsonNode document, Configuration jsonConfig)
   {
     return this.jsonPathExpr.read(document, jsonConfig);
   }
 
-  public JsonNode read(JsonNode document)
+  public JsonNode readJq(JsonNode document)
   {
     try {
       return this.jsonQueryExpr.apply(document).get(0);
