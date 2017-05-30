@@ -431,6 +431,7 @@ public class RealtimePlumber implements Plumber
                   mergedFile,
                   sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
               );
+              index.close();
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());
               segmentPublisher.publishSegment(segment);
 
@@ -861,6 +862,7 @@ public class RealtimePlumber implements Plumber
         );
         for (FireHydrant hydrant : sink) {
           cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+          hydrant.getSegment().close();
         }
         synchronized (handoffCondition) {
           handoffCondition.notifyAll();
