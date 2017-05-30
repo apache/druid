@@ -57,8 +57,8 @@ public class HdfsLoadSpec implements LoadSpec
   }
 
   @Override
-  public LoadSpecResult loadSegment(File outDir) throws SegmentLoadingException
+  public LoadSpecResult loadSegment(File outDir, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    return new LoadSpecResult(puller.getSegmentFiles(path, outDir).size());
+    return new LoadSpecResult(puller.getSegmentFiles(path, outDir, cacheSegmentsLocally).size());
   }
 }

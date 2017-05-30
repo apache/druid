@@ -117,12 +117,16 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   private static final Logger log = new Logger(LocalDataSegmentPuller.class);
 
   @Override
-  public void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException
+  public void getSegmentFiles(DataSegment segment, File dir, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    getSegmentFiles(getFile(segment), dir);
+    getSegmentFiles(getFile(segment), dir, cacheSegmentsLocally);
   }
 
-  public FileUtils.FileCopyResult getSegmentFiles(final File sourceFile, final File dir) throws SegmentLoadingException
+  public FileUtils.FileCopyResult getSegmentFiles(
+      final File sourceFile,
+      final File dir,
+      boolean cacheSegmentsLocally
+  ) throws SegmentLoadingException
   {
     if (sourceFile.isDirectory()) {
       if (sourceFile.equals(dir)) {

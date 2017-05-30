@@ -160,12 +160,12 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   }
 
   @Override
-  public void getSegmentFiles(final DataSegment segment, final File outDir) throws SegmentLoadingException
+  public void getSegmentFiles(final DataSegment segment, final File outDir, final boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    getSegmentFiles(new S3Coords(segment), outDir);
+    getSegmentFiles(new S3Coords(segment), outDir, cacheSegmentsLocally);
   }
 
-  public FileUtils.FileCopyResult getSegmentFiles(final S3Coords s3Coords, final File outDir)
+  public FileUtils.FileCopyResult getSegmentFiles(final S3Coords s3Coords, final File outDir, final boolean cacheSegmentsLocally)
       throws SegmentLoadingException
   {
 
@@ -202,7 +202,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
             byteSource,
             outDir,
             S3Utils.S3RETRY,
-            true
+            cacheSegmentsLocally
         );
         log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outDir.getAbsolutePath());
         return result;

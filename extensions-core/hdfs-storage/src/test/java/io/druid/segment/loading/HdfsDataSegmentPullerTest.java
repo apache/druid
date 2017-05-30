@@ -133,7 +133,7 @@ public class HdfsDataSegmentPullerTest
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(uri, outTmpDir);
+      puller.getSegmentFiles(uri, outTmpDir, false);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
@@ -174,7 +174,7 @@ public class HdfsDataSegmentPullerTest
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(uri, outTmpDir);
+      puller.getSegmentFiles(uri, outTmpDir, false);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
@@ -208,7 +208,7 @@ public class HdfsDataSegmentPullerTest
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(uri, outTmpDir);
+      puller.getSegmentFiles(uri, outTmpDir, false);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));

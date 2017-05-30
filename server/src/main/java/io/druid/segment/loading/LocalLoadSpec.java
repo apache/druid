@@ -59,8 +59,8 @@ public class LocalLoadSpec implements LoadSpec
   }
 
   @Override
-  public LoadSpecResult loadSegment(final File outDir) throws SegmentLoadingException
+  public LoadSpecResult loadSegment(final File outDir, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    return new LoadSpecResult(puller.getSegmentFiles(path.toFile(), outDir).size());
+    return new LoadSpecResult(puller.getSegmentFiles(path.toFile(), outDir, cacheSegmentsLocally).size());
   }
 }

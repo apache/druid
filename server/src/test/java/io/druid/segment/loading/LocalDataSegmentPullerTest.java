@@ -72,7 +72,7 @@ public class LocalDataSegmentPullerTest
 
     Assert.assertFalse(file.exists());
     Assert.assertTrue(zipFile.exists());
-    puller.getSegmentFiles(zipFile, tmpDir);
+    puller.getSegmentFiles(zipFile, tmpDir, false);
     Assert.assertTrue(file.exists());
   }
 
@@ -97,7 +97,7 @@ public class LocalDataSegmentPullerTest
 
     Assert.assertTrue(zipFile.exists());
     Assert.assertFalse(unZipFile.exists());
-    puller.getSegmentFiles(zipFile, tmpDir);
+    puller.getSegmentFiles(zipFile, tmpDir, false);
     Assert.assertTrue(unZipFile.exists());
   }
 
@@ -108,7 +108,7 @@ public class LocalDataSegmentPullerTest
     File tmpFile = File.createTempFile("test", "file", srcDir);
     File expectedOutput = new File(tmpDir, Files.getNameWithoutExtension(tmpFile.getAbsolutePath()));
     Assert.assertFalse(expectedOutput.exists());
-    puller.getSegmentFiles(srcDir, tmpDir);
+    puller.getSegmentFiles(srcDir, tmpDir, false);
     Assert.assertTrue(expectedOutput.exists());
   }
 }

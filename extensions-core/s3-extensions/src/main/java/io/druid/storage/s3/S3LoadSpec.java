@@ -55,9 +55,9 @@ public class S3LoadSpec implements LoadSpec
   }
 
   @Override
-  public LoadSpecResult loadSegment(File outDir) throws SegmentLoadingException
+  public LoadSpecResult loadSegment(File outDir, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    return new LoadSpecResult(puller.getSegmentFiles(new S3DataSegmentPuller.S3Coords(bucket, key), outDir).size());
+    return new LoadSpecResult(puller.getSegmentFiles(new S3DataSegmentPuller.S3Coords(bucket, key), outDir, cacheSegmentsLocally).size());
   }
 
   @JsonProperty(S3DataSegmentPuller.BUCKET)

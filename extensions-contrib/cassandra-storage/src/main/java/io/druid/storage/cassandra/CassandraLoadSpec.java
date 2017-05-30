@@ -49,8 +49,8 @@ public class CassandraLoadSpec implements LoadSpec
   }
 
   @Override
-  public LoadSpecResult loadSegment(File outDir) throws SegmentLoadingException
+  public LoadSpecResult loadSegment(File outDir, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    return new LoadSpecResult(puller.getSegmentFiles(key, outDir).size());
+    return new LoadSpecResult(puller.getSegmentFiles(key, outDir, cacheSegmentsLocally).size());
   }
 }

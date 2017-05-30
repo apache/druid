@@ -37,6 +37,7 @@ The historical node uses several of the global configs in [Configuration](../con
 |`druid.segmentCache.announceIntervalMillis`|How frequently to announce segments while segments are loading from cache. Set this value to zero to wait for all segments to be loaded before announcing.|5000 (5 seconds)|
 |`druid.segmentCache.numLoadingThreads`|How many segments to load concurrently from from deep storage.|1|
 |`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently from local storage at startup.|1|
+|`druid.segmentCache.cacheSegmentsLocally`|Download segments to temp before uncompressing.|false|
 
 ### Query Configs
 

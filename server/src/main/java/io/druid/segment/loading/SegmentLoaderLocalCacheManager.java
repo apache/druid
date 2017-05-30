@@ -203,7 +203,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   {
     // LoadSpec isn't materialized until here so that any system can interpret Segment without having to have all the LoadSpec dependencies.
     final LoadSpec loadSpec = jsonMapper.convertValue(segment.getLoadSpec(), LoadSpec.class);
-    final LoadSpec.LoadSpecResult result = loadSpec.loadSegment(storageDir);
+    final LoadSpec.LoadSpecResult result = loadSpec.loadSegment(storageDir, config.isCacheSegmentsLocally());
     if (result.getSize() != segment.getSize()) {
       log.warn(
           "Segment [%s] is different than expected size. Expected [%d] found [%d]",
