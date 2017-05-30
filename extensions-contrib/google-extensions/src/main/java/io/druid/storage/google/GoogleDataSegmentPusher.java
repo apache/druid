@@ -21,8 +21,6 @@ package io.druid.storage.google;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.http.InputStreamContent;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -144,10 +142,9 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     }
   }
 
-  @VisibleForTesting
-  String buildPath(final String path)
+  public String buildPath(final String path)
   {
-    if (!Strings.isNullOrEmpty(config.getPrefix())) {
+    if (config.getPrefix() != "") {
       return config.getPrefix() + "/" + path;
     } else {
       return path;
