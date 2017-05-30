@@ -167,7 +167,7 @@ public class IndexGeneratorJob implements Jobby
       JobHelper.injectSystemProperties(job);
       config.addJobProperties(job);
       // inject druid properties like deep storage bindings
-      JobHelper.injectDruidProprties(job.getConfiguration());
+      JobHelper.injectDruidProperties(job.getConfiguration(), config.getAllowedHadoopPrefix());
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);

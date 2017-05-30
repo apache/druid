@@ -222,6 +222,7 @@ public class HadoopDruidIndexerConfig
   private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
   private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
   private final Granularity rollupGran;
+  private final List<String> allowedHadoopPrefix;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
@@ -258,6 +259,7 @@ public class HadoopDruidIndexerConfig
 
     }
     this.rollupGran = spec.getDataSchema().getGranularitySpec().getQueryGranularity();
+    this.allowedHadoopPrefix = spec.getTuningConfig().getAllowedHadoopPrefix();
   }
 
   @JsonProperty(value = "spec")
@@ -595,5 +597,10 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(schema.getTuningConfig().getWorkingPath(), "workingPath");
     Preconditions.checkNotNull(schema.getIOConfig().getSegmentOutputPath(), "segmentOutputPath");
     Preconditions.checkNotNull(schema.getTuningConfig().getVersion(), "version");
+  }
+
+  public List<String> getAllowedHadoopPrefix()
+  {
+    return allowedHadoopPrefix;
   }
 }

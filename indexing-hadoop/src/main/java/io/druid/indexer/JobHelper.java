@@ -309,14 +309,24 @@ public class JobHelper
   {
     injectSystemProperties(job.getConfiguration());
   }
-  public static void injectDruidProprties(Configuration configuration) {
-    String mapJavaOpst = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
-    String reduceJavaOpts = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
+  public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix) {
+    String mapJavaOpts = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
+    String reduceJavaOpts = configuration.get(MRJobConfig.REDUCE_JAVA_OPTS);
+
     for (String propName: System.getProperties().stringPropertyNames()){
-      if (propName.startsWith("druid.storage.")) {
-        mapJavaOpst = String.format("%s -D%s=%s", mapJavaOpst, propName, System.getProperty(propName));
-        reduceJavaOpts = String.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+      for (String prefix : listOfAllowedPrefix) {
+        if (propName.startsWith(prefix)) {
+          mapJavaOpts = String.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
+          reduceJavaOpts = String.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+        }
       }
+
+    }
+    if (!Strings.isNullOrEmpty(mapJavaOpts)) {
+      configuration.set(MRJobConfig.MAP_JAVA_OPTS, mapJavaOpts);
+    }
+    if (!Strings.isNullOrEmpty(reduceJavaOpts)) {
+      configuration.set(MRJobConfig.REDUCE_JAVA_OPTS, reduceJavaOpts);
     }
   }
 
