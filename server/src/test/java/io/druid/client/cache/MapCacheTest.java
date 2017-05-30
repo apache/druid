@@ -30,45 +30,43 @@ public class MapCacheTest
 {
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
-  private ByteCountingLRUMap baseMap;
   private MapCache cache;
 
   @Before
   public void setUp() throws Exception
   {
-    baseMap = new ByteCountingLRUMap(1024 * 1024);
-    cache = new MapCache(baseMap);
+    cache = MapCache.create(1024 * 1024);
   }
 
   @Test
   public void testSanity() throws Exception
   {
     Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
-    Assert.assertEquals(0, baseMap.size());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
     put(cache, "a", HI, 1);
-    Assert.assertEquals(1, baseMap.size());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, get(cache, "a", HI));
     Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
-    Assert.assertEquals(2, baseMap.size());
+    Assert.assertEquals(2, cache.getStats().getNumEntries());
     Assert.assertEquals(1, get(cache, "a", HI));
     Assert.assertEquals(2, get(cache, "the", HI));
 
     put(cache, "the", HO, 10);
-    Assert.assertEquals(3, baseMap.size());
+    Assert.assertEquals(3, cache.getStats().getNumEntries());
     Assert.assertEquals(1, get(cache, "a", HI));
     Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
     Assert.assertEquals(2, get(cache, "the", HI));
     Assert.assertEquals(10, get(cache, "the", HO));
 
     cache.close("the");
-    Assert.assertEquals(1, baseMap.size());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, get(cache, "a", HI));
     Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
 
     cache.close("a");
-    Assert.assertEquals(0, baseMap.size());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
   }
 
   public void put(Cache cache, String namespace, byte[] key, Integer value)

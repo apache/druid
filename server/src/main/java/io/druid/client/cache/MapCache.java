@@ -19,59 +19,77 @@
 
 package io.druid.client.cache;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.Weigher;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import com.metamx.emitter.service.ServiceEmitter;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
 public class MapCache implements Cache
 {
-  public static Cache create(long sizeInBytes)
+  public static MapCache create(long sizeInBytes) {
+    return create(sizeInBytes, 0, 4);
+  }
+  public static MapCache create(long sizeInBytes, int initialCapacity, int concurrencyLevel)
   {
-    return new MapCache(new ByteCountingLRUMap(sizeInBytes));
+    return new MapCache(sizeInBytes, initialCapacity, concurrencyLevel);
   }
 
-  private final Map<ByteBuffer, byte[]> baseMap;
-  private final ByteCountingLRUMap byteCountingLRUMap;
+  private final com.google.common.cache.Cache<ByteBuffer, byte[]> baseCache;
+  private final com.google.common.cache.LoadingCache<String, Integer> namespaceId;
+  private final AtomicInteger ids = new AtomicInteger();
 
-  private final Map<String, byte[]> namespaceId;
-  private final AtomicInteger ids;
-
-  private final Object clearLock = new Object();
-
-  private final AtomicLong hitCount = new AtomicLong(0);
-  private final AtomicLong missCount = new AtomicLong(0);
-
-  MapCache(
-      ByteCountingLRUMap byteCountingLRUMap
-  )
+  private MapCache(long sizeInBytes, int initialCapacity, int concurrencyLevel)
   {
-    this.byteCountingLRUMap = byteCountingLRUMap;
-    this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
+    this.baseCache = CacheBuilder
+        .newBuilder()
+        .initialCapacity(initialCapacity)
+        .maximumWeight(sizeInBytes)
+        .recordStats()
+        .concurrencyLevel(concurrencyLevel)
+        .weigher(
+            new Weigher<ByteBuffer, byte[]>()
+            {
+              @Override
+              public int weigh(ByteBuffer key, byte[] value)
+              {
+                return key.remaining() + value.length;
+              }
+            }
+        )
+        .build();
 
-    namespaceId = Maps.newHashMap();
-    ids = new AtomicInteger();
+    this.namespaceId = CacheBuilder
+        .newBuilder()
+        .concurrencyLevel(concurrencyLevel)
+        .build(new CacheLoader<String, Integer>()
+        {
+          @Override
+          public Integer load(String namespace) throws Exception
+          {
+            return ids.getAndIncrement();
+          }
+        });
   }
 
   @Override
   public CacheStats getStats()
   {
+    final com.google.common.cache.CacheStats stats = baseCache.stats();
     return new CacheStats(
-        hitCount.get(),
-        missCount.get(),
-        byteCountingLRUMap.size(),
-        byteCountingLRUMap.getNumBytes(),
-        byteCountingLRUMap.getEvictionCount(),
+        stats.hitCount(),
+        stats.missCount(),
+        baseCache.size(),
+        -1,
+        stats.evictionCount(),
         0,
         0
     );
@@ -80,24 +98,13 @@ public class MapCache implements Cache
   @Override
   public byte[] get(NamedKey key)
   {
-    final byte[] retVal;
-    synchronized (clearLock) {
-      retVal = baseMap.get(computeKey(getNamespaceId(key.namespace), key.key));
-    }
-    if (retVal == null) {
-      missCount.incrementAndGet();
-    } else {
-      hitCount.incrementAndGet();
-    }
-    return retVal;
+    return baseCache.getIfPresent(computeKey(namespaceId.getUnchecked(key.namespace), key.key));
   }
 
   @Override
   public void put(NamedKey key, byte[] value)
   {
-    synchronized (clearLock) {
-      baseMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
-    }
+    baseCache.put(computeKey(namespaceId.getUnchecked(key.namespace), key.key), value);
   }
 
   @Override
@@ -116,51 +123,25 @@ public class MapCache implements Cache
   @Override
   public void close(String namespace)
   {
-    byte[] idBytes;
-    synchronized (namespaceId) {
-      idBytes = getNamespaceId(namespace);
-      if (idBytes == null) {
-        return;
-      }
-
-      namespaceId.remove(namespace);
-    }
-    synchronized (clearLock) {
-      Iterator<ByteBuffer> iter = baseMap.keySet().iterator();
+    final Integer id = namespaceId.asMap().remove(namespace);
+    if (id != null) {
       List<ByteBuffer> toRemove = Lists.newLinkedList();
-      while (iter.hasNext()) {
-        ByteBuffer next = iter.next();
-
-        if (next.get(0) == idBytes[0]
-            && next.get(1) == idBytes[1]
-            && next.get(2) == idBytes[2]
-            && next.get(3) == idBytes[3]) {
+      final int unboxed = id;
+      for (ByteBuffer next : baseCache.asMap().keySet()) {
+        if (next.getInt(0) == unboxed) {
           toRemove.add(next);
         }
       }
-      for (ByteBuffer key : toRemove) {
-        baseMap.remove(key);
-      }
+      baseCache.invalidateAll(toRemove);
     }
   }
 
-  private byte[] getNamespaceId(final String identifier)
+  private ByteBuffer computeKey(int id, byte[] key)
   {
-    synchronized (namespaceId) {
-      byte[] idBytes = namespaceId.get(identifier);
-      if (idBytes != null) {
-        return idBytes;
-      }
-
-      idBytes = Ints.toByteArray(ids.getAndIncrement());
-      namespaceId.put(identifier, idBytes);
-      return idBytes;
-    }
-  }
-
-  private ByteBuffer computeKey(byte[] idBytes, byte[] key)
-  {
-    final ByteBuffer retVal = ByteBuffer.allocate(key.length + 4).put(idBytes).put(key);
+    final ByteBuffer retVal = ByteBuffer
+        .allocate(key.length + 4)
+        .putInt(id)
+        .put(key);
     retVal.rewind();
     return retVal;
   }
