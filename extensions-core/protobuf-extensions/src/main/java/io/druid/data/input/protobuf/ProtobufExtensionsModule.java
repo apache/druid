@@ -17,35 +17,32 @@
  * under the License.
  */
 
-package io.druid.guice;
+package io.druid.data.input.protobuf;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
-import io.druid.segment.realtime.firehose.IrcInputRowParser;
 
 import java.util.Arrays;
 import java.util.List;
 
-/**
- */
-public class ParsersModule implements DruidModule
+public class ProtobufExtensionsModule implements DruidModule
 {
-  @Override
-  public void configure(Binder binder)
-  {
-  }
 
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
-        new SimpleModule("ParsersModule")
+    return Arrays.asList(
+        new SimpleModule("ProtobufInputRowParserModule")
             .registerSubtypes(
-                new NamedType(IrcInputRowParser.class, "irc")
+                new NamedType(ProtobufInputRowParser.class, "protobuf")
             )
     );
   }
+
+  @Override
+  public void configure(Binder binder)
+  { }
 }
