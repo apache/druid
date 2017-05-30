@@ -214,24 +214,8 @@ public class IndexMerger
       ProgressIndicator progress
   ) throws IOException
   {
-    // We are materializing the list for performance reasons. Lists.transform
-    // only creates a "view" of the original list, meaning the function gets
-    // applied every time you access an element.
-    List<IndexableAdapter> indexAdapteres = Lists.newArrayList(
-        Iterables.transform(
-            indexes,
-            new Function<QueryableIndex, IndexableAdapter>()
-            {
-              @Override
-              public IndexableAdapter apply(final QueryableIndex input)
-              {
-                return new QueryableIndexIndexableAdapter(input);
-              }
-            }
-        )
-    );
     return merge(
-        indexAdapteres,
+        toIndexableAdapters(indexes),
         rollup,
         metricAggs,
         outDir,
@@ -268,6 +252,24 @@ public class IndexMerger
     );
   }
 
+  private static List<IndexableAdapter> toIndexableAdapters(List<QueryableIndex> indexes)
+  {
+    // We are materializing the list for performance reasons. Lists.transform
+    // only creates a "view" of the original list, meaning the function gets
+    // applied every time you access an element.
+    return Lists.transform(
+        indexes,
+        new Function<QueryableIndex, IndexableAdapter>()
+        {
+          @Override
+          public IndexableAdapter apply(final QueryableIndex input)
+          {
+            return new QueryableIndexIndexableAdapter(input);
+          }
+        }
+    );
+  }
+
   private static List<String> getLongestSharedDimOrder(List<IndexableAdapter> indexes)
   {
     int maxSize = 0;
@@ -301,6 +303,11 @@ public class IndexMerger
       }
     }
     return ImmutableList.copyOf(orderingCandidate);
+  }
+
+  public static List<String> getMergedDimensionsFromQueryableIndexes(List<QueryableIndex> indexes)
+  {
+    return getMergedDimensions(toIndexableAdapters(indexes));
   }
 
   public static List<String> getMergedDimensions(List<IndexableAdapter> indexes)
