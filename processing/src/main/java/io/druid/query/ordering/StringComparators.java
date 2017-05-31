@@ -63,7 +63,7 @@ public class StringComparators
     {
       // Avoid conversion to bytes for equal references
       // Assuming we mostly compare different strings, checking s.equals(s2) will only make the comparison slower.
-      if (s == s2){
+      if (s == s2) {
         return 0;
       }
 
