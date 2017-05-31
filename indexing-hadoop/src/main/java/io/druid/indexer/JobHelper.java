@@ -309,15 +309,18 @@ public class JobHelper
   {
     injectSystemProperties(job.getConfiguration());
   }
-  public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix) {
+
+  public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
+  {
     String mapJavaOpts = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
     String reduceJavaOpts = configuration.get(MRJobConfig.REDUCE_JAVA_OPTS);
 
-    for (String propName: System.getProperties().stringPropertyNames()){
+    for (String propName : System.getProperties().stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {
         if (propName.startsWith(prefix)) {
           mapJavaOpts = String.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
           reduceJavaOpts = String.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+          break;
         }
       }
 
