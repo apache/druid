@@ -385,7 +385,13 @@ public class DruidCoordinator
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentName);
       }
 
+      // get segment information from MetadataSegmentManager instead of getting it from fromServer's.
+      // This is useful when MetadataSegmentManager and fromServer DataSegment's are different for same
+      // identifier (say loadSpec differs because of deep storage migration).
       final DataSegment segmentToLoad = dataSource.getSegment(segment.getIdentifier());
+      if (segmentToLoad == null) {
+        throw new IAE("No segment metadata found for segment Id [%s]", segment.getIdentifier());
+      }
       final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
         throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", toServer.getName());
