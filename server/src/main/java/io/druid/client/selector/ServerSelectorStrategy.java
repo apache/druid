@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.timeline.DataSegment;
 
+import java.util.List;
 import java.util.Set;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RandomServerSelectorStrategy.class)
@@ -32,5 +33,7 @@ import java.util.Set;
 })
 public interface ServerSelectorStrategy
 {
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment);
+  QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment);
+
+  List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick);
 }

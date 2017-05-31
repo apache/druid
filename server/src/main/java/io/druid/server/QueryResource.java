@@ -25,7 +25,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.MapMaker;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
@@ -41,7 +40,6 @@ import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
-import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QueryPlus;
@@ -187,7 +185,6 @@ public class QueryResource implements QueryCountStatsProvider
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      final Map<String, Object> responseContext = new MapMaker().makeMap();
 
       query = context.getObjectMapper().readValue(in, Query.class);
       queryId = query.getId();
@@ -195,14 +192,12 @@ public class QueryResource implements QueryCountStatsProvider
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      query = QueryContexts.withDefaultTimeout(query, config.getDefaultQueryTimeout());
-      query = QueryContexts.withMaxScatterGatherBytes(query, config.getMaxScatterGatherBytes());
 
-      responseContext.put(
-          DirectDruidClient.QUERY_FAIL_TIME,
-          System.currentTimeMillis() + QueryContexts.getTimeout(query)
+      query = DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(query, config);
+      final Map<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery(
+          query,
+          System.currentTimeMillis()
       );
-      responseContext.put(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
       toolChest = warehouse.getToolChest(query);
 

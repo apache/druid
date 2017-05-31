@@ -30,6 +30,7 @@ There are several main parts to a select query:
 |filter|See [Filters](../querying/filters.html)|no|
 |dimensions|A JSON list of dimensions to select; or see [DimensionSpec](../querying/dimensionspecs.html) for ways to extract dimensions. If left empty, all dimensions are returned.|no|
 |metrics|A String array of metrics to select. If left empty, all metrics are returned.|no|
+|granularity|Defines the granularity of the query. See [Granularities](../querying/granularities.html)|yes|
 |pagingSpec|A JSON object indicating offsets into different scanned segments. Query results will return a `pagingIdentifiers` value that can be reused in the next query for pagination.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 

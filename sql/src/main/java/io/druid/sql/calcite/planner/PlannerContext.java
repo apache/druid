@@ -42,6 +42,7 @@ public class PlannerContext
 
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
+  private final long queryStartTimeMillis;
   private final Map<String, Object> queryContext;
 
   private PlannerContext(
@@ -53,6 +54,7 @@ public class PlannerContext
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.queryContext = queryContext != null ? ImmutableMap.copyOf(queryContext) : ImmutableMap.<String, Object>of();
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
+    this.queryStartTimeMillis = System.currentTimeMillis();
   }
 
   public static PlannerContext create(
@@ -104,6 +106,11 @@ public class PlannerContext
   public Map<String, Object> getQueryContext()
   {
     return queryContext;
+  }
+
+  public long getQueryStartTimeMillis()
+  {
+    return queryStartTimeMillis;
   }
 
   public DataContext createDataContext(final JavaTypeFactory typeFactory)

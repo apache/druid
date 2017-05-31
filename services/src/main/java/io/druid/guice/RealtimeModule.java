@@ -40,6 +40,8 @@ import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierC
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.QueryResource;
+import io.druid.server.SegmentManager;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.http.SegmentListerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -103,7 +105,7 @@ public class RealtimeModule implements Module
     binder.install(new CacheModule());
 
     binder.bind(QuerySegmentWalker.class).to(RealtimeManager.class).in(ManageLifecycle.class);
-    binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("realtime"));
+    binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.REALTIME));
     binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
     binder.bind(QueryCountStatsProvider.class).to(QueryResource.class).in(LazySingleton.class);
     Jerseys.addResource(binder, QueryResource.class);
@@ -111,6 +113,7 @@ public class RealtimeModule implements Module
     LifecycleModule.register(binder, QueryResource.class);
     LifecycleModule.register(binder, Server.class);
 
+    binder.bind(SegmentManager.class).in(LazySingleton.class);
     binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
     LifecycleModule.register(binder, ZkCoordinator.class);
   }

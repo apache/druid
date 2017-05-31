@@ -66,9 +66,6 @@ public class GroupByQueryConfig
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
   private long maxOnDiskStorage = 0L;
 
-  @JsonProperty
-  private Class<? extends GroupByQueryMetricsFactory> queryMetricsFactory;
-
   public String getDefaultStrategy()
   {
     return defaultStrategy;
@@ -127,16 +124,6 @@ public class GroupByQueryConfig
   public long getMaxOnDiskStorage()
   {
     return maxOnDiskStorage;
-  }
-
-  public Class<? extends GroupByQueryMetricsFactory> getQueryMetricsFactory()
-  {
-    return queryMetricsFactory != null ? queryMetricsFactory : DefaultGroupByQueryMetricsFactory.class;
-  }
-
-  public void setQueryMetricsFactory(Class<? extends GroupByQueryMetricsFactory> queryMetricsFactory)
-  {
-    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   public GroupByQueryConfig withOverrides(final GroupByQuery query)

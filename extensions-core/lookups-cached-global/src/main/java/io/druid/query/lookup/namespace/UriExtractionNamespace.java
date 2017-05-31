@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -530,8 +531,10 @@ public class UriExtractionNamespace implements ExtractionNamespace
       Preconditions.checkArgument(!Strings.isNullOrEmpty(valueFieldName), "[valueFieldName] cannot be empty");
       this.keyFieldName = keyFieldName;
       this.valueFieldName = valueFieldName;
+
+      // Copy jsonMapper; don't want to share canonicalization tables, etc., with the global ObjectMapper.
       this.parser = new DelegateParser(
-          new JSONParser(jsonMapper, ImmutableList.of(keyFieldName, valueFieldName)),
+          new JSONParser(jsonMapper.copy(), ImmutableList.of(keyFieldName, valueFieldName)),
           keyFieldName,
           valueFieldName
       );
@@ -588,6 +591,9 @@ public class UriExtractionNamespace implements ExtractionNamespace
   @JsonTypeName("simpleJson")
   public static class ObjectMapperFlatDataParser implements FlatDataParser
   {
+    private static final TypeReference<Map<String, String>> MAP_STRING_STRING = new TypeReference<Map<String, String>>()
+    {
+    };
 
     private final Parser<String, String> parser;
 
@@ -596,17 +602,17 @@ public class UriExtractionNamespace implements ExtractionNamespace
         final @JacksonInject @Json ObjectMapper jsonMapper
     )
     {
+      // There's no point canonicalizing field names, we expect them to all be unique.
+      final JsonFactory jsonFactory = jsonMapper.getFactory().copy();
+      jsonFactory.configure(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES, false);
+
       parser = new Parser<String, String>()
       {
         @Override
         public Map<String, String> parse(String input)
         {
           try {
-            return jsonMapper.readValue(
-                input, new TypeReference<Map<String, String>>()
-                {
-                }
-            );
+            return jsonFactory.createParser(input).readValueAs(MAP_STRING_STRING);
           }
           catch (IOException e) {
             throw Throwables.propagate(e);

@@ -58,6 +58,7 @@ import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -331,10 +332,23 @@ public class GroupByQuery extends BaseQuery<Row>
   private static int compareDims(List<DimensionSpec> dimensions, Row lhs, Row rhs)
   {
     for (DimensionSpec dimension : dimensions) {
-      final int dimCompare = NATURAL_NULLS_FIRST.compare(
-          lhs.getRaw(dimension.getOutputName()),
-          rhs.getRaw(dimension.getOutputName())
-      );
+      final int dimCompare;
+      if (dimension.getOutputType() == ValueType.LONG) {
+        dimCompare = Long.compare(
+            ((Number) lhs.getRaw(dimension.getOutputName())).longValue(),
+            ((Number) rhs.getRaw(dimension.getOutputName())).longValue()
+        );
+      } else if (dimension.getOutputType() == ValueType.FLOAT) {
+        dimCompare = Double.compare(
+            ((Number) lhs.getRaw(dimension.getOutputName())).doubleValue(),
+            ((Number) rhs.getRaw(dimension.getOutputName())).doubleValue()
+        );
+      } else {
+        dimCompare = NATURAL_NULLS_FIRST.compare(
+            lhs.getRaw(dimension.getOutputName()),
+            rhs.getRaw(dimension.getOutputName())
+        );
+      }
       if (dimCompare != 0) {
         return dimCompare;
       }
@@ -735,17 +749,17 @@ public class GroupByQuery extends BaseQuery<Row>
   public String toString()
   {
     return "GroupByQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", virtualColumns=" + virtualColumns +
-        ", limitSpec=" + limitSpec +
-        ", dimFilter=" + dimFilter +
-        ", granularity=" + granularity +
-        ", dimensions=" + dimensions +
-        ", aggregatorSpecs=" + aggregatorSpecs +
-        ", postAggregatorSpecs=" + postAggregatorSpecs +
-        ", havingSpec=" + havingSpec +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", virtualColumns=" + virtualColumns +
+           ", limitSpec=" + limitSpec +
+           ", dimFilter=" + dimFilter +
+           ", granularity=" + granularity +
+           ", dimensions=" + dimensions +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           ", havingSpec=" + havingSpec +
+           '}';
   }
 
   @Override
@@ -762,13 +776,13 @@ public class GroupByQuery extends BaseQuery<Row>
     }
     final GroupByQuery that = (GroupByQuery) o;
     return Objects.equals(virtualColumns, that.virtualColumns) &&
-        Objects.equals(limitSpec, that.limitSpec) &&
-        Objects.equals(havingSpec, that.havingSpec) &&
-        Objects.equals(dimFilter, that.dimFilter) &&
-        Objects.equals(granularity, that.granularity) &&
-        Objects.equals(dimensions, that.dimensions) &&
-        Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
-        Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
+           Objects.equals(limitSpec, that.limitSpec) &&
+           Objects.equals(havingSpec, that.havingSpec) &&
+           Objects.equals(dimFilter, that.dimFilter) &&
+           Objects.equals(granularity, that.granularity) &&
+           Objects.equals(dimensions, that.dimensions) &&
+           Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
+           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
   }
 
   @Override
