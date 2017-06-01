@@ -18,12 +18,12 @@
  */
 package io.druid.metadata.storage.sqlserver;
 
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.regex.Pattern;
-
+import com.google.common.base.Supplier;
+import com.google.inject.Inject;
+import com.metamx.common.logger.Logger;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.metadata.SQLMetadataConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Binding;
 import org.skife.jdbi.v2.ColonPrefixNamedParamStatementRewriter;
@@ -35,13 +35,11 @@ import org.skife.jdbi.v2.tweak.RewrittenStatement;
 import org.skife.jdbi.v2.tweak.StatementRewriter;
 import org.skife.jdbi.v2.util.StringMapper;
 
-import com.google.common.base.Supplier;
-import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
-
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
-import io.druid.metadata.SQLMetadataConnector;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("nls")
 public class SQLServerConnector extends SQLMetadataConnector
@@ -127,7 +125,7 @@ public class SQLServerConnector extends SQLMetadataConnector
    * <p>
    *
    * @see <a href="https://github.com/spring-projects/spring-framework/blob/v4.3.2.RELEASE/spring-jdbc/src/main/java/org/springframework/jdbc/support/SQLStateSQLExceptionTranslator.java">Spring Framework SQLStateSQLExceptionTranslator</a>
-   * @see java.sql.SQLException#getSQLState()
+   * @see SQLException#getSQLState()
    */
   private final Set<String> TRANSIENT_SQL_CLASS_CODES = new HashSet<>(Arrays.asList(
       "08", "53", "54", "57", "58", // Resource Failures
@@ -266,7 +264,7 @@ public class SQLServerConnector extends SQLMetadataConnector
    *
    * {@inheritDoc}
    *
-   * @see java.sql.SQLException#getSQLState()
+   * @see SQLException#getSQLState()
    *
    */
   @Override

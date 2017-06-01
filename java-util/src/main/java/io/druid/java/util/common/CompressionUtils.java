@@ -489,7 +489,7 @@ public class CompressionUtils
    *
    * @return fname without the ".gz" extension
    *
-   * @throws io.druid.java.util.common.IAE if fname is not a valid "*.gz" file name
+   * @throws IAE if fname is not a valid "*.gz" file name
    */
   public static String getGzBaseName(String fname)
   {

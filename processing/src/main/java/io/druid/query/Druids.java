@@ -325,7 +325,7 @@ public class Druids
    *                                        .build();
    * </code></pre>
    *
-   * @see io.druid.query.timeseries.TimeseriesQuery
+   * @see TimeseriesQuery
    */
   public static class TimeseriesQueryBuilder
   {
@@ -544,7 +544,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.search.search.SearchQuery
+   * @see SearchQuery
    */
   public static class SearchQueryBuilder
   {
@@ -766,7 +766,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.timeboundary.TimeBoundaryQuery
+   * @see TimeBoundaryQuery
    */
   public static class TimeBoundaryQueryBuilder
   {
@@ -951,7 +951,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.metadata.metadata.SegmentMetadataQuery
+   * @see SegmentMetadataQuery
    */
   public static class SegmentMetadataQueryBuilder
   {
@@ -1091,7 +1091,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.select.SelectQuery
+   * @see SelectQuery
    */
   public static class SelectQueryBuilder
   {
@@ -1281,7 +1281,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.datasourcemetadata.DataSourceMetadataQuery
+   * @see DataSourceMetadataQuery
    */
   public static class DataSourceMetadataQueryBuilder
   {

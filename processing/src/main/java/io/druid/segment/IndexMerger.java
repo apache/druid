@@ -136,7 +136,7 @@ public class IndexMerger
    *
    * @return the index output directory
    *
-   * @throws java.io.IOException if an IO error occurs persisting the index
+   * @throws IOException if an IO error occurs persisting the index
    */
   public File persist(
       final IncrementalIndex index,

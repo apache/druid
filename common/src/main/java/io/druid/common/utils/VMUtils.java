@@ -47,9 +47,8 @@ public class VMUtils
    *
    * @return total CPU time for the current thread in nanoseconds.
    *
-   * @throws java.lang.UnsupportedOperationException if the Java
-   *                                                 virtual machine does not support CPU time measurement for
-   *                                                 the current thread.
+   * @throws UnsupportedOperationException if the Java virtual machine does not support CPU time measurement for
+   * the current thread.
    */
   public static long getCurrentThreadCpuTime()
   {
