@@ -132,4 +132,22 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
 
     verifyAll();
   }
+
+  @Test
+  public void testBuildPath()
+  {
+    GoogleAccountConfig config = new GoogleAccountConfig();
+    StringBuilder sb = new StringBuilder();
+    sb.setLength(0);
+    config.setPrefix(sb.toString()); // avoid cached empty string
+    GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(
+        storage,
+        config,
+        jsonMapper
+    );
+    Assert.assertEquals("/path", pusher.buildPath("/path"));
+    config.setPrefix(null);
+    Assert.assertEquals("/path", pusher.buildPath("/path"));
+  }
+
 }

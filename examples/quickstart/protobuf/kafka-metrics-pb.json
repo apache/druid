@@ -1,0 +1,71 @@
+{
+  "type": "kafka",
+  "dataSchema": {
+    "dataSource": "metrics-kafka2",
+    "parser": {
+      "type": "protobuf",
+      "descriptor": "file:///tmp/metrics.desc",
+      "protoMessageType": "Metrics",
+      "parseSpec": {
+        "format": "json",
+        "timestampSpec": {
+          "column": "timestamp",
+          "format": "auto"
+        },
+        "dimensionsSpec": {
+          "dimensions": [
+            "unit",
+            "http_method",
+            "http_code",
+            "page",
+            "metricType",
+            "server"
+          ],
+          "dimensionExclusions": [
+            "timestamp",
+            "value"
+          ]
+        }
+      }
+    },
+    "metricsSpec": [
+      {
+        "name": "count",
+        "type": "count"
+      },
+      {
+        "name": "value_sum",
+        "fieldName": "value",
+        "type": "doubleSum"
+      },
+      {
+        "name": "value_min",
+        "fieldName": "value",
+        "type": "doubleMin"
+      },
+      {
+        "name": "value_max",
+        "fieldName": "value",
+        "type": "doubleMax"
+      }
+    ],
+    "granularitySpec": {
+      "type": "uniform",
+      "segmentGranularity": "HOUR",
+      "queryGranularity": "NONE"
+    }
+  },
+  "tuningConfig": {
+    "type": "kafka",
+    "maxRowsPerSegment": 5000000
+  },
+  "ioConfig": {
+    "topic": "metrics_pb",
+    "consumerProperties": {
+      "bootstrap.servers": "localhost:9092"
+    },
+    "taskCount": 1,
+    "replicas": 1,
+    "taskDuration": "PT1H"
+  }
+}

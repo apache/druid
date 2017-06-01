@@ -21,6 +21,7 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -65,7 +66,7 @@ public class DruidStatementTest
         )
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
-    plannerFactory = new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig);
+    plannerFactory = new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig, new ServerConfig());
   }
 
   @After

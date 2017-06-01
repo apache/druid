@@ -30,6 +30,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -74,6 +75,7 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
+import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
 import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -100,6 +102,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class IndexTask extends AbstractTask
 {
@@ -451,9 +456,9 @@ public class IndexTask extends AbstractTask
               sequenceNameToShardSpecMap.put(sequenceName, shardSpecForPublishing);
             }
 
-            final SegmentIdentifier identifier = driver.add(inputRow, sequenceName, committerSupplier);
+            final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
-            if (identifier == null) {
+            if (!addResult.isOk()) {
               throw new ISE("Could not allocate segment for row with timestamp[%s]", inputRow.getTimestamp());
             }
 
@@ -482,7 +487,22 @@ public class IndexTask extends AbstractTask
         }
       };
 
-      final SegmentsAndMetadata published = driver.finish(publisher, committerSupplier.get());
+      final SegmentsAndMetadata published;
+      final long publishTimeout = ingestionSchema.getTuningConfig().getPublishTimeout();
+      if (publishTimeout == 0) {
+        published = driver.publish(
+            publisher,
+            committerSupplier.get(),
+            sequenceNameToShardSpecMap.keySet()
+        ).get();
+      } else {
+        published = driver.publish(
+            publisher,
+            committerSupplier.get(),
+            sequenceNameToShardSpecMap.keySet()
+        ).get(publishTimeout, TimeUnit.MILLISECONDS);
+      }
+
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
         return false;
@@ -504,6 +524,9 @@ public class IndexTask extends AbstractTask
         );
         return true;
       }
+    }
+    catch (TimeoutException | ExecutionException e) {
+      throw Throwables.propagate(e);
     }
   }
 
@@ -533,8 +556,6 @@ public class IndexTask extends AbstractTask
         new NoopSegmentHandoffNotifierFactory(), // don't wait for handoff since we don't serve queries
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getObjectMapper(),
-        Integer.MAX_VALUE, // rows for a partition is already determined by the shardSpec
-        0,
         metrics
     );
   }
@@ -558,7 +579,7 @@ public class IndexTask extends AbstractTask
       this.ioConfig = ioConfig;
       this.tuningConfig = tuningConfig == null
                           ?
-                          new IndexTuningConfig(null, null, null, null, null, null, null, null, (File) null)
+                          new IndexTuningConfig(null, null, null, null, null, null, null, null, null, (File) null)
                           : tuningConfig;
     }
 
@@ -624,6 +645,7 @@ public class IndexTask extends AbstractTask
     private static final boolean DEFAULT_BUILD_V9_DIRECTLY = true;
     private static final boolean DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
+    private static final long DEFAULT_PUBLISH_TIMEOUT = 0;
 
     static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
 
@@ -636,6 +658,7 @@ public class IndexTask extends AbstractTask
     private final boolean buildV9Directly;
     private final boolean forceExtendableShardSpecs;
     private final boolean reportParseExceptions;
+    private final long publishTimeout;
 
     @JsonCreator
     public IndexTuningConfig(
@@ -647,7 +670,8 @@ public class IndexTask extends AbstractTask
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
         @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
         @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
-        @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions
+        @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
+        @JsonProperty("publishTimeout") @Nullable Long publishTimeout
     )
     {
       this(
@@ -659,6 +683,7 @@ public class IndexTask extends AbstractTask
           buildV9Directly,
           forceExtendableShardSpecs,
           reportParseExceptions,
+          publishTimeout,
           null
       );
     }
@@ -672,6 +697,7 @@ public class IndexTask extends AbstractTask
         @Nullable Boolean buildV9Directly,
         @Nullable Boolean forceExtendableShardSpecs,
         @Nullable Boolean reportParseExceptions,
+        @Nullable Long publishTimeout,
         @Nullable File basePersistDirectory
     )
     {
@@ -696,6 +722,7 @@ public class IndexTask extends AbstractTask
       this.reportParseExceptions = reportParseExceptions == null
                                    ? DEFAULT_REPORT_PARSE_EXCEPTIONS
                                    : reportParseExceptions;
+      this.publishTimeout = publishTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : publishTimeout;
       this.basePersistDirectory = basePersistDirectory;
     }
 
@@ -710,6 +737,7 @@ public class IndexTask extends AbstractTask
           buildV9Directly,
           forceExtendableShardSpecs,
           reportParseExceptions,
+          publishTimeout,
           dir
       );
     }
@@ -770,6 +798,12 @@ public class IndexTask extends AbstractTask
     public boolean isForceExtendableShardSpecs()
     {
       return forceExtendableShardSpecs;
+    }
+
+    @JsonProperty
+    public long getPublishTimeout()
+    {
+      return publishTimeout;
     }
 
     @Override
