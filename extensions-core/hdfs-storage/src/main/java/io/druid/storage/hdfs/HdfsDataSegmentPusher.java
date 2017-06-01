@@ -158,7 +158,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
   private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
   {
-    if (!HadoopFsWrapper.rename(fs, from, to)) {
+    if (!fs.rename(from, to)) {
       if (fs.exists(to)) {
         log.info(
             "Unable to rename temp Index file[%s] to final segment path [%s]. "
