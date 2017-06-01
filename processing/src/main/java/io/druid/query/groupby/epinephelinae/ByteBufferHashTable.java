@@ -153,7 +153,7 @@ public class ByteBufferHashTable
     final int newMaxSize;
     final int newTableStart;
 
-    if ((tableStart + maxBuckets * 3 * bucketSizeWithHash) > tableArenaSize) {
+    if (((long) maxBuckets * 3 * bucketSizeWithHash) > (long) tableArenaSize - tableStart) {
       // Not enough space to grow upwards, start back from zero
       newTableStart = 0;
       newBuckets = tableStart / bucketSizeWithHash;

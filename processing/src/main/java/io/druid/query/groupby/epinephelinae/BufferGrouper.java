@@ -270,7 +270,6 @@ public class BufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
 
   private class BufferGrouperBucketUpdateHandler implements ByteBufferHashTable.BucketUpdateHandler
   {
-
     @Override
     public void handleNewBucket(int bucketOffset)
     {

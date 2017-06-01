@@ -147,7 +147,7 @@ public class GroupByQueryConfig
   {
     this.queryMetricsFactory = queryMetricsFactory;
   }
-
+  
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();

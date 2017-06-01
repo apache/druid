@@ -130,11 +130,11 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
       }
     }
 
-    log.info("Issued merge requests for %s segments", stats.getGlobalStats().get("mergedCount").get());
+    log.info("Issued merge requests for %s segments", stats.getGlobalStat("mergedCount"));
 
     params.getEmitter().emit(
         new ServiceMetricEvent.Builder().build(
-            "coordinator/merge/count", stats.getGlobalStats().get("mergedCount")
+            "coordinator/merge/count", stats.getGlobalStat("mergedCount")
         )
     );
 

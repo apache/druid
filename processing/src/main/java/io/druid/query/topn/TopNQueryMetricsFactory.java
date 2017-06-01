@@ -20,7 +20,15 @@
 package io.druid.query.topn;
 
 /**
- * Implementations of this interface could be injected using {@link TopNQueryConfig#queryMetricsFactory} option.
+ * Implementations could be injected using
+ *
+ * PolyBind
+ *    .optionBinder(binder, Key.get(TopNQueryMetricsFactory.class))
+ *    .addBinding("myCustomTopNQueryMetricsFactory")
+ *    .to(MyCustomTopNQueryMetricsFactory.class);
+ *
+ * And then setting property:
+ * druid.query.topN.queryMetricsFactory=myCustomTopNQueryMetricsFactory
  */
 public interface TopNQueryMetricsFactory
 {
