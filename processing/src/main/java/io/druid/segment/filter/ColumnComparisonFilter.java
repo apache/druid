@@ -35,6 +35,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -120,11 +121,7 @@ public class ColumnComparisonFilter implements Filter
 
     for (int i = 0; i < a.length; i++) {
       for (int j = 0; j < b.length; j++) {
-        if (a[i] == null || b[j] == null) {
-          if (a[i] == b[j]) {
-            return true;
-          }
-        } else if (a[i].equals(b[j])) {
+        if (Objects.equals(a[i], b[j])) {
           return true;
         }
       }
