@@ -3,18 +3,29 @@ language: java
 jdk:
   - oraclejdk8
 
-install: true
-
-# The script execution consists of 4 steps:
-# 1) Increase the jvm max heap size. Strict compilation in 2) requires more than 2 GB.
-# 2) Strict compilation using error-prone
-# 3) Reset the maven options. Parallel testing in 4) launches 2 processes, each requires 1 GB of memory. Increasing the maximum memory may cause OutOfMemory error because the instance of Travis has 4 GB of memory space.
-# 4) Parallel unit testing
-# Using && instead of independent script steps to make Travis build fail faster, if each step is not successful
-script: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B && rm ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2
-
-sudo: false
-
 cache:
   directories:
     - $HOME/.m2
+
+matrix:
+  include:
+    - sudo: false
+      install: true
+      script:
+        # The script execution consists of 4 steps:
+        # 1) Increase the jvm max heap size. Strict compilation in 2) requires more than 2 GB.
+        # 2) Strict compilation using error-prone
+        # 3) Reset the maven options. Parallel testing in 4) launches 2 processes, each requires 1 GB of memory. Increasing the maximum memory may cause OutOfMemory error because the instance of Travis has 4 GB of memory space.
+        # 4) Parallel unit testing
+        # Using && instead of independent script steps to make Travis build fail faster, if each step is not successful
+        - echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B && rm ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2
+    - sudo: required
+      services:
+        - docker
+      env:
+        - DOCKER_IP=172.17.0.1
+      install:
+        # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
+        - mvn clean install -q -ff -DskipTests -B
+      script:
+        - $TRAVIS_BUILD_DIR/ci/travis_script_integration.sh
