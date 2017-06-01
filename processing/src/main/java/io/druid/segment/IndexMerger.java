@@ -257,16 +257,18 @@ public class IndexMerger
     // We are materializing the list for performance reasons. Lists.transform
     // only creates a "view" of the original list, meaning the function gets
     // applied every time you access an element.
-    return Lists.transform(
-        indexes,
-        new Function<QueryableIndex, IndexableAdapter>()
-        {
-          @Override
-          public IndexableAdapter apply(final QueryableIndex input)
-          {
-            return new QueryableIndexIndexableAdapter(input);
-          }
-        }
+    return Lists.newArrayList(
+        Iterables.transform(
+            indexes,
+            new Function<QueryableIndex, IndexableAdapter>()
+            {
+              @Override
+              public IndexableAdapter apply(final QueryableIndex input)
+              {
+                return new QueryableIndexIndexableAdapter(input);
+              }
+            }
+        )
     );
   }
 
