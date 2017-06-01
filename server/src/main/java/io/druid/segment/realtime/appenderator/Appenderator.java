@@ -117,7 +117,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
 
   /**
    * Persist any in-memory indexed data for segments of the given identifiers to durable storage. This may be only
-   * somewhat durable, e.g. the machine's local disk. The Committer will be made synchronously will the call to
+   * somewhat durable, e.g. the machine's local disk. The Committer will be made synchronously with the call to
    * persist, but will actually be used asynchronously. Any metadata returned by the committer will be associated with
    * the data persisted to disk.
    * <p>
@@ -134,7 +134,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
 
   /**
    * Persist any in-memory indexed data to durable storage. This may be only somewhat durable, e.g. the
-   * machine's local disk. The Committer will be made synchronously will the call to persistAll, but will actually
+   * machine's local disk. The Committer will be made synchronously with the call to persistAll, but will actually
    * be used asynchronously. Any metadata returned by the committer will be associated with the data persisted to
    * disk.
    * <p>

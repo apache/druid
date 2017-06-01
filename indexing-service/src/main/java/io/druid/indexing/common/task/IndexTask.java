@@ -500,7 +500,7 @@ public class IndexTask extends AbstractTask
             publisher,
             committerSupplier.get(),
             sequenceNameToShardSpecMap.keySet()
-        ).get(ingestionSchema.getTuningConfig().getPublishTimeout(), TimeUnit.MILLISECONDS);
+        ).get(publishTimeout, TimeUnit.MILLISECONDS);
       }
 
       if (published == null) {
