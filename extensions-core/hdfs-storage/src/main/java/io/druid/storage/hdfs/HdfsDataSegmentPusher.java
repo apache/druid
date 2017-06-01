@@ -64,8 +64,11 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
-    this.fullyQualifiedStorageDirectory = FileSystem.newInstance(hadoopConfig).makeQualified(new Path(config.getStorageDirectory()))
-                                                    .toUri().toString();
+    Path storageDir = new Path(config.getStorageDirectory());
+    this.fullyQualifiedStorageDirectory = FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
+                                                    .makeQualified(storageDir)
+                                                    .toUri()
+                                                    .toString();
 
     log.info("Configured HDFS as deep storage");
   }

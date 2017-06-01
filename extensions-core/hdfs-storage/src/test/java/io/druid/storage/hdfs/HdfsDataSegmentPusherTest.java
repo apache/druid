@@ -102,8 +102,8 @@ public class HdfsDataSegmentPusherTest
   @Test
   public void testPushWithBadScheme() throws Exception
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Wrong FS");
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage("No FileSystem for scheme");
     testUsingScheme("xyzzy");
 
     // Not reached
