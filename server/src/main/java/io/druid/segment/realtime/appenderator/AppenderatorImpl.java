@@ -575,11 +575,9 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getIndexSpec()
       );
 
-      QueryableIndex index = indexIO.loadIndex(mergedFile);
-
       DataSegment segment = dataSegmentPusher.push(
           mergedFile,
-          sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+          sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
       );
 
       objectMapper.writeValue(descriptorFile, segment);
@@ -924,6 +922,14 @@ public class AppenderatorImpl implements Appenderator
             for (FireHydrant hydrant : sink) {
               if (cache != null) {
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+              }
+              try {
+                hydrant.getSegment().close();
+              }
+              catch (IOException e) {
+                log.makeAlert(e, "Failed to explicitly close segment[%s]", schema.getDataSource())
+                   .addData("identifier", hydrant.getSegment().getIdentifier())
+                   .emit();
               }
             }
 
