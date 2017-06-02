@@ -42,6 +42,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -149,12 +150,12 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client2
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer2, serverSelector.getSegment());
@@ -253,7 +254,7 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
@@ -322,7 +323,7 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer = new QueryableDruidServer(
-        new DruidServer("test1", hostName, 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", hostName, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
 

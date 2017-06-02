@@ -43,6 +43,7 @@ import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.CuratorDataSegmentServerAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
@@ -124,7 +125,7 @@ public class BatchServerInventoryViewTest
         "id",
         "host",
         Long.MAX_VALUE,
-        "type",
+        ServerType.HISTORICAL,
         "tier",
         0
     );
@@ -443,7 +444,7 @@ public class BatchServerInventoryViewTest
                           "id",
                           "host",
                           Long.MAX_VALUE,
-                          "type",
+                          ServerType.HISTORICAL,
                           "tier",
                           0
                       ),

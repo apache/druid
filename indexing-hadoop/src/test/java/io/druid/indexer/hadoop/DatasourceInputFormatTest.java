@@ -53,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  */
@@ -322,5 +323,108 @@ public class DatasourceInputFormatTest
   public void testGetRecordReader() throws Exception
   {
     Assert.assertTrue(new DatasourceInputFormat().createRecordReader(null, null) instanceof DatasourceRecordReader);
+  }
+
+  @Test
+  public void testGetFrequentLocationsEmpty()
+  {
+    Assert.assertArrayEquals(
+        new String[0],
+        DatasourceInputFormat.getFrequentLocations(Stream.empty())
+    );
+  }
+
+  @Test
+  public void testGetFrequentLocationsLessThan3()
+  {
+    Assert.assertArrayEquals(
+        new String[]{"s1", "s2"},
+        DatasourceInputFormat.getFrequentLocations(Stream.of("s2", "s1"))
+    );
+  }
+
+  @Test
+  public void testGetFrequentLocationsMoreThan3()
+  {
+    Assert.assertArrayEquals(
+        new String[]{"s3", "s1", "s2"},
+        DatasourceInputFormat.getFrequentLocations(
+            Stream.of("s3", "e", "s2", "s3", "s4", "s3", "s1", "s3", "s2", "s1")
+        )
+    );
+  }
+
+  @Test
+  public void testGetLocationsInputFormatException() throws IOException
+  {
+    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
+        org.apache.hadoop.mapred.InputFormat.class
+    );
+
+    EasyMock.expect(fio.getSplits(config, 1)).andThrow(new IOException("testing"));
+    EasyMock.replay(fio);
+
+    Assert.assertEquals(
+        0,
+        DatasourceInputFormat.getLocations(segments.subList(0, 1), fio, config).count()
+    );
+  }
+
+  @Test
+  public void testGetLocationsSplitException() throws IOException
+  {
+    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
+        org.apache.hadoop.mapred.InputFormat.class
+    );
+
+    final org.apache.hadoop.mapred.InputSplit split = EasyMock.mock(
+        org.apache.hadoop.mapred.InputSplit.class
+    );
+
+    EasyMock.expect(fio.getSplits(config, 1)).andReturn(
+        new org.apache.hadoop.mapred.InputSplit[] {split}
+    );
+    EasyMock.expect(split.getLocations()).andThrow(new IOException("testing"));
+
+    EasyMock.replay(fio, split);
+
+    Assert.assertEquals(
+        0,
+        DatasourceInputFormat.getLocations(segments.subList(0, 1), fio, config).count()
+    );
+  }
+
+  @Test
+  public void testGetLocations() throws IOException
+  {
+    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
+        org.apache.hadoop.mapred.InputFormat.class
+    );
+
+    final org.apache.hadoop.mapred.InputSplit split = EasyMock.mock(
+        org.apache.hadoop.mapred.InputSplit.class
+    );
+
+    EasyMock.expect(fio.getSplits(config, 1)).andReturn(
+        new org.apache.hadoop.mapred.InputSplit[] {split}
+    );
+    EasyMock.expect(split.getLocations()).andReturn(new String[] {"s1", "s2"});
+
+    EasyMock.expect(fio.getSplits(config, 1)).andReturn(
+        new org.apache.hadoop.mapred.InputSplit[] {split}
+    );
+    EasyMock.expect(split.getLocations()).andReturn(new String[] {"s3"});
+
+    EasyMock.expect(fio.getSplits(config, 1)).andReturn(
+        new org.apache.hadoop.mapred.InputSplit[] {split}
+    );
+    EasyMock.expect(split.getLocations()).andReturn(new String[] {"s4", "s2"});
+
+    EasyMock.replay(fio, split);
+
+    Assert.assertArrayEquals(
+        new String[] {"s1", "s2", "s3", "s4", "s2"},
+        DatasourceInputFormat.getLocations(segments, fio, config).toArray(String[]::new)
+    );
   }
 }

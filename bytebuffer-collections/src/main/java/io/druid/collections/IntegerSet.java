@@ -19,18 +19,17 @@
 
 package io.druid.collections;
 
-import com.google.common.collect.Sets;
 import io.druid.collections.bitmap.MutableBitmap;
 import org.roaringbitmap.IntIterator;
 
+import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Set;
 
 /**
  *
  */
-public class IntegerSet implements Set<Integer>
+public class IntegerSet extends AbstractSet<Integer>
 {
   private final MutableBitmap mutableBitmap;
 
@@ -82,12 +81,6 @@ public class IntegerSet implements Set<Integer>
       retval[pos++] = i;
     }
     return retval;
-  }
-
-  @Override
-  public <T> T[] toArray(T[] a)
-  {
-    return Sets.newHashSet(this).toArray(a);
   }
 
   @Override

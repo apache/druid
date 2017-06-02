@@ -22,9 +22,11 @@ package io.druid.query.topn;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Json;
 import io.druid.jackson.DefaultObjectMapper;
 
+@LazySingleton
 public class DefaultTopNQueryMetricsFactory implements TopNQueryMetricsFactory
 {
   private static final TopNQueryMetricsFactory INSTANCE = new DefaultTopNQueryMetricsFactory(new DefaultObjectMapper());

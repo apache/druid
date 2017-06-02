@@ -208,7 +208,7 @@ public class BenchmarkColumnValueGenerator
       ((AbstractIntegerDistribution) distribution).reseedRandomGenerator(seed);
     } else if (distribution instanceof AbstractRealDistribution) {
       ((AbstractRealDistribution) distribution).reseedRandomGenerator(seed);
-    } else if (distribution instanceof EnumeratedDistribution) {
+    } else {
       ((EnumeratedDistribution) distribution).reseedRandomGenerator(seed);
     }
   }

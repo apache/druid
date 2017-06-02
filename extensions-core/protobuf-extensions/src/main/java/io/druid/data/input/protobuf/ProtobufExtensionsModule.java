@@ -17,22 +17,32 @@
  * under the License.
  */
 
-package io.druid.query.timeseries;
+package io.druid.data.input.protobuf;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import io.druid.initialization.DruidModule;
 
-public class TimeseriesQueryConfig
+import java.util.Arrays;
+import java.util.List;
+
+public class ProtobufExtensionsModule implements DruidModule
 {
-  @JsonProperty
-  private Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory;
 
-  public Class<? extends TimeseriesQueryMetricsFactory> getQueryMetricsFactory()
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    return queryMetricsFactory != null ? queryMetricsFactory : DefaultTimeseriesQueryMetricsFactory.class;
+    return Arrays.asList(
+        new SimpleModule("ProtobufInputRowParserModule")
+            .registerSubtypes(
+                new NamedType(ProtobufInputRowParser.class, "protobuf")
+            )
+    );
   }
 
-  public void setQueryMetricsFactory(Class<? extends TimeseriesQueryMetricsFactory> queryMetricsFactory)
-  {
-    this.queryMetricsFactory = queryMetricsFactory;
-  }
+  @Override
+  public void configure(Binder binder)
+  { }
 }

@@ -20,64 +20,98 @@
 package io.druid.server.coordinator;
 
 import com.google.common.collect.Maps;
-import io.druid.collections.CountingMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
+import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Set;
+import java.util.function.ObjLongConsumer;
 
 /**
  */
 public class CoordinatorStats
 {
-  private final Map<String, CountingMap<String>> perTierStats;
-  private final CountingMap<String> globalStats;
+  private final Map<String, Object2LongOpenHashMap<String>> perTierStats;
+  private final Object2LongOpenHashMap<String> globalStats;
 
   public CoordinatorStats()
   {
     perTierStats = Maps.newHashMap();
-    globalStats = new CountingMap<String>();
+    globalStats = new Object2LongOpenHashMap<>();
   }
 
-  public Map<String, CountingMap<String>> getPerTierStats()
+  public boolean hasPerTierStats()
   {
-    return perTierStats;
+    return !perTierStats.isEmpty();
   }
 
-  public CountingMap<String> getGlobalStats()
+  public Set<String> getTiers(final String statName)
   {
-    return globalStats;
-  }
-
-  public void addToTieredStat(String statName, String tier, long value)
-  {
-    CountingMap<String> theStat = perTierStats.get(statName);
+    final Object2LongOpenHashMap<String> theStat = perTierStats.get(statName);
     if (theStat == null) {
-      theStat = new CountingMap<String>();
-      perTierStats.put(statName, theStat);
+      return Collections.emptySet();
     }
-    theStat.add(tier, value);
+    return Collections.unmodifiableSet(theStat.keySet());
   }
 
-  public void addToGlobalStat(String statName, long value)
+  /**
+   *
+   * @param statName the name of the statistics
+   * @param tier the tier
+   * @return the value for the statistics {@code statName} under {@code tier} tier
+   * @throws NullPointerException if {@code statName} is not found
+   */
+  public long getTieredStat(final String statName, final String tier)
   {
-    globalStats.add(statName, value);
+    return perTierStats.get(statName).getLong(tier);
   }
 
-  public CoordinatorStats accumulate(CoordinatorStats stats)
+  public void forEachTieredStat(final String statName, final ObjLongConsumer<String> consumer)
   {
-    for (Map.Entry<String, CountingMap<String>> entry : stats.perTierStats.entrySet()) {
-      CountingMap<String> theStat = perTierStats.get(entry.getKey());
-      if (theStat == null) {
-        theStat = new CountingMap<String>();
-        perTierStats.put(entry.getKey(), theStat);
-      }
-      for (Map.Entry<String, AtomicLong> tiers : entry.getValue().entrySet()) {
-        theStat.add(tiers.getKey(), tiers.getValue().get());
+    final Object2LongOpenHashMap<String> theStat = perTierStats.get(statName);
+    if (theStat != null) {
+      for (final Object2LongMap.Entry<String> entry : theStat.object2LongEntrySet()) {
+        consumer.accept(entry.getKey(), entry.getLongValue());
       }
     }
-    for (Map.Entry<String, AtomicLong> entry : stats.globalStats.entrySet()) {
-      globalStats.add(entry.getKey(), entry.getValue().get());
+  }
+
+  public long getGlobalStat(final String statName)
+  {
+    return globalStats.getLong(statName);
+  }
+
+  public void addToTieredStat(final String statName, final String tier, final long value)
+  {
+    perTierStats.computeIfAbsent(statName, ignored -> new Object2LongOpenHashMap<>())
+                .addTo(tier, value);
+  }
+
+  public void addToGlobalStat(final String statName, final long value)
+  {
+    globalStats.addTo(statName, value);
+  }
+
+  public CoordinatorStats accumulate(final CoordinatorStats stats)
+  {
+    stats.perTierStats.forEach(
+        (final String statName, final Object2LongOpenHashMap<String> urStat) -> {
+
+          final Object2LongOpenHashMap<String> myStat = perTierStats.computeIfAbsent(
+              statName, ignored -> new Object2LongOpenHashMap<>()
+          );
+
+          for (final Object2LongMap.Entry<String> entry : urStat.object2LongEntrySet()) {
+            myStat.addTo(entry.getKey(), entry.getLongValue());
+          }
+        }
+    );
+
+    for (final Object2LongMap.Entry<String> entry : stats.globalStats.object2LongEntrySet()) {
+      globalStats.addTo(entry.getKey(), entry.getLongValue());
     }
+
     return this;
   }
 }

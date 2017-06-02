@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
@@ -57,7 +58,7 @@ public class DruidServer implements Comparable
   public DruidServer(
       DruidNode node,
       DruidServerConfig config,
-      String type
+      ServerType type
   )
   {
     this(
@@ -75,7 +76,7 @@ public class DruidServer implements Comparable
       @JsonProperty("name") String name,
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
-      @JsonProperty("type") String type,
+      @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
       @JsonProperty("priority") int priority
   )
@@ -86,6 +87,7 @@ public class DruidServer implements Comparable
     this.segments = new ConcurrentHashMap<String, DataSegment>();
   }
 
+  @JsonProperty
   public String getName()
   {
     return metadata.getName();
@@ -96,6 +98,7 @@ public class DruidServer implements Comparable
     return metadata;
   }
 
+  @JsonProperty
   public String getHost()
   {
     return metadata.getHost();
@@ -106,26 +109,30 @@ public class DruidServer implements Comparable
     return currSize;
   }
 
+  @JsonProperty
   public long getMaxSize()
   {
     return metadata.getMaxSize();
   }
 
-  public String getType()
+  @JsonProperty
+  public ServerType getType()
   {
     return metadata.getType();
   }
 
+  @JsonProperty
   public String getTier()
   {
     return metadata.getTier();
   }
 
-  public boolean isAssignable()
+  public boolean segmentReplicatable()
   {
-    return metadata.isAssignable();
+    return metadata.segmentReplicatable();
   }
 
+  @JsonProperty
   public int getPriority()
   {
     return metadata.getPriority();

@@ -133,7 +133,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaultReportParseExceptions
                                  : reportParseExceptions;
-
     this.handoffConditionTimeout = handoffConditionTimeout == null
                                    ? defaultHandoffConditionTimeout
                                    : handoffConditionTimeout;

@@ -55,6 +55,13 @@ Returns the Druid version, loaded extensions, memory used, total memory and othe
 
 Returns the current leader coordinator of the cluster.
 
+* `/druid/coordinator/v1/isLeader`
+
+Returns a JSON object with field "leader", either true or false, indicating if this server is the current leader
+coordinator of the cluster. In addition, returns HTTP 200 if the server is the current leader and HTTP 404 if not.
+This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
+at the load balancer.
+
 * `/druid/coordinator/v1/loadstatus`
 
 Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster.

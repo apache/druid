@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -363,7 +364,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       }
 
       // Randomly choose a server from the best servers
-      bestServer = bestServers.get((int) Math.random() * bestServers.size());
+      bestServer = bestServers.get(ThreadLocalRandom.current().nextInt(bestServers.size()));
     }
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();

@@ -47,6 +47,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -177,7 +178,8 @@ public class SqlBenchmark
         Calcites.createRootSchema(druidSchema),
         walker,
         CalciteTests.createOperatorTable(),
-        plannerConfig
+        plannerConfig,
+        new ServerConfig()
     );
     groupByQuery = GroupByQuery
         .builder()
