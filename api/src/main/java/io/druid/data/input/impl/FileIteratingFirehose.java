@@ -24,6 +24,7 @@ import io.druid.data.input.InputRow;
 import io.druid.utils.Runnables;
 import org.apache.commons.io.LineIterator;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -37,13 +38,25 @@ public class FileIteratingFirehose implements Firehose
 
   private LineIterator lineIterator = null;
 
+  private final Closeable closer;
+
   public FileIteratingFirehose(
       Iterator<LineIterator> lineIterators,
       StringInputRowParser parser
   )
   {
+    this(lineIterators, parser, null);
+  }
+
+  public FileIteratingFirehose(
+      Iterator<LineIterator> lineIterators,
+      StringInputRowParser parser,
+      Closeable closer
+  )
+  {
     this.lineIterators = lineIterators;
     this.parser = parser;
+    this.closer = closer;
   }
 
   @Override
@@ -86,8 +99,24 @@ public class FileIteratingFirehose implements Firehose
   @Override
   public void close() throws IOException
   {
-    if (lineIterator != null) {
-      lineIterator.close();
+    try {
+      if (lineIterator != null) {
+        lineIterator.close();
+      }
+    }
+    catch (Throwable t) {
+      try {
+        if (closer != null) {
+          closer.close();
+        }
+      }
+      catch (Exception e) {
+        t.addSuppressed(e);
+      }
+      throw t;
+    }
+    if (closer != null) {
+      closer.close();
     }
   }
 }

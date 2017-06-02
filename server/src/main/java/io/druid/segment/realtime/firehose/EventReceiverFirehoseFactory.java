@@ -54,6 +54,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -103,7 +104,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
   }
 
   @Override
-  public Firehose connect(MapInputRowParser firehoseParser) throws IOException
+  public Firehose connect(MapInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
     log.info("Connecting firehose: %s", serviceName);
     final EventReceiverFirehose firehose = new EventReceiverFirehose(firehoseParser);

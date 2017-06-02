@@ -102,6 +102,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -238,7 +239,7 @@ public class TaskLifecycleTest
   private static class MockExceptionalFirehoseFactory implements FirehoseFactory
   {
     @Override
-    public Firehose connect(InputRowParser parser) throws IOException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
     {
       return new Firehose()
       {
@@ -288,7 +289,7 @@ public class TaskLifecycleTest
     }
 
     @Override
-    public Firehose connect(InputRowParser parser) throws IOException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
     {
       final Iterator<InputRow> inputRowIterator = usedByRealtimeIdxTask
                                                   ? realtimeIdxTaskInputRows.iterator()
@@ -566,13 +567,8 @@ public class TaskLifecycleTest
           {
 
           }
-
-          @Override
-          public boolean isAnnounced(DataSegment segment)
-          {
-            return false;
-          }
         }, // segment announcer
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         MoreExecutors.sameThreadExecutor(), // query executor service
@@ -652,8 +648,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false, null),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
+            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null)
         ),
         null,
         MAPPER
@@ -710,8 +706,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false, null),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
+            new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null)
         ),
         null,
         MAPPER
@@ -1069,8 +1065,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false, null),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null)
+            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null, null)
         ),
         null,
         MAPPER

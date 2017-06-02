@@ -114,7 +114,7 @@ public abstract class AbstractIntSet implements IntSet
     IntIterator itr = c.iterator();
     boolean res = true;
     while (res && itr.hasNext()) {
-      res &= contains(itr.next());
+      res = contains(itr.next());
     }
     return res;
   }
@@ -126,8 +126,7 @@ public abstract class AbstractIntSet implements IntSet
   public boolean containsAny(IntSet c)
   {
     IntIterator itr = c.iterator();
-    boolean res = true;
-    while (res && itr.hasNext()) {
+    while (itr.hasNext()) {
       if (contains(itr.next())) {
         return true;
       }
@@ -591,55 +590,6 @@ public abstract class AbstractIntSet implements IntSet
   public int powerSetSize()
   {
     return isEmpty() ? 0 : (int) Math.pow(2, size()) - 1;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int powerSetSize(int min, int max)
-  {
-    if (min < 1 || max < min) {
-      throw new IllegalArgumentException();
-    }
-    final int size = size();
-
-    // special cases
-    if (size < min) {
-      return 0;
-    }
-    if (size == min) {
-      return 1;
-    }
-
-    /*
-     * Compute the sum of binomial coefficients ranging from (size choose
-     * max) to (size choose min) using dynamic programming
-     */
-
-    // trivial cases
-    max = Math.min(size, max);
-    if (max == min && (max == 0 || max == size)) {
-      return 1;
-    }
-
-    // compute all binomial coefficients for "n"
-    int[] b = new int[size + 1];
-    for (int i = 0; i <= size; i++) {
-      b[i] = 1;
-    }
-    for (int i = 1; i <= size; i++) {
-      for (int j = i - 1; j > 0; j--) {
-        b[j] += b[j - 1];
-      }
-    }
-
-    // sum binomial coefficients
-    int res = 0;
-    for (int i = min; i <= max; i++) {
-      res += b[i];
-    }
-    return res;
   }
 
   /**

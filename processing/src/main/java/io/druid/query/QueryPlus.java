@@ -66,6 +66,11 @@ public final class QueryPlus<T>
    * Returns the same QueryPlus object, if it already has {@link QueryMetrics} ({@link #getQueryMetrics()} returns not
    * null), or returns a new QueryPlus object with {@link Query} from this QueryPlus and QueryMetrics created using the
    * given {@link QueryToolChest}, via {@link QueryToolChest#makeMetrics(Query)} method.
+   *
+   * By convention, callers of {@code withQueryMetrics()} must also call .getQueryMetrics().emit() on the returned
+   * QueryMetrics object, regardless if this object is the same as the object on which .withQueryMetrics() was initially
+   * called (i. e. it already had non-null QueryMetrics), or if it is a new QueryPlus object. See {@link
+   * MetricsEmittingQueryRunner} for example.
    */
   public QueryPlus<T> withQueryMetrics(QueryToolChest<T, ? extends Query<T>> queryToolChest)
   {
@@ -73,6 +78,31 @@ public final class QueryPlus<T>
       return this;
     } else {
       return new QueryPlus<>(query, ((QueryToolChest) queryToolChest).makeMetrics(query));
+    }
+  }
+
+  /**
+   * Returns a QueryPlus object without the components which are unsafe for concurrent use from multiple threads,
+   * therefore couldn't be passed down in concurrent or async {@link QueryRunner}s.
+   *
+   * Currently the only unsafe component is {@link QueryMetrics}, i. e. {@code withoutThreadUnsafeState()} call is
+   * equivalent to {@link #withoutQueryMetrics()}.
+   */
+  public QueryPlus<T> withoutThreadUnsafeState()
+  {
+    return withoutQueryMetrics();
+  }
+
+  /**
+   * Returns the same QueryPlus object, if it doesn't have {@link QueryMetrics} ({@link #getQueryMetrics()} returns
+   * null), or returns a new QueryPlus object with {@link Query} from this QueryPlus and null as QueryMetrics.
+   */
+  private QueryPlus<T> withoutQueryMetrics()
+  {
+    if (queryMetrics == null) {
+      return this;
+    } else {
+      return new QueryPlus<>(query, null);
     }
   }
 

@@ -34,6 +34,7 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.server.SegmentManager;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -72,7 +73,8 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final DruidServerMetadata me;
   private final CuratorFramework curator;
   private final DataSegmentAnnouncer announcer;
-  private final ServerManager serverManager;
+  private final DataSegmentServerAnnouncer serverAnnouncer;
+  private final SegmentManager segmentManager;
   private final ScheduledExecutorService exec;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
@@ -87,8 +89,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       ZkPathsConfig zkPaths,
       DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
+      DataSegmentServerAnnouncer serverAnnouncer,
       CuratorFramework curator,
-      ServerManager serverManager,
+      SegmentManager segmentManager,
       ScheduledExecutorFactory factory
   )
   {
@@ -98,7 +101,8 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     this.me = me;
     this.curator = curator;
     this.announcer = announcer;
-    this.serverManager = serverManager;
+    this.serverAnnouncer = serverAnnouncer;
+    this.segmentManager = segmentManager;
 
     this.exec = factory.create(1, "ZkCoordinator-Exec--%d");
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
@@ -132,6 +136,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
         loadLocalCache();
+        serverAnnouncer.announce();
 
         loadQueueCache.getListenable().addListener(
             new PathChildrenCacheListener()
@@ -226,6 +231,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
       try {
         loadQueueCache.close();
+        serverAnnouncer.unannounce();
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -262,7 +268,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         if (!segment.getIdentifier().equals(file.getName())) {
           log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getIdentifier());
           ignored++;
-        } else if (serverManager.isSegmentCached(segment)) {
+        } else if (segmentManager.isSegmentCached(segment)) {
           cachedSegments.add(segment);
         } else {
           log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
@@ -314,7 +320,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   {
     final boolean loaded;
     try {
-      loaded = serverManager.loadSegment(segment);
+      loaded = segmentManager.loadSegment(segment);
     }
     catch (Exception e) {
       removeSegment(segment, callback);
@@ -360,13 +366,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         }
       }
       loadSegment(segment, callback);
-      if (!announcer.isAnnounced(segment)) {
-        try {
-          announcer.announceSegment(segment);
-        }
-        catch (IOException e) {
-          throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
-        }
+      try {
+        announcer.announceSegment(segment);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
       }
     }
     catch (SegmentLoadingException e) {
@@ -408,14 +412,12 @@ public class ZkCoordinator implements DataSegmentChangeHandler
                       segment.getIdentifier()
                   );
                   loadSegment(segment, callback);
-                  if (!announcer.isAnnounced(segment)) {
-                    try {
-                      backgroundSegmentAnnouncer.announceSegment(segment);
-                    }
-                    catch (InterruptedException e) {
-                      Thread.currentThread().interrupt();
-                      throw new SegmentLoadingException(e, "Loading Interrupted");
-                    }
+                  try {
+                    backgroundSegmentAnnouncer.announceSegment(segment);
+                  }
+                  catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new SegmentLoadingException(e, "Loading Interrupted");
                   }
                 }
                 catch (SegmentLoadingException e) {
@@ -476,7 +478,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
               try {
                 synchronized (lock) {
                   if (segmentsToDelete.remove(segment)) {
-                    serverManager.dropSegment(segment);
+                    segmentManager.dropSegment(segment);
 
                     File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
                     if (!segmentInfoCacheFile.delete()) {

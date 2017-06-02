@@ -34,15 +34,40 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * DefaultQueryMetrics is unsafe for use from multiple threads. It fails with RuntimeException on access not from the
+ * thread where it was constructed. To "transfer" DefaultQueryMetrics from one thread to another {@link #ownerThread}
+ * field should be updated.
+ */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
   protected final ObjectMapper jsonMapper;
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
 
+  /** Non final to give subclasses ability to reassign it. */
+  protected Thread ownerThread = Thread.currentThread();
+
   public DefaultQueryMetrics(ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
+  }
+
+  protected void checkModifiedFromOwnerThread()
+  {
+    if (Thread.currentThread() != ownerThread) {
+      throw new IllegalStateException(
+          "DefaultQueryMetrics must not be modified from multiple threads. If it is needed to gather dimension or "
+          + "metric information from multiple threads or from an async thread, this information should explicitly be "
+          + "passed between threads (e. g. using Futures), or this DefaultQueryMetrics's ownerThread should be "
+          + "reassigned explicitly");
+    }
+  }
+
+  protected void setDimension(String dimension, String value)
+  {
+    checkModifiedFromOwnerThread();
+    builder.setDimension(dimension, value);
   }
 
   @Override
@@ -59,18 +84,19 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void dataSource(QueryType query)
   {
-    builder.setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()));
+    setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()));
   }
 
   @Override
   public void queryType(QueryType query)
   {
-    builder.setDimension(DruidMetrics.TYPE, query.getType());
+    setDimension(DruidMetrics.TYPE, query.getType());
   }
 
   @Override
   public void interval(QueryType query)
   {
+    checkModifiedFromOwnerThread();
     builder.setDimension(
         DruidMetrics.INTERVAL,
         query.getIntervals().stream().map(Interval::toString).toArray(String[]::new)
@@ -80,32 +106,28 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void hasFilters(QueryType query)
   {
-    builder.setDimension("hasFilters", String.valueOf(query.hasFilters()));
+    setDimension("hasFilters", String.valueOf(query.hasFilters()));
   }
 
   @Override
   public void duration(QueryType query)
   {
-    builder.setDimension("duration", query.getDuration().toString());
+    setDimension("duration", query.getDuration().toString());
   }
 
   @Override
   public void queryId(QueryType query)
   {
-    builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
+    setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
   }
 
   @Override
   public void context(QueryType query)
   {
     try {
-      builder.setDimension(
+      setDimension(
           "context",
-          jsonMapper.writeValueAsString(
-              query.getContext() == null
-              ? ImmutableMap.of()
-              : query.getContext()
-          )
+          jsonMapper.writeValueAsString(query.getContext() == null ? ImmutableMap.of() : query.getContext())
       );
     }
     catch (JsonProcessingException e) {
@@ -116,37 +138,37 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void server(String host)
   {
-    builder.setDimension("server", host);
+    setDimension("server", host);
   }
 
   @Override
   public void remoteAddress(String remoteAddress)
   {
-    builder.setDimension("remoteAddress", remoteAddress);
+    setDimension("remoteAddress", remoteAddress);
   }
 
   @Override
   public void status(String status)
   {
-    builder.setDimension(DruidMetrics.STATUS, status);
+    setDimension(DruidMetrics.STATUS, status);
   }
 
   @Override
   public void success(boolean success)
   {
-    builder.setDimension("success", String.valueOf(success));
+    setDimension("success", String.valueOf(success));
   }
 
   @Override
   public void segment(String segmentIdentifier)
   {
-    builder.setDimension("segment", segmentIdentifier);
+    setDimension("segment", segmentIdentifier);
   }
 
   @Override
   public void chunkInterval(Interval interval)
   {
-    builder.setDimension("chunkInterval", interval.toString());
+    setDimension("chunkInterval", interval.toString());
   }
 
   @Override
@@ -170,70 +192,73 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public QueryMetrics<QueryType> reportQueryTime(long timeNs)
   {
-    return defaultTimeMetric("query/time", timeNs);
+    return reportMillisTimeMetric("query/time", timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportQueryBytes(long byteCount)
   {
-    metrics.put("query/bytes", byteCount);
-    return this;
+    return reportMetric("query/bytes", byteCount);
   }
 
   @Override
   public QueryMetrics<QueryType> reportWaitTime(long timeNs)
   {
-    return defaultTimeMetric("query/wait/time", timeNs);
+    return reportMillisTimeMetric("query/wait/time", timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportSegmentTime(long timeNs)
   {
-    return defaultTimeMetric("query/segment/time", timeNs);
+    return reportMillisTimeMetric("query/segment/time", timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs)
   {
-    return defaultTimeMetric("query/segmentAndCache/time", timeNs);
+    return reportMillisTimeMetric("query/segmentAndCache/time", timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
   {
-    return defaultTimeMetric("query/intervalChunk/time", timeNs);
+    return reportMillisTimeMetric("query/intervalChunk/time", timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportCpuTime(long timeNs)
   {
-    metrics.put("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(timeNs));
-    return this;
+    return reportMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(timeNs));
   }
 
   @Override
   public QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs)
   {
-    return defaultTimeMetric("query/node/ttfb", timeNs);
+    return reportMillisTimeMetric("query/node/ttfb", timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportNodeTime(long timeNs)
   {
-    return defaultTimeMetric("query/node/time", timeNs);
+    return reportMillisTimeMetric("query/node/time", timeNs);
   }
 
-  private QueryMetrics<QueryType> defaultTimeMetric(String metricName, long timeNs)
+  private QueryMetrics<QueryType> reportMillisTimeMetric(String metricName, long timeNs)
   {
-    metrics.put(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
+    return reportMetric(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
+  }
+
+  protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
+  {
+    checkModifiedFromOwnerThread();
+    metrics.put(metricName, value);
     return this;
   }
 
   @Override
   public QueryMetrics<QueryType> reportNodeBytes(long byteCount)
   {
-    metrics.put("query/node/bytes", byteCount);
-    return this;
+    return reportMetric("query/node/bytes", byteCount);
   }
 
   @Override
@@ -260,6 +285,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void emit(ServiceEmitter emitter)
   {
+    checkModifiedFromOwnerThread();
     for (Map.Entry<String, Number> metric : metrics.entrySet()) {
       emitter.emit(builder.build(metric.getKey(), metric.getValue()));
     }

@@ -25,6 +25,7 @@ import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
@@ -328,7 +329,7 @@ public class DatasourcesResourceTest
   @Test
   public void testGetSegmentDataSourceIntervals()
   {
-    server = new DruidServer("who", "host", 1234, "historical", "tier1", 0);
+    server = new DruidServer("who", "host", 1234, ServerType.HISTORICAL, "tier1", 0);
     server.addDataSegment(dataSegmentList.get(0).getIdentifier(), dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1).getIdentifier(), dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2).getIdentifier(), dataSegmentList.get(2));
@@ -378,7 +379,7 @@ public class DatasourcesResourceTest
   @Test
   public void testGetSegmentDataSourceSpecificInterval()
   {
-    server = new DruidServer("who", "host", 1234, "historical", "tier1", 0);
+    server = new DruidServer("who", "host", 1234, ServerType.HISTORICAL, "tier1", 0);
     server.addDataSegment(dataSegmentList.get(0).getIdentifier(), dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1).getIdentifier(), dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2).getIdentifier(), dataSegmentList.get(2));

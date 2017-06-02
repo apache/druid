@@ -29,7 +29,6 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.concurrent.Execs;
@@ -44,12 +43,14 @@ import io.druid.query.NoopQueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.loading.CacheTestSegmentLoader;
 import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.server.SegmentManager;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.curator.framework.CuratorFramework;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -81,7 +82,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       "dummyServer",
       "dummyHost",
       0,
-      "dummyType",
+      ServerType.HISTORICAL,
       "normal",
       0
   );
@@ -93,6 +94,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   private AtomicInteger announceCount;
   private ConcurrentSkipListSet<DataSegment> segmentsAnnouncedByMe;
   private CacheTestSegmentLoader segmentLoader;
+  private SegmentManager segmentManager;
   private List<Runnable> scheduledRunnable;
 
   @Before
@@ -116,16 +118,17 @@ public class ZkCoordinatorTest extends CuratorTestBase
     scheduledRunnable = Lists.newArrayList();
 
     segmentLoader = new CacheTestSegmentLoader();
+    segmentManager = new SegmentManager(segmentLoader);
 
     serverManager = new ServerManager(
-        segmentLoader,
         new NoopQueryRunnerFactoryConglomerate(),
         new NoopServiceEmitter(),
         MoreExecutors.sameThreadExecutor(),
         MoreExecutors.sameThreadExecutor(),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
-        new CacheConfig()
+        new CacheConfig(),
+        segmentManager
     );
 
     final ZkPathsConfig zkPaths = new ZkPathsConfig()
@@ -139,6 +142,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     segmentsAnnouncedByMe = new ConcurrentSkipListSet<>();
     announceCount = new AtomicInteger(0);
+
     announcer = new DataSegmentAnnouncer()
     {
       private final DataSegmentAnnouncer delegate = new BatchDataSegmentAnnouncer(
@@ -184,12 +188,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
         announceCount.addAndGet(-Iterables.size(segments));
         delegate.unannounceSegments(segments);
       }
-
-      @Override
-      public boolean isAnnounced(DataSegment segment)
-      {
-        return segmentsAnnouncedByMe.contains(segment);
-      }
     };
 
     zkCoordinator = new ZkCoordinator(
@@ -223,8 +221,9 @@ public class ZkCoordinatorTest extends CuratorTestBase
         zkPaths,
         me,
         announcer,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         curator,
-        serverManager,
+        segmentManager,
         new ScheduledExecutorFactory()
         {
           @Override
@@ -392,12 +391,12 @@ public class ZkCoordinatorTest extends CuratorTestBase
     }
 
     checkCache(segments);
-    Assert.assertTrue(serverManager.getDataSourceCounts().isEmpty());
+    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
     zkCoordinator.start();
-    Assert.assertTrue(!serverManager.getDataSourceCounts().isEmpty());
+    Assert.assertTrue(!segmentManager.getDataSourceCounts().isEmpty());
     for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(11L, serverManager.getDataSourceCounts().get("test" + i).longValue());
-      Assert.assertEquals(2L, serverManager.getDataSourceCounts().get("test_two" + i).longValue());
+      Assert.assertEquals(11L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
+      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
     Assert.assertEquals(13 * COUNT, announceCount.get());
     zkCoordinator.stop();
@@ -516,10 +515,12 @@ public class ZkCoordinatorTest extends CuratorTestBase
                 }
             );
             binder.bind(DruidServerMetadata.class)
-                  .toInstance(new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal", 0));
+                  .toInstance(new DruidServerMetadata("dummyServer", "dummyHost", 0, ServerType.HISTORICAL, "normal", 0));
             binder.bind(DataSegmentAnnouncer.class).toInstance(announcer);
+            binder.bind(DataSegmentServerAnnouncer.class).toInstance(EasyMock.createNiceMock(DataSegmentServerAnnouncer.class));
             binder.bind(CuratorFramework.class).toInstance(curator);
             binder.bind(ServerManager.class).toInstance(serverManager);
+            binder.bind(SegmentManager.class).toInstance(segmentManager);
             binder.bind(ScheduledExecutorFactory.class).toInstance(ScheduledExecutors.createFactory(new Lifecycle()));
           }
 
@@ -543,13 +544,13 @@ public class ZkCoordinatorTest extends CuratorTestBase
     }
 
     checkCache(segments);
-    Assert.assertTrue(serverManager.getDataSourceCounts().isEmpty());
+    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     zkCoordinator.start();
-    Assert.assertTrue(!serverManager.getDataSourceCounts().isEmpty());
+    Assert.assertTrue(!segmentManager.getDataSourceCounts().isEmpty());
     for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(3L, serverManager.getDataSourceCounts().get("test" + i).longValue());
-      Assert.assertEquals(2L, serverManager.getDataSourceCounts().get("test_two" + i).longValue());
+      Assert.assertEquals(3L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
+      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
     Assert.assertEquals(5 * COUNT, announceCount.get());
     zkCoordinator.stop();

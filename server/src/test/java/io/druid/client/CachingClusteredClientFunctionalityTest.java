@@ -35,10 +35,12 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -46,17 +48,18 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.Executor;
 
 /**
  */
-public class CachingClusteredClientFunctionalityTest {
+public class CachingClusteredClientFunctionalityTest
+{
 
   public CachingClusteredClient client;
 
@@ -74,17 +77,22 @@ public class CachingClusteredClientFunctionalityTest {
   }
 
   @Test
-  public void testUncoveredInterval() throws Exception {
+  public void testUncoveredInterval() throws Exception
+  {
     addToTimeline(new Interval("2015-01-02/2015-01-03"), "1");
     addToTimeline(new Interval("2015-01-04/2015-01-05"), "1");
     addToTimeline(new Interval("2015-02-04/2015-02-05"), "1");
 
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
-        .dataSource("test")
-        .intervals("2015-01-02/2015-01-03")
-        .granularity("day")
-        .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
-        .context(ImmutableMap.<String, Object>of("uncoveredIntervalsLimit", 3));
+                                                        .dataSource("test")
+                                                        .intervals("2015-01-02/2015-01-03")
+                                                        .granularity("day")
+                                                        .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(
+                                                            "rows")))
+                                                        .context(ImmutableMap.<String, Object>of(
+                                                            "uncoveredIntervalsLimit",
+                                                            3
+                                                        ));
 
     Map<String, Object> responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
@@ -131,7 +139,8 @@ public class CachingClusteredClientFunctionalityTest {
     assertUncovered(responseContext, true, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-02-04");
   }
 
-  private void assertUncovered(Map<String, Object> context, boolean uncoveredIntervalsOverflowed, String... intervals) {
+  private void assertUncovered(Map<String, Object> context, boolean uncoveredIntervalsOverflowed, String... intervals)
+  {
     List<Interval> expectedList = Lists.newArrayListWithExpectedSize(intervals.length);
     for (String interval : intervals) {
       expectedList.add(new Interval(interval));
@@ -140,26 +149,47 @@ public class CachingClusteredClientFunctionalityTest {
     Assert.assertEquals(uncoveredIntervalsOverflowed, context.get("uncoveredIntervalsOverflowed"));
   }
 
-  private void addToTimeline(Interval interval, String version) {
+  private void addToTimeline(Interval interval, String version)
+  {
     timeline.add(interval, version, new SingleElementPartitionChunk<>(
         new ServerSelector(
             DataSegment.builder()
-                .dataSource("test")
-                .interval(interval)
-                .version(version)
-                .shardSpec(NoneShardSpec.instance())
-                .build(),
-            new TierSelectorStrategy() {
+                       .dataSource("test")
+                       .interval(interval)
+                       .version(version)
+                       .shardSpec(NoneShardSpec.instance())
+                       .build(),
+            new TierSelectorStrategy()
+            {
               @Override
-              public Comparator<Integer> getComparator() {
+              public Comparator<Integer> getComparator()
+              {
                 return Ordering.natural();
               }
 
               @Override
-              public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment) {
+              public QueryableDruidServer pick(
+                  Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers, DataSegment segment
+              )
+              {
                 return new QueryableDruidServer(
-                    new DruidServer("localhost", "localhost", 100, "historical", "a", 10),
+                    new DruidServer("localhost", "localhost", 100, ServerType.HISTORICAL, "a", 10),
                     EasyMock.createNiceMock(DirectDruidClient.class)
+                );
+              }
+
+              @Override
+              public List<QueryableDruidServer> pick(
+                  Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+                  DataSegment segment,
+                  int numServersToPick
+              )
+              {
+                return Collections.singletonList(
+                    new QueryableDruidServer(
+                        new DruidServer("localhost", "localhost", 100, ServerType.HISTORICAL, "a", 10),
+                        EasyMock.createNiceMock(DirectDruidClient.class)
+                    )
                 );
               }
             }

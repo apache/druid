@@ -64,6 +64,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.server.SegmentManager;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -95,6 +96,7 @@ public class ServerManagerTest
   private CountDownLatch queryWaitYieldLatch;
   private CountDownLatch queryNotifyLatch;
   private ExecutorService serverManagerExec;
+  private SegmentManager segmentManager;
 
   @Before
   public void setUp() throws IOException
@@ -106,7 +108,7 @@ public class ServerManagerTest
     queryNotifyLatch = new CountDownLatch(1);
     factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
     serverManagerExec = Executors.newFixedThreadPool(2);
-    serverManager = new ServerManager(
+    segmentManager = new SegmentManager(
         new SegmentLoader()
         {
           @Override
@@ -135,7 +137,9 @@ public class ServerManagerTest
           {
 
           }
-        },
+        }
+    );
+    serverManager = new ServerManager(
         new QueryRunnerFactoryConglomerate()
         {
           @Override
@@ -149,7 +153,8 @@ public class ServerManagerTest
         MoreExecutors.sameThreadExecutor(),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
-        new CacheConfig()
+        new CacheConfig(),
+        segmentManager
     );
 
     loadQueryable("test", "1", new Interval("P1d/2011-04-01"));
@@ -459,7 +464,7 @@ public class ServerManagerTest
   public void loadQueryable(String dataSource, String version, Interval interval) throws IOException
   {
     try {
-      serverManager.loadSegment(
+      segmentManager.loadSegment(
           new DataSegment(
               dataSource,
               interval,
@@ -481,7 +486,7 @@ public class ServerManagerTest
   public void dropQueryable(String dataSource, String version, Interval interval)
   {
     try {
-      serverManager.dropSegment(
+      segmentManager.dropSegment(
           new DataSegment(
               dataSource,
               interval,

@@ -1,0 +1,11 @@
+syntax = "proto3";
+message Metrics {
+  string unit = 1;
+  string http_method = 2;
+  int32 value = 3;
+  string timestamp = 4;
+  string http_code = 5;
+  string page = 6;
+  string metricType = 7;
+  string server = 8;
+}

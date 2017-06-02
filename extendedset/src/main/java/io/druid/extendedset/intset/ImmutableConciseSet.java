@@ -39,7 +39,7 @@ public class ImmutableConciseSet
   {
     // Comparison is first by index, then one fills < literals < zero fills
     // one fills are sorted by length (longer one fills have priority)
-    // similarily, shorter zero fills have priority
+    // similarly, shorter zero fills have priority
     @Override
     public int compare(WordIterator i1, WordIterator i2)
     {
@@ -82,7 +82,7 @@ public class ImmutableConciseSet
   {
     // Comparison is first by index, then zero fills < literals < one fills
     // zero fills are sorted by length (longer zero fills have priority)
-    // similarily, shorter one fills have priority
+    // similarly, shorter one fills have priority
     @Override
     public int compare(WordIterator i1, WordIterator i2)
     {

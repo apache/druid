@@ -25,6 +25,7 @@ import org.junit.runners.Parameterized;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -1182,7 +1183,7 @@ public class ImmutableConciseSetTest
   {
     final int[] ints1 = {33, 100000};
     final int[] ints2 = {34, 100000};
-    List<Integer> expected = Arrays.asList(100000);
+    List<Integer> expected = Collections.singletonList(100000);
 
     ConciseSet set1 = new ConciseSet();
     for (int i : ints1) {
@@ -1655,7 +1656,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testIntersectionTerminates() throws Exception
   {
-    verifyIntersection(Arrays.<Integer>asList(), Arrays.asList(new ImmutableConciseSet(), new ImmutableConciseSet()));
+    verifyIntersection(Collections.emptyList(), Arrays.asList(new ImmutableConciseSet(), new ImmutableConciseSet()));
   }
 
   private void verifyIntersection(ConciseSet set1, ConciseSet set2)

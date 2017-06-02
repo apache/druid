@@ -32,6 +32,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.query.TableDataSource;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
@@ -60,7 +61,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
-  private ServerInventoryView baseView;
+  private BatchServerInventoryView baseView;
   private CoordinatorServerView overlordServerView;
 
   public CoordinatorServerViewTest()
@@ -91,7 +92,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         "localhost:1234",
         "localhost:1234",
         10000000L,
-        "historical",
+        ServerType.HISTORICAL,
         "default_tier",
         0
     );
@@ -158,7 +159,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                 input,
                 input,
                 10000000L,
-                "historical",
+                ServerType.HISTORICAL,
                 "default_tier",
                 0
             );

@@ -177,7 +177,22 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLeader()
   {
-    return Response.ok(taskMaster.getLeader()).build();
+    return Response.ok(taskMaster.getCurrentLeader()).build();
+  }
+
+  @GET
+  @Path("/isLeader")
+  @ResourceFilters(StateResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response isLeader()
+  {
+    final boolean leading = taskMaster.isLeader();
+    final Map<String, Boolean> response = ImmutableMap.of("leader", leading);
+    if (leading) {
+      return Response.ok(response).build();
+    } else {
+      return Response.status(Response.Status.NOT_FOUND).entity(response).build();
+    }
   }
 
   @GET

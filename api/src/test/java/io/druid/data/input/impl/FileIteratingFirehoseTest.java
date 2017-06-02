@@ -30,7 +30,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,6 +67,8 @@ public class FileIteratingFirehoseTest
 
     return args;
   }
+
+  private static final char[] LINE_CHARS = "\n".toCharArray();
 
   private final StringInputRowParser parser;
   private final List<String> inputs;
@@ -120,6 +124,47 @@ public class FileIteratingFirehoseTest
       }
 
       Assert.assertEquals(expectedResults, results);
+    }
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testClose() throws IOException
+  {
+    final LineIterator lineIterator = new LineIterator(new Reader()
+    {
+      @Override
+      public int read(char[] cbuf, int off, int len) throws IOException
+      {
+        System.arraycopy(LINE_CHARS, 0, cbuf, 0, LINE_CHARS.length);
+        return LINE_CHARS.length;
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        throw new RuntimeException("close test for FileIteratingFirehose");
+      }
+    });
+
+    final TestCloseable closeable = new TestCloseable();
+    final FileIteratingFirehose firehose = new FileIteratingFirehose(
+        ImmutableList.of(lineIterator).iterator(),
+        parser,
+        closeable
+    );
+    firehose.hasMore(); // initialize lineIterator
+    firehose.close();
+    Assert.assertTrue(closeable.closed);
+  }
+
+  private static final class TestCloseable implements Closeable
+  {
+    private boolean closed;
+
+    @Override
+    public void close() throws IOException
+    {
+      closed = true;
     }
   }
 }

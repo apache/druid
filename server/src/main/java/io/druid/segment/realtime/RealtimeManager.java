@@ -20,6 +20,7 @@
 package io.druid.segment.realtime;
 
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -50,6 +51,7 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Plumbers;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -66,6 +68,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
   private final List<FireDepartment> fireDepartments;
   private final QueryRunnerFactoryConglomerate conglomerate;
+  private final DataSegmentServerAnnouncer serverAnnouncer;
 
   /**
    * key=data source name,value=mappings of partition number to FireChief
@@ -75,29 +78,32 @@ public class RealtimeManager implements QuerySegmentWalker
   @Inject
   public RealtimeManager(
       List<FireDepartment> fireDepartments,
-      QueryRunnerFactoryConglomerate conglomerate
+      QueryRunnerFactoryConglomerate conglomerate,
+      DataSegmentServerAnnouncer serverAnnouncer
   )
   {
-    this.fireDepartments = fireDepartments;
-    this.conglomerate = conglomerate;
-
-    this.chiefs = Maps.newHashMap();
+    this(fireDepartments, conglomerate, serverAnnouncer, Maps.newHashMap());
   }
 
+  @VisibleForTesting
   RealtimeManager(
       List<FireDepartment> fireDepartments,
       QueryRunnerFactoryConglomerate conglomerate,
+      DataSegmentServerAnnouncer serverAnnouncer,
       Map<String, Map<Integer, FireChief>> chiefs
   )
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
-    this.chiefs = chiefs;
+    this.serverAnnouncer = serverAnnouncer;
+    this.chiefs = chiefs == null ? Maps.newHashMap() : Maps.newHashMap(chiefs);
   }
 
   @LifecycleStart
   public void start() throws IOException
   {
+    serverAnnouncer.announce();
+
     for (final FireDepartment fireDepartment : fireDepartments) {
       final DataSchema schema = fireDepartment.getDataSchema();
 
@@ -129,6 +135,8 @@ public class RealtimeManager implements QuerySegmentWalker
         CloseQuietly.close(chief);
       }
     }
+
+    serverAnnouncer.unannounce();
   }
 
   public FireDepartmentMetrics getMetrics(String datasource)
@@ -303,14 +311,15 @@ public class RealtimeManager implements QuerySegmentWalker
       catch (RuntimeException e) {
         log.makeAlert(
             e,
-            "RuntimeException aborted realtime processing[%s]",
+            "[%s] aborted realtime processing[%s]",
+            e.getClass().getSimpleName(),
             fireDepartment.getDataSchema().getDataSource()
         ).emit();
         normalExit = false;
-        throw e;
+        throw Throwables.propagate(e);
       }
       catch (Error e) {
-        log.makeAlert(e, "Exception aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
+        log.makeAlert(e, "Error aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
            .emit();
         normalExit = false;
         throw e;

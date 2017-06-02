@@ -22,8 +22,11 @@ package io.druid.query.timeseries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import io.druid.guice.LazySingleton;
+import io.druid.guice.annotations.Json;
 import io.druid.jackson.DefaultObjectMapper;
 
+@LazySingleton
 public class DefaultTimeseriesQueryMetricsFactory implements TimeseriesQueryMetricsFactory
 {
   private static final TimeseriesQueryMetricsFactory INSTANCE =
@@ -42,7 +45,7 @@ public class DefaultTimeseriesQueryMetricsFactory implements TimeseriesQueryMetr
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public DefaultTimeseriesQueryMetricsFactory(ObjectMapper jsonMapper)
+  public DefaultTimeseriesQueryMetricsFactory(@Json ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
   }

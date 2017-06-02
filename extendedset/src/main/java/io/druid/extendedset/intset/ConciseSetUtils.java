@@ -330,7 +330,7 @@ public class ConciseSetUtils
 
   public static int clearBitsAfterInLastWord(int lastWord, int lastSetBit)
   {
-    return lastWord &= ALL_ZEROS_LITERAL | (0xFFFFFFFF >>> (31 - lastSetBit));
+    return lastWord & (ALL_ZEROS_LITERAL | (0xFFFFFFFF >>> (31 - lastSetBit)));
   }
 
   public static int onesUntil(int bit)

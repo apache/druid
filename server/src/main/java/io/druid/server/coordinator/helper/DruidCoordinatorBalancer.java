@@ -88,7 +88,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     final int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
-        params.getDruidCluster().getCluster().entrySet()) {
+        params.getDruidCluster().getHistoricals().entrySet()) {
       String tier = entry.getKey();
 
       if (currentlyMovingSegments.get(tier) == null) {

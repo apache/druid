@@ -22,34 +22,19 @@ package io.druid.firehose.cloudfiles;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
-import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.impl.FileIteratingFirehose;
-import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.java.util.common.parsers.ParseException;
 import io.druid.storage.cloudfiles.CloudFilesByteSource;
 import io.druid.storage.cloudfiles.CloudFilesObjectApiProxy;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.LineIterator;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.Collection;
 import java.util.List;
 
-public class StaticCloudFilesFirehoseFactory implements FirehoseFactory<StringInputRowParser>
+public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<CloudFilesBlob>
 {
   private static final Logger log = new Logger(StaticCloudFilesFirehoseFactory.class);
 
@@ -59,11 +44,17 @@ public class StaticCloudFilesFirehoseFactory implements FirehoseFactory<StringIn
   @JsonCreator
   public StaticCloudFilesFirehoseFactory(
       @JacksonInject("objectApi") CloudFilesApi cloudFilesApi,
-      @JsonProperty("blobs") CloudFilesBlob[] blobs
+      @JsonProperty("blobs") List<CloudFilesBlob> blobs,
+      @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
+      @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
+      @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
+      @JsonProperty("fetchTimeout") Long fetchTimeout,
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
   )
   {
+    super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.cloudFilesApi = cloudFilesApi;
-    this.blobs = ImmutableList.copyOf(blobs);
+    this.blobs = blobs;
   }
 
   @JsonProperty
@@ -73,67 +64,31 @@ public class StaticCloudFilesFirehoseFactory implements FirehoseFactory<StringIn
   }
 
   @Override
-  public Firehose connect(StringInputRowParser stringInputRowParser) throws IOException, ParseException
+  protected Collection<CloudFilesBlob> initObjects()
   {
-    Preconditions.checkNotNull(cloudFilesApi, "null cloudFilesApi");
-
-    final LinkedList<CloudFilesBlob> objectQueue = Lists.newLinkedList(blobs);
-
-    return new FileIteratingFirehose(
-        new Iterator<LineIterator>()
-        {
-
-          @Override
-          public boolean hasNext()
-          {
-            return !objectQueue.isEmpty();
-          }
-
-          @Override
-          public LineIterator next()
-          {
-            final CloudFilesBlob nextURI = objectQueue.poll();
-
-            final String region = nextURI.getRegion();
-            final String container = nextURI.getContainer();
-            final String path = nextURI.getPath();
-
-            log.info("Retrieving file from region[%s], container[%s] and path [%s]",
-                     region, container, path
-            );
-            CloudFilesObjectApiProxy objectApi = new CloudFilesObjectApiProxy(
-                cloudFilesApi, region, container);
-            final CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
-
-            try {
-              final InputStream innerInputStream = byteSource.openStream();
-              final InputStream outerInputStream = path.endsWith(".gz")
-                                                   ? CompressionUtils.gzipInputStream(innerInputStream)
-                                                   : innerInputStream;
-
-              return IOUtils.lineIterator(
-                  new BufferedReader(
-                      new InputStreamReader(outerInputStream, Charsets.UTF_8)));
-            }
-            catch (IOException e) {
-              log.error(e,
-                        "Exception opening container[%s] blob[%s] from region[%s]",
-                        container, path, region
-              );
-
-              throw Throwables.propagate(e);
-            }
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-        },
-        stringInputRowParser
-    );
+    return blobs;
   }
 
+  @Override
+  protected InputStream openObjectStream(CloudFilesBlob object) throws IOException
+  {
+    final String region = object.getRegion();
+    final String container = object.getContainer();
+    final String path = object.getPath();
+
+    log.info("Retrieving file from region[%s], container[%s] and path [%s]",
+             region, container, path
+    );
+    CloudFilesObjectApiProxy objectApi = new CloudFilesObjectApiProxy(
+        cloudFilesApi, region, container);
+    final CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
+
+    return byteSource.openStream();
+  }
+
+  @Override
+  protected InputStream wrapObjectStream(CloudFilesBlob object, InputStream stream) throws IOException
+  {
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+  }
 }
