@@ -109,19 +109,19 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   @Override
   public DateTime increment(DateTime time)
   {
-    return new DateTime(increment(time.getMillis()));
+    return new DateTime(increment(time.getMillis()), getTimeZone());
   }
 
   @Override
   public DateTime decrement(DateTime time)
   {
-    return new DateTime(decrement(time.getMillis()));
+    return new DateTime(decrement(time.getMillis()), getTimeZone());
   }
 
   @Override
   public DateTime bucketStart(DateTime time)
   {
-    return new DateTime(truncate(time.getMillis()));
+    return new DateTime(truncate(time.getMillis()), getTimeZone());
   }
 
   // Used only for Segments. Not for Queries
