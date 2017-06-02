@@ -88,7 +88,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -701,8 +700,10 @@ public class DruidCoordinator
           }
         }
 
-        balancerExec = MoreExecutors.listeningDecorator(
-                Executors.newFixedThreadPool(getDynamicConfigs().getBalancerComputeThreads()));
+        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+            getDynamicConfigs().getBalancerComputeThreads(),
+            "coordinator-cost-balancer-%s"
+        ));
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
