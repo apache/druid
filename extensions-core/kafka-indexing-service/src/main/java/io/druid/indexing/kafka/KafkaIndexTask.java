@@ -121,7 +121,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private static final String TYPE = "index_kafka";
   private static final Random RANDOM = new Random();
   private static final long POLL_TIMEOUT = 100;
-  private static final long POLL_RETRY_MS = 30000;
   private static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
 
@@ -182,6 +181,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private volatile boolean pauseRequested = false;
   private volatile long pauseMillis = 0;
 
+  // This value can be tuned in some tests
+  private long pollRetryMs = 30000;
+
   @JsonCreator
   public KafkaIndexTask(
       @JsonProperty("id") String id,
@@ -208,6 +210,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
 
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
+  }
+
+  @VisibleForTesting
+  void setPollRetryMs(long retryMs)
+  {
+    this.pollRetryMs = retryMs;
   }
 
   private static String makeTaskId(String dataSource, int randomBits)
@@ -1055,10 +1063,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     if (doReset) {
       sendResetRequestAndWait(resetPartitions, taskToolbox);
     } else {
-      log.warn("Retrying in %dms", POLL_RETRY_MS);
+      log.warn("Retrying in %dms", pollRetryMs);
       pollRetryLock.lockInterruptibly();
       try {
-        long nanos = TimeUnit.MILLISECONDS.toNanos(POLL_RETRY_MS);
+        long nanos = TimeUnit.MILLISECONDS.toNanos(pollRetryMs);
         while (nanos > 0L && !pauseRequested && !stopRequested) {
           nanos = isAwaitingRetry.awaitNanos(nanos);
         }
