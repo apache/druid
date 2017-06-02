@@ -48,7 +48,7 @@ public class HadoopFsWrapper
   public static boolean rename(FileSystem fs, Path from, Path to) throws IOException
   {
     try {
-      fs.rename(from,to);
+      fs.rename(from, to);
       return true;
     }
     catch (IOException ex) {
