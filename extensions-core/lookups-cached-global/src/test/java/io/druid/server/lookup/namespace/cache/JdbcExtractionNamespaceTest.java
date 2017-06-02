@@ -31,10 +31,10 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.TestDerbyConnector;
-import io.druid.query.lookup.namespace.CachePopulator;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
-import io.druid.server.lookup.namespace.JdbcCachePopulator;
+import io.druid.server.lookup.namespace.JdbcCacheGenerator;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -186,14 +186,14 @@ public class JdbcExtractionNamespaceTest
             NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
             scheduler = new CacheScheduler(
                 noopServiceEmitter,
-                ImmutableMap.<Class<? extends ExtractionNamespace>, CachePopulator<?>>of(
+                ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
                     JdbcExtractionNamespace.class,
-                    new CachePopulator<JdbcExtractionNamespace>()
+                    new CacheGenerator<JdbcExtractionNamespace>()
                     {
-                      private final JdbcCachePopulator delegate =
-                          new JdbcCachePopulator();
+                      private final JdbcCacheGenerator delegate =
+                          new JdbcCacheGenerator();
                       @Override
-                      public CacheScheduler.VersionedCache populateCache(
+                      public CacheScheduler.VersionedCache generateCache(
                           final JdbcExtractionNamespace namespace,
                           final CacheScheduler.EntryImpl<JdbcExtractionNamespace> id,
                           final String lastVersion,
@@ -202,9 +202,9 @@ public class JdbcExtractionNamespaceTest
                       {
                         updateLock.lockInterruptibly();
                         try {
-                          log.debug("Running cache populator");
+                          log.debug("Running cache generator");
                           try {
-                            return delegate.populateCache(namespace, id, lastVersion, scheduler);
+                            return delegate.generateCache(namespace, id, lastVersion, scheduler);
                           }
                           finally {
                             updates.incrementAndGet();

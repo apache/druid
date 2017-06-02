@@ -29,7 +29,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.query.lookup.namespace.CachePopulator;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
@@ -76,7 +76,7 @@ import java.util.zip.GZIPOutputStream;
  *
  */
 @RunWith(Parameterized.class)
-public class UriCachePopulatorTest
+public class UriCacheGeneratorTest
 {
   private static final String FAKE_SCHEME = "wabblywoo";
   private static final Map<String, SearchableVersionedDataFinder> FINDERS = ImmutableMap.<String, SearchableVersionedDataFinder>of(
@@ -232,13 +232,13 @@ public class UriCachePopulatorTest
     };
   }
 
-  public UriCachePopulatorTest(
+  public UriCacheGeneratorTest(
       String suffix,
       Function<File, OutputStream> outStreamSupplier,
       Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator
   ) throws Exception
   {
-    final Map<Class<? extends ExtractionNamespace>, CachePopulator<?>> namespaceFunctionFactoryMap = new HashMap<>();
+    final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceFunctionFactoryMap = new HashMap<>();
     this.suffix = suffix;
     this.outStreamSupplier = outStreamSupplier;
     this.lifecycle = new Lifecycle();
@@ -250,7 +250,7 @@ public class UriCachePopulatorTest
     namespaceFunctionFactoryMap.put(
         UriExtractionNamespace.class,
 
-        new UriCachePopulator(FINDERS)
+        new UriCacheGenerator(FINDERS)
     );
   }
 
@@ -263,7 +263,7 @@ public class UriCachePopulatorTest
   private CacheScheduler scheduler;
   private File tmpFile;
   private File tmpFileParent;
-  private UriCachePopulator populator;
+  private UriCacheGenerator generator;
   private UriExtractionNamespace namespace;
 
   @Before
@@ -288,7 +288,7 @@ public class UriCachePopulatorTest
           ""
       )));
     }
-    populator = new UriCachePopulator(FINDERS);
+    generator = new UriCacheGenerator(FINDERS);
     namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
@@ -371,7 +371,7 @@ public class UriCachePopulatorTest
   {
     Assert.assertEquals(0, scheduler.getActiveEntries());
 
-    CacheScheduler.VersionedCache versionedCache = populator.populateCache(namespace, null, null, scheduler);
+    CacheScheduler.VersionedCache versionedCache = generator.generateCache(namespace, null, null, scheduler);
     Assert.assertNotNull(versionedCache);
     Map<String, String> map = versionedCache.getCache();
     Assert.assertEquals("bar", map.get("foo"));
@@ -379,7 +379,7 @@ public class UriCachePopulatorTest
     String version = versionedCache.getVersion();
     Assert.assertNotNull(version);
 
-    Assert.assertNull(populator.populateCache(namespace, null, version, scheduler));
+    Assert.assertNull(generator.generateCache(namespace, null, version, scheduler));
   }
 
   @Test(expected = FileNotFoundException.class)
@@ -393,7 +393,7 @@ public class UriCachePopulatorTest
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    populator.populateCache(badNamespace, null, null, scheduler);
+    generator.generateCache(badNamespace, null, null, scheduler);
   }
 
   @Test(expected = FileNotFoundException.class)
@@ -408,7 +408,7 @@ public class UriCachePopulatorTest
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    populator.populateCache(badNamespace, null, null, scheduler);
+    generator.generateCache(badNamespace, null, null, scheduler);
   }
 
   @Test(expected = IAE.class)
@@ -496,7 +496,7 @@ public class UriCachePopulatorTest
         Period.millis((int) namespace.getPollMs()),
         null
     );
-    Assert.assertNotNull(populator.populateCache(extractionNamespace, null, null, scheduler));
+    Assert.assertNotNull(generator.generateCache(extractionNamespace, null, null, scheduler));
   }
 
   @Test(timeout = 10_000)

@@ -22,7 +22,7 @@ package io.druid.server.lookup.namespace;
 import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.lookup.namespace.CachePopulator;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.skife.jdbi.v2.DBI;
@@ -44,15 +44,15 @@ import java.util.concurrent.ConcurrentMap;
 /**
  *
  */
-public final class JdbcCachePopulator implements CachePopulator<JdbcExtractionNamespace>
+public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNamespace>
 {
-  private static final Logger LOG = new Logger(JdbcCachePopulator.class);
+  private static final Logger LOG = new Logger(JdbcCacheGenerator.class);
   private final ConcurrentMap<CacheScheduler.EntryImpl<JdbcExtractionNamespace>, DBI> dbiCache =
       new ConcurrentHashMap<>();
 
   @Override
   @Nullable
-  public CacheScheduler.VersionedCache populateCache(
+  public CacheScheduler.VersionedCache generateCache(
       final JdbcExtractionNamespace namespace,
       final CacheScheduler.EntryImpl<JdbcExtractionNamespace> entryId,
       final String lastVersion,

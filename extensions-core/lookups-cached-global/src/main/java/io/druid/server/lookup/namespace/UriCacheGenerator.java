@@ -27,7 +27,7 @@ import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.lookup.namespace.CachePopulator;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
@@ -44,14 +44,14 @@ import java.util.regex.Pattern;
 /**
  *
  */
-public final class UriCachePopulator implements CachePopulator<UriExtractionNamespace>
+public final class UriCacheGenerator implements CacheGenerator<UriExtractionNamespace>
 {
   private static final int DEFAULT_NUM_RETRIES = 3;
-  private static final Logger log = new Logger(UriCachePopulator.class);
+  private static final Logger log = new Logger(UriCacheGenerator.class);
   private final Map<String, SearchableVersionedDataFinder> pullers;
 
   @Inject
-  public UriCachePopulator(
+  public UriCacheGenerator(
       Map<String, SearchableVersionedDataFinder> pullers
   )
   {
@@ -60,7 +60,7 @@ public final class UriCachePopulator implements CachePopulator<UriExtractionName
 
   @Override
   @Nullable
-  public CacheScheduler.VersionedCache populateCache(
+  public CacheScheduler.VersionedCache generateCache(
       final UriExtractionNamespace extractionNamespace,
       final CacheScheduler.EntryImpl<UriExtractionNamespace> entryId,
       @Nullable final String lastVersion,

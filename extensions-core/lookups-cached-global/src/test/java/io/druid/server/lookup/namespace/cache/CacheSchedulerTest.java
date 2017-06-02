@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.query.lookup.namespace.CachePopulator;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
@@ -125,11 +125,11 @@ public class CacheSchedulerTest
     lifecycle.start();
     cacheManager = createCacheManager.apply(lifecycle);
     final Path tmpDir = temporaryFolder.newFolder().toPath();
-    final CachePopulator<UriExtractionNamespace> cachePopulator = new
-        CachePopulator<UriExtractionNamespace>()
+    final CacheGenerator<UriExtractionNamespace> cacheGenerator = new
+        CacheGenerator<UriExtractionNamespace>()
     {
       @Override
-      public CacheScheduler.VersionedCache populateCache(
+      public CacheScheduler.VersionedCache generateCache(
           final UriExtractionNamespace extractionNamespace,
           final CacheScheduler.EntryImpl<UriExtractionNamespace> id,
           final String lastVersion,
@@ -146,9 +146,9 @@ public class CacheSchedulerTest
     };
     scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
-        ImmutableMap.<Class<? extends ExtractionNamespace>, CachePopulator<?>>of(
+        ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
             UriExtractionNamespace.class,
-            cachePopulator
+            cacheGenerator
         ),
         cacheManager
     );

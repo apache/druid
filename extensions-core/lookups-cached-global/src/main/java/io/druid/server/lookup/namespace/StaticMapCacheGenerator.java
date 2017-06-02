@@ -19,20 +19,20 @@
 
 package io.druid.server.lookup.namespace;
 
-import io.druid.query.lookup.namespace.CachePopulator;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
 
-public final class StaticMapCachePopulator implements CachePopulator<StaticMapExtractionNamespace>
+public final class StaticMapCacheGenerator implements CacheGenerator<StaticMapExtractionNamespace>
 {
   private final String version = UUID.randomUUID().toString();
 
   @Override
   @Nullable
-  public CacheScheduler.VersionedCache populateCache(
+  public CacheScheduler.VersionedCache generateCache(
       final StaticMapExtractionNamespace namespace,
       final CacheScheduler.EntryImpl<StaticMapExtractionNamespace> id,
       final String lastVersion,
@@ -43,7 +43,7 @@ public final class StaticMapCachePopulator implements CachePopulator<StaticMapEx
       // Throwing AssertionError, because CacheScheduler doesn't suppress Errors and will stop trying to update
       // the cache periodically.
       throw new AssertionError(
-          "StaticMapCachePopulator could only be configured for a namespace which is scheduled "
+          "StaticMapCacheGenerator could only be configured for a namespace which is scheduled "
           + "to be updated once, not periodically. Last version: `" + lastVersion + "`");
     }
     CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);

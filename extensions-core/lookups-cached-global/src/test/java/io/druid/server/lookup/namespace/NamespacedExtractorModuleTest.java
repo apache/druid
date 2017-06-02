@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.query.lookup.namespace.CachePopulator;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
@@ -61,16 +61,16 @@ public class NamespacedExtractorModuleTest
   @Before
   public void setUp() throws Exception
   {
-    final Map<Class<? extends ExtractionNamespace>, CachePopulator<?>> factoryMap =
-        ImmutableMap.<Class<? extends ExtractionNamespace>, CachePopulator<?>>of(
+    final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> factoryMap =
+        ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
             UriExtractionNamespace.class,
-            new UriCachePopulator(
+            new UriCacheGenerator(
                 ImmutableMap.<String, SearchableVersionedDataFinder>of(
                     "file",
                     new LocalFileTimestampVersionFinder()
                 )
             ),
-            JdbcExtractionNamespace.class, new JdbcCachePopulator()
+            JdbcExtractionNamespace.class, new JdbcCacheGenerator()
         );
     lifecycle = new Lifecycle();
     lifecycle.start();
@@ -95,7 +95,7 @@ public class NamespacedExtractorModuleTest
     try (OutputStreamWriter out = new FileWriter(tmpFile)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
-    final UriCachePopulator factory = new UriCachePopulator(
+    final UriCacheGenerator factory = new UriCacheGenerator(
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     );
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
@@ -107,7 +107,7 @@ public class NamespacedExtractorModuleTest
         new Period(0),
         null
     );
-    CacheScheduler.VersionedCache versionedCache = factory.populateCache(namespace, null, null, scheduler);
+    CacheScheduler.VersionedCache versionedCache = factory.generateCache(namespace, null, null, scheduler);
     Assert.assertNotNull(versionedCache);
     Map<String, String> map = versionedCache.getCache();
     Assert.assertEquals("bar", map.get("foo"));

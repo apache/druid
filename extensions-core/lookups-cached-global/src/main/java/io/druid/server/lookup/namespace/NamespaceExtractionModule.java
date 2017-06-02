@@ -30,7 +30,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
 import io.druid.query.lookup.NamespaceLookupExtractorFactory;
-import io.druid.query.lookup.namespace.CachePopulator;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
@@ -59,7 +59,7 @@ public class NamespaceExtractionModule implements DruidModule
     );
   }
 
-  public static MapBinder<Class<? extends ExtractionNamespace>, CachePopulator<?>> getNamespaceFactoryMapBinder(
+  public static MapBinder<Class<? extends ExtractionNamespace>, CacheGenerator<?>> getNamespaceFactoryMapBinder(
       final Binder binder
   )
   {
@@ -68,7 +68,7 @@ public class NamespaceExtractionModule implements DruidModule
         new TypeLiteral<Class<? extends ExtractionNamespace>>()
         {
         },
-        new TypeLiteral<CachePopulator<?>>()
+        new TypeLiteral<CacheGenerator<?>>()
         {
         }
     );
@@ -93,15 +93,15 @@ public class NamespaceExtractionModule implements DruidModule
 
     getNamespaceFactoryMapBinder(binder)
         .addBinding(JdbcExtractionNamespace.class)
-        .to(JdbcCachePopulator.class)
+        .to(JdbcCacheGenerator.class)
         .in(LazySingleton.class);
     getNamespaceFactoryMapBinder(binder)
         .addBinding(UriExtractionNamespace.class)
-        .to(UriCachePopulator.class)
+        .to(UriCacheGenerator.class)
         .in(LazySingleton.class);
     getNamespaceFactoryMapBinder(binder)
         .addBinding(StaticMapExtractionNamespace.class)
-        .to(StaticMapCachePopulator.class)
+        .to(StaticMapCacheGenerator.class)
         .in(LazySingleton.class);
   }
 }
