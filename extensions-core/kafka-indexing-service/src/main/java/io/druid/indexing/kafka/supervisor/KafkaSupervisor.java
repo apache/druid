@@ -1620,7 +1620,7 @@ public class KafkaSupervisor implements Supervisor
         ioConfig.getTaskDuration().getMillis() / 1000,
         includeOffsets ? latestOffsetsFromKafka : null,
         includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(Number::longValue).sum() : null,
+        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? offsetsLastUpdated : null
     );
 
@@ -1764,7 +1764,7 @@ public class KafkaSupervisor implements Supervisor
         long lag = getLagPerPartition(highestCurrentOffsets)
             .values()
             .stream()
-            .mapToLong(Number::longValue)
+            .mapToLong(x -> Math.max(x, 0))
             .sum();
 
         emitter.emit(
