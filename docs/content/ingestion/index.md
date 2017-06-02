@@ -109,13 +109,6 @@ If `type` is not included, the parser defaults to `string`. For additional data 
 | type | String | This should say `string` in general, or `hadoopyString` when used in a Hadoop indexing job. | no |
 | parseSpec | JSON Object | Specifies the format, timestamp, and dimensions of the data. | yes |
 
-### Protobuf Parser
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `protobuf`. | no |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
-
 ### ParseSpec
 
 ParseSpecs serve two purposes:

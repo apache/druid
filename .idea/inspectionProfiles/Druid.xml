@@ -1,0 +1,22 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Druid" />
+    <inspection_tool class="Annotator" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="AntDuplicateTargetsInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="AntMissingPropertiesFileInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="AntResolveInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="CheckValidXmlInScriptTagBody" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="ImplicitArrayToString" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="InjectedReferences" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="JavadocReference" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="MavenModelInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
+      <option name="processCode" value="true" />
+      <option name="processLiterals" value="true" />
+      <option name="processComments" value="true" />
+    </inspection_tool>
+    <inspection_tool class="SyntaxError" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="XmlHighlighting" enabled="true" level="WARNING" enabled_by_default="true" />
+  </profile>
+</component>

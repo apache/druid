@@ -22,9 +22,11 @@ package io.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Json;
 import io.druid.jackson.DefaultObjectMapper;
 
+@LazySingleton
 public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFactory
 {
   private static final GenericQueryMetricsFactory INSTANCE =

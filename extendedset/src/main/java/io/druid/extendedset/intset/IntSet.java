@@ -523,21 +523,6 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
   public int powerSetSize();
 
   /**
-   * Computes the power-set size of the current set, composed by those subsets
-   * that have cardinality between <code>min</code> and <code>max</code>.
-   * <p>
-   * The returned power-set does <i>not</i> contain the empty set.
-   *
-   * @param min minimum subset size (greater than zero)
-   * @param max maximum subset size
-   *
-   * @return the power-set size
-   *
-   * @see #powerSet(int, int)
-   */
-  public int powerSetSize(int min, int max);
-
-  /**
    * Computes the Jaccard similarity coefficient between this set and the
    * given set.
    * <p>
