@@ -115,11 +115,12 @@ public class RabbitMQProducerMain
     HelpFormatter formatter = new HelpFormatter();
     // Add a comparator to the HelpFormatter using the ArrayList above to sort by insertion order.
     formatter.setOptionComparator(new Comparator(){
+      @SuppressWarnings("SuspiciousMethodCalls")
       @Override
       public int compare(Object o1, Object o2)
       {
         // I know this isn't fast, but who cares! The list is short.
-        return optionList.indexOf(o1) - optionList.indexOf(o2);
+        return Integer.compare(optionList.indexOf(o1), optionList.indexOf(o2));
       }
     });
 

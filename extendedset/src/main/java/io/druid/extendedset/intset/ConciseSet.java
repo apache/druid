@@ -678,6 +678,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
    *
    * @return the result of the operation
    */
+  @SuppressWarnings("NonShortCircuitBooleanExpression")
   private ConciseSet performOperation(ConciseSet other, Operator operator)
   {
     // non-empty arguments
@@ -791,6 +792,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   /**
    * {@inheritDoc}
    */
+  @SuppressWarnings("NonShortCircuitBooleanExpression")
   @Override
   public int intersectionSize(IntSet o)
   {
@@ -1680,6 +1682,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   /**
    * {@inheritDoc}
    */
+  @SuppressWarnings("NonShortCircuitBooleanExpression")
   @Override
   public boolean containsAny(IntSet c)
   {
@@ -1753,6 +1756,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   /**
    * {@inheritDoc}
    */
+  @SuppressWarnings("NonShortCircuitBooleanExpression")
   @Override
   public boolean containsAtLeast(IntSet c, int minElements)
   {
@@ -2011,6 +2015,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   /**
    * {@inheritDoc}
    */
+  @SuppressWarnings("CompareToUsesNonFinalVariable")
   @Override
   public int compareTo(IntSet o)
   {

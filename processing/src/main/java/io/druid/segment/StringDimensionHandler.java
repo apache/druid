@@ -81,7 +81,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   ) throws SegmentValidationException
   {
     if (lhs == null || rhs == null) {
-      if (lhs != rhs) {
+      if (lhs != null || rhs != null) {
         throw new SegmentValidationException(
             "Expected nulls, found %s and %s",
             Arrays.toString(lhs),

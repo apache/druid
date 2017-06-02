@@ -35,6 +35,7 @@ import io.druid.common.guava.CombiningSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
@@ -126,16 +127,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       {
         if (query.isMerge()) {
           // Merge everything always
-          return new Ordering<SegmentAnalysis>()
-          {
-            @Override
-            public int compare(
-                @Nullable SegmentAnalysis left, @Nullable SegmentAnalysis right
-            )
-            {
-              return 0;
-            }
-          };
+          return Comparators.alwaysEqual();
         }
 
         return query.getResultOrdering(); // No two elements should be equal, so it should never merge

@@ -169,4 +169,15 @@ public class IndexSpec
     result = 31 * result + (metricCompression != null ? metricCompression.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return "IndexSpec{" +
+           "bitmapSerdeFactory=" + bitmapSerdeFactory +
+           ", dimensionCompression=" + dimensionCompression +
+           ", metricCompression=" + metricCompression +
+           ", longEncoding=" + longEncoding +
+           '}';
+  }
 }

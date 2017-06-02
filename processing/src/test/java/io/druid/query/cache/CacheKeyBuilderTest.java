@@ -286,11 +286,9 @@ public class CacheKeyBuilderTest
 
   private static void assertNotEqualsEachOther(List<byte[]> keys)
   {
-    for (byte[] k1 : keys) {
-      for (byte[] k2 : keys) {
-        if (k1 != k2) {
-          assertFalse(Arrays.equals(k1, k2));
-        }
+    for (int i = 0; i < keys.size(); i++) {
+      for (int j = i + 1; j < keys.size(); j++) {
+        assertFalse(Arrays.equals(keys.get(i), keys.get(j)));
       }
     }
   }

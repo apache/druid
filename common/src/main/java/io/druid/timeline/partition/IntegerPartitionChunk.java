@@ -27,7 +27,7 @@ import java.util.Comparator;
  */
 public class IntegerPartitionChunk<T> implements PartitionChunk<T>
 {
-  Comparator<Integer> comparator = Ordering.<Integer>natural().nullsFirst();
+  private static final Comparator<Integer> comparator = Ordering.<Integer>natural().nullsFirst();
 
   private final Integer start;
   private final Integer end;

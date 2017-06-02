@@ -98,6 +98,7 @@ public class CostBalancerStrategy implements BalancerStrategy
    *
    * @return joint cost of X and Y
    */
+  @SuppressWarnings("SuspiciousNameCombination")
   public static double intervalCost(double x1, double y0, double y1)
   {
     if (x1 == 0 || y1 == y0) {

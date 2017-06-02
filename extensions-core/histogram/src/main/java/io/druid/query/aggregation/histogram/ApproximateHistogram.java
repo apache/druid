@@ -1523,7 +1523,7 @@ public class ApproximateHistogram
   public float[] getQuantiles(float[] probabilities)
   {
     for (float p : probabilities) {
-      Preconditions.checkArgument(0 < p & p < 1, "quantile probabilities must be strictly between 0 and 1");
+      Preconditions.checkArgument(0 < p && p < 1, "quantile probabilities must be strictly between 0 and 1");
     }
 
     float[] quantiles = new float[probabilities.length];

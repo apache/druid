@@ -120,7 +120,7 @@ public class FireHydrant
   {
     return "FireHydrant{" +
            "index=" + index +
-           ", queryable=" + adapter +
+           ", queryable=" + adapter.getIdentifier() +
            ", count=" + count +
            '}';
   }

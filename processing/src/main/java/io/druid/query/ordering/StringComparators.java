@@ -320,9 +320,11 @@ public class StringComparators
       }
     }).nullsFirst().compound(Ordering.natural());
     
+    @SuppressWarnings("StringEquality")
     @Override
     public int compare(String s, String s2)
     {
+      // Optimization
       if (s == s2) {
         return 0;
       }

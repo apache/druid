@@ -25,7 +25,7 @@ import java.util.Comparator;
 
 public class LinearPartitionChunk <T> implements PartitionChunk<T>
 {
-  Comparator<Integer> comparator = Ordering.<Integer>natural().nullsFirst();
+  private static final Comparator<Integer> comparator = Ordering.<Integer>natural().nullsFirst();
 
   private final int chunkNumber;
   private final T object;

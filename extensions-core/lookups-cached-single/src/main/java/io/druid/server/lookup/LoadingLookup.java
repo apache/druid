@@ -146,4 +146,13 @@ public class LoadingLookup extends LookupExtractor
       return dataFetcher.reverseFetchKeys(value);
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "LoadingLookup{" +
+           "dataFetcher=" + dataFetcher +
+           ", id='" + id + '\'' +
+           '}';
+  }
 }

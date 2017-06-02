@@ -70,10 +70,11 @@ public class BucketTest
     Assert.assertEquals(bucket.toString(),expectedString);
   }
 
+  @SuppressWarnings({"EqualsBetweenInconvertibleTypes", "ObjectEqualsNull"})
   @Test public void testEquals()
   {
     Assert.assertFalse("Object should not be equals to NULL", bucket.equals(null));
-    Assert.assertFalse("Objects do not have the same Class",bucket.equals(new Integer(0)));
+    Assert.assertFalse("Objects do not have the same Class", bucket.equals(new Integer(0)));
     Assert.assertFalse("Objects do not have the same partitionNum",
         bucket.equals(new Bucket(shardNum, time, partitionNum + 1)));
     Assert.assertFalse("Objects do not have the same shardNum",

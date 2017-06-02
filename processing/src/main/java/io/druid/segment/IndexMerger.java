@@ -1349,10 +1349,12 @@ public class IndexMerger
     {
       IntBuffer readOnly = conversions[index].asReadOnlyBuffer();
       readOnly.rewind();
-      for (int i = 0; readOnly.hasRemaining(); i++) {
+      int i = 0;
+      while (readOnly.hasRemaining()) {
         if (i != readOnly.get()) {
           return true;
         }
+        i++;
       }
       return false;
     }

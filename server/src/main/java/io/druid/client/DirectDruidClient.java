@@ -645,4 +645,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       }
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "DirectDruidClient{" +
+           "host='" + host + '\'' +
+           ", isSmile=" + isSmile +
+           '}';
+  }
 }
