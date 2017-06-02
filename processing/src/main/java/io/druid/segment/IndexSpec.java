@@ -30,6 +30,7 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -143,31 +144,17 @@ public class IndexSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     IndexSpec indexSpec = (IndexSpec) o;
-
-    if (bitmapSerdeFactory != null
-        ? !bitmapSerdeFactory.equals(indexSpec.bitmapSerdeFactory)
-        : indexSpec.bitmapSerdeFactory != null) {
-      return false;
-    }
-    if (dimensionCompression != null
-        ? !dimensionCompression.equals(indexSpec.dimensionCompression)
-        : indexSpec.dimensionCompression != null) {
-      return false;
-    }
-    return !(metricCompression != null
-             ? !metricCompression.equals(indexSpec.metricCompression)
-             : indexSpec.metricCompression != null);
+    return Objects.equals(bitmapSerdeFactory, indexSpec.bitmapSerdeFactory) &&
+           dimensionCompression == indexSpec.dimensionCompression &&
+           metricCompression == indexSpec.metricCompression &&
+           longEncoding == indexSpec.longEncoding;
   }
 
   @Override
   public int hashCode()
   {
-    int result = bitmapSerdeFactory != null ? bitmapSerdeFactory.hashCode() : 0;
-    result = 31 * result + (dimensionCompression != null ? dimensionCompression.hashCode() : 0);
-    result = 31 * result + (metricCompression != null ? metricCompression.hashCode() : 0);
-    return result;
+    return Objects.hash(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding);
   }
 
   @Override
