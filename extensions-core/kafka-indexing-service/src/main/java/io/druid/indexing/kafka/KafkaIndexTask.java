@@ -65,9 +65,9 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
+import io.druid.segment.realtime.appenderator.AppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
-import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
@@ -282,7 +282,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     try (
         final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-        final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
+        final AppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
         final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
       toolbox.getDataSegmentServerAnnouncer().announce();
@@ -871,13 +871,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  private FiniteAppenderatorDriver newDriver(
+  private AppenderatorDriver newDriver(
       final Appenderator appenderator,
       final TaskToolbox toolbox,
       final FireDepartmentMetrics metrics
   )
   {
-    return new FiniteAppenderatorDriver(
+    return new AppenderatorDriver(
         appenderator,
         new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
         toolbox.getSegmentHandoffNotifierFactory(),

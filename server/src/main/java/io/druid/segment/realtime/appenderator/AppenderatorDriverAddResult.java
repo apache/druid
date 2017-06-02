@@ -25,7 +25,7 @@ import io.druid.data.input.InputRow;
 import javax.annotation.Nullable;
 
 /**
- * Result of {@link FiniteAppenderatorDriver#add(InputRow, String, Supplier)}.  It contains the identifier of the
+ * Result of {@link AppenderatorDriver#add(InputRow, String, Supplier)}.  It contains the identifier of the
  * segment which the InputRow is added to and the number of rows in that segment.
  */
 public class AppenderatorDriverAddResult

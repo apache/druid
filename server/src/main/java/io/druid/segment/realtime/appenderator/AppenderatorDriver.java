@@ -64,7 +64,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * A FiniteAppenderatorDriver drives an Appenderator to index a finite stream of data. This class does not help you
+ * A AppenderatorDriver drives an Appenderator to index a finite stream of data. This class does not help you
  * index unbounded streams. All handoff is done at the end of indexing.
  *
  * This class helps with doing things that Appenderators don't, including deciding which segments to use (with a
@@ -74,9 +74,9 @@ import java.util.stream.Collectors;
  * Note that the commit metadata stored by this class via the underlying Appenderator is not the same metadata as
  * you pass in. It's wrapped in some extra metadata needed by the driver.
  */
-public class FiniteAppenderatorDriver implements Closeable
+public class AppenderatorDriver implements Closeable
 {
-  private static final Logger log = new Logger(FiniteAppenderatorDriver.class);
+  private static final Logger log = new Logger(AppenderatorDriver.class);
 
   private final Appenderator appenderator;
   private final SegmentAllocator segmentAllocator;
@@ -111,7 +111,7 @@ public class FiniteAppenderatorDriver implements Closeable
    * @param objectMapper            object mapper, used for serde of commit metadata
    * @param metrics                 Firedepartment metrics
    */
-  public FiniteAppenderatorDriver(
+  public AppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
