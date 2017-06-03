@@ -31,10 +31,10 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.TestDerbyConnector;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
-import io.druid.server.lookup.namespace.JDBCExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
+import io.druid.server.lookup.namespace.JdbcCacheGenerator;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -62,11 +62,11 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  */
 @RunWith(Parameterized.class)
-public class JDBCExtractionNamespaceTest
+public class JdbcExtractionNamespaceTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-  private static final Logger log = new Logger(JDBCExtractionNamespaceTest.class);
+  private static final Logger log = new Logger(JdbcExtractionNamespaceTest.class);
   private static final String tableName = "abstractDbRenameTest";
   private static final String keyName = "keyName";
   private static final String valName = "valName";
@@ -87,7 +87,7 @@ public class JDBCExtractionNamespaceTest
     );
   }
 
-  public JDBCExtractionNamespaceTest(
+  public JdbcExtractionNamespaceTest(
       String tsColumn
   )
   {
@@ -186,25 +186,25 @@ public class JDBCExtractionNamespaceTest
             NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
             scheduler = new CacheScheduler(
                 noopServiceEmitter,
-                ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
-                    JDBCExtractionNamespace.class,
-                    new ExtractionNamespaceCacheFactory<JDBCExtractionNamespace>()
+                ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+                    JdbcExtractionNamespace.class,
+                    new CacheGenerator<JdbcExtractionNamespace>()
                     {
-                      private final JDBCExtractionNamespaceCacheFactory delegate =
-                          new JDBCExtractionNamespaceCacheFactory();
+                      private final JdbcCacheGenerator delegate =
+                          new JdbcCacheGenerator();
                       @Override
-                      public CacheScheduler.VersionedCache populateCache(
-                          final JDBCExtractionNamespace namespace,
-                          final CacheScheduler.EntryImpl<JDBCExtractionNamespace> id,
+                      public CacheScheduler.VersionedCache generateCache(
+                          final JdbcExtractionNamespace namespace,
+                          final CacheScheduler.EntryImpl<JdbcExtractionNamespace> id,
                           final String lastVersion,
                           final CacheScheduler scheduler
                       ) throws InterruptedException
                       {
                         updateLock.lockInterruptibly();
                         try {
-                          log.debug("Running cache populator");
+                          log.debug("Running cache generator");
                           try {
-                            return delegate.populateCache(namespace, id, lastVersion, scheduler);
+                            return delegate.generateCache(namespace, id, lastVersion, scheduler);
                           }
                           finally {
                             updates.incrementAndGet();
@@ -355,7 +355,7 @@ public class JDBCExtractionNamespaceTest
       throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, ExecutionException,
              InterruptedException, TimeoutException
   {
-    final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
+    final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         tableName,
         keyName,
@@ -364,7 +364,7 @@ public class JDBCExtractionNamespaceTest
         new Period(0)
     );
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
-      NamespaceExtractionCacheManagerExecutorsTest.waitFor(entry);
+      CacheSchedulerTest.waitFor(entry);
       final Map<String, String> map = entry.getCache();
 
       for (Map.Entry<String, String> e : renames.entrySet()) {
@@ -403,7 +403,7 @@ public class JDBCExtractionNamespaceTest
   private CacheScheduler.Entry ensureEntry()
       throws NoSuchFieldException, IllegalAccessException, InterruptedException
   {
-    final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
+    final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         tableName,
         keyName,

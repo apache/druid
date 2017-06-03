@@ -27,8 +27,8 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.LazySingleton;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import sun.misc.Cleaner;
 
 import javax.annotation.Nullable;
@@ -70,9 +70,9 @@ public final class CacheScheduler
   {
     private final EntryImpl<T> impl;
 
-    private Entry(final T namespace, final ExtractionNamespaceCacheFactory<T> cachePopulator)
+    private Entry(final T namespace, final CacheGenerator<T> cacheGenerator)
     {
-      impl = new EntryImpl<>(namespace, this, cachePopulator);
+      impl = new EntryImpl<>(namespace, this, cacheGenerator);
     }
 
     /**
@@ -143,18 +143,18 @@ public final class CacheScheduler
     private final AtomicReference<CacheState> cacheStateHolder = new AtomicReference<CacheState>(NoCache.CACHE_NOT_INITIALIZED);
     private final Future<?> updaterFuture;
     private final Cleaner entryCleaner;
-    private final ExtractionNamespaceCacheFactory<T> cachePopulator;
+    private final CacheGenerator<T> cacheGenerator;
     private final UpdateCounter updateCounter = new UpdateCounter();
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
-    private EntryImpl(final T namespace, final Entry<T> entry, final ExtractionNamespaceCacheFactory<T> cachePopulator)
+    private EntryImpl(final T namespace, final Entry<T> entry, final CacheGenerator<T> cacheGenerator)
     {
       try {
         this.namespace = namespace;
         this.asString = String.format("namespace [%s] : %s", namespace, super.toString());
         this.updaterFuture = schedule(namespace);
         this.entryCleaner = createCleaner(entry);
-        this.cachePopulator = cachePopulator;
+        this.cacheGenerator = cacheGenerator;
         activeEntries.incrementAndGet();
       }
       finally {
@@ -221,7 +221,7 @@ public final class CacheScheduler
       boolean updatedCacheSuccessfully = false;
       VersionedCache newVersionedCache = null;
       try {
-        newVersionedCache = cachePopulator.populateCache(namespace, this, currentVersion, CacheScheduler.this
+        newVersionedCache = cacheGenerator.generateCache(namespace, this, currentVersion, CacheScheduler.this
         );
         if (newVersionedCache != null) {
           CacheState previousCacheState = swapCacheState(newVersionedCache);
@@ -408,7 +408,7 @@ public final class CacheScheduler
     }
   }
 
-  private final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespacePopulatorMap;
+  private final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceGeneratorMap;
   private final NamespaceExtractionCacheManager cacheManager;
   private final AtomicLong updatesStarted = new AtomicLong(0);
   private final AtomicInteger activeEntries = new AtomicInteger();
@@ -416,11 +416,11 @@ public final class CacheScheduler
   @Inject
   public CacheScheduler(
       final ServiceEmitter serviceEmitter,
-      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespacePopulatorMap,
+      final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceGeneratorMap,
       NamespaceExtractionCacheManager cacheManager
   )
   {
-    this.namespacePopulatorMap = namespacePopulatorMap;
+    this.namespaceGeneratorMap = namespaceGeneratorMap;
     this.cacheManager = cacheManager;
     cacheManager.scheduledExecutorService().scheduleAtFixedRate(
         new Runnable()
@@ -452,7 +452,7 @@ public final class CacheScheduler
   }
 
   /**
-   * This method should be used from {@link ExtractionNamespaceCacheFactory#populateCache} implementations, to obtain
+   * This method should be used from {@link io.druid.query.lookup.namespace.CacheGenerator#generateCache} implementations, to obtain
    * a {@link VersionedCache} to be returned.
    *
    * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry}, for which VersionedCache is
@@ -502,11 +502,10 @@ public final class CacheScheduler
 
   public <T extends ExtractionNamespace> Entry schedule(final T namespace)
   {
-    final ExtractionNamespaceCacheFactory<T> populator =
-        (ExtractionNamespaceCacheFactory<T>) namespacePopulatorMap.get(namespace.getClass());
-    if (populator == null) {
-      throw new ISE("Cannot find populator for namespace [%s]", namespace);
+    final CacheGenerator<T> generator = (CacheGenerator<T>) namespaceGeneratorMap.get(namespace.getClass());
+    if (generator == null) {
+      throw new ISE("Cannot find generator for namespace [%s]", namespace);
     }
-    return new Entry<>(namespace, populator);
+    return new Entry<>(namespace, generator);
   }
 }

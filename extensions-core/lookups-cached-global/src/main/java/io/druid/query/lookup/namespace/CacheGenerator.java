@@ -26,25 +26,25 @@ import javax.annotation.Nullable;
 /**
  *
  */
-public interface ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
+public interface CacheGenerator<T extends ExtractionNamespace>
 {
   /**
-   * If the lookup source, encapsulated by this {@code ExtractionNamespaceCacheFactory}, has data newer than identified
+   * If the lookup source, encapsulated by this {@code CacheGenerator}, has data newer than identified
    * by the given {@code lastVersion} (which is null at the first run of this method, or the version from the previous
    * run), this method creates a new {@code CacheScheduler.VersionedCache} with {@link
    * CacheScheduler#createVersionedCache}, called on the given {@code scheduler}, with the version string identifying
    * the current version of lookup source, populates the created {@code VersionedCache} and returns it. If the lookup
    * source is up-to-date, this methods returns null.
    *
-   * @param namespace The ExtractionNamespace for which to populate data.
-   * @param id An object uniquely corresponding to the {@link CacheScheduler.Entry}, for which this populateCache()
+   * @param namespace The ExtractionNamespace for which to generate cache.
+   * @param id An object uniquely corresponding to the {@link CacheScheduler.Entry}, for which this generateCache()
    *           method is called. Also it has the same toString() representation, that is useful for logging
    * @param lastVersion The version which was last cached
    * @param scheduler Should be used only to call {@link CacheScheduler#createVersionedCache}.
    * @return the new cache along with the new version, or null if the last version is up-to-date.
    */
   @Nullable
-  CacheScheduler.VersionedCache populateCache(
+  CacheScheduler.VersionedCache generateCache(
       T namespace,
       CacheScheduler.EntryImpl<T> id,
       String lastVersion,
