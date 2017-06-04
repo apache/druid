@@ -21,7 +21,6 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -31,15 +30,8 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
-import io.druid.timeline.partition.NumberedShardSpec;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.TaskType;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -58,229 +50,6 @@ public class HadoopDruidIndexerConfigTest
     jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
   }
 
-  public static <T> T jsonReadWriteRead(String s, Class<T> klass)
-  {
-    try {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  @Test
-  public void shouldMakeHDFSCompliantSegmentOutputPath()
-  {
-    HadoopIngestionSpec schema;
-
-    try {
-      schema = jsonReadWriteRead(
-          "{\n"
-          + "    \"dataSchema\": {\n"
-          + "        \"dataSource\": \"source\",\n"
-          + "        \"metricsSpec\": [],\n"
-          + "        \"granularitySpec\": {\n"
-          + "            \"type\": \"uniform\",\n"
-          + "            \"segmentGranularity\": \"hour\",\n"
-          + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
-          + "        }\n"
-          + "    },\n"
-          + "    \"ioConfig\": {\n"
-          + "        \"type\": \"hadoop\",\n"
-          + "        \"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\"\n"
-          + "    }\n"
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withTuningConfig(
-            schema.getTuningConfig()
-                  .withVersion(
-                      "some:brand:new:version"
-                  )
-        )
-    );
-
-    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = JobHelper.makeFileNamePath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new DistributedFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            -1
-        ),
-        JobHelper.INDEX_ZIP
-    );
-    Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
-        + "/4712_index.zip",
-        path.toString()
-    );
-
-    path = JobHelper.makeFileNamePath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new DistributedFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            -1
-        ),
-        JobHelper.DESCRIPTOR_JSON
-    );
-    Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
-        + "/4712_descriptor.json",
-        path.toString()
-    );
-
-    path = JobHelper.makeTmpPath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new DistributedFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            -1
-        ),
-        new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0)
-    );
-    Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
-        + "/4712_index.zip.0",
-        path.toString()
-    );
-
-  }
-
-  @Test
-  public void shouldMakeDefaultSegmentOutputPathIfNotHDFS()
-  {
-    final HadoopIngestionSpec schema;
-
-    try {
-      schema = jsonReadWriteRead(
-          "{\n"
-          + "    \"dataSchema\": {\n"
-          + "        \"dataSource\": \"the:data:source\",\n"
-          + "        \"metricsSpec\": [],\n"
-          + "        \"granularitySpec\": {\n"
-          + "            \"type\": \"uniform\",\n"
-          + "            \"segmentGranularity\": \"hour\",\n"
-          + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
-          + "        }\n"
-          + "    },\n"
-          + "    \"ioConfig\": {\n"
-          + "        \"type\": \"hadoop\",\n"
-          + "        \"segmentOutputPath\": \"/tmp/dru:id/data:test\"\n"
-          + "    }\n"
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withTuningConfig(
-            schema.getTuningConfig()
-                  .withVersion(
-                      "some:brand:new:version"
-                  )
-        )
-    );
-
-    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = JobHelper.makeFileNamePath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new LocalFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            -1
-        ),
-        JobHelper.INDEX_ZIP
-    );
-    Assert.assertEquals(
-        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
-        + "version/4712/index.zip",
-        path.toString()
-    );
-
-    path = JobHelper.makeFileNamePath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new LocalFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            -1
-        ),
-        JobHelper.DESCRIPTOR_JSON
-    );
-    Assert.assertEquals(
-        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
-        + "version/4712/descriptor.json",
-        path.toString()
-    );
-
-    path = JobHelper.makeTmpPath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new LocalFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            -1
-        ),
-        new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0)
-    );
-    Assert.assertEquals(
-        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
-        + "version/4712/4712_index.zip.0",
-        path.toString()
-    );
-
-  }
 
   @Test
   public void testHashedBucketSelection()
@@ -325,7 +94,8 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             false,
-            false
+            false,
+            null
         )
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
@@ -397,7 +167,8 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             false,
-            false
+            false,
+            null
         )
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
