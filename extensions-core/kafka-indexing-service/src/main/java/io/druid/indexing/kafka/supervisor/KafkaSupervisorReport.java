@@ -19,12 +19,14 @@
 
 package io.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -50,10 +52,10 @@ public class KafkaSupervisorReport extends SupervisorReport
         Integer partitions,
         Integer replicas,
         Long durationSeconds,
-        Map<Integer, Long> latestOffsets,
-        Map<Integer, Long> minimumLag,
-        Long aggregateLag,
-        DateTime offsetsLastUpdated
+        @Nullable Map<Integer, Long> latestOffsets,
+        @Nullable Map<Integer, Long> minimumLag,
+        @Nullable Long aggregateLag,
+        @Nullable DateTime offsetsLastUpdated
     )
     {
       this.dataSource = dataSource;
@@ -112,18 +114,21 @@ public class KafkaSupervisorReport extends SupervisorReport
     }
 
     @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public Map<Integer, Long> getLatestOffsets()
     {
       return latestOffsets;
     }
 
     @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public Map<Integer, Long> getMinimumLag()
     {
       return minimumLag;
     }
 
     @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public Long getAggregateLag()
     {
       return aggregateLag;
@@ -163,10 +168,10 @@ public class KafkaSupervisorReport extends SupervisorReport
       Integer partitions,
       Integer replicas,
       Long durationSeconds,
-      Map<Integer, Long> latestOffsets,
-      Map<Integer, Long> minimumLag,
-      Long aggregateLag,
-      DateTime offsetsLastUpdated
+      @Nullable Map<Integer, Long> latestOffsets,
+      @Nullable Map<Integer, Long> minimumLag,
+      @Nullable Long aggregateLag,
+      @Nullable DateTime offsetsLastUpdated
   )
   {
     super(dataSource, generationTime);

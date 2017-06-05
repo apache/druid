@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class TaskReportData
@@ -42,12 +43,12 @@ public class TaskReportData
 
   public TaskReportData(
       String id,
-      Map<Integer, Long> startingOffsets,
-      Map<Integer, Long> currentOffsets,
+      @Nullable Map<Integer, Long> startingOffsets,
+      @Nullable Map<Integer, Long> currentOffsets,
       DateTime startTime,
       Long remainingSeconds,
       TaskType type,
-      Map<Integer, Long> lag
+      @Nullable Map<Integer, Long> lag
   )
   {
     this.id = id;
@@ -66,6 +67,7 @@ public class TaskReportData
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<Integer, Long> getStartingOffsets()
   {
     return startingOffsets;
