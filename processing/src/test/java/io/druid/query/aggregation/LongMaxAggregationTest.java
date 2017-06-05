@@ -20,8 +20,8 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,7 +42,7 @@ public class LongMaxAggregationTest
   public LongMaxAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"longMax\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    longMaxAggFactory = new DefaultObjectMapper().readValue(aggSpecJson , LongMaxAggregatorFactory.class);
+    longMaxAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, LongMaxAggregatorFactory.class);
   }
 
   @Before

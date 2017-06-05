@@ -21,13 +21,37 @@ package io.druid.math.expr;
 
 import com.google.common.math.LongMath;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
  */
 public interface Expr
 {
+  default boolean isLiteral()
+  {
+    // Overridden by things that are literals.
+    return false;
+  }
+
+  /**
+   * Returns the value of expr if expr is a literal, or throws an exception otherwise.
+   *
+   * @return expr's literal value
+   *
+   * @throws IllegalStateException if expr is not a literal
+   */
+  @Nullable
+  default Object getLiteralValue()
+  {
+    // Overridden by things that are literals.
+    throw new ISE("Not a literal");
+  }
+
+  @Nonnull
   ExprEval eval(ObjectBinding bindings);
 
   interface ObjectBinding
@@ -46,6 +70,12 @@ public interface Expr
 abstract class ConstantExpr implements Expr
 {
   @Override
+  public boolean isLiteral()
+  {
+    return true;
+  }
+
+  @Override
   public void visit(Visitor visitor)
   {
     visitor.visit(this);
@@ -61,12 +91,20 @@ class LongExpr extends ConstantExpr
     this.value = value;
   }
 
+  @Nullable
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
+  }
+
   @Override
   public String toString()
   {
     return String.valueOf(value);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -83,12 +121,20 @@ class StringExpr extends ConstantExpr
     this.value = value;
   }
 
+  @Nullable
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
+  }
+
   @Override
   public String toString()
   {
     return value;
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -105,12 +151,20 @@ class DoubleExpr extends ConstantExpr
     this.value = value;
   }
 
+  @Nullable
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
+  }
+
   @Override
   public String toString()
   {
     return String.valueOf(value);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -133,6 +187,7 @@ class IdentifierExpr implements Expr
     return value;
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -148,11 +203,13 @@ class IdentifierExpr implements Expr
 
 class FunctionExpr implements Expr
 {
+  final Function function;
   final String name;
   final List<Expr> args;
 
-  public FunctionExpr(String name, List<Expr> args)
+  public FunctionExpr(Function function, String name, List<Expr> args)
   {
+    this.function = function;
     this.name = name;
     this.args = args;
   }
@@ -163,10 +220,11 @@ class FunctionExpr implements Expr
     return "(" + name + " " + args + ")";
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return Parser.getFunction(name).apply(args, bindings);
+    return function.apply(args, bindings);
   }
 
   @Override
@@ -203,6 +261,7 @@ class UnaryMinusExpr extends UnaryExpr
     super(expr);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -237,6 +296,7 @@ class UnaryNotExpr extends UnaryExpr
     super(expr);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -290,6 +350,7 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
     super(op, left, right);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -347,7 +408,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   @Override
   protected final long evalLong(long left, long right)
   {
-    return LongMath.pow(left, (int)right);
+    return LongMath.pow(left, (int) right);
   }
 
   @Override
@@ -606,6 +667,7 @@ class BinAndExpr extends BinaryOpExprBase
     super(op, left, right);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -621,6 +683,7 @@ class BinOrExpr extends BinaryOpExprBase
     super(op, left, right);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {

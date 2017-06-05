@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedRow;
@@ -26,7 +27,9 @@ import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.Result;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.column.ColumnConfig;
 import org.junit.Assert;
@@ -41,12 +44,11 @@ public class TestHelper
   private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
-  public static final ObjectMapper JSON_MAPPER;
 
   static {
-    JSON_MAPPER = new DefaultObjectMapper();
+    final ObjectMapper jsonMapper = getJsonMapper();
     INDEX_IO = new IndexIO(
-        JSON_MAPPER,
+        jsonMapper,
         new ColumnConfig()
         {
           @Override
@@ -56,15 +58,9 @@ public class TestHelper
           }
         }
     );
-    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER = new IndexMerger(jsonMapper, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(jsonMapper, INDEX_IO);
   }
-
-  public static ObjectMapper getTestObjectMapper()
-  {
-    return JSON_MAPPER;
-  }
-
 
   public static IndexMerger getTestIndexMerger()
   {
@@ -81,11 +77,30 @@ public class TestHelper
     return INDEX_IO;
   }
 
-  public static ObjectMapper getObjectMapper() {
-    return JSON_MAPPER;
+  public static ObjectMapper getJsonMapper()
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+    );
+    return mapper;
   }
 
-  public static <T> Iterable<T> revert(Iterable<T> input) {
+  public static ObjectMapper getSmileMapper()
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+    );
+    return mapper;
+  }
+
+  public static <T> Iterable<T> revert(Iterable<T> input)
+  {
     return Lists.reverse(Lists.newArrayList(input));
   }
 
@@ -272,7 +287,11 @@ public class TestHelper
   {
     // Custom equals check to get fuzzy comparison of numerics, useful because different groupBy strategies don't
     // always generate exactly the same results (different merge ordering / float vs double)
-    Assert.assertEquals(String.format("%s: timestamp", msg), expected.getTimestamp().getMillis(), actual.getTimestamp().getMillis());
+    Assert.assertEquals(
+        String.format("%s: timestamp", msg),
+        expected.getTimestamp().getMillis(),
+        actual.getTimestamp().getMillis()
+    );
 
     final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
     final Map<String, Object> actualMap = ((MapBasedRow) actual).getEvent();

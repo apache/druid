@@ -19,18 +19,19 @@
 
 package io.druid.query.aggregation.post;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import io.druid.math.expr.Expr;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -55,15 +56,20 @@ public class ExpressionPostAggregator implements PostAggregator
   private final String expression;
   private final Comparator comparator;
   private final String ordering;
+  private final ExprMacroTable macroTable;
 
   private final Expr parsed;
-  private final List<String> dependentFields;
+  private final Set<String> dependentFields;
 
+  /**
+   * Constructor for serialization.
+   */
   @JsonCreator
   public ExpressionPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
-      @JsonProperty("ordering") String ordering
+      @JsonProperty("ordering") String ordering,
+      @JacksonInject ExprMacroTable macroTable
   )
   {
     Preconditions.checkArgument(expression != null, "expression cannot be null");
@@ -72,20 +78,20 @@ public class ExpressionPostAggregator implements PostAggregator
     this.expression = expression;
     this.ordering = ordering;
     this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
-
-    this.parsed = Parser.parse(expression);
-    this.dependentFields = Parser.findRequiredBindings(parsed);
+    this.macroTable = macroTable;
+    this.parsed = Parser.parse(expression, macroTable);
+    this.dependentFields = ImmutableSet.copyOf(Parser.findRequiredBindings(parsed));
   }
 
   public ExpressionPostAggregator(String name, String fnName)
   {
-    this(name, fnName, null);
+    this(name, fnName, null, ExprMacroTable.nil());
   }
 
   @Override
   public Set<String> getDependentFields()
   {
-    return Sets.newHashSet(dependentFields);
+    return dependentFields;
   }
 
   @Override

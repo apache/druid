@@ -21,8 +21,8 @@ package io.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,7 +31,7 @@ import java.util.concurrent.TimeoutException;
 
 public class QueryInterruptedExceptionTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final ObjectMapper MAPPER = TestHelper.getJsonMapper();
 
   @Test
   public void testErrorCode()

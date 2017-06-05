@@ -22,7 +22,6 @@ package io.druid.query.timeseries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
@@ -32,6 +31,7 @@ import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.segment.TestHelper;
 import io.druid.segment.VirtualColumns;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -98,7 +98,7 @@ public class TimeseriesQueryQueryToolChestTest
 
     Object preparedValue = strategy.prepareForCache().apply(result);
 
-    ObjectMapper objectMapper = new DefaultObjectMapper();
+    ObjectMapper objectMapper = TestHelper.getJsonMapper();
     Object fromCacheValue = objectMapper.readValue(
         objectMapper.writeValueAsBytes(preparedValue),
         strategy.getCacheObjectClazz()

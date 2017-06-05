@@ -17,28 +17,21 @@
  * under the License.
  */
 
-package io.druid.query.lookup;
+package io.druid.query.expression;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import com.google.common.collect.ImmutableList;
+import io.druid.math.expr.ExprMacroTable;
 
-import java.io.IOException;
-
-public class LookupConfigTest
+public class TestExprMacroTable extends ExprMacroTable
 {
+  public static final ExprMacroTable INSTANCE = new TestExprMacroTable();
 
-  ObjectMapper mapper = TestHelper.getJsonMapper();
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Test
-  public void TestSerDesr() throws IOException
+  private TestExprMacroTable()
   {
-    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
-    Assert.assertEquals(lookupConfig, mapper.reader(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig)));
+    super(
+        ImmutableList.of(
+            new LikeExprMacro()
+        )
+    );
   }
 }

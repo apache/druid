@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
@@ -27,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
@@ -35,6 +37,9 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.guice.ExpressionModule;
+import io.druid.guice.annotations.Json;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
@@ -93,6 +98,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -109,6 +115,66 @@ public class CalciteTests
   private static final String TIMESTAMP_COLUMN = "t";
   private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
+  private static final Injector INJECTOR = Guice.createInjector(
+      new Module()
+      {
+        @Override
+        public void configure(final Binder binder)
+        {
+          binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.getJsonMapper());
+
+          // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
+
+          final LookupReferencesManager mock = EasyMock.createMock(LookupReferencesManager.class);
+          EasyMock.expect(mock.get(EasyMock.eq("lookyloo"))).andReturn(
+              new LookupExtractorFactoryContainer(
+                  "v0",
+                  new LookupExtractorFactory()
+                  {
+                    @Override
+                    public boolean start()
+                    {
+                      throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public boolean close()
+                    {
+                      throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public boolean replaces(@Nullable final LookupExtractorFactory other)
+                    {
+                      throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public LookupIntrospectHandler getIntrospectHandler()
+                    {
+                      throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public LookupExtractor get()
+                    {
+                      return new MapLookupExtractor(
+                          ImmutableMap.of(
+                              "a", "xa",
+                              "abc", "xabc"
+                          ),
+                          false
+                      );
+                    }
+                  }
+              )
+          ).anyTimes();
+          EasyMock.replay(mock);
+          binder.bind(LookupReferencesManager.class).toInstance(mock);
+        }
+      }
+  );
+
   private static final QueryRunnerFactoryConglomerate CONGLOMERATE = new DefaultQueryRunnerFactoryConglomerate(
       ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
           .put(
@@ -124,7 +190,7 @@ public class CalciteTests
               SelectQuery.class,
               new SelectQueryRunnerFactory(
                   new SelectQueryQueryToolChest(
-                      TestHelper.getObjectMapper(),
+                      TestHelper.getJsonMapper(),
                       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
                       selectConfigSupplier
                   ),
@@ -284,76 +350,27 @@ public class CalciteTests
     );
   }
 
+  public static ExprMacroTable createExprMacroTable()
+  {
+    final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
+    for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
+      exprMacros.add(INJECTOR.getInstance(clazz));
+    }
+    return new ExprMacroTable(exprMacros);
+  }
+
   public static DruidOperatorTable createOperatorTable()
   {
     try {
-      final Injector injector = Guice.createInjector(
-          new Module()
-          {
-            @Override
-            public void configure(final Binder binder)
-            {
-              // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
-
-              final LookupReferencesManager mock = EasyMock.createMock(LookupReferencesManager.class);
-              EasyMock.expect(mock.get(EasyMock.eq("lookyloo"))).andReturn(
-                  new LookupExtractorFactoryContainer(
-                      "v0",
-                      new LookupExtractorFactory()
-                      {
-                        @Override
-                        public boolean start()
-                        {
-                          throw new UnsupportedOperationException();
-                        }
-
-                        @Override
-                        public boolean close()
-                        {
-                          throw new UnsupportedOperationException();
-                        }
-
-                        @Override
-                        public boolean replaces(@Nullable final LookupExtractorFactory other)
-                        {
-                          throw new UnsupportedOperationException();
-                        }
-
-                        @Nullable
-                        @Override
-                        public LookupIntrospectHandler getIntrospectHandler()
-                        {
-                          throw new UnsupportedOperationException();
-                        }
-
-                        @Override
-                        public LookupExtractor get()
-                        {
-                          return new MapLookupExtractor(
-                              ImmutableMap.of(
-                                  "a", "xa",
-                                  "abc", "xabc"
-                              ),
-                              false
-                          );
-                        }
-                      }
-                  )
-              ).anyTimes();
-              EasyMock.replay(mock);
-              binder.bind(LookupReferencesManager.class).toInstance(mock);
-            }
-          }
-      );
       final Set<SqlAggregator> aggregators = new HashSet<>();
       final Set<SqlExtractionOperator> extractionOperators = new HashSet<>();
 
       for (Class<? extends SqlAggregator> clazz : SqlModule.DEFAULT_AGGREGATOR_CLASSES) {
-        aggregators.add(injector.getInstance(clazz));
+        aggregators.add(INJECTOR.getInstance(clazz));
       }
 
       for (Class<? extends SqlExtractionOperator> clazz : SqlModule.DEFAULT_EXTRACTION_OPERATOR_CLASSES) {
-        extractionOperators.add(injector.getInstance(clazz));
+        extractionOperators.add(INJECTOR.getInstance(clazz));
       }
 
       return new DruidOperatorTable(aggregators, extractionOperators);

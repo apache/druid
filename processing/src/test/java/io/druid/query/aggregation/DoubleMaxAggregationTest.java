@@ -20,8 +20,8 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Doubles;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,7 +42,7 @@ public class DoubleMaxAggregationTest
   public DoubleMaxAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"doubleMax\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    doubleMaxAggFactory = new DefaultObjectMapper().readValue(aggSpecJson , DoubleMaxAggregatorFactory.class);
+    doubleMaxAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, DoubleMaxAggregatorFactory.class);
   }
 
   @Before

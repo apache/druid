@@ -21,6 +21,7 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import io.druid.math.expr.ExprMacroTable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.QueryProvider;
@@ -40,17 +41,23 @@ public class PlannerContext
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
 
+  private final DruidOperatorTable operatorTable;
+  private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
   private final long queryStartTimeMillis;
   private final Map<String, Object> queryContext;
 
   private PlannerContext(
+      final DruidOperatorTable operatorTable,
+      final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
       final Map<String, Object> queryContext
   )
   {
+    this.operatorTable = operatorTable;
+    this.macroTable = macroTable;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.queryContext = queryContext != null ? ImmutableMap.copyOf(queryContext) : ImmutableMap.<String, Object>of();
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
@@ -58,6 +65,8 @@ public class PlannerContext
   }
 
   public static PlannerContext create(
+      final DruidOperatorTable operatorTable,
+      final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext
   )
@@ -85,7 +94,23 @@ public class PlannerContext
       timeZone = DateTimeZone.UTC;
     }
 
-    return new PlannerContext(plannerConfig.withOverrides(queryContext), utcNow.withZone(timeZone), queryContext);
+    return new PlannerContext(
+        operatorTable,
+        macroTable,
+        plannerConfig.withOverrides(queryContext),
+        utcNow.withZone(timeZone),
+        queryContext
+    );
+  }
+
+  public DruidOperatorTable getOperatorTable()
+  {
+    return operatorTable;
+  }
+
+  public ExprMacroTable getExprMacroTable()
+  {
+    return macroTable;
   }
 
   public PlannerConfig getPlannerConfig()

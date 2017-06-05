@@ -117,8 +117,8 @@ public class SearchQueryRunnerTest
   public void testSearchHitSerDe() throws Exception
   {
     for (SearchHit hit : Arrays.asList(new SearchHit("dim1", "val1"), new SearchHit("dim2", "val2", 3))) {
-      SearchHit read = TestHelper.JSON_MAPPER.readValue(
-          TestHelper.JSON_MAPPER.writeValueAsString(hit),
+      SearchHit read = TestHelper.getJsonMapper().readValue(
+          TestHelper.getJsonMapper().writeValueAsString(hit),
           SearchHit.class
       );
       Assert.assertEquals(hit, read);

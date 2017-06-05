@@ -136,7 +136,14 @@ public class QuantileSqlAggregatorTest
         ImmutableSet.<SqlAggregator>of(new QuantileSqlAggregator()),
         ImmutableSet.<SqlExtractionOperator>of()
     );
-    plannerFactory = new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig, new ServerConfig());
+    plannerFactory = new PlannerFactory(
+        rootSchema,
+        walker,
+        operatorTable,
+        CalciteTests.createExprMacroTable(),
+        plannerConfig,
+        new ServerConfig()
+    );
   }
 
   @After

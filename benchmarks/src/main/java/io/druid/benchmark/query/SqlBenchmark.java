@@ -178,6 +178,7 @@ public class SqlBenchmark
         Calcites.createRootSchema(druidSchema),
         walker,
         CalciteTests.createOperatorTable(),
+        CalciteTests.createExprMacroTable(),
         plannerConfig,
         new ServerConfig()
     );

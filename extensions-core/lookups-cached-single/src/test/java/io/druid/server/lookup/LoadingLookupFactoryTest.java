@@ -104,7 +104,7 @@ public class LoadingLookupFactoryTest
   @Test
   public void testSerDeser() throws IOException
   {
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
     LoadingLookupFactory loadingLookupFactory = new LoadingLookupFactory(
         new MockDataFetcher(),
         new OnHeapLoadingCache<String, String>(
