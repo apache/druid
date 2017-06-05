@@ -194,7 +194,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT
+        TEST_SHUTDOWN_TIMEOUT,
+        null
     );
 
     topic = getTopic();
@@ -999,6 +1000,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
+    supervisor.updateCurrentAndLatestOffsets().run();
     SupervisorReport report = supervisor.getStatus();
     verifyAll();
 
@@ -1088,6 +1090,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
+    supervisor.updateCurrentAndLatestOffsets().run();
     SupervisorReport report = supervisor.getStatus();
     verifyAll();
 
@@ -1142,7 +1145,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final DateTime startTime = new DateTime();
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
-    addSomeEvents(1);
+    addSomeEvents(6);
 
     Task id1 = createKafkaIndexTask(
         "id1",
@@ -1157,7 +1160,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "id2",
         DATASOURCE,
         "sequenceName-0",
-        new KafkaPartitions("topic", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 1L, 1, 2L, 2, 3L)),
         new KafkaPartitions("topic", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
         null
     );
@@ -1183,16 +1186,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(KafkaIndexTask.Status.READING));
     expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     expect(taskClient.getCurrentOffsetsAsync("id1", false))
-        .andReturn(Futures.immediateFuture((Map<Integer, Long>) ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)));
-    expect(taskClient.getCurrentOffsets("id1", true)).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
+        .andReturn(Futures.immediateFuture((Map<Integer, Long>) ImmutableMap.of(0, 1L, 1, 2L, 2, 3L)));
+    expect(taskClient.getCurrentOffsets("id1", true)).andReturn(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L));
     expect(taskClient.getCurrentOffsetsAsync("id2", false))
-        .andReturn(Futures.immediateFuture((Map<Integer, Long>) ImmutableMap.of(0, 40L, 1, 50L, 2, 60L)));
+        .andReturn(Futures.immediateFuture((Map<Integer, Long>) ImmutableMap.of(0, 4L, 1, 5L, 2, 6L)));
 
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
     replayAll();
 
     supervisor.start();
     supervisor.runInternal();
+    supervisor.updateCurrentAndLatestOffsets().run();
     SupervisorReport report = supervisor.getStatus();
     verifyAll();
 
@@ -1215,12 +1219,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     Assert.assertEquals("id2", activeReport.getId());
     Assert.assertEquals(startTime, activeReport.getStartTime());
-    Assert.assertEquals(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L), activeReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(0, 40L, 1, 50L, 2, 60L), activeReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L), activeReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 4L, 1, 5L, 2, 6L), activeReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 2L, 1, 1L, 2, 0L), activeReport.getLag());
 
     Assert.assertEquals("id1", publishingReport.getId());
     Assert.assertEquals(ImmutableMap.of(0, 0L, 1, 0L, 2, 0L), publishingReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L), publishingReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L), publishingReport.getCurrentOffsets());
+    Assert.assertEquals(null, publishingReport.getLag());
+
+    Assert.assertEquals(ImmutableMap.of(0, 6L, 1, 6L, 2, 6L), payload.getLatestOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 2L, 1, 1L, 2, 0L), payload.getMinimumLag());
+    Assert.assertEquals(3L, (long) payload.getAggregateLag());
+    Assert.assertTrue(payload.getOffsetsLastUpdated().plusMinutes(1).isAfterNow());
   }
 
   @Test
