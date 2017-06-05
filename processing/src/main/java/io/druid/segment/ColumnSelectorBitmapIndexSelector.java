@@ -110,6 +110,21 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   }
 
   @Override
+  public boolean hasMultipleValues(final String dimension)
+  {
+    if (isFilterableVirtualColumn(dimension)) {
+      return virtualColumns.getVirtualColumn(dimension).capabilities(dimension).hasMultipleValues();
+    }
+
+    final Column column = index.getColumn(dimension);
+    if (column == null || !columnSupportsFiltering(column)) {
+      return false;
+    } else {
+      return column.getCapabilities().hasMultipleValues();
+    }
+  }
+
+  @Override
   public int getNumRows()
   {
     try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
