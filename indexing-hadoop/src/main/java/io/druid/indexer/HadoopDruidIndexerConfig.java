@@ -72,6 +72,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -195,7 +196,7 @@ public class HadoopDruidIndexerConfig
     {
       Path pt = new Path(path);
       FileSystem fs = pt.getFileSystem(new Configuration());
-      Reader reader = new InputStreamReader(fs.open(pt));
+      Reader reader = new InputStreamReader(fs.open(pt), StandardCharsets.UTF_8);
 
       return fromMap(
           (Map<String, Object>) HadoopDruidIndexerConfig.JSON_MAPPER.readValue(

@@ -35,12 +35,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -89,9 +89,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     for (int i = 0; i < 10; i++) {
       // Each file is 1390 bytes
-      try (final Writer writer = new BufferedWriter(
-          new FileWriter(new File(testDir, "test_" + i))
-      )) {
+      try (final Writer writer = Files.newBufferedWriter(new File(testDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
         for (int j = 0; j < 100; j++) {
           final String a = (20171220 + i) + "," + i + "," + j + "\n";
           writer.write(a);

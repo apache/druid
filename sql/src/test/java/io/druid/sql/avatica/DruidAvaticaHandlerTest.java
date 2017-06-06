@@ -103,6 +103,8 @@ public class DruidAvaticaHandlerTest
   private Server server;
   private Connection client;
   private Connection clientLosAngeles;
+  private DruidMeta druidMeta;
+  private String url;
 
   @Before
   public void setUp() throws Exception
@@ -118,11 +120,12 @@ public class DruidAvaticaHandlerTest
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    druidMeta = new DruidMeta(
+        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
+        AVATICA_CONFIG
+    );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        new DruidMeta(
-            new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
-            AVATICA_CONFIG
-        ),
+        druidMeta,
         new DruidNode("dummy", "dummy", 1),
         new AvaticaMonitor()
     );
@@ -130,7 +133,7 @@ public class DruidAvaticaHandlerTest
     server = new Server(new InetSocketAddress("127.0.0.1", port));
     server.setHandler(handler);
     server.start();
-    final String url = String.format(
+    url = String.format(
         "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
         port,
         DruidAvaticaHandler.AVATICA_PATH
@@ -425,6 +428,90 @@ public class DruidAvaticaHandlerTest
     client.createStatement().close();
     client.createStatement().close();
 
+    Assert.assertTrue(true);
+  }
+
+  @Test
+  public void testNotTooManyStatementsWhenYouFullyIterateThem() throws Exception
+  {
+    for (int i = 0; i < 50; i++) {
+      final ResultSet resultSet = client.createStatement().executeQuery(
+          "SELECT COUNT(*) AS cnt FROM druid.foo"
+      );
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("cnt", 6L)
+          ),
+          getRows(resultSet)
+      );
+    }
+
+    Assert.assertTrue(true);
+  }
+
+  @Test
+  public void testNotTooManyStatementsWhenTheyThrowErrors() throws Exception
+  {
+    for (int i = 0; i < 50; i++) {
+      Exception thrown = null;
+      try {
+        client.createStatement().executeQuery("SELECT SUM(nonexistent) FROM druid.foo");
+      }
+      catch (Exception e) {
+        thrown = e;
+      }
+
+      Assert.assertNotNull(thrown);
+
+      final ResultSet resultSet = client.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      Assert.assertEquals(
+          ImmutableList.of(ImmutableMap.of("cnt", 6L)),
+          getRows(resultSet)
+      );
+    }
+
+    Assert.assertTrue(true);
+  }
+
+  @Test
+  public void testAutoReconnectOnNoSuchConnection() throws Exception
+  {
+    for (int i = 0; i < 50; i++) {
+      final ResultSet resultSet = client.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      Assert.assertEquals(
+          ImmutableList.of(ImmutableMap.of("cnt", 6L)),
+          getRows(resultSet)
+      );
+      druidMeta.closeAllConnections();
+    }
+
+    Assert.assertTrue(true);
+  }
+
+  @Test
+  public void testTooManyConnections() throws Exception
+  {
+    final Connection connection1 = DriverManager.getConnection(url);
+    final Statement statement1 = connection1.createStatement();
+
+    final Connection connection2 = DriverManager.getConnection(url);
+    final Statement statement2 = connection2.createStatement();
+
+    expectedException.expect(AvaticaClientRuntimeException.class);
+    expectedException.expectMessage("Too many connections, limit is[2]");
+    final Connection connection3 = DriverManager.getConnection(url);
+  }
+
+  @Test
+  public void testNotTooManyConnectionsWhenTheyAreEmpty() throws Exception
+  {
+    final Connection connection1 = DriverManager.getConnection(url);
+    connection1.createStatement().close();
+
+    final Connection connection2 = DriverManager.getConnection(url);
+    connection2.createStatement().close();
+
+    final Connection connection3 = DriverManager.getConnection(url);
     Assert.assertTrue(true);
   }
 

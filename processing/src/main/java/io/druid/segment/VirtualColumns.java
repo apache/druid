@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -46,9 +47,9 @@ import java.util.Set;
 public class VirtualColumns implements Cacheable
 {
   public static final VirtualColumns EMPTY = new VirtualColumns(
-      ImmutableList.<VirtualColumn>of(),
-      ImmutableMap.<String, VirtualColumn>of(),
-      ImmutableMap.<String, VirtualColumn>of()
+      ImmutableList.of(),
+      ImmutableMap.of(),
+      ImmutableMap.of()
   );
 
   /**
@@ -78,6 +79,10 @@ public class VirtualColumns implements Cacheable
     Map<String, VirtualColumn> withDotSupport = Maps.newHashMap();
     Map<String, VirtualColumn> withoutDotSupport = Maps.newHashMap();
     for (VirtualColumn vc : virtualColumns) {
+      if (Strings.isNullOrEmpty(vc.getOutputName())) {
+        throw new IAE("Empty or null virtualColumn name");
+      }
+
       if (vc.getOutputName().equals(Column.TIME_COLUMN_NAME)) {
         throw new IAE("virtualColumn name[%s] not allowed", vc.getOutputName());
       }

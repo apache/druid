@@ -71,6 +71,7 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(8L, (long) config.getChatRetries());
     Assert.assertEquals(Duration.standardSeconds(10), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(80), config.getShutdownTimeout());
+    Assert.assertEquals(Duration.standardSeconds(30), config.getOffsetFetchPeriod());
   }
 
   @Test
@@ -90,7 +91,8 @@ public class KafkaSupervisorTuningConfigTest
                      + "  \"chatThreads\": 13,\n"
                      + "  \"chatRetries\": 14,\n"
                      + "  \"httpTimeout\": \"PT15S\",\n"
-                     + "  \"shutdownTimeout\": \"PT95S\"\n"
+                     + "  \"shutdownTimeout\": \"PT95S\",\n"
+                     + "  \"offsetFetchPeriod\": \"PT20S\"\n"
                      + "}";
 
     KafkaSupervisorTuningConfig config = (KafkaSupervisorTuningConfig) mapper.readValue(
@@ -116,5 +118,6 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(14L, (long) config.getChatRetries());
     Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
+    Assert.assertEquals(Duration.standardSeconds(20), config.getOffsetFetchPeriod());
   }
 }

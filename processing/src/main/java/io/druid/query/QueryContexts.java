@@ -75,6 +75,16 @@ public class QueryContexts
     return parseBoolean(query, "finalize", defaultValue);
   }
 
+  public static <T> boolean isSerializeDateTimeAsLong(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "serializeDateTimeAsLong", defaultValue);
+  }
+
+  public static <T> boolean isSerializeDateTimeAsLongInner(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
+  }
+
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
   {
     return getUncoveredIntervalsLimit(query, DEFAULT_UNCOVERED_INTERVALS_LIMIT);

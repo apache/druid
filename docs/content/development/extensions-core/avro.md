@@ -57,7 +57,7 @@ This decoder can be used if all the input events can be read using the same sche
     "namespace": "io.druid.data",
     "name": "User",
     "type": "record",
-    "fields" [
+    "fields": [
       { "name": "FullName", "type": "string" },
       { "name": "Country", "type": "string" }
     ]
@@ -80,7 +80,7 @@ This decoder can be used if different input events can have different read schem
       "namespace": "io.druid.data",
       "name": "User",
       "type": "record",
-      "fields" [
+      "fields": [
         { "name": "FullName", "type": "string" },
         { "name": "Country", "type": "string" }
       ]
@@ -89,7 +89,7 @@ This decoder can be used if different input events can have different read schem
       "namespace": "io.druid.otherdata",
       "name": "UserIdentity",
       "type": "record",
-      "fields" [
+      "fields": [
         { "name": "Name", "type": "string" },
         { "name": "Location", "type": "string" }
       ]

@@ -52,7 +52,7 @@ public class EventHolder
   public DateTime getTimestamp()
   {
     Object retVal = event.get(timestampKey);
-    if (retVal instanceof String) {
+    if (retVal instanceof String || retVal instanceof Long) {
       return new DateTime(retVal);
     } else if (retVal instanceof DateTime) {
       return (DateTime) retVal;

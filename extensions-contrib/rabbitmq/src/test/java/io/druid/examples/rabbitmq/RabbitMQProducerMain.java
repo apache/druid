@@ -22,6 +22,7 @@ package io.druid.examples.rabbitmq;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -197,7 +198,7 @@ public class RabbitMQProducerMain
 
       String line = String.format(msg_template, sdf.format(timer.getTime()), wp, gender, age);
 
-      channel.basicPublish(exchange, routingKey, null, line.getBytes());
+      channel.basicPublish(exchange, routingKey, null, StringUtils.toUtf8(line));
 
       System.out.println("Sent message: " + line);
 

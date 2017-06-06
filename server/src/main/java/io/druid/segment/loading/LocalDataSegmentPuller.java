@@ -21,7 +21,6 @@ package io.druid.segment.loading;
 
 import com.google.common.base.Predicate;
 import com.google.common.io.Files;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.MapUtils;
@@ -33,14 +32,13 @@ import javax.tools.FileObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -85,7 +83,7 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
       @Override
       public Reader openReader(boolean ignoreEncodingErrors) throws IOException
       {
-        return new FileReader(file);
+        return Files.newReader(file, Charset.defaultCharset());
       }
 
       @Override
@@ -97,7 +95,7 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
       @Override
       public Writer openWriter() throws IOException
       {
-        return new FileWriter(file);
+        return Files.newWriter(file, Charset.defaultCharset());
       }
 
       @Override

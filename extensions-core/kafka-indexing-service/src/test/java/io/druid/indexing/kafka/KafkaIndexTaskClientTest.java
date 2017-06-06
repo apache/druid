@@ -36,6 +36,7 @@ import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMockSupport;
@@ -547,7 +548,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
-    Assert.assertEquals("{\"0\":15,\"1\":120}", new String(request.getContent().array()));
+    Assert.assertEquals("{\"0\":15,\"1\":120}", StringUtils.fromUtf8(request.getContent().array()));
   }
 
   @Test
@@ -572,7 +573,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
-    Assert.assertEquals("{\"0\":15,\"1\":120}", new String(request.getContent().array()));
+    Assert.assertEquals("{\"0\":15,\"1\":120}", StringUtils.fromUtf8(request.getContent().array()));
   }
 
   @Test
