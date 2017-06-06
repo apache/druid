@@ -21,7 +21,6 @@ package io.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.primitives.Doubles;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.SegmentGenerator;
@@ -64,9 +63,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 @State(Scope.Benchmark)
-@Fork(jvmArgsPrepend = "-server", value = 1)
+@Fork(value = 1)
 @Warmup(iterations = 15)
 @Measurement(iterations = 30)
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class ExpressionBenchmark
 {
   @Param({"1000000"})
@@ -76,7 +77,7 @@ public class ExpressionBenchmark
   private QueryableIndex index;
   private JavaScriptAggregatorFactory javaScriptAggregatorFactory;
   private DoubleSumAggregatorFactory expressionAggregatorFactory;
-  private ByteBuffer aggregationBuffer = ByteBuffer.allocate(Doubles.BYTES);
+  private ByteBuffer aggregationBuffer = ByteBuffer.allocate(Double.BYTES);
 
   @Setup(Level.Trial)
   public void setup() throws Exception
@@ -130,8 +131,6 @@ public class ExpressionBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryUsingJavaScript(Blackhole blackhole) throws Exception
   {
     final Double result = compute(javaScriptAggregatorFactory::factorizeBuffered);
@@ -139,8 +138,6 @@ public class ExpressionBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryUsingExpression(Blackhole blackhole) throws Exception
   {
     final Double result = compute(expressionAggregatorFactory::factorizeBuffered);
@@ -148,8 +145,6 @@ public class ExpressionBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryUsingNative(Blackhole blackhole) throws Exception
   {
     final Double result = compute(
