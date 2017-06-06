@@ -87,6 +87,12 @@ public class NamespaceExtractionModule implements DruidModule
 
     PolyBind
         .optionBinder(binder, Key.get(NamespaceExtractionCacheManager.class))
+        .addBinding("onHeap")
+        .to(OnHeapNamespaceExtractionCacheManager.class)
+        .in(LazySingleton.class);
+
+    PolyBind
+        .optionBinder(binder, Key.get(NamespaceExtractionCacheManager.class))
         .addBinding("offHeap")
         .to(OffHeapNamespaceExtractionCacheManager.class)
         .in(LazySingleton.class);
