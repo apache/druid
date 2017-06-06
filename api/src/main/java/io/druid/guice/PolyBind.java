@@ -165,17 +165,17 @@ public class PolyBind
 
       String implName = props.getProperty(property);
       if (implName == null) {
+        if (defaultPropertyValue == null) {
+          return injector.getInstance(defaultKey);
+        }
         implName = defaultPropertyValue;
       }
       final Provider<T> provider = implsMap.get(implName);
 
       if (provider == null) {
-        if (defaultKey == null) {
-          throw new ProvisionException(
-              String.format("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
-          );
-        }
-        return injector.getInstance(defaultKey);
+        throw new ProvisionException(
+            String.format("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
+        );
       }
 
       return provider.get();
