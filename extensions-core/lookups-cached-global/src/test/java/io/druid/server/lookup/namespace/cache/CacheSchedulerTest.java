@@ -28,10 +28,10 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
+import io.druid.query.lookup.namespace.UriExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -65,7 +65,7 @@ import java.util.concurrent.TimeoutException;
  *
  */
 @RunWith(Parameterized.class)
-public class NamespaceExtractionCacheManagerExecutorsTest
+public class CacheSchedulerTest
 {
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_ON_HEAP_CACHE_MANAGER =
       new Function<Lifecycle, NamespaceExtractionCacheManager>()
@@ -111,7 +111,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   private CacheScheduler scheduler;
   private File tmpFile;
 
-  public NamespaceExtractionCacheManagerExecutorsTest(
+  public CacheSchedulerTest(
       Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
   )
   {
@@ -125,13 +125,13 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     lifecycle.start();
     cacheManager = createCacheManager.apply(lifecycle);
     final Path tmpDir = temporaryFolder.newFolder().toPath();
-    final ExtractionNamespaceCacheFactory<URIExtractionNamespace> cachePopulator = new
-        ExtractionNamespaceCacheFactory<URIExtractionNamespace>()
+    final CacheGenerator<UriExtractionNamespace> cacheGenerator = new
+        CacheGenerator<UriExtractionNamespace>()
     {
       @Override
-      public CacheScheduler.VersionedCache populateCache(
-          final URIExtractionNamespace extractionNamespace,
-          final CacheScheduler.EntryImpl<URIExtractionNamespace> id,
+      public CacheScheduler.VersionedCache generateCache(
+          final UriExtractionNamespace extractionNamespace,
+          final CacheScheduler.EntryImpl<UriExtractionNamespace> id,
           final String lastVersion,
           final CacheScheduler scheduler
       ) throws InterruptedException
@@ -146,9 +146,9 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     };
     scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
-        ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
-            URIExtractionNamespace.class,
-            cachePopulator
+        ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+            UriExtractionNamespace.class,
+            cacheGenerator
         ),
         cacheManager
     );
@@ -172,11 +172,11 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   @Test(timeout = 10_000)
   public void testSimpleSubmission() throws ExecutionException, InterruptedException
   {
-    URIExtractionNamespace namespace = new URIExtractionNamespace(
+    UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(
-            URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+            UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(0),
         null
@@ -194,7 +194,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final int repeatCount = 5;
     final long delay = 5;
     try {
-      final URIExtractionNamespace namespace = getUriExtractionNamespace(delay);
+      final UriExtractionNamespace namespace = getUriExtractionNamespace(delay);
       final long start = System.currentTimeMillis();
       try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
 
@@ -305,7 +305,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       throws InterruptedException, TimeoutException, ExecutionException
   {
     final long period = 1_000L;// Give it some time between attempts to update
-    final URIExtractionNamespace namespace = getUriExtractionNamespace(period);
+    final UriExtractionNamespace namespace = getUriExtractionNamespace(period);
     CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000);
     Assert.assertNotNull(entry);
     final Future<?> future = entry.getUpdaterFuture();
@@ -332,13 +332,13 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     Assert.assertTrue(future.isDone());
   }
 
-  private URIExtractionNamespace getUriExtractionNamespace(long period)
+  private UriExtractionNamespace getUriExtractionNamespace(long period)
   {
-    return new URIExtractionNamespace(
+    return new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(
-            URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+            UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(period),
         null
@@ -352,7 +352,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final long period = 5L;
     try {
 
-      final URIExtractionNamespace namespace = getUriExtractionNamespace(period);
+      final UriExtractionNamespace namespace = getUriExtractionNamespace(period);
 
       try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
         final Future<?> future = entry.getUpdaterFuture();
@@ -384,7 +384,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   {
     final int numWaits = 5;
     try {
-      final URIExtractionNamespace namespace = getUriExtractionNamespace((long) 5);
+      final UriExtractionNamespace namespace = getUriExtractionNamespace((long) 5);
       try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
         final Future<?> future = entry.getUpdaterFuture();
         entry.awaitNextUpdates(numWaits);

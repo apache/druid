@@ -39,9 +39,9 @@ import io.druid.query.QueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriverTest.TestCommitterSupplier;
-import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriverTest.TestSegmentAllocator;
-import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
+import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestCommitterSupplier;
+import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegmentAllocator;
+import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class FiniteAppenderatorDriverFailTest
+public class AppenderatorDriverFailTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
@@ -91,7 +91,7 @@ public class FiniteAppenderatorDriverFailTest
 
   SegmentAllocator allocator;
   TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
-  FiniteAppenderatorDriver driver;
+  AppenderatorDriver driver;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -117,7 +117,7 @@ public class FiniteAppenderatorDriverFailTest
   {
     expectedException.expect(TimeoutException.class);
 
-    driver = new FiniteAppenderatorDriver(
+    driver = new AppenderatorDriver(
         createPersistFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -139,7 +139,7 @@ public class FiniteAppenderatorDriverFailTest
     }
 
     driver.publish(
-        FiniteAppenderatorDriverTest.makeOkPublisher(),
+        AppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -151,7 +151,7 @@ public class FiniteAppenderatorDriverFailTest
     expectedException.expect(ExecutionException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(InterruptedException.class));
 
-    driver = new FiniteAppenderatorDriver(
+    driver = new AppenderatorDriver(
         createPushInterruptAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -173,7 +173,7 @@ public class FiniteAppenderatorDriverFailTest
     }
 
     driver.publish(
-        FiniteAppenderatorDriverTest.makeOkPublisher(),
+        AppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -184,7 +184,7 @@ public class FiniteAppenderatorDriverFailTest
   {
     expectedException.expect(TimeoutException.class);
 
-    driver = new FiniteAppenderatorDriver(
+    driver = new AppenderatorDriver(
         createPushFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -206,7 +206,7 @@ public class FiniteAppenderatorDriverFailTest
     }
 
     driver.publish(
-        FiniteAppenderatorDriverTest.makeOkPublisher(),
+        AppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -221,7 +221,7 @@ public class FiniteAppenderatorDriverFailTest
         "Fail test while dropping segment[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123]"
     );
 
-    driver = new FiniteAppenderatorDriver(
+    driver = new AppenderatorDriver(
         createDropFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -243,7 +243,7 @@ public class FiniteAppenderatorDriverFailTest
     }
 
     final SegmentsAndMetadata published = driver.publish(
-        FiniteAppenderatorDriverTest.makeOkPublisher(),
+        AppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);

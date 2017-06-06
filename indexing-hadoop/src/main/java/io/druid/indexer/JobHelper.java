@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
@@ -35,7 +34,7 @@ import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
-import io.druid.segment.loading.DataSegmentPusherUtil;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -45,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -310,6 +310,29 @@ public class JobHelper
     injectSystemProperties(job.getConfiguration());
   }
 
+  public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
+  {
+    String mapJavaOpts = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
+    String reduceJavaOpts = configuration.get(MRJobConfig.REDUCE_JAVA_OPTS);
+
+    for (String propName : System.getProperties().stringPropertyNames()) {
+      for (String prefix : listOfAllowedPrefix) {
+        if (propName.startsWith(prefix)) {
+          mapJavaOpts = String.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
+          reduceJavaOpts = String.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+          break;
+        }
+      }
+
+    }
+    if (!Strings.isNullOrEmpty(mapJavaOpts)) {
+      configuration.set(MRJobConfig.MAP_JAVA_OPTS, mapJavaOpts);
+    }
+    if (!Strings.isNullOrEmpty(reduceJavaOpts)) {
+      configuration.set(MRJobConfig.REDUCE_JAVA_OPTS, reduceJavaOpts);
+    }
+  }
+
   public static Configuration injectSystemProperties(Configuration conf)
   {
     for (String propName : System.getProperties().stringPropertyNames()) {
@@ -379,7 +402,8 @@ public class JobHelper
       final File mergedBase,
       final Path finalIndexZipFilePath,
       final Path finalDescriptorPath,
-      final Path tmpPath
+      final Path tmpPath,
+      DataSegmentPusher dataSegmentPusher
   )
       throws IOException
   {
@@ -412,43 +436,8 @@ public class JobHelper
     log.info("Zipped %,d bytes to [%s]", size.get(), tmpPath.toUri());
 
     final URI indexOutURI = finalIndexZipFilePath.toUri();
-    final ImmutableMap<String, Object> loadSpec;
-    // TODO: Make this a part of Pushers or Pullers
-    switch (outputFS.getScheme()) {
-      case "hdfs":
-      case "viewfs":
-      case "maprfs":
-        loadSpec = ImmutableMap.<String, Object>of(
-            "type", "hdfs",
-            "path", indexOutURI.toString()
-        );
-        break;
-      case "gs":
-        loadSpec = ImmutableMap.<String, Object>of(
-            "type", "google",
-            "bucket", indexOutURI.getHost(),
-            "path", indexOutURI.getPath().substring(1) // remove the leading "/"
-        );
-        break;
-      case "s3":
-      case "s3n":
-        loadSpec = ImmutableMap.<String, Object>of(
-            "type", "s3_zip",
-            "bucket", indexOutURI.getHost(),
-            "key", indexOutURI.getPath().substring(1) // remove the leading "/"
-        );
-        break;
-      case "file":
-        loadSpec = ImmutableMap.<String, Object>of(
-            "type", "local",
-            "path", indexOutURI.getPath()
-        );
-        break;
-      default:
-        throw new IAE("Unknown file system scheme [%s]", outputFS.getScheme());
-    }
     final DataSegment finalSegment = segmentTemplate
-        .withLoadSpec(loadSpec)
+        .withLoadSpec(dataSegmentPusher.makeLoadSpec(indexOutURI))
         .withSize(size.get())
         .withBinaryVersion(SegmentUtils.getVersionFromDir(mergedBase));
 
@@ -575,77 +564,33 @@ public class JobHelper
     out.putNextEntry(new ZipEntry(file.getName()));
   }
 
-  public static boolean isHdfs(FileSystem fs)
-  {
-    return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme()) || "maprfs".equals(fs.getScheme());
-  }
-
   public static Path makeFileNamePath(
       final Path basePath,
       final FileSystem fs,
       final DataSegment segmentTemplate,
-      final String baseFileName
+      final String baseFileName,
+      DataSegmentPusher dataSegmentPusher
   )
   {
-    final Path finalIndexZipPath;
-    final String segmentDir;
-    if (isHdfs(fs)) {
-      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
-      finalIndexZipPath = new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_%s",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              baseFileName
-          )
-      );
-    } else {
-      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
-      finalIndexZipPath = new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%s",
-              segmentDir,
-              baseFileName
-          )
-      );
-    }
-    return finalIndexZipPath;
+    return new Path(prependFSIfNullScheme(fs, basePath),
+                    dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName));
   }
 
   public static Path makeTmpPath(
       final Path basePath,
       final FileSystem fs,
       final DataSegment segmentTemplate,
-      final TaskAttemptID taskAttemptID
+      final TaskAttemptID taskAttemptID,
+      DataSegmentPusher dataSegmentPusher
   )
   {
-    final String segmentDir;
-
-    if (isHdfs(fs)) {
-      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
-      return new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_index.zip.%d",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              taskAttemptID.getId()
-          )
-      );
-    } else {
-      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
-      return new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_index.zip.%d",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              taskAttemptID.getId()
-          )
-      );
-    }
+    return new Path(
+        prependFSIfNullScheme(fs, basePath),
+        String.format("./%s.%d",
+                      dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+                      taskAttemptID.getId()
+        )
+    );
   }
 
   /**
@@ -793,7 +738,12 @@ public class JobHelper
     final String type = loadSpec.get("type").toString();
     final URI segmentLocURI;
     if ("s3_zip".equals(type)) {
-      segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+      if ("s3a".equals(loadSpec.get("S3Schema"))) {
+        segmentLocURI = URI.create(String.format("s3a://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+
+      } else {
+        segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+      }
     } else if ("hdfs".equals(type)) {
       segmentLocURI = URI.create(loadSpec.get("path").toString());
     } else if ("google".equals(type)) {

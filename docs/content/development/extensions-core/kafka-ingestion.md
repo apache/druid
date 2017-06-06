@@ -129,6 +129,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`chatRetries`|Integer|The number of times HTTP requests to indexing tasks will be retried before considering tasks unresponsive.|no (default == 8)|
 |`httpTimeout`|ISO8601 Period|How long to wait for a HTTP response from an indexing task.|no (default == PT10S)|
 |`shutdownTimeout`|ISO8601 Period|How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|no (default == PT80S)|
+|`offsetFetchPeriod`|ISO8601 Period|How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and calculate lag.|no (default == PT30S, min == PT5S)|
 
 #### IndexSpec
 
@@ -211,7 +212,10 @@ Returns the current spec for the supervisor with the provided ID.
 ```
 GET /druid/indexer/v1/supervisor/<supervisorId>/status
 ```
-Returns a snapshot report of the current state of the tasks managed by the given supervisor.
+Returns a snapshot report of the current state of the tasks managed by the given supervisor. This includes the latest
+offsets as reported by Kafka, the consumer lag per partition, as well as the aggregate lag of all partitions. The
+consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
+response from Kafka. The aggregate lag value will always be >= 0.
 
 #### Get All Supervisor History
 ```
