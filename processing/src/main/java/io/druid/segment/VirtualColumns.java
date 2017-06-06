@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -78,7 +79,7 @@ public class VirtualColumns implements Cacheable
     Map<String, VirtualColumn> withDotSupport = Maps.newHashMap();
     Map<String, VirtualColumn> withoutDotSupport = Maps.newHashMap();
     for (VirtualColumn vc : virtualColumns) {
-      if (vc.getOutputName() == null || vc.getOutputName().isEmpty()) {
+      if (Strings.isNullOrEmpty(vc.getOutputName())) {
         throw new IAE("Empty or null virtualColumn name");
       }
 
