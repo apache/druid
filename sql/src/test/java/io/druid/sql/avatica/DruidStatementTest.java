@@ -80,7 +80,7 @@ public class DruidStatementTest
   public void testSignature() throws Exception
   {
     final String sql = "SELECT * FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null).prepare(plannerFactory, sql, -1);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1);
 
     // Check signature.
     final Meta.Signature signature = statement.getSignature();
@@ -118,7 +118,7 @@ public class DruidStatementTest
   public void testSelectAllInFirstFrame() throws Exception
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null).prepare(plannerFactory, sql, -1);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1);
 
     // First frame, ask for all rows.
     Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 6);
@@ -144,7 +144,7 @@ public class DruidStatementTest
   public void testSelectSplitOverTwoFrames() throws Exception
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null).prepare(plannerFactory, sql, -1);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1);
 
     // First frame, ask for 2 rows.
     Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 2);

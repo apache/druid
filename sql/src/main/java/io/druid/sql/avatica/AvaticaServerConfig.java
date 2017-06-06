@@ -31,7 +31,7 @@ public class AvaticaServerConfig
   public int maxStatementsPerConnection = 4;
 
   @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT30M");
+  public Period connectionIdleTimeout = new Period("PT5M");
 
   public int getMaxConnections()
   {
