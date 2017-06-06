@@ -20,6 +20,7 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.common.base.Function;
@@ -28,8 +29,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;
 import io.druid.curator.CuratorTestBase;
@@ -37,6 +40,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
+import io.druid.query.SegmentDescriptor;
 import io.druid.query.TableDataSource;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
@@ -46,7 +50,10 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.NoneShardSpec;
+import io.druid.timeline.partition.NumberedShardSpec;
+import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
+import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -57,6 +64,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
@@ -75,6 +83,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   public BrokerServerViewTest()
   {
     jsonMapper = new DefaultObjectMapper();
+    jsonMapper.registerSubtypes(new NamedType(NumberedShardSpec.class, "numbered"));
     zkPathsConfig = new ZkPathsConfig();
   }
 
@@ -251,6 +260,124 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
   }
 
+  private void testFoundServer(TimelineLookup timeline, boolean expectFail) {
+    List<TimelineObjectHolder<String, ServerSelector>> segments = (List<TimelineObjectHolder<String, ServerSelector>>) timeline.lookup(
+        new Interval(
+            "2016-10-31T15:00:00.000+08:00/2016-10-31T16:28:58.744+08:00"
+        )
+    );
+    Set<Pair<ServerSelector, SegmentDescriptor>> as = Sets.newLinkedHashSet();
+    for (TimelineObjectHolder<String, ServerSelector> holder : segments) {
+      for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
+        ServerSelector selector = chunk.getObject();
+        final SegmentDescriptor descriptor = new SegmentDescriptor(
+            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+        );
+
+        as.add(Pair.of(selector, descriptor));
+      }
+    }
+    // Compile list of all segments not pulled from cache
+    for (Pair<ServerSelector, SegmentDescriptor> segment : as) {
+      final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
+
+      if (queryableDruidServer == null) {
+        System.out.println(
+            String.format(
+                "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
+                segment.rhs,
+                "test_broker_server_view")
+        );
+        if (!expectFail) {
+          Assert.fail();
+        }
+      } else {
+        System.out.println(
+            String.format(
+                "Found servers found for SegmentDescriptor[%s] for DataSource[%s]",
+                segment.rhs,
+                "test_broker_server_view")
+        );
+      }
+    }
+  }
+
+  @Test
+  public void testMultipleServerAddedRemovedSegmentOverlapRecover() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+
+    // temporarily set latch count to 1
+    segmentRemovedLatch = new CountDownLatch(1);
+
+    setupViews();
+
+    final List<DruidServer> druidServers = Lists.transform(
+        ImmutableList.<String>of("locahost:0", "localhost:1", "localhost:2"),
+        new Function<String, DruidServer>()
+        {
+          @Override
+          public DruidServer apply(String input)
+          {
+            return new DruidServer(
+                input,
+                input,
+                10000000L,
+                "historical",
+                "default_tier",
+                0
+            );
+          }
+        }
+    );
+
+    for (DruidServer druidServer : druidServers) {
+      setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
+    }
+
+    final List<DataSegment> segments = Lists.newArrayList();
+    segments.add(dataSegmentWithIntervalAndVersion("2016-10-31T00:00:00.000+08:00/2016-10-31T01:00:00.000+08:00", "v1", new NumberedShardSpec(0, 2)));
+    segments.add(dataSegmentWithIntervalAndVersion("2016-10-31T00:00:00.000+08:00/2016-10-31T01:00:00.000+08:00", "v1", new NumberedShardSpec(1, 2)));
+    segments.add(dataSegmentWithIntervalAndVersion("2016-10-31T00:00:00.000+08:00/2016-11-01T00:00:00.000+08:00", "v1", new NumberedShardSpec(0, 2)));
+    segments.add(dataSegmentWithIntervalAndVersion("2016-10-31T00:00:00.000+08:00/2016-11-01T00:00:00.000+08:00", "v1", new NumberedShardSpec(1, 2)));
+
+    segmentAddedLatch = new CountDownLatch(2);
+    // announce two smaller chuck
+    announceSegmentForServer(druidServers.get(0), segments.get(0), zkPathsConfig, jsonMapper);
+    announceSegmentForServer(druidServers.get(1), segments.get(1), zkPathsConfig, jsonMapper);
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+
+    segmentAddedLatch = new CountDownLatch(2);
+    // announce the larger segment size segment, will overlap fail
+    announceSegmentForServer(druidServers.get(2), segments.get(2), zkPathsConfig, jsonMapper);
+    announceSegmentForServer(druidServers.get(2), segments.get(3), zkPathsConfig, jsonMapper);
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+
+    // unannounce the smaller chunk, will overlap fail again
+    segmentRemovedLatch = new CountDownLatch(2);
+    unannounceSegmentForServer(druidServers.get(0), segments.get(0), zkPathsConfig);
+    unannounceSegmentForServer(druidServers.get(1), segments.get(1), zkPathsConfig);
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+
+    TimelineLookup timeline = brokerServerView.getTimeline(new TableDataSource("test_broker_server_view"));
+    // No servers found expected
+    testFoundServer(timeline, true);
+    // we know there is failure, then try to fix it by remove the larger size segments and announce them later
+    segmentRemovedLatch = new CountDownLatch(2);
+    unannounceSegmentForServer(druidServers.get(2), segments.get(2), zkPathsConfig);
+    unannounceSegmentForServer(druidServers.get(2), segments.get(3), zkPathsConfig);
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    testFoundServer(timeline, false);
+
+    segmentAddedLatch = new CountDownLatch(2);
+    announceSegmentForServer(druidServers.get(2), segments.get(2), zkPathsConfig, jsonMapper);
+    announceSegmentForServer(druidServers.get(2), segments.get(3), zkPathsConfig, jsonMapper);
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    // should success this time
+    testFoundServer(timeline, false);
+  }
+
   private Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> createExpected(
       String intervalStr,
       String version,
@@ -304,17 +431,23 @@ public class BrokerServerViewTest extends CuratorTestBase
               @Override
               public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
               {
-                CallbackAction res = callback.segmentAdded(server, segment);
-                segmentAddedLatch.countDown();
-                return res;
+                try {
+                  return callback.segmentAdded(server, segment);
+                }
+                finally {
+                  segmentAddedLatch.countDown();
+                }
               }
 
               @Override
               public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
               {
-                CallbackAction res = callback.segmentRemoved(server, segment);
-                segmentRemovedLatch.countDown();
-                return res;
+                try {
+                  return callback.segmentRemoved(server, segment);
+                }
+                finally {
+                  segmentRemovedLatch.countDown();
+                }
               }
 
               @Override
@@ -360,6 +493,28 @@ public class BrokerServerViewTest extends CuratorTestBase
                       .dimensions(ImmutableList.<String>of())
                       .metrics(ImmutableList.<String>of())
                       .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(0)
+                      .build();
+  }
+
+  private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version, ShardSpec shardSpec)
+  {
+    return DataSegment.builder()
+                      .dataSource("test_broker_server_view")
+                      .interval(new Interval(intervalStr))
+                      .loadSpec(
+                          ImmutableMap.<String, Object>of(
+                              "type",
+                              "local",
+                              "path",
+                              "somewhere"
+                          )
+                      )
+                      .version(version)
+                      .dimensions(ImmutableList.<String>of())
+                      .metrics(ImmutableList.<String>of())
+                      .shardSpec(shardSpec)
                       .binaryVersion(9)
                       .size(0)
                       .build();

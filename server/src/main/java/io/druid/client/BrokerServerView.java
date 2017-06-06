@@ -244,7 +244,7 @@ public class BrokerServerView implements TimelineServerView
   {
 
     String segmentId = segment.getIdentifier();
-    final ServerSelector selector;
+    ServerSelector selector;
 
     synchronized (lock) {
       log.debug("Removing segment[%s] from server[%s].", segmentId, server);
@@ -252,7 +252,7 @@ public class BrokerServerView implements TimelineServerView
       selector = selectors.get(segmentId);
       if (selector == null) {
         log.warn("Told to remove non-existant segment[%s]", segmentId);
-        return;
+        selector = new ServerSelector(segment, tierSelectorStrategy);
       }
 
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());

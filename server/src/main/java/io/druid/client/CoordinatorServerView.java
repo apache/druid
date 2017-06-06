@@ -158,10 +158,10 @@ public class CoordinatorServerView implements InventoryView
     synchronized (lock) {
       log.debug("Removing segment[%s] from server[%s].", segmentId, server);
 
-      final SegmentLoadInfo segmentLoadInfo = segmentLoadInfos.get(segmentId);
+      SegmentLoadInfo segmentLoadInfo = segmentLoadInfos.get(segmentId);
       if (segmentLoadInfo == null) {
         log.warn("Told to remove non-existant segment[%s]", segmentId);
-        return;
+        segmentLoadInfo = new SegmentLoadInfo(segment);
       }
       segmentLoadInfo.removeServer(server);
       if (segmentLoadInfo.isEmpty()) {
