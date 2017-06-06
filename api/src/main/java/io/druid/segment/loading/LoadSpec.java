@@ -34,7 +34,7 @@ public interface LoadSpec
    * @param destDir The destination directory
    * @return The byte count of data put in the destination directory
    */
-  public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException;
+  public LoadSpecResult loadSegment(File destDir, boolean cacheSegmentsLocally) throws SegmentLoadingException;
 
   // Hold interesting data about the results of the segment load
   public static class LoadSpecResult{

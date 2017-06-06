@@ -168,12 +168,15 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 
 
   @Override
-  public void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException
+  public void getSegmentFiles(DataSegment segment, File dir, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    getSegmentFiles(getPath(segment), dir);
+    getSegmentFiles(getPath(segment), dir, cacheSegmentsLocally);
   }
 
-  public FileUtils.FileCopyResult getSegmentFiles(final Path path, final File outDir) throws SegmentLoadingException
+  public FileUtils.FileCopyResult getSegmentFiles(
+      final Path path,
+      final File outDir,
+      final boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
     try {
       final FileSystem fs = path.getFileSystem(config);
@@ -283,12 +286,16 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
     }
   }
 
-  public FileUtils.FileCopyResult getSegmentFiles(URI uri, File outDir) throws SegmentLoadingException
+  public FileUtils.FileCopyResult getSegmentFiles(
+      URI uri,
+      File outDir,
+      boolean cacheSegmentsLocally
+  ) throws SegmentLoadingException
   {
     if (!uri.getScheme().equalsIgnoreCase(HdfsStorageDruidModule.SCHEME)) {
       throw new SegmentLoadingException("Don't know how to load SCHEME for URI [%s]", uri.toString());
     }
-    return getSegmentFiles(new Path(uri), outDir);
+    return getSegmentFiles(new Path(uri), outDir, cacheSegmentsLocally);
   }
 
   public InputStream getInputStream(Path path) throws IOException

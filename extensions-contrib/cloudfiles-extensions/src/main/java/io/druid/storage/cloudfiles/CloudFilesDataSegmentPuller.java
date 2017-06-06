@@ -48,7 +48,11 @@ public class CloudFilesDataSegmentPuller implements DataSegmentPuller
   }
 
   @Override
-  public void getSegmentFiles(final DataSegment segment, final File outDir) throws SegmentLoadingException
+  public void getSegmentFiles(
+      final DataSegment segment,
+      final File outDir,
+      final boolean cacheSegmentsLocally
+  ) throws SegmentLoadingException
   {
     final Map<String, Object> loadSpec = segment.getLoadSpec();
     final String region = MapUtils.getString(loadSpec, "region");
@@ -57,10 +61,15 @@ public class CloudFilesDataSegmentPuller implements DataSegmentPuller
 
     log.info("Pulling index at path[%s] to outDir[%s]", path, outDir);
     prepareOutDir(outDir);
-    getSegmentFiles(region, container, path, outDir);
+    getSegmentFiles(region, container, path, outDir, cacheSegmentsLocally);
   }
 
-  public FileUtils.FileCopyResult getSegmentFiles(String region, String container, String path, File outDir)
+  public FileUtils.FileCopyResult getSegmentFiles(
+      String region,
+      String container,
+      String path,
+      File outDir,
+      boolean cacheSegmentsLocally)
       throws SegmentLoadingException
   {
     CloudFilesObjectApiProxy objectApi = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
@@ -68,8 +77,10 @@ public class CloudFilesDataSegmentPuller implements DataSegmentPuller
 
     try {
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
-          byteSource, outDir,
-          CloudFilesUtils.CLOUDFILESRETRY, true
+          byteSource,
+          outDir,
+          CloudFilesUtils.CLOUDFILESRETRY,
+          cacheSegmentsLocally
       );
       log.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
       return result;

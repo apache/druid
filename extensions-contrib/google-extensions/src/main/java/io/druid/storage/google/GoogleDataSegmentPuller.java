@@ -50,17 +50,25 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   }
 
   @Override
-  public void getSegmentFiles(final DataSegment segment, final File outDir) throws SegmentLoadingException
+  public void getSegmentFiles(
+      final DataSegment segment,
+      final File outDir,
+      final boolean cacheSegmentsLocally
+  ) throws SegmentLoadingException
   {
     final Map<String, Object> loadSpec = segment.getLoadSpec();
     final String bucket = MapUtils.getString(loadSpec, "bucket");
     final String path = MapUtils.getString(loadSpec, "path");
 
-    getSegmentFiles(bucket, path, outDir);
+    getSegmentFiles(bucket, path, outDir, cacheSegmentsLocally);
   }
 
-  public FileUtils.FileCopyResult getSegmentFiles(final String bucket, final String path, File outDir)
-      throws SegmentLoadingException
+  public FileUtils.FileCopyResult getSegmentFiles(
+      final String bucket,
+      final String path,
+      File outDir,
+      boolean cacheSegmentsLocally
+  ) throws SegmentLoadingException
   {
     LOG.info("Pulling index at path[%s] to outDir[%s]", bucket, path, outDir.getAbsolutePath());
 
@@ -72,7 +80,7 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
           byteSource,
           outDir,
           GoogleUtils.GOOGLE_RETRY,
-          true
+          cacheSegmentsLocally
       );
       LOG.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
       return result;

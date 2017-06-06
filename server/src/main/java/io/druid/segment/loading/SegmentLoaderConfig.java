@@ -52,6 +52,9 @@ public class SegmentLoaderConfig
   @JsonProperty
   private File infoDir = null;
 
+  @JsonProperty("cacheSegmentsLocally")
+  private boolean cacheSegmentsLocally = false;
+
   public List<StorageLocationConfig> getLocations()
   {
     return locations;
@@ -99,6 +102,11 @@ public class SegmentLoaderConfig
     return retVal;
   }
 
+  public boolean isCacheSegmentsLocally()
+  {
+    return cacheSegmentsLocally;
+  }
+
   @Override
   public String toString()
   {
@@ -107,6 +115,7 @@ public class SegmentLoaderConfig
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
            ", infoDir=" + infoDir +
+           ", cacheSegmentsLocally=" + cacheSegmentsLocally +
            '}';
   }
 }

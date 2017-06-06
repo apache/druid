@@ -114,7 +114,9 @@ public class S3DataSegmentPullerTest
         new S3DataSegmentPuller.S3Coords(
             bucket,
             object0.getKey()
-        ), tmpDir
+        ),
+        tmpDir,
+        false
     );
     EasyMock.verify(s3Client);
 
@@ -172,7 +174,9 @@ public class S3DataSegmentPullerTest
         new S3DataSegmentPuller.S3Coords(
             bucket,
             object0.getKey()
-        ), tmpDir
+        ),
+        tmpDir,
+        false
     );
     EasyMock.verify(s3Client);
 

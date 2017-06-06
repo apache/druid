@@ -82,7 +82,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       AzureDataSegmentPuller puller = new AzureDataSegmentPuller(azureStorage);
 
-      FileUtils.FileCopyResult result = puller.getSegmentFiles(containerName, blobPath, toDir);
+      FileUtils.FileCopyResult result = puller.getSegmentFiles(containerName, blobPath, toDir, false);
 
       File expected = new File(toDir, SEGMENT_FILE_NAME);
       assertEquals(value.length(), result.size());
@@ -118,7 +118,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       AzureDataSegmentPuller puller = new AzureDataSegmentPuller(azureStorage);
 
-      puller.getSegmentFiles(containerName, blobPath, outDir);
+      puller.getSegmentFiles(containerName, blobPath, outDir, false);
 
       assertFalse(outDir.exists());
 
@@ -138,13 +138,13 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       final FileUtils.FileCopyResult result = createMock(FileUtils.FileCopyResult.class);
       final AzureDataSegmentPuller puller = createMockBuilder(AzureDataSegmentPuller.class).withConstructor(
           azureStorage
-      ).addMockedMethod("getSegmentFiles", String.class, String.class, File.class).createMock();
+      ).addMockedMethod("getSegmentFiles", String.class, String.class, File.class, boolean.class).createMock();
 
-      expect(puller.getSegmentFiles(containerName, blobPath, outDir)).andReturn(result);
+      expect(puller.getSegmentFiles(containerName, blobPath, outDir, false)).andReturn(result);
 
       replayAll();
 
-      puller.getSegmentFiles(dataSegment, outDir);
+      puller.getSegmentFiles(dataSegment, outDir, false);
 
       verifyAll();
     }

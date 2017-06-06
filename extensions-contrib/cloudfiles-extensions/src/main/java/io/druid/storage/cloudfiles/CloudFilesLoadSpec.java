@@ -60,8 +60,8 @@ public class CloudFilesLoadSpec implements LoadSpec
   }
 
   @Override
-  public LoadSpecResult loadSegment(File file) throws SegmentLoadingException
+  public LoadSpecResult loadSegment(File file, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    return new LoadSpecResult(puller.getSegmentFiles(region, container, path, file).size());
+    return new LoadSpecResult(puller.getSegmentFiles(region, container, path, file, cacheSegmentsLocally).size());
   }
 }

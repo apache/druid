@@ -55,12 +55,16 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
   }
 
   @Override
-  public void getSegmentFiles(DataSegment segment, File outDir) throws SegmentLoadingException
+  public void getSegmentFiles(DataSegment segment, File outDir, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
     String key = (String) segment.getLoadSpec().get("key");
-    getSegmentFiles(key, outDir);
+    getSegmentFiles(key, outDir, cacheSegmentsLocally);
   }
-  public io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(final String key, final File outDir) throws SegmentLoadingException{
+  public io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(
+      final String key,
+      final File outDir,
+      final boolean cacheSegmentsLocally
+  ) throws SegmentLoadingException{
     log.info("Pulling index from C* at path[%s] to outDir[%s]", key, outDir);
     if (!outDir.exists()) {
       outDir.mkdirs();

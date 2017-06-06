@@ -313,7 +313,7 @@ public class BatchDeltaIngestionTest
     Assert.assertEquals(1, spec.getPartitions());
 
     File tmpUnzippedSegmentDir = temporaryFolder.newFolder();
-    new LocalDataSegmentPuller().getSegmentFiles(dataSegment, tmpUnzippedSegmentDir);
+    new LocalDataSegmentPuller().getSegmentFiles(dataSegment, tmpUnzippedSegmentDir, false);
 
     QueryableIndex index = INDEX_IO.loadIndex(tmpUnzippedSegmentDir);
     StorageAdapter adapter = new QueryableIndexStorageAdapter(index);

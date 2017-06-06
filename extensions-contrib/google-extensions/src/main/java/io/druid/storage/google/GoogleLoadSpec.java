@@ -55,8 +55,8 @@ public class GoogleLoadSpec implements LoadSpec
   }
 
   @Override
-  public LoadSpecResult loadSegment(File file) throws SegmentLoadingException
+  public LoadSpecResult loadSegment(File file, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
-    return new LoadSpecResult(puller.getSegmentFiles(bucket, path, file).size());
+    return new LoadSpecResult(puller.getSegmentFiles(bucket, path, file, cacheSegmentsLocally).size());
   }
 }

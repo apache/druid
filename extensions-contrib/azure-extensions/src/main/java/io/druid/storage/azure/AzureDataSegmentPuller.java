@@ -51,7 +51,8 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
   public io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(
       final String containerName,
       final String blobPath,
-      final File outDir
+      final File outDir,
+      final boolean cacheSegmentsLocally
   )
       throws SegmentLoadingException
   {
@@ -63,7 +64,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
           byteSource,
           outDir,
           AzureUtils.AZURE_RETRY,
-          true
+          cacheSegmentsLocally
       );
 
       log.info("Loaded %d bytes from [%s] to [%s]", result.size(), blobPath, outDir.getAbsolutePath());
@@ -87,14 +88,14 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
   }
 
   @Override
-  public void getSegmentFiles(DataSegment segment, File outDir) throws SegmentLoadingException
+  public void getSegmentFiles(DataSegment segment, File outDir, boolean cacheSegmentsLocally) throws SegmentLoadingException
   {
 
     final Map<String, Object> loadSpec = segment.getLoadSpec();
     final String containerName = MapUtils.getString(loadSpec, "containerName");
     final String blobPath = MapUtils.getString(loadSpec, "blobPath");
 
-    getSegmentFiles(containerName, blobPath, outDir);
+    getSegmentFiles(containerName, blobPath, outDir, cacheSegmentsLocally);
   }
 
   @VisibleForTesting

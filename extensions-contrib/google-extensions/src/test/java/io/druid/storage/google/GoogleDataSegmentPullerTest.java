@@ -65,7 +65,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
       replayAll();
 
       GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
-      puller.getSegmentFiles(bucket, path, outDir);
+      puller.getSegmentFiles(bucket, path, outDir, false);
 
       assertFalse(outDir.exists());
 
@@ -85,13 +85,13 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
       GoogleStorage storage = createMock(GoogleStorage.class);
       GoogleDataSegmentPuller puller = createMockBuilder(GoogleDataSegmentPuller.class).withConstructor(
           storage
-      ).addMockedMethod("getSegmentFiles", String.class, String.class, File.class).createMock();
+      ).addMockedMethod("getSegmentFiles", String.class, String.class, File.class, boolean.class).createMock();
 
-      expect(puller.getSegmentFiles(bucket, path, outDir)).andReturn(result);
+      expect(puller.getSegmentFiles(bucket, path, outDir, false)).andReturn(result);
 
       replayAll();
 
-      puller.getSegmentFiles(dataSegment, outDir);
+      puller.getSegmentFiles(dataSegment, outDir, false);
 
       verifyAll();
     }
