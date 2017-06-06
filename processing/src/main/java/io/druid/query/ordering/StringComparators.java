@@ -53,7 +53,7 @@ public class StringComparators
       public int compare(String s, String s2)
       {
         return UnsignedBytes.lexicographicalComparator().compare(
-                StringUtils.toUtf8(s), StringUtils.toUtf8(s2));
+            StringUtils.toUtf8(s), StringUtils.toUtf8(s2));
       }
     }).nullsFirst();
     

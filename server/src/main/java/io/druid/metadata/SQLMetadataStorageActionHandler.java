@@ -29,8 +29,8 @@ import com.google.common.collect.Maps;
 import com.metamx.emitter.EmittingLogger;
 
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.StringUtils;
 
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;

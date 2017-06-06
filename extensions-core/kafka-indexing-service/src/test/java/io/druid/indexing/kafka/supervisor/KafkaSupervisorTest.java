@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -96,6 +97,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+import static java.lang.String.format;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
 import static org.easymock.EasyMock.capture;
@@ -1717,7 +1719,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                   topic,
                   i,
                   null,
-                  String.format("event-%d", j).getBytes()
+                  StringUtils.toUtf8(format("event-%d", j))
               )
           ).get();
         }

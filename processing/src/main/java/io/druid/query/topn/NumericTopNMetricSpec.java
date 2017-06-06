@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -131,7 +132,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] metricBytes = io.druid.java.util.common.StringUtils.toUtf8(metric);
+    byte[] metricBytes = StringUtils.toUtf8(metric);
 
     return ByteBuffer.allocate(1 + metricBytes.length)
                      .put(CACHE_TYPE_ID)
