@@ -106,7 +106,7 @@ import java.util.concurrent.TimeUnit;
 // Benchmark for determining the interface overhead of GroupBy with multiple type implementations
 
 @State(Scope.Benchmark)
-@Fork(jvmArgsPrepend = "-server", value = 1)
+@Fork(value = 1)
 @Warmup(iterations = 15)
 @Measurement(iterations = 30)
 public class GroupByTypeInterfaceBenchmark
