@@ -45,6 +45,7 @@ public class Queries
   }
 
   public static List<PostAggregator> prepareAggregations(
+      List<String> otherOutputNames,
       List<AggregatorFactory> aggFactories,
       List<PostAggregator> postAggs
   )
@@ -59,18 +60,19 @@ public class Queries
     }
 
     if (postAggs != null && !postAggs.isEmpty()) {
-      final Set<String> combinedAggNames = Sets.newHashSet(aggsFactoryMap.keySet());
+      final Set<String> combinedOutputNames = Sets.newHashSet(aggsFactoryMap.keySet());
+      combinedOutputNames.addAll(otherOutputNames);
 
       List<PostAggregator> decorated = Lists.newArrayListWithExpectedSize(postAggs.size());
       for (final PostAggregator postAgg : postAggs) {
         final Set<String> dependencies = postAgg.getDependentFields();
-        final Set<String> missing = Sets.difference(dependencies, combinedAggNames);
+        final Set<String> missing = Sets.difference(dependencies, combinedOutputNames);
 
         Preconditions.checkArgument(
             missing.isEmpty(),
             "Missing fields [%s] for postAggregator [%s]", missing, postAgg.getName()
         );
-        Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()),
+        Preconditions.checkArgument(combinedOutputNames.add(postAgg.getName()),
                                     "[%s] already defined", postAgg.getName());
 
         decorated.add(postAgg.decorate(aggsFactoryMap));

@@ -143,8 +143,9 @@ public class TopNQueryEngine
       topNAlgorithm = new TimeExtractionTopNAlgorithm(capabilities, query);
     } else if (selector.isHasExtractionFn()) {
       topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
-    } else if (columnCapabilities != null && columnCapabilities.getType() != ValueType.STRING) {
-      // force non-Strings to use DimExtraction for now, do a typed PooledTopN later
+    } else if (columnCapabilities != null && !(columnCapabilities.getType() == ValueType.STRING
+                                              && columnCapabilities.isDictionaryEncoded())) {
+      // Use DimExtraction for non-Strings and for non-dictionary-encoded Strings.
       topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
     } else if (selector.isAggregateAllMetrics()) {
       topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);

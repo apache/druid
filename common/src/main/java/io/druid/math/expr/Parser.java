@@ -148,30 +148,14 @@ public class Parser
 
   public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
   {
-    return new Expr.ObjectBinding()
-    {
-      @Override
-      public Number get(String name)
-      {
-        Number number = (Number)bindings.get(name);
-        if (number == null && !bindings.containsKey(name)) {
-          throw new RuntimeException("No binding found for " + name);
-        }
-        return number;
-      }
-    };
+    return bindings::get;
   }
 
-  public static Expr.ObjectBinding withSuppliers(final Map<String, Supplier<Number>> bindings)
+  public static Expr.ObjectBinding withSuppliers(final Map<String, Supplier<Object>> bindings)
   {
-    return new Expr.ObjectBinding()
-    {
-      @Override
-      public Number get(String name)
-      {
-        Supplier<Number> supplier = bindings.get(name);
-        return supplier == null ? null : supplier.get();
-      }
+    return (String name) -> {
+      Supplier<Object> supplier = bindings.get(name);
+      return supplier == null ? null : supplier.get();
     };
   }
 }

@@ -249,11 +249,16 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                         + 1
                     );
 
+                    // Put non-finalized aggregators before post-aggregators.
                     for (int i = 0; i < aggFactoryNames.length; ++i) {
                       final String name = aggFactoryNames[i];
                       values.put(name, input.getMetric(name));
                     }
 
+                    // Put dimension, post-aggregators might depend on it.
+                    values.put(dimension, input.getDimensionValue(dimension));
+
+                    // Put post-aggregators.
                     for (PostAggregator postAgg : postAggregators) {
                       Object calculatedPostAgg = input.getMetric(postAgg.getName());
                       if (calculatedPostAgg != null) {
@@ -262,12 +267,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                         values.put(postAgg.getName(), postAgg.compute(values));
                       }
                     }
+
+                    // Put finalized aggregators now that post-aggregators are done.
                     for (int i = 0; i < aggFactoryNames.length; ++i) {
                       final String name = aggFactoryNames[i];
                       values.put(name, fn.manipulate(aggregatorFactories[i], input.getMetric(name)));
                     }
-
-                    values.put(dimension, input.getDimensionValue(dimension));
 
                     return values;
                   }
