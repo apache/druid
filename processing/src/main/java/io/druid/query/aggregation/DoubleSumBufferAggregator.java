@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class DoubleSumBufferAggregator extends DoubleBufferAggregator
+public class DoubleSumBufferAggregator extends SimpleDoubleBufferAggregator
 {
 
   DoubleSumBufferAggregator(FloatColumnSelector selector)
@@ -40,8 +40,14 @@ public class DoubleSumBufferAggregator extends DoubleBufferAggregator
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public void putFirst(ByteBuffer buf, int position, double value)
   {
-    buf.putDouble(position, buf.getDouble(position) + (double) selector.get());
+    buf.putDouble(position, value);
+  }
+
+  @Override
+  public void aggregate(ByteBuffer buf, int position, double value)
+  {
+    buf.putDouble(position, buf.getDouble(position) + value);
   }
 }

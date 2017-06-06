@@ -21,67 +21,15 @@ package io.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
-import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
-import java.util.Map;
 
 public class QueryContextsTest
 {
-  private static class TestQuery extends BaseQuery
-  {
-
-    public TestQuery(DataSource dataSource, QuerySegmentSpec querySegmentSpec, boolean descending, Map context)
-    {
-      super(dataSource, querySegmentSpec, descending, context);
-    }
-
-    @Override
-    public boolean hasFilters()
-    {
-      return false;
-    }
-
-    @Override
-    public DimFilter getFilter()
-    {
-      return null;
-    }
-
-    @Override
-    public String getType()
-    {
-      return null;
-    }
-
-    @Override
-    public Query withQuerySegmentSpec(QuerySegmentSpec spec)
-    {
-      return null;
-    }
-
-    @Override
-    public Query withDataSource(DataSource dataSource)
-    {
-      return null;
-    }
-
-    @Override
-    public Query withOverriddenContext(Map contextOverride)
-    {
-      return new TestQuery(
-          getDataSource(),
-          getQuerySegmentSpec(),
-          isDescending(),
-          BaseQuery.computeOverriddenContext(getContext(), contextOverride)
-      );
-    }
-  }
 
   @Test
   public void testDefaultQueryTimeout()

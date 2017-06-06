@@ -46,6 +46,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -245,14 +246,14 @@ public class IndexGeneratorCombinerTest
 
     InputRow capturedRow1 = InputRowSerde.fromBytes(captureVal1.getValue().getBytes(), aggregators);
     Assert.assertEquals(Arrays.asList("host", "keywords"), capturedRow1.getDimensions());
-    Assert.assertEquals(Arrays.asList("host1"), capturedRow1.getDimension("host"));
+    Assert.assertEquals(Collections.singletonList("host1"), capturedRow1.getDimension("host"));
     Assert.assertEquals(Arrays.asList("bar", "foo"), capturedRow1.getDimension("keywords"));
     Assert.assertEquals(10, capturedRow1.getLongMetric("visited_sum"));
     Assert.assertEquals(1.0, (Double)HyperUniquesAggregatorFactory.estimateCardinality(capturedRow1.getRaw("unique_hosts")), 0.001);
 
     InputRow capturedRow2 = InputRowSerde.fromBytes(captureVal2.getValue().getBytes(), aggregators);
     Assert.assertEquals(Arrays.asList("host", "keywords"), capturedRow2.getDimensions());
-    Assert.assertEquals(Arrays.asList("host2"), capturedRow2.getDimension("host"));
+    Assert.assertEquals(Collections.singletonList("host2"), capturedRow2.getDimension("host"));
     Assert.assertEquals(Arrays.asList("bar", "foo"), capturedRow2.getDimension("keywords"));
     Assert.assertEquals(5, capturedRow2.getLongMetric("visited_sum"));
     Assert.assertEquals(1.0, (Double)HyperUniquesAggregatorFactory.estimateCardinality(capturedRow2.getRaw("unique_hosts")), 0.001);

@@ -140,12 +140,17 @@
             <artifactId>emitter</artifactId>
             <scope>provided</scope>
         </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-aws</artifactId>
+        <version>${hadoop.compile.version}</version>
+      </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <scope>provided</scope>
         </dependency>
-      
+
         <!-- Tests -->
         <dependency>
           <groupId>junit</groupId>
@@ -178,6 +183,12 @@
           <version>${hadoop.compile.version}</version>
           <scope>test</scope>
         </dependency>
-      </dependencies>
+      <dependency>
+        <groupId>io.druid</groupId>
+        <artifactId>druid-indexing-hadoop</artifactId>
+        <version>${project.parent.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
 
 </project>

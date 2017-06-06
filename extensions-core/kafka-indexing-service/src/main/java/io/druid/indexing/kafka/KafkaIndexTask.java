@@ -57,6 +57,7 @@ import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.DruidMetrics;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -64,9 +65,9 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
+import io.druid.segment.realtime.appenderator.AppenderatorDriver;
+import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
-import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriver;
-import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
@@ -89,7 +90,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -121,7 +121,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private static final String TYPE = "index_kafka";
   private static final Random RANDOM = new Random();
   private static final long POLL_TIMEOUT = 100;
-  private static final long POLL_RETRY_MS = 30000;
   private static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
 
@@ -182,6 +181,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private volatile boolean pauseRequested = false;
   private volatile long pauseMillis = 0;
 
+  // This value can be tuned in some tests
+  private long pollRetryMs = 30000;
+
   @JsonCreator
   public KafkaIndexTask(
       @JsonProperty("id") String id,
@@ -208,6 +210,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
 
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
+  }
+
+  @VisibleForTesting
+  void setPollRetryMs(long retryMs)
+  {
+    this.pollRetryMs = retryMs;
   }
 
   private static String makeTaskId(String dataSource, int randomBits)
@@ -282,9 +290,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     try (
         final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-        final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
+        final AppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
         final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
+      toolbox.getDataSegmentServerAnnouncer().announce();
+
       appenderator = appenderator0;
 
       final String topic = ioConfig.getStartPartitions().getTopic();
@@ -355,39 +365,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         }
       };
 
-      final TransactionalSegmentPublisher publisher = new TransactionalSegmentPublisher()
-      {
-        @Override
-        public boolean publishSegments(Set<DataSegment> segments, Object commitMetadata) throws IOException
-        {
-          final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(
-              ((Map) commitMetadata).get(METADATA_NEXT_PARTITIONS),
-              KafkaPartitions.class
-          );
-
-          // Sanity check, we should only be publishing things that match our desired end state.
-          if (!endOffsets.equals(finalPartitions.getPartitionOffsetMap())) {
-            throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
-          }
-
-          final SegmentTransactionalInsertAction action;
-
-          if (ioConfig.isUseTransaction()) {
-            action = new SegmentTransactionalInsertAction(
-                segments,
-                new KafkaDataSourceMetadata(ioConfig.getStartPartitions()),
-                new KafkaDataSourceMetadata(finalPartitions)
-            );
-          } else {
-            action = new SegmentTransactionalInsertAction(segments, null, null);
-          }
-
-          log.info("Publishing with isTransaction[%s].", ioConfig.isUseTransaction());
-
-          return toolbox.getTaskActionClient().submit(action).isSuccess();
-        }
-      };
-
       Set<Integer> assignment = assignPartitionsAndSeekToNext(consumer, topic);
 
       // Main loop.
@@ -437,12 +414,21 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
             if (record.offset() < endOffsets.get(record.partition())) {
               if (record.offset() != nextOffsets.get(record.partition())) {
-                throw new ISE(
-                    "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
-                    record.offset(),
-                    nextOffsets.get(record.partition()),
-                    record.partition()
-                );
+                if (ioConfig.isSkipOffsetGaps()) {
+                  log.warn(
+                      "Skipped to offset[%,d] after offset[%,d] in partition[%d].",
+                      record.offset(),
+                      nextOffsets.get(record.partition()),
+                      record.partition()
+                  );
+                } else {
+                  throw new ISE(
+                      "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
+                      record.offset(),
+                      nextOffsets.get(record.partition()),
+                      record.partition()
+                  );
+                }
               }
 
               try {
@@ -456,15 +442,20 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 if (!ioConfig.getMinimumMessageTime().isPresent() ||
                     !ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp())) {
 
-                  final SegmentIdentifier identifier = driver.add(
+                  final String sequenceName = sequenceNames.get(record.partition());
+                  final AppenderatorDriverAddResult addResult = driver.add(
                       row,
-                      sequenceNames.get(record.partition()),
-                      committerSupplier,
-                      publisher,
-                      false
-                  ).lhs;
+                      sequenceName,
+                      committerSupplier
+                  );
 
-                  if (identifier == null) {
+                  if (addResult.isOk()) {
+                    // If the number of rows in the segment exceeds the threshold after adding a row,
+                    // move the segment out from the active segments of AppenderatorDriver to make a new segment.
+                    if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
+                      driver.moveSegmentOut(sequenceName, ImmutableList.of(addResult.getSegmentIdentifier()));
+                    }
+                  } else {
                     // Failure to allocate segment puts determinism at risk, bail out to be safe.
                     // May want configurable behavior here at some point.
                     // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
@@ -515,15 +506,59 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         status = Status.PUBLISHING;
       }
 
-      final SegmentsAndMetadata published = driver.publishAndWaitHandoff(publisher, committerSupplier.get());
-      if (published == null) {
+      final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
+        final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(
+            ((Map) commitMetadata).get(METADATA_NEXT_PARTITIONS),
+            KafkaPartitions.class
+        );
+
+        // Sanity check, we should only be publishing things that match our desired end state.
+        if (!endOffsets.equals(finalPartitions.getPartitionOffsetMap())) {
+          throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
+        }
+
+        final SegmentTransactionalInsertAction action;
+
+        if (ioConfig.isUseTransaction()) {
+          action = new SegmentTransactionalInsertAction(
+              segments,
+              new KafkaDataSourceMetadata(ioConfig.getStartPartitions()),
+              new KafkaDataSourceMetadata(finalPartitions)
+          );
+        } else {
+          action = new SegmentTransactionalInsertAction(segments, null, null);
+        }
+
+        log.info("Publishing with isTransaction[%s].", ioConfig.isUseTransaction());
+
+        return toolbox.getTaskActionClient().submit(action).isSuccess();
+      };
+
+      // Supervised kafka tasks are killed by KafkaSupervisor if they are stuck during publishing segments or waiting
+      // for hand off. See KafkaSupervisorIOConfig.completionTimeout.
+      final SegmentsAndMetadata published = driver.publish(
+          publisher,
+          committerSupplier.get(),
+          sequenceNames.values()
+      ).get();
+
+      final SegmentsAndMetadata handedOff;
+      if (tuningConfig.getHandoffConditionTimeout() == 0) {
+        handedOff = driver.registerHandoff(published)
+                          .get();
+      } else {
+        handedOff = driver.registerHandoff(published)
+                          .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
+      }
+
+      if (handedOff == null) {
         throw new ISE("Transaction failure publishing segments, aborting");
       } else {
         log.info(
             "Published segments[%s] with metadata[%s].",
             Joiner.on(", ").join(
                 Iterables.transform(
-                    published.getSegments(),
+                    handedOff.getSegments(),
                     new Function<DataSegment, String>()
                     {
                       @Override
@@ -534,7 +569,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                     }
                 )
             ),
-            published.getCommitMetadata()
+            handedOff.getCommitMetadata()
         );
       }
     }
@@ -558,6 +593,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         chatHandlerProvider.get().unregister(getId());
       }
     }
+
+    toolbox.getDataSegmentServerAnnouncer().unannounce();
 
     return success();
   }
@@ -628,9 +665,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
-        return query.run(appenderator, responseContext);
+        return queryPlus.run(appenderator, responseContext);
       }
     };
   }
@@ -826,7 +863,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                              ioConfig.getStartPartitions().getPartitionOffsetMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir())
                     .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
         metrics,
         toolbox.getSegmentPusher(),
@@ -842,21 +879,18 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  private FiniteAppenderatorDriver newDriver(
+  private AppenderatorDriver newDriver(
       final Appenderator appenderator,
       final TaskToolbox toolbox,
       final FireDepartmentMetrics metrics
   )
   {
-    return new FiniteAppenderatorDriver(
+    return new AppenderatorDriver(
         appenderator,
         new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getObjectMapper(),
-        tuningConfig.getMaxRowsPerSegment(),
-        Long.MAX_VALUE, // KafkaIndexTask doesn't support this parameter yet
-        tuningConfig.getHandoffConditionTimeout(),
         metrics
     );
   }
@@ -1029,10 +1063,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     if (doReset) {
       sendResetRequestAndWait(resetPartitions, taskToolbox);
     } else {
-      log.warn("Retrying in %dms", POLL_RETRY_MS);
+      log.warn("Retrying in %dms", pollRetryMs);
       pollRetryLock.lockInterruptibly();
       try {
-        long nanos = TimeUnit.MILLISECONDS.toNanos(POLL_RETRY_MS);
+        long nanos = TimeUnit.MILLISECONDS.toNanos(pollRetryMs);
         while (nanos > 0L && !pauseRequested && !stopRequested) {
           nanos = isAwaitingRetry.awaitNanos(nanos);
         }
@@ -1066,10 +1100,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
          .emit();
       // wait for being killed by supervisor
       try {
-        Thread.sleep(Long.MAX_VALUE);
+        pause(-1);
       }
       catch (InterruptedException e) {
-        throw new RuntimeException("Got interrupted while waiting to be killed");
+        throw new RuntimeException("Got interrupted while pausing task");
       }
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();

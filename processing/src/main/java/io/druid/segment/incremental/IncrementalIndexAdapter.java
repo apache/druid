@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
@@ -53,7 +54,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private final IncrementalIndex<?> index;
   private final Map<String, DimensionAccessor> accessors;
 
-  private class DimensionAccessor
+  private static class DimensionAccessor
   {
     private final IncrementalIndex.DimensionDesc dimensionDesc;
     private final MutableBitmap[] invertedIndexes;
@@ -178,17 +179,16 @@ public class IncrementalIndexAdapter implements IndexableAdapter
          * iterator() call to ensure the counter starts at 0.
          */
         return Iterators.transform(
-            index.getFacts().entrySet().iterator(),
-            new Function<Map.Entry<IncrementalIndex.TimeAndDims, Integer>, Rowboat>()
+            index.getFacts().keySet().iterator(),
+            new Function<IncrementalIndex.TimeAndDims, Rowboat>()
             {
               int count = 0;
 
               @Override
-              public Rowboat apply(Map.Entry<IncrementalIndex.TimeAndDims, Integer> input)
+              public Rowboat apply(IncrementalIndex.TimeAndDims timeAndDims)
               {
-                final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
                 final Object[] dimValues = timeAndDims.getDims();
-                final int rowOffset = input.getValue();
+                final int rowOffset = timeAndDims.getRowIndex();
 
                 Object[] dims = new Object[dimValues.length];
                 for (IncrementalIndex.DimensionDesc dimension : dimensions) {
@@ -300,6 +300,12 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     @Override
     public void close() throws IOException
     {
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("bitmapIndex", bitmapIndex);
     }
   }
 

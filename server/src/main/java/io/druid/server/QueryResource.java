@@ -25,11 +25,11 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.MapMaker;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.DirectDruidClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
@@ -40,9 +40,9 @@ import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
-import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -185,13 +185,19 @@ public class QueryResource implements QueryCountStatsProvider
 
     final String currThreadName = Thread.currentThread().getName();
     try {
+
       query = context.getObjectMapper().readValue(in, Query.class);
       queryId = query.getId();
       if (queryId == null) {
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      query = QueryContexts.withDefaultTimeout(query, config.getDefaultQueryTimeout());
+
+      query = DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(query, config);
+      final Map<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery(
+          query,
+          System.currentTimeMillis()
+      );
 
       toolChest = warehouse.getToolChest(query);
 
@@ -226,8 +232,7 @@ public class QueryResource implements QueryCountStatsProvider
         );
       }
 
-      final Map<String, Object> responseContext = new MapMaker().makeMap();
-      final Sequence res = query.run(texasRanger, responseContext);
+      final Sequence res = QueryPlus.wrap(query).run(texasRanger, responseContext);
 
       if (prevEtag != null && prevEtag.equals(responseContext.get(HDR_ETAG))) {
         return Response.notModified().build();
@@ -328,6 +333,9 @@ public class QueryResource implements QueryCountStatsProvider
           builder.header(HDR_ETAG, responseContext.get(HDR_ETAG));
           responseContext.remove(HDR_ETAG);
         }
+
+        responseContext.remove(DirectDruidClient.QUERY_FAIL_TIME);
+        responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()

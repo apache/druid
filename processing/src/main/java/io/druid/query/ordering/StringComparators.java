@@ -57,11 +57,13 @@ public class StringComparators
       }
     }).nullsFirst();
     
+    @SuppressWarnings("StringEquality")
     @Override
     public int compare(String s, String s2)
     {
       // Avoid conversion to bytes for equal references
-      if(s == s2){
+      // Assuming we mostly compare different strings, checking s.equals(s2) will only make the comparison slower.
+      if (s == s2) {
         return 0;
       }
 
@@ -98,6 +100,7 @@ public class StringComparators
   {
     // This code is based on https://github.com/amjjd/java-alphanum, see
     // NOTICE file for more information
+    @Override
     public int compare(String str1, String str2)
     {
       int[] pos =
@@ -369,10 +372,12 @@ public class StringComparators
 
   public static class NumericComparator extends StringComparator
   {
+    @SuppressWarnings("StringEquality")
     @Override
     public int compare(String o1, String o2)
     {
       // return if o1 and o2 are the same object
+      // Assuming we mostly compare different strings, checking o1.equals(o2) will only make the comparison slower.
       if (o1 == o2) {
         return 0;
       }

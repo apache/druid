@@ -19,13 +19,27 @@
 
 package io.druid.segment.column;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.DimensionSelectorUtils;
+import io.druid.segment.IdLookup;
 import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.SingleIndexedInt;
+import io.druid.segment.filter.BooleanValueMatcher;
+import io.druid.segment.historical.HistoricalDimensionSelector;
+import io.druid.segment.historical.OffsetHolder;
+import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.BitSet;
 
 /**
 */
@@ -88,6 +102,184 @@ public class SimpleDictionaryEncodedColumn
   public int getCardinality()
   {
     return cachedLookups.size();
+  }
+
+  @Override
+  public HistoricalDimensionSelector makeDimensionSelector(
+      final OffsetHolder offsetHolder,
+      final ExtractionFn extractionFn
+  )
+  {
+    abstract class QueryableDimensionSelector implements HistoricalDimensionSelector, IdLookup
+    {
+      @Override
+      public int getValueCardinality()
+      {
+        return getCardinality();
+      }
+
+      @Override
+      public String lookupName(int id)
+      {
+        final String value = SimpleDictionaryEncodedColumn.this.lookupName(id);
+        return extractionFn == null ?
+               value :
+               extractionFn.apply(value);
+      }
+
+      @Override
+      public boolean nameLookupPossibleInAdvance()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public IdLookup idLookup()
+      {
+        return extractionFn == null ? this : null;
+      }
+
+      @Override
+      public int lookupId(String name)
+      {
+        if (extractionFn != null) {
+          throw new UnsupportedOperationException(
+              "cannot perform lookup when applying an extraction function"
+          );
+        }
+        return SimpleDictionaryEncodedColumn.this.lookupId(name);
+      }
+    }
+
+    if (hasMultipleValues()) {
+      class MultiValueDimensionSelector extends QueryableDimensionSelector
+      {
+        @Override
+        public IndexedInts getRow()
+        {
+          return multiValueColumn.get(offsetHolder.getOffset().getOffset());
+        }
+
+        @Override
+        public IndexedInts getRow(int offset)
+        {
+          return multiValueColumn.get(offset);
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(String value)
+        {
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+        {
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("multiValueColumn", multiValueColumn);
+          inspector.visit("offsetHolder", offsetHolder);
+          inspector.visit("offset", offsetHolder.getOffset());
+          inspector.visit("extractionFn", extractionFn);
+        }
+      }
+      return new MultiValueDimensionSelector();
+    } else {
+      class SingleValueQueryableDimensionSelector extends QueryableDimensionSelector
+          implements SingleValueHistoricalDimensionSelector
+      {
+        @Override
+        public IndexedInts getRow()
+        {
+          return new SingleIndexedInt(getRowValue());
+        }
+
+        @Override
+        public int getRowValue()
+        {
+          return column.get(offsetHolder.getOffset().getOffset());
+        }
+
+        @Override
+        public IndexedInts getRow(int offset)
+        {
+          return new SingleIndexedInt(getRowValue(offset));
+        }
+
+        @Override
+        public int getRowValue(int offset)
+        {
+          return column.get(offset);
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(final String value)
+        {
+          if (extractionFn == null) {
+            final int valueId = lookupId(value);
+            if (valueId >= 0) {
+              return new ValueMatcher()
+              {
+                @Override
+                public boolean matches()
+                {
+                  return getRowValue() == valueId;
+                }
+
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
+                  inspector.visit("column", SimpleDictionaryEncodedColumn.this);
+                }
+              };
+            } else {
+              return BooleanValueMatcher.of(false);
+            }
+          } else {
+            // Employ precomputed BitSet optimization
+            return makeValueMatcher(Predicates.equalTo(value));
+          }
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        {
+          final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(
+              this,
+              predicate
+          );
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              return predicateMatchingValueIds.get(getRowValue());
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+              inspector.visit("column", SimpleDictionaryEncodedColumn.this);
+            }
+          };
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("column", column);
+          inspector.visit("offsetHolder", offsetHolder);
+          inspector.visit("offset", offsetHolder.getOffset());
+          inspector.visit("extractionFn", extractionFn);
+        }
+      }
+      return new SingleValueQueryableDimensionSelector();
+    }
   }
 
   @Override

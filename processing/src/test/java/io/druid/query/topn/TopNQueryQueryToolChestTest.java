@@ -27,7 +27,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.CacheStrategy;
-import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -243,11 +243,11 @@ public class TopNQueryQueryToolChestTest
 
     @Override
     public Sequence<Result<TopNResultValue>> run(
-        Query<Result<TopNResultValue>> query,
+        QueryPlus<Result<TopNResultValue>> queryPlus,
         Map<String, Object> responseContext
     )
     {
-      this.query = (TopNQuery) query;
+      this.query = (TopNQuery) queryPlus.getQuery();
       return query.run(runner, responseContext);
     }
   }

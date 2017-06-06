@@ -39,7 +39,7 @@ public class S3DataSegmentPusherConfigTest
   public void testSerialization() throws IOException
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                        +"\"disableAcl\":false,\"maxListingLength\":2000}";
+                        +"\"disableAcl\":false,\"maxListingLength\":2000,\"useS3aSchema\":false}";
 
     S3DataSegmentPusherConfig config = jsonMapper.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Assert.assertEquals(jsonConfig, jsonMapper.writeValueAsString(config));
@@ -50,7 +50,7 @@ public class S3DataSegmentPusherConfigTest
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\"}";
     String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                                +"\"disableAcl\":false,\"maxListingLength\":1000}";
+                                +"\"disableAcl\":false,\"maxListingLength\":1000,\"useS3aSchema\":false}";
 
     S3DataSegmentPusherConfig config = jsonMapper.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Assert.assertEquals(expectedJsonConfig, jsonMapper.writeValueAsString(config));

@@ -189,8 +189,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     int bufferOffset;
 
     synchronized (this) {
-      final Integer priorIndex = facts.getPriorIndex(key);
-      if (null != priorIndex) {
+      final int priorIndex = facts.getPriorIndex(key);
+      if (TimeAndDims.EMPTY_ROW_INDEX != priorIndex) {
         final int[] indexAndOffset = indexAndOffsets.get(priorIndex);
         bufferIndex = indexAndOffset[0];
         bufferOffset = indexAndOffset[1];
@@ -202,9 +202,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           rowContainer.set(row);
           for (int i = 0; i < metrics.length; i++) {
             final AggregatorFactory agg = metrics[i];
-            getAggs()[i] = agg.factorizeBuffered(
-                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
-            );
+            getAggs()[i] = agg.factorizeBuffered(selectors.get(agg.getName()));
           }
           rowContainer.set(null);
         }
@@ -236,7 +234,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == null) {
+        if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
           throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
         }
 
@@ -245,8 +243,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         // note that indexAndOffsets must be updated before facts, because as soon as we update facts
         // concurrent readers get hold of it and might ask for newly added row
         indexAndOffsets.add(new int[]{bufferIndex, bufferOffset});
-        final Integer prev = facts.putIfAbsent(key, rowIndex);
-        if (null == prev) {
+        final int prev = facts.putIfAbsent(key, rowIndex);
+        if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
         } else {
           throw new ISE("WTF! we are in sychronized block.");

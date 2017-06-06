@@ -71,7 +71,7 @@ public class RetryQueryRunnerTest
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
           @Override
-          public Sequence<Result<TimeseriesResultValue>> run(Query query, Map context)
+          public Sequence<Result<TimeseriesResultValue>> run(QueryPlus queryPlus, Map context)
           {
             ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                 new SegmentDescriptor(
@@ -128,7 +128,7 @@ public class RetryQueryRunnerTest
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
-              Query<Result<TimeseriesResultValue>> query,
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
               Map<String, Object> context
           )
           {
@@ -165,6 +165,7 @@ public class RetryQueryRunnerTest
           private int numTries = 1;
           private boolean returnPartialResults = true;
 
+          @Override
           public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
@@ -195,7 +196,7 @@ public class RetryQueryRunnerTest
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
-              Query<Result<TimeseriesResultValue>> query,
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
               Map<String, Object> context
           )
           {
@@ -232,6 +233,7 @@ public class RetryQueryRunnerTest
           private int numTries = 4;
           private boolean returnPartialResults = true;
 
+          @Override
           public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
@@ -261,7 +263,7 @@ public class RetryQueryRunnerTest
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
-              Query<Result<TimeseriesResultValue>> query,
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
               Map<String, Object> context
           )
           {
@@ -284,6 +286,7 @@ public class RetryQueryRunnerTest
           private int numTries = 1;
           private boolean returnPartialResults = false;
 
+          @Override
           public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
@@ -313,10 +316,11 @@ public class RetryQueryRunnerTest
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
-              Query<Result<TimeseriesResultValue>> query,
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
               Map<String, Object> context
           )
           {
+            final Query<Result<TimeseriesResultValue>> query = queryPlus.getQuery();
             if ((int) context.get("count") == 0) {
               // assume 2 missing segments at first run
               ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
@@ -395,6 +399,7 @@ public class RetryQueryRunnerTest
           private int numTries = 2;
           private boolean returnPartialResults = false;
 
+          @Override
           public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }

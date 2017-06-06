@@ -72,10 +72,8 @@ If you have nested JSON, [Druid can automatically flatten it for you](flatten-js
 
 ### CSV
 
-Since the CSV data cannot contain the column names (no header is allowed), these must be added before that data can be processed:
-
 ```json
-  "parseSpec":{
+  "parseSpec": {
     "format" : "csv",
     "timestampSpec" : {
       "column" : "timestamp"
@@ -87,12 +85,27 @@ Since the CSV data cannot contain the column names (no header is allowed), these
   }
 ```
 
-The `columns` field must match the columns of your input data in the same order.
+#### CSV Index Tasks
 
-### TSV
+If your input files contain a header, the `columns` field is optional and you don't need to set.
+Instead, you can set the `hasHeaderRow` field to true, which makes Druid automatically extract the column information from the header.
+Otherwise, you must set the `columns` field and ensure that field must match the columns of your input data in the same order.
+
+Also, you can skip some header rows by setting `skipHeaderRows` in your parseSpec. If both `skipHeaderRows` and `hasHeaderRow` options are set,
+`skipHeaderRows` is first applied. For example, if you set `skipHeaderRows` to 2 and `hasHeaderRow` to true, Druid will
+skip the first two lines and then extract column information from the third line.
+
+Note that `hasHeaderRow` and `skipHeaderRows` are effective only for non-Hadoop batch index tasks. Other types of index
+tasks will fail with an exception.
+
+#### Other CSV Ingestion Tasks
+
+The `columns` field must be included and and ensure that the order of the fields matches the columns of your input data in the same order.
+
+### TSV (Delimited)
 
 ```json
-  "parseSpec":{
+  "parseSpec": {
     "format" : "tsv",
     "timestampSpec" : {
       "column" : "timestamp"
@@ -105,9 +118,24 @@ The `columns` field must match the columns of your input data in the same order.
   }
 ```
 
-The `columns` field must match the columns of your input data in the same order. 
-
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
+
+#### TSV (Delimited) Index Tasks
+
+If your input files contain a header, the `columns` field is optional and you don't need to set.
+Instead, you can set the `hasHeaderRow` field to true, which makes Druid automatically extract the column information from the header.
+Otherwise, you must set the `columns` field and ensure that field must match the columns of your input data in the same order.
+
+Also, you can skip some header rows by setting `skipHeaderRows` in your parseSpec. If both `skipHeaderRows` and `hasHeaderRow` options are set,
+`skipHeaderRows` is first applied. For example, if you set `skipHeaderRows` to 2 and `hasHeaderRow` to true, Druid will
+skip the first two lines and then extract column information from the third line.
+
+Note that `hasHeaderRow` and `skipHeaderRows` are effective only for non-Hadoop batch index tasks. Other types of index
+tasks will fail with an exception.
+
+#### Other TSV (Delimited) Ingestion Tasks
+
+The `columns` field must be included and and ensure that the order of the fields matches the columns of your input data in the same order.
 
 ### Regex
 

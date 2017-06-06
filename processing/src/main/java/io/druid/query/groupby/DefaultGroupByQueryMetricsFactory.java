@@ -22,8 +22,11 @@ package io.druid.query.groupby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import io.druid.guice.LazySingleton;
+import io.druid.guice.annotations.Json;
 import io.druid.jackson.DefaultObjectMapper;
 
+@LazySingleton
 public class DefaultGroupByQueryMetricsFactory implements GroupByQueryMetricsFactory
 {
   private static final GroupByQueryMetricsFactory INSTANCE =
@@ -43,7 +46,7 @@ public class DefaultGroupByQueryMetricsFactory implements GroupByQueryMetricsFac
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public DefaultGroupByQueryMetricsFactory(ObjectMapper jsonMapper)
+  public DefaultGroupByQueryMetricsFactory(@Json ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
   }

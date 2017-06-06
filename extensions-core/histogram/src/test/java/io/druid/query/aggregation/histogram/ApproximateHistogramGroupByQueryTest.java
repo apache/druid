@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.Row;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
@@ -42,6 +41,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -181,13 +181,13 @@ public class ApproximateHistogramGroupByQueryTest
             )
         )
         .setPostAggregatorSpecs(
-            Arrays.<PostAggregator>asList(
+            Collections.singletonList(
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)
             )
         )
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
+    List<Row> expectedResults = Collections.singletonList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01T00:00:00.000Z",
             "marketalias", "upfront",
@@ -255,13 +255,13 @@ public class ApproximateHistogramGroupByQueryTest
             )
         )
         .setPostAggregatorSpecs(
-            Arrays.<PostAggregator>asList(
+            Collections.singletonList(
                 new QuantilePostAggregator("quantile", "quantile", 0.5f)
             )
         )
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
+    List<Row> expectedResults = Collections.singletonList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01T00:00:00.000Z",
             "marketalias", "upfront",

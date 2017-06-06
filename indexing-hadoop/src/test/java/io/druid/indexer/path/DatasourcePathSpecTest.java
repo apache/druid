@@ -265,7 +265,9 @@ public class DatasourcePathSpecTest
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
                             new DimensionsSpec(null, null, null),
                             null,
-                            ImmutableList.of("timestamp", "host", "visited")
+                            ImmutableList.of("timestamp", "host", "visited"),
+                            false,
+                            0
                         ),
                         null
                     ),

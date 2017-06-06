@@ -54,6 +54,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
@@ -92,8 +93,10 @@ public class HadoopDruidIndexerConfig
   public static final IndexMerger INDEX_MERGER;
   public static final IndexMergerV9 INDEX_MERGER_V9;
   public static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
-
+  public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
+
+
 
   static {
     injector = Initialization.makeInjectorWithModules(
@@ -118,6 +121,7 @@ public class HadoopDruidIndexerConfig
     INDEX_MERGER = injector.getInstance(IndexMerger.class);
     INDEX_MERGER_V9 = injector.getInstance(IndexMergerV9.class);
     HADOOP_KERBEROS_CONFIG = injector.getInstance(HadoopKerberosConfig.class);
+    DATA_SEGMENT_PUSHER = injector.getInstance(DataSegmentPusher.class);
   }
 
   public static enum IndexJobCounters
@@ -218,6 +222,7 @@ public class HadoopDruidIndexerConfig
   private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
   private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
   private final Granularity rollupGran;
+  private final List<String> allowedHadoopPrefix;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
@@ -254,6 +259,7 @@ public class HadoopDruidIndexerConfig
 
     }
     this.rollupGran = spec.getDataSchema().getGranularitySpec().getQueryGranularity();
+    this.allowedHadoopPrefix = spec.getTuningConfig().getAllowedHadoopPrefix();
   }
 
   @JsonProperty(value = "spec")
@@ -591,5 +597,10 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(schema.getTuningConfig().getWorkingPath(), "workingPath");
     Preconditions.checkNotNull(schema.getIOConfig().getSegmentOutputPath(), "segmentOutputPath");
     Preconditions.checkNotNull(schema.getTuningConfig().getVersion(), "version");
+  }
+
+  public List<String> getAllowedHadoopPrefix()
+  {
+    return allowedHadoopPrefix;
   }
 }

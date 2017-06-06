@@ -77,9 +77,9 @@ public class QueryRunnerHelper
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+      public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
       {
-        return Sequences.withBaggage(runner.run(query, responseContext), closeable);
+        return Sequences.withBaggage(runner.run(queryPlus, responseContext), closeable);
       }
     };
   }

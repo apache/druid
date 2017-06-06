@@ -33,6 +33,7 @@ import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -86,21 +87,22 @@ public class GroupByQueryRunnerFactoryTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, Map responseContext)
           {
             return factory.getToolchest().mergeResults(
                 new QueryRunner()
                 {
                   @Override
-                  public Sequence run(Query query, Map responseContext)
+                  public Sequence run(QueryPlus queryPlus, Map responseContext)
                   {
+                    final Query query = queryPlus.getQuery();
                     try {
                       return new MergeSequence(
                           query.getResultOrdering(),
                           Sequences.simple(
                               Arrays.asList(
-                                  factory.createRunner(createSegment()).run(query, responseContext),
-                                  factory.createRunner(createSegment()).run(query, responseContext)
+                                  factory.createRunner(createSegment()).run(queryPlus, responseContext),
+                                  factory.createRunner(createSegment()).run(queryPlus, responseContext)
                               )
                           )
                       );
@@ -110,7 +112,7 @@ public class GroupByQueryRunnerFactoryTest
                     }
                   }
                 }
-            ).run(query, responseContext);
+            ).run(queryPlus, responseContext);
           }
         }
     );
@@ -144,7 +146,9 @@ public class GroupByQueryRunnerFactoryTest
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags")), null, null),
             "\t",
-            ImmutableList.of("timestamp", "product", "tags")
+            ImmutableList.of("timestamp", "product", "tags"),
+            false,
+            0
         ),
         "UTF-8"
     );

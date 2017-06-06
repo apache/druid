@@ -228,7 +228,7 @@ public class Sink implements Iterable<FireHydrant>
   public int getNumRows()
   {
     synchronized (hydrantLock) {
-      return numRowsExcludingCurrIndex.get() + currHydrant.getIndex().size();
+      return numRowsExcludingCurrIndex.get() + getNumRowsInMemory();
     }
   }
 

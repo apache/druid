@@ -52,6 +52,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     return Math.max(2, getNumThreads() / 4);
   }
 
+  @Override
   @Config(value = "${base_path}.columnCache.sizeBytes")
   public int columnCacheSizeBytes()
   {

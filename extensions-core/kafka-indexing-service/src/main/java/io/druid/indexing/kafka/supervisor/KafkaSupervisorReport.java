@@ -31,7 +31,7 @@ import java.util.List;
 
 public class KafkaSupervisorReport extends SupervisorReport
 {
-  public class KafkaSupervisorReportPayload
+  public static class KafkaSupervisorReportPayload
   {
     private final String dataSource;
     private final String topic;

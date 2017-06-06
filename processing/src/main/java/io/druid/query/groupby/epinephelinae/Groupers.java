@@ -34,7 +34,7 @@ public class Groupers
   private static final int C1 = 0xcc9e2d51;
   private static final int C2 = 0x1b873593;
 
-  /*
+  /**
    * This method was rewritten in Java from an intermediate step of the Murmur hash function in
    * https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp, which contained the
    * following header:
@@ -57,7 +57,7 @@ public class Groupers
 
   public static <KeyType> Iterator<Grouper.Entry<KeyType>> mergeIterators(
       final Iterable<Iterator<Grouper.Entry<KeyType>>> iterators,
-      final Comparator<KeyType> keyTypeComparator
+      final Comparator<Grouper.Entry<KeyType>> keyTypeComparator
   )
   {
     if (keyTypeComparator != null) {
@@ -68,7 +68,7 @@ public class Groupers
             @Override
             public int compare(Grouper.Entry<KeyType> lhs, Grouper.Entry<KeyType> rhs)
             {
-              return keyTypeComparator.compare(lhs.getKey(), rhs.getKey());
+              return keyTypeComparator.compare(lhs, rhs);
             }
           }
       );

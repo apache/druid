@@ -26,17 +26,9 @@ import io.druid.data.input.Row;
  */
 public class AlwaysHavingSpec extends BaseHavingSpec
 {
-  private static final byte CACHE_KEY = 0x0;
-
   @Override
   public boolean eval(Row row)
   {
     return true;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new byte[]{CACHE_KEY};
   }
 }

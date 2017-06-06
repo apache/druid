@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
@@ -50,7 +51,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final AtomicInteger threadNumber = new AtomicInteger();
   private volatile boolean spilling = false;
   private volatile boolean closed = false;
-  private final Comparator<KeyType> keyObjComparator;
+  private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
 
   private final Supplier<ByteBuffer> bufferSupplier;
   private final ColumnSelectorFactory columnSelectorFactory;
@@ -62,6 +63,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final ObjectMapper spillMapper;
   private final int concurrencyHint;
   private final KeySerdeFactory<KeyType> keySerdeFactory;
+  private final DefaultLimitSpec limitSpec;
+  private final boolean sortHasNonGroupingFields;
 
   private volatile boolean initialized = false;
 
@@ -75,7 +78,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final int bufferGrouperInitialBuckets,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final int concurrencyHint
+      final int concurrencyHint,
+      final DefaultLimitSpec limitSpec,
+      final boolean sortHasNonGroupingFields
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -100,7 +105,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     this.spillMapper = spillMapper;
     this.concurrencyHint = concurrencyHint;
     this.keySerdeFactory = keySerdeFactory;
-    this.keyObjComparator = keySerdeFactory.objectComparator();
+    this.limitSpec = limitSpec;
+    this.sortHasNonGroupingFields = sortHasNonGroupingFields;
+    this.keyObjComparator = keySerdeFactory.objectComparator(sortHasNonGroupingFields);
   }
 
   @Override
@@ -126,7 +133,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                 bufferGrouperInitialBuckets,
                 temporaryStorage,
                 spillMapper,
-                false
+                false,
+                limitSpec,
+                sortHasNonGroupingFields
             );
             grouper.init();
             groupers.add(grouper);

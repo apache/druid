@@ -30,6 +30,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
+import io.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +44,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 public class IndexerSQLMetadataStorageCoordinatorTest
 {
@@ -95,6 +97,66 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new LinearShardSpec(0),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment0of0 = new DataSegment(
+      "fooDataSource",
+      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(0, 0),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment1of0 = new DataSegment(
+      "fooDataSource",
+      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(1, 0),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment2of0 = new DataSegment(
+      "fooDataSource",
+      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(2, 0),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment2of1 = new DataSegment(
+      "fooDataSource",
+      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(2, 1),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment3of1 = new DataSegment(
+      "fooDataSource",
+      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(3, 1),
       9,
       100
   );
@@ -712,5 +774,54 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue("deleteValidDataSourceMetadata", coordinator.deleteDataSourceMetadata("fooDataSource"));
 
     Assert.assertNull("getDataSourceMetadataNullAfterDelete", coordinator.getDataSourceMetadata("fooDataSource"));
+  }
+
+  @Test
+  public void testSingleAdditionalNumberedShardWithNoCorePartitions() throws IOException
+  {
+    additionalNumberedShardTest(ImmutableSet.of(numberedSegment0of0));
+  }
+
+  @Test
+  public void testMultipleAdditionalNumberedShardsWithNoCorePartitions() throws IOException
+  {
+    additionalNumberedShardTest(ImmutableSet.of(numberedSegment0of0, numberedSegment1of0, numberedSegment2of0));
+  }
+
+  @Test
+  public void testSingleAdditionalNumberedShardWithOneCorePartition() throws IOException
+  {
+    additionalNumberedShardTest(ImmutableSet.of(numberedSegment2of1));
+  }
+
+  @Test
+  public void testMultipleAdditionalNumberedShardsWithOneCorePartition() throws IOException
+  {
+    additionalNumberedShardTest(ImmutableSet.of(numberedSegment2of1, numberedSegment3of1));
+  }
+
+  private void additionalNumberedShardTest(Set<DataSegment> segments) throws IOException
+  {
+    coordinator.announceHistoricalSegments(segments);
+
+    for (DataSegment segment : segments) {
+      Assert.assertArrayEquals(
+          mapper.writeValueAsString(segment).getBytes("UTF-8"),
+          derbyConnector.lookup(
+              derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+              "id",
+              "payload",
+              segment.getIdentifier()
+          )
+      );
+    }
+
+    Assert.assertEquals(
+        segments.stream().map(DataSegment::getIdentifier).collect(Collectors.toList()),
+        getUsedIdentifiers()
+    );
+
+    // Should not update dataSource metadata.
+    Assert.assertEquals(0, metadataUpdateCounter.get());
   }
 }

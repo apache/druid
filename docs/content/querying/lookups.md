@@ -67,6 +67,7 @@ The configuration is propagated to the query serving nodes (broker / router / pe
 The query serving nodes have an internal API for managing lookups on the node and those are used by the coordinator.
 The coordinator periodically checks if any of the nodes need to load/drop lookups and updates them appropriately.
 
+# API for configuring lookups
 
 ## Bulk update
 Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v1/lookups`. The format of the json object is as follows:
@@ -231,6 +232,27 @@ To discover a list of tiers currently active in the cluster **instead of** ones 
 
 ## List lookup names
 A `GET` to `/druid/coordinator/v1/lookups/{tier}` will return a list of known lookup names for that tier.
+
+# Additional API related to status of configured lookups
+These end points can be used to get the propagation status of configured lookups to lookup nodes such as historicals.
+
+## List load status of all lookups
+`GET /druid/coordinator/v1/lookups/status` with optional query parameter `detailed`.
+
+## List load status of lookups in a tier
+`GET /druid/coordinator/v1/lookups/status/{tier}` with optional query parameter `detailed`.
+
+## List load status of single lookup
+`GET /druid/coordinator/v1/lookups/status/{tier}/{lookup}` with optional query parameter `detailed`.
+
+## List lookup state of all nodes
+`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers from zookeeper or configured lookup tiers are listed.
+
+## List lookup state of nodes in a tier
+`GET /druid/coordinator/v1/lookups/nodeStatus/{tier}`
+
+## List lookup state of single node
+`GET /druid/coordinator/v1/lookups/nodeStatus/{tier}/{host:port}`
 
 # Internal API
 

@@ -120,6 +120,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
+        // nothing to inspect
       }
     }
 
@@ -150,6 +151,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
+        // nothing to inspect
       }
     }
 

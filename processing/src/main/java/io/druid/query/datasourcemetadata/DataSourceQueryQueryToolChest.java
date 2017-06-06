@@ -33,6 +33,7 @@ import io.druid.query.CacheStrategy;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -93,15 +94,15 @@ public class DataSourceQueryQueryToolChest
       @Override
       protected Sequence<Result<DataSourceMetadataResultValue>> doRun(
           QueryRunner<Result<DataSourceMetadataResultValue>> baseRunner,
-          Query<Result<DataSourceMetadataResultValue>> input,
+          QueryPlus<Result<DataSourceMetadataResultValue>> input,
           Map<String, Object> context
       )
       {
-        DataSourceMetadataQuery query = (DataSourceMetadataQuery) input;
+        DataSourceMetadataQuery query = (DataSourceMetadataQuery) input.getQuery();
         return Sequences.simple(
             query.mergeResults(
                 Sequences.toList(
-                    baseRunner.run(query, context),
+                    baseRunner.run(input, context),
                     Lists.<Result<DataSourceMetadataResultValue>>newArrayList()
                 )
             )

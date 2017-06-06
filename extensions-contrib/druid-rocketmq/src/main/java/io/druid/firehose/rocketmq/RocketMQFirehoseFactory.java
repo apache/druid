@@ -38,10 +38,10 @@ import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -127,7 +127,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   private boolean hasMessagesPending()
   {
 
-    for (ConcurrentHashMap.Entry<MessageQueue, ConcurrentSkipListSet<MessageExt>> entry : messageQueueTreeSetMap.entrySet()) {
+    for (Map.Entry<MessageQueue, ConcurrentSkipListSet<MessageExt>> entry : messageQueueTreeSetMap.entrySet()) {
       if (!entry.getValue().isEmpty()) {
         return true;
       }
@@ -137,7 +137,10 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   }
 
   @Override
-  public Firehose connect(ByteBufferInputRowParser byteBufferInputRowParser) throws IOException, ParseException
+  public Firehose connect(
+      ByteBufferInputRowParser byteBufferInputRowParser,
+      File temporaryDirectory
+  ) throws IOException, ParseException
   {
 
     Set<String> newDimExclus = Sets.union(
@@ -202,8 +205,8 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
 
         for (Map.Entry<String, Set<MessageQueue>> entry : topicQueueMap.entrySet()) {
           for (MessageQueue messageQueue : entry.getValue()) {
-            if (JavaCompatUtils.keySet(messageQueueTreeSetMap).contains(messageQueue)
-                && !messageQueueTreeSetMap.get(messageQueue).isEmpty()) {
+            ConcurrentSkipListSet<MessageExt> messages = messageQueueTreeSetMap.get(messageQueue);
+            if (messages != null && !messages.isEmpty()) {
               hasMore = true;
             } else {
               try {
@@ -251,10 +254,9 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
             MessageExt message = entry.getValue().pollFirst();
             InputRow inputRow = theParser.parse(ByteBuffer.wrap(message.getBody()));
 
-            if (!JavaCompatUtils.keySet(windows).contains(entry.getKey())) {
-              windows.put(entry.getKey(), new ConcurrentSkipListSet<Long>());
-            }
-            windows.get(entry.getKey()).add(message.getQueueOffset());
+            windows
+                .computeIfAbsent(entry.getKey(), k -> new ConcurrentSkipListSet<>())
+                .add(message.getQueueOffset());
             return inputRow;
           }
         }
@@ -308,7 +310,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   /**
    * Pull request.
    */
-  final class DruidPullRequest
+  static final class DruidPullRequest
   {
     private final MessageQueue messageQueue;
     private final String tag;
@@ -434,13 +436,9 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
           switch (pullResult.getPullStatus()) {
             case FOUND:
               // Handle pull result.
-              if (!JavaCompatUtils.keySet(messageQueueTreeSetMap).contains(pullRequest.getMessageQueue())) {
-                messageQueueTreeSetMap.putIfAbsent(
-                    pullRequest.getMessageQueue(),
-                    new ConcurrentSkipListSet<>(new MessageComparator())
-                );
-              }
-              messageQueueTreeSetMap.get(pullRequest.getMessageQueue()).addAll(pullResult.getMsgFoundList());
+              messageQueueTreeSetMap
+                  .computeIfAbsent(pullRequest.getMessageQueue(), k -> new ConcurrentSkipListSet<>(MESSAGE_COMPARATOR))
+                  .addAll(pullResult.getMsgFoundList());
               break;
 
             case NO_NEW_MSG:
@@ -508,14 +506,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   /**
    * Compare messages pulled from same message queue according to queue offset.
    */
-  static final class MessageComparator implements Comparator<MessageExt>
-  {
-    @Override
-    public int compare(MessageExt lhs, MessageExt rhs)
-    {
-      return Long.compare(lhs.getQueueOffset(), lhs.getQueueOffset());
-    }
-  }
+  private static final Comparator<MessageExt> MESSAGE_COMPARATOR = Comparator.comparingLong(MessageExt::getQueueOffset);
 
 
   /**

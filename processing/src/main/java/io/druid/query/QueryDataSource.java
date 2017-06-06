@@ -49,6 +49,7 @@ public class QueryDataSource implements DataSource
     return query;
   }
 
+  @Override
   public String toString() { return query.toString(); }
 
   @Override

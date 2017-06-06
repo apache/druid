@@ -93,6 +93,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -231,6 +232,12 @@ public class IngestSegmentFirehoseFactoryTest
           {
             return segment;
           }
+
+          @Override
+          public Map<String, Object> makeLoadSpec(URI uri)
+          {
+            throw new UnsupportedOperationException();
+          }
         },
         new DataSegmentKiller()
         {
@@ -270,6 +277,7 @@ public class IngestSegmentFirehoseFactoryTest
           }
         },
         null, // segment announcer
+        null,
         notifierFactory,
         null, // query runner factory conglomerate corporation unionized collective
         null, // query executor service
@@ -518,7 +526,7 @@ public class IngestSegmentFirehoseFactoryTest
     Integer rowcount = 0;
     try (final IngestSegmentFirehose firehose =
              (IngestSegmentFirehose)
-                 factory.connect(rowParser)) {
+                 factory.connect(rowParser, null)) {
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();
         Assert.assertArrayEquals(new String[]{DIM_NAME}, row.getDimensions().toArray());

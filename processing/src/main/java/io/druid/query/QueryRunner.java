@@ -24,14 +24,26 @@ import io.druid.java.util.common.guava.Sequence;
 import java.util.Map;
 
 /**
+ * This interface has two similar run() methods. {@link #run(Query, Map)} is legacy and {@link #run(QueryPlus, Map)}
+ * is the new one. Their default implementations delegate to each other. Every implementation of QueryRunner should
+ * override only one of those methods. New implementations should override the new method: {@link #run(QueryPlus, Map)}.
  */
 public interface QueryRunner<T>
 {
   /**
-   * Runs the given query and returns results in a time-ordered sequence
-   * @param query
-   * @param responseContext
-   * @return
+   * @deprecated use and override {@link #run(QueryPlus, Map)} instead. This method is going to be removed in Druid 0.11
    */
-  Sequence<T> run(Query<T> query, Map<String, Object> responseContext);
+  @Deprecated
+  default Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+  {
+    return run(QueryPlus.wrap(query), responseContext);
+  }
+
+  /**
+   * Runs the given query and returns results in a time-ordered sequence.
+   */
+  default Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  {
+    return run(queryPlus.getQuery(), responseContext);
+  }
 }

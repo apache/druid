@@ -29,11 +29,13 @@ import io.druid.query.filter.ValueGetter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -74,6 +76,9 @@ public class ColumnComparisonFilter implements Filter
   }
 
   public static ValueMatcher makeValueMatcher(final ValueGetter[] valueGetters) {
+    if (valueGetters.length == 0) {
+      return BooleanValueMatcher.of(true);
+    }
     return new ValueMatcher()
     {
       @Override
@@ -93,6 +98,13 @@ public class ColumnComparisonFilter implements Filter
         }
         return true;
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // All value getters are likely the same or similar (in terms of runtime shape), so inspecting only one of them.
+        inspector.visit("oneValueGetter", valueGetters[0]);
+      }
     };
   }
 
@@ -109,11 +121,7 @@ public class ColumnComparisonFilter implements Filter
 
     for (int i = 0; i < a.length; i++) {
       for (int j = 0; j < b.length; j++) {
-        if (a[i] == null || b[j] == null) {
-          if (a[i] == b[j]) {
-            return true;
-          }
-        } else if (a[i].equals(b[j])) {
+        if (Objects.equals(a[i], b[j])) {
           return true;
         }
       }

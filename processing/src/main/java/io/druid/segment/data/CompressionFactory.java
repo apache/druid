@@ -63,7 +63,7 @@ public class CompressionFactory
   // encoding format for segments created prior to the introduction of encoding formats
   public static final LongEncodingFormat LEGACY_LONG_ENCODING_FORMAT = LongEncodingFormat.LONGS;
 
-  /*
+  /**
    * Delta Encoding Header v1:
    * Byte 1 : version
    * Byte 2 - 9 : base value
@@ -71,7 +71,7 @@ public class CompressionFactory
    */
   public static final byte DELTA_ENCODING_VERSION = 0x1;
 
-  /*
+  /**
    * Table Encoding Header v1 :
    * Byte 1 : version
    * Byte 2 - 5 : table size
@@ -112,7 +112,7 @@ public class CompressionFactory
     return hasEncodingFlag(strategyId) ? (byte) (strategyId + FLAG_VALUE) : strategyId;
   }
 
-  /*
+  /**
    * The compression of decompression of encodings are separated into different enums. EncodingStrategy refers to the
    * strategy used to encode the data, and EncodingFormat refers to the format the data is encoded in. Note there is not
    * necessarily an one-to-one mapping between to two. For instance, the AUTO LongEncodingStrategy scans the data once
@@ -120,7 +120,6 @@ public class CompressionFactory
    * write in any of the LongEncodingFormat. On the other hand, there are no LongEncodingStrategy that always write in
    * TABLE LongEncodingFormat since it only works for data with low cardinality.
    */
-
   public enum LongEncodingStrategy
   {
     /**

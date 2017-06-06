@@ -42,6 +42,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final IndexSpec indexSpec;
   private final boolean buildV9Directly;
   private final boolean reportParseExceptions;
+  @Deprecated
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
 
@@ -98,17 +99,11 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     );
   }
 
+  @Override
   @JsonProperty
   public int getMaxRowsInMemory()
   {
     return maxRowsInMemory;
-  }
-
-  @Override
-  public long getMaxPersistedSegmentsBytes()
-  {
-    // This option is not supported yet
-    throw new UnsupportedOperationException();
   }
 
   @JsonProperty
@@ -117,24 +112,28 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return maxRowsPerSegment;
   }
 
+  @Override
   @JsonProperty
   public Period getIntermediatePersistPeriod()
   {
     return intermediatePersistPeriod;
   }
 
+  @Override
   @JsonProperty
   public File getBasePersistDirectory()
   {
     return basePersistDirectory;
   }
 
+  @Override
   @JsonProperty
   public int getMaxPendingPersists()
   {
     return maxPendingPersists;
   }
 
+  @Override
   @JsonProperty
   public IndexSpec getIndexSpec()
   {
@@ -147,12 +146,14 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return buildV9Directly;
   }
 
+  @Override
   @JsonProperty
   public boolean isReportParseExceptions()
   {
     return reportParseExceptions;
   }
 
+  @Deprecated
   @JsonProperty
   public long getHandoffConditionTimeout()
   {

@@ -31,6 +31,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.client.DirectDruidClient;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
@@ -42,6 +43,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
@@ -49,6 +51,7 @@ import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.segment.column.ValueType;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
@@ -81,6 +84,7 @@ public class DruidSchema extends AbstractSchema
   private final ViewManager viewManager;
   private final ExecutorService cacheExec;
   private final ConcurrentMap<String, Table> tables;
+  private final ServerConfig serverConfig;
 
   // For awaitInitialization.
   private final CountDownLatch initializationLatch = new CountDownLatch(1);
@@ -99,7 +103,8 @@ public class DruidSchema extends AbstractSchema
       final QuerySegmentWalker walker,
       final TimelineServerView serverView,
       final PlannerConfig config,
-      final ViewManager viewManager
+      final ViewManager viewManager,
+      final ServerConfig serverConfig
   )
   {
     this.walker = Preconditions.checkNotNull(walker, "walker");
@@ -108,6 +113,7 @@ public class DruidSchema extends AbstractSchema
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
     this.tables = Maps.newConcurrentMap();
+    this.serverConfig = serverConfig;
   }
 
   @LifecycleStart
@@ -294,7 +300,7 @@ public class DruidSchema extends AbstractSchema
 
   private DruidTable computeTable(final String dataSource)
   {
-    final SegmentMetadataQuery segmentMetadataQuery = new SegmentMetadataQuery(
+    SegmentMetadataQuery segmentMetadataQuery = new SegmentMetadataQuery(
         new TableDataSource(dataSource),
         null,
         null,
@@ -305,7 +311,19 @@ public class DruidSchema extends AbstractSchema
         true
     );
 
-    final Sequence<SegmentAnalysis> sequence = segmentMetadataQuery.run(walker, Maps.<String, Object>newHashMap());
+    segmentMetadataQuery = DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(
+        segmentMetadataQuery,
+        serverConfig
+    );
+
+    final Sequence<SegmentAnalysis> sequence = QueryPlus.wrap(segmentMetadataQuery)
+                                                        .run(
+                                                            walker,
+                                                            DirectDruidClient.makeResponseContextForQuery(
+                                                                segmentMetadataQuery,
+                                                                System.currentTimeMillis()
+                                                            )
+                                                        );
     final List<SegmentAnalysis> results = Sequences.toList(sequence, Lists.<SegmentAnalysis>newArrayList());
     if (results.isEmpty()) {
       return null;

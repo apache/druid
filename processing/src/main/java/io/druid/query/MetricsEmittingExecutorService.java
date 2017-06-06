@@ -48,6 +48,7 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
     return delegate;
   }
 
+  @SuppressWarnings("ParameterPackage")
   @Override
   public <T> ListenableFuture<T> submit(Callable<T> tCallable)
   {

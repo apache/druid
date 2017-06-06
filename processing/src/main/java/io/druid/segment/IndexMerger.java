@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -44,13 +43,13 @@ import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.nary.BinaryFn;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -63,8 +62,6 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedIterable;
-import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -72,6 +69,9 @@ import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.serde.ComplexMetricColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -93,7 +93,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  */
@@ -101,10 +100,8 @@ public class IndexMerger
 {
   private static final Logger log = new Logger(IndexMerger.class);
 
-  protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Arrays.asList(""), String.class);
   protected static final SerializerUtils serializerUtils = new SerializerUtils();
   protected static final int INVALID_ROW = -1;
-  protected static final Splitter SPLITTER = Splitter.on(",");
 
   protected final ObjectMapper mapper;
   protected final IndexIO indexIO;
@@ -217,24 +214,8 @@ public class IndexMerger
       ProgressIndicator progress
   ) throws IOException
   {
-    // We are materializing the list for performance reasons. Lists.transform
-    // only creates a "view" of the original list, meaning the function gets
-    // applied every time you access an element.
-    List<IndexableAdapter> indexAdapteres = Lists.newArrayList(
-        Iterables.transform(
-            indexes,
-            new Function<QueryableIndex, IndexableAdapter>()
-            {
-              @Override
-              public IndexableAdapter apply(final QueryableIndex input)
-              {
-                return new QueryableIndexIndexableAdapter(input);
-              }
-            }
-        )
-    );
     return merge(
-        indexAdapteres,
+        toIndexableAdapters(indexes),
         rollup,
         metricAggs,
         outDir,
@@ -265,6 +246,26 @@ public class IndexMerger
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
                 return input.getDimensionNames();
+              }
+            }
+        )
+    );
+  }
+
+  private static List<IndexableAdapter> toIndexableAdapters(List<QueryableIndex> indexes)
+  {
+    // We are materializing the list for performance reasons. Lists.transform
+    // only creates a "view" of the original list, meaning the function gets
+    // applied every time you access an element.
+    return Lists.newArrayList(
+        Iterables.transform(
+            indexes,
+            new Function<QueryableIndex, IndexableAdapter>()
+            {
+              @Override
+              public IndexableAdapter apply(final QueryableIndex input)
+              {
+                return new QueryableIndexIndexableAdapter(input);
               }
             }
         )
@@ -304,6 +305,11 @@ public class IndexMerger
       }
     }
     return ImmutableList.copyOf(orderingCandidate);
+  }
+
+  public static List<String> getMergedDimensionsFromQueryableIndexes(List<QueryableIndex> indexes)
+  {
+    return getMergedDimensions(toIndexableAdapters(indexes));
   }
 
   public static List<String> getMergedDimensions(List<IndexableAdapter> indexes)
@@ -752,10 +758,14 @@ public class IndexMerger
           mergers.get(i).processMergedRow(dims[i]);
         }
 
-        for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
-          final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRow.getKey());
+        Iterator<Int2ObjectMap.Entry<IntSortedSet>> rowsIterator = theRow.getComprisedRows().int2ObjectEntrySet().fastIterator();
+        while (rowsIterator.hasNext()) {
+          Int2ObjectMap.Entry<IntSortedSet> comprisedRow = rowsIterator.next();
 
-          for (Integer rowNum : comprisedRow.getValue()) {
+          final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRow.getIntKey());
+
+          for (IntIterator setIterator = comprisedRow.getValue().iterator(); setIterator.hasNext(); /* NOP */) {
+            int rowNum = setIterator.nextInt();
             while (conversionBuffer.position() < rowNum) {
               conversionBuffer.put(INVALID_ROW);
             }
@@ -1074,6 +1084,7 @@ public class IndexMerger
       this.lastVal = NOT_INIT;
     }
 
+    @Override
     public int seek(int dictId)
     {
       if (dimConversions == null) {
@@ -1176,46 +1187,6 @@ public class IndexMerger
     }
   }
 
-  public static class AggFactoryStringIndexed implements Indexed<String>
-  {
-    private final AggregatorFactory[] metricAggs;
-
-    public AggFactoryStringIndexed(AggregatorFactory[] metricAggs)
-    {
-      this.metricAggs = metricAggs;
-    }
-
-    @Override
-    public Class<? extends String> getClazz()
-    {
-      return String.class;
-    }
-
-    @Override
-    public int size()
-    {
-      return metricAggs.length;
-    }
-
-    @Override
-    public String get(int index)
-    {
-      return metricAggs[index].getName();
-    }
-
-    @Override
-    public int indexOf(String value)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Iterator<String> iterator()
-    {
-      return IndexedIterable.create(this).iterator();
-    }
-  }
-
   public static class RowboatMergeFunction implements BinaryFn<Rowboat, Rowboat, Rowboat>
   {
     private final AggregatorFactory[] metricAggs;
@@ -1260,9 +1231,12 @@ public class IndexMerger
       );
 
       for (Rowboat rowboat : Arrays.asList(lhs, rhs)) {
-        for (Map.Entry<Integer, TreeSet<Integer>> entry : rowboat.getComprisedRows().entrySet()) {
-          for (Integer rowNum : entry.getValue()) {
-            retVal.addRow(entry.getKey(), rowNum);
+        Iterator<Int2ObjectMap.Entry<IntSortedSet>> entryIterator = rowboat.getComprisedRows().int2ObjectEntrySet().fastIterator();
+        while (entryIterator.hasNext()) {
+          Int2ObjectMap.Entry<IntSortedSet> entry = entryIterator.next();
+
+          for (IntIterator setIterator = entry.getValue().iterator(); setIterator.hasNext(); /* NOP */) {
+            retVal.addRow(entry.getIntKey(), setIterator.nextInt());
           }
         }
       }

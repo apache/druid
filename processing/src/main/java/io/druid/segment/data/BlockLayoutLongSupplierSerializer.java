@@ -23,7 +23,6 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Ints;
-
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -62,7 +61,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
   {
     this.ioPeon = ioPeon;
     this.sizePer = writer.getBlockSize(CompressedPools.BUFFER_SIZE);
-    this.flattener = new GenericIndexedWriter<ResourceHolder<ByteBuffer>>(
+    this.flattener = new GenericIndexedWriter<>(
         ioPeon,
         filenameBase,
         VSizeCompressedObjectStrategy.getBufferForOrder(

@@ -114,12 +114,6 @@ public class Appenderators
           {
             // Do nothing
           }
-
-          @Override
-          public boolean isAnnounced(DataSegment segment)
-          {
-            return false;
-          }
         },
         null,
         null,
