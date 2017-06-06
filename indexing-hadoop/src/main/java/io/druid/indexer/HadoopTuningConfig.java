@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
@@ -66,7 +67,8 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_BUILD_V9_DIRECTLY,
         DEFAULT_NUM_BACKGROUND_PERSIST_THREADS,
         false,
-        false
+        false,
+        null
     );
   }
 
@@ -87,6 +89,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final int numBackgroundPersistThreads;
   private final boolean forceExtendableShardSpecs;
   private final boolean useExplicitVersion;
+  private final List<String> allowedHadoopPrefix;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -108,7 +111,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       final @JsonProperty("numBackgroundPersistThreads") Integer numBackgroundPersistThreads,
       final @JsonProperty("forceExtendableShardSpecs") boolean forceExtendableShardSpecs,
-      final @JsonProperty("useExplicitVersion") boolean useExplicitVersion
+      final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
+      final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix
   )
   {
     this.workingPath = workingPath;
@@ -135,6 +139,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.forceExtendableShardSpecs = forceExtendableShardSpecs;
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
     this.useExplicitVersion = useExplicitVersion;
+    this.allowedHadoopPrefix = allowedHadoopPrefix == null
+                               ? ImmutableList.of("druid.storage.", "druid.javascript.")
+                               : allowedHadoopPrefix;
   }
 
   @JsonProperty
@@ -259,7 +266,8 @@ public class HadoopTuningConfig implements TuningConfig
         buildV9Directly,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
-        useExplicitVersion
+        useExplicitVersion,
+        null
     );
   }
 
@@ -283,7 +291,8 @@ public class HadoopTuningConfig implements TuningConfig
         buildV9Directly,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
-        useExplicitVersion
+        useExplicitVersion,
+        null
     );
   }
 
@@ -307,7 +316,14 @@ public class HadoopTuningConfig implements TuningConfig
         buildV9Directly,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
-        useExplicitVersion
+        useExplicitVersion,
+        null
     );
+  }
+
+  @JsonProperty
+  public List<String> getAllowedHadoopPrefix()
+  {
+    return allowedHadoopPrefix;
   }
 }

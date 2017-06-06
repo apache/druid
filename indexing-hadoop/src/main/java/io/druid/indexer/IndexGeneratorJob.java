@@ -166,6 +166,8 @@ public class IndexGeneratorJob implements Jobby
 
       JobHelper.injectSystemProperties(job);
       config.addJobProperties(job);
+      // inject druid properties like deep storage bindings
+      JobHelper.injectDruidProperties(job.getConfiguration(), config.getAllowedHadoopPrefix());
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);
@@ -741,20 +743,24 @@ public class IndexGeneratorJob implements Jobby
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,
                 segmentTemplate,
-                JobHelper.INDEX_ZIP
+                JobHelper.INDEX_ZIP,
+                config.DATA_SEGMENT_PUSHER
             ),
             JobHelper.makeFileNamePath(
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,
                 segmentTemplate,
-                JobHelper.DESCRIPTOR_JSON
+                JobHelper.DESCRIPTOR_JSON,
+                config.DATA_SEGMENT_PUSHER
             ),
             JobHelper.makeTmpPath(
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,
                 segmentTemplate,
-                context.getTaskAttemptID()
-            )
+                context.getTaskAttemptID(),
+                config.DATA_SEGMENT_PUSHER
+            ),
+            config.DATA_SEGMENT_PUSHER
         );
 
         Path descriptorPath = config.makeDescriptorInfoPath(segment);

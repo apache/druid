@@ -22,7 +22,6 @@ package io.druid.query.groupby.strategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -62,7 +61,6 @@ import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
-import io.druid.query.groupby.orderby.NoopLimitSpec;
 import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
@@ -212,7 +210,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
     // involve materialization)
-
     final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<Row>(baseRunner)
     {
       @Override
@@ -231,60 +228,71 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // Fudge timestamp, maybe.
     final DateTime fudgeTimestamp = getUniversalTimestamp(query);
 
-    return query.postProcess(
-        Sequences.map(
-            mergingQueryRunner.run(
-                QueryPlus.wrap(
-                    new GroupByQuery.Builder(query)
-                        // Don't do post aggs until the end of this method.
-                        .setPostAggregatorSpecs(ImmutableList.of())
-                        // Don't do "having" clause until the end of this method.
-                        .setHavingSpec(null)
-                        .setLimitSpec(NoopLimitSpec.instance())
-                        .overrideContext(
-                            ImmutableMap.of(
-                                "finalize", false,
-                                GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
-                                CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
-                                CTX_KEY_OUTERMOST, false
-                            )
-                        )
-                        .build()
-                ),
-                responseContext
-            ),
-            new Function<Row, Row>()
-            {
-              @Override
-              public Row apply(final Row row)
-              {
-                // Apply postAggregators and fudgeTimestamp if present and if this is the outermost mergeResults.
-
-                if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
-                  return row;
-                }
-
-                if (query.getPostAggregatorSpecs().isEmpty() && fudgeTimestamp == null) {
-                  return row;
-                }
-
-                final Map<String, Object> newMap;
-
-                if (query.getPostAggregatorSpecs().isEmpty()) {
-                  newMap = ((MapBasedRow) row).getEvent();
-                } else {
-                  newMap = Maps.newLinkedHashMap(((MapBasedRow) row).getEvent());
-
-                  for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
-                    newMap.put(postAggregator.getName(), postAggregator.compute(newMap));
-                  }
-                }
-
-                return new MapBasedRow(fudgeTimestamp != null ? fudgeTimestamp : row.getTimestamp(), newMap);
-              }
-            }
+    final GroupByQuery newQuery = new GroupByQuery(
+        query.getDataSource(),
+        query.getQuerySegmentSpec(),
+        query.getVirtualColumns(),
+        query.getDimFilter(),
+        query.getGranularity(),
+        query.getDimensions(),
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs(),
+        // Don't do "having" clause until the end of this method.
+        null,
+        query.getLimitSpec(),
+        query.getContext()
+    ).withOverriddenContext(
+        ImmutableMap.<String, Object>of(
+            "finalize", false,
+            GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
+            CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
+            CTX_KEY_OUTERMOST, false
         )
     );
+
+    Sequence<Row> rowSequence = Sequences.map(
+        mergingQueryRunner.run(
+            QueryPlus.wrap(newQuery),
+            responseContext
+        ),
+        new Function<Row, Row>()
+        {
+          @Override
+          public Row apply(final Row row)
+          {
+            // Apply postAggregators and fudgeTimestamp if present and if this is the outermost mergeResults.
+
+            if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
+              return row;
+            }
+
+            if (query.getPostAggregatorSpecs().isEmpty() && fudgeTimestamp == null) {
+              return row;
+            }
+
+            final Map<String, Object> newMap;
+
+            if (query.getPostAggregatorSpecs().isEmpty()) {
+              newMap = ((MapBasedRow) row).getEvent();
+            } else {
+              newMap = Maps.newLinkedHashMap(((MapBasedRow) row).getEvent());
+
+              for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
+                newMap.put(postAggregator.getName(), postAggregator.compute(newMap));
+              }
+            }
+
+            return new MapBasedRow(fudgeTimestamp != null ? fudgeTimestamp : row.getTimestamp(), newMap);
+          }
+        }
+    );
+
+    // Don't apply limit here for inner results, that will be pushed down to the BufferGrouper
+    if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
+      return query.postProcess(rowSequence);
+    } else {
+      return rowSequence;
+    }
   }
 
   @Override

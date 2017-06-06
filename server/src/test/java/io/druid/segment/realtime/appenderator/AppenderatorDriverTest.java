@@ -64,7 +64,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class FiniteAppenderatorDriverTest
+public class AppenderatorDriverTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
@@ -95,7 +95,7 @@ public class FiniteAppenderatorDriverTest
   SegmentAllocator allocator;
   AppenderatorTester appenderatorTester;
   TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
-  FiniteAppenderatorDriver driver;
+  AppenderatorDriver driver;
 
   @Before
   public void setUp()
@@ -103,7 +103,7 @@ public class FiniteAppenderatorDriverTest
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     segmentHandoffNotifierFactory = new TestSegmentHandoffNotifierFactory();
-    driver = new FiniteAppenderatorDriver(
+    driver = new AppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,

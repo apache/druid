@@ -34,7 +34,7 @@ import javax.validation.constraints.NotNull;
  *
  */
 @JsonTypeName("jdbc")
-public class JDBCExtractionNamespace implements ExtractionNamespace
+public class JdbcExtractionNamespace implements ExtractionNamespace
 {
   @JsonProperty
   private final MetadataStorageConnectorConfig connectorConfig;
@@ -50,7 +50,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   private final Period pollPeriod;
 
   @JsonCreator
-  public JDBCExtractionNamespace(
+  public JdbcExtractionNamespace(
       @NotNull @JsonProperty(value = "connectorConfig", required = true)
       final MetadataStorageConnectorConfig connectorConfig,
       @NotNull @JsonProperty(value = "table", required = true)
@@ -109,7 +109,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   public String toString()
   {
     return String.format(
-        "JDBCExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
+        "JdbcExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
         connectorConfig.toString(),
         table,
         keyColumn,
@@ -129,7 +129,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
       return false;
     }
 
-    JDBCExtractionNamespace that = (JDBCExtractionNamespace) o;
+    JdbcExtractionNamespace that = (JdbcExtractionNamespace) o;
 
     if (!connectorConfig.equals(that.connectorConfig)) {
       return false;

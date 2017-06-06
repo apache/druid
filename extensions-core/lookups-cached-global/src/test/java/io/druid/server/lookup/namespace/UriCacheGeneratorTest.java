@@ -29,14 +29,14 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
+import io.druid.query.lookup.namespace.UriExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
-import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManagerExecutorsTest;
+import io.druid.server.lookup.namespace.cache.CacheSchedulerTest;
 import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -76,7 +76,7 @@ import java.util.zip.GZIPOutputStream;
  *
  */
 @RunWith(Parameterized.class)
-public class URIExtractionNamespaceCacheFactoryTest
+public class UriCacheGeneratorTest
 {
   private static final String FAKE_SCHEME = "wabblywoo";
   private static final Map<String, SearchableVersionedDataFinder> FINDERS = ImmutableMap.<String, SearchableVersionedDataFinder>of(
@@ -232,13 +232,13 @@ public class URIExtractionNamespaceCacheFactoryTest
     };
   }
 
-  public URIExtractionNamespaceCacheFactoryTest(
+  public UriCacheGeneratorTest(
       String suffix,
       Function<File, OutputStream> outStreamSupplier,
       Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator
   ) throws Exception
   {
-    final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap = new HashMap<>();
+    final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceFunctionFactoryMap = new HashMap<>();
     this.suffix = suffix;
     this.outStreamSupplier = outStreamSupplier;
     this.lifecycle = new Lifecycle();
@@ -248,9 +248,9 @@ public class URIExtractionNamespaceCacheFactoryTest
         cacheManagerCreator.apply(lifecycle)
     );
     namespaceFunctionFactoryMap.put(
-        URIExtractionNamespace.class,
+        UriExtractionNamespace.class,
 
-        new URIExtractionNamespaceCacheFactory(FINDERS)
+        new UriCacheGenerator(FINDERS)
     );
   }
 
@@ -263,8 +263,8 @@ public class URIExtractionNamespaceCacheFactoryTest
   private CacheScheduler scheduler;
   private File tmpFile;
   private File tmpFileParent;
-  private URIExtractionNamespaceCacheFactory populator;
-  private URIExtractionNamespace namespace;
+  private UriCacheGenerator generator;
+  private UriExtractionNamespace namespace;
 
   @Before
   public void setUp() throws Exception
@@ -288,12 +288,12 @@ public class URIExtractionNamespaceCacheFactoryTest
           ""
       )));
     }
-    populator = new URIExtractionNamespaceCacheFactory(FINDERS);
-    namespace = new URIExtractionNamespace(
+    generator = new UriCacheGenerator(FINDERS);
+    namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(
-            URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+            UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(0),
         null
@@ -311,7 +311,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   {
     Assert.assertEquals(0, scheduler.getActiveEntries());
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
-    NamespaceExtractionCacheManagerExecutorsTest.waitFor(entry);
+    CacheSchedulerTest.waitFor(entry);
     Map<String, String> map = entry.getCache();
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
@@ -320,7 +320,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   @Test
   public void simpleTestRegex() throws IOException, ExecutionException, InterruptedException
   {
-    final URIExtractionNamespace namespace = new URIExtractionNamespace(
+    final UriExtractionNamespace namespace = new UriExtractionNamespace(
         null,
         Paths.get(this.namespace.getUri()).getParent().toUri(),
         Pattern.quote(Paths.get(this.namespace.getUri()).getFileName().toString()),
@@ -329,7 +329,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         null
     );
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
-    NamespaceExtractionCacheManagerExecutorsTest.waitFor(entry);
+    CacheSchedulerTest.waitFor(entry);
     Map<String, String> map = entry.getCache();
     Assert.assertNotNull(map);
     Assert.assertEquals("bar", map.get("foo"));
@@ -342,11 +342,11 @@ public class URIExtractionNamespaceCacheFactoryTest
     final int size = 128;
     List<CacheScheduler.Entry> entries = new ArrayList<>(size);
     for (int i = 0; i < size; ++i) {
-      URIExtractionNamespace namespace = new URIExtractionNamespace(
+      UriExtractionNamespace namespace = new UriExtractionNamespace(
           tmpFile.toURI(),
           null, null,
-          new URIExtractionNamespace.ObjectMapperFlatDataParser(
-              URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
+          new UriExtractionNamespace.ObjectMapperFlatDataParser(
+              UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
           new Period(0),
           null
@@ -354,7 +354,7 @@ public class URIExtractionNamespaceCacheFactoryTest
 
       CacheScheduler.Entry entry = scheduler.schedule(namespace);
       entries.add(entry);
-      NamespaceExtractionCacheManagerExecutorsTest.waitFor(entry);
+      CacheSchedulerTest.waitFor(entry);
     }
 
     for (CacheScheduler.Entry entry : entries) {
@@ -371,7 +371,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   {
     Assert.assertEquals(0, scheduler.getActiveEntries());
 
-    CacheScheduler.VersionedCache versionedCache = populator.populateCache(namespace, null, null, scheduler);
+    CacheScheduler.VersionedCache versionedCache = generator.generateCache(namespace, null, null, scheduler);
     Assert.assertNotNull(versionedCache);
     Map<String, String> map = versionedCache.getCache();
     Assert.assertEquals("bar", map.get("foo"));
@@ -379,13 +379,13 @@ public class URIExtractionNamespaceCacheFactoryTest
     String version = versionedCache.getVersion();
     Assert.assertNotNull(version);
 
-    Assert.assertNull(populator.populateCache(namespace, null, version, scheduler));
+    Assert.assertNull(generator.generateCache(namespace, null, version, scheduler));
   }
 
   @Test(expected = FileNotFoundException.class)
   public void testMissing() throws Exception
   {
-    URIExtractionNamespace badNamespace = new URIExtractionNamespace(
+    UriExtractionNamespace badNamespace = new UriExtractionNamespace(
         namespace.getUri(),
         null, null,
         namespace.getNamespaceParseSpec(),
@@ -393,13 +393,13 @@ public class URIExtractionNamespaceCacheFactoryTest
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    populator.populateCache(badNamespace, null, null, scheduler);
+    generator.generateCache(badNamespace, null, null, scheduler);
   }
 
   @Test(expected = FileNotFoundException.class)
   public void testMissingRegex() throws Exception
   {
-    URIExtractionNamespace badNamespace = new URIExtractionNamespace(
+    UriExtractionNamespace badNamespace = new UriExtractionNamespace(
         null,
         Paths.get(namespace.getUri()).getParent().toUri(),
         Pattern.quote(Paths.get(namespace.getUri()).getFileName().toString()),
@@ -408,13 +408,13 @@ public class URIExtractionNamespaceCacheFactoryTest
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    populator.populateCache(badNamespace, null, null, scheduler);
+    generator.generateCache(badNamespace, null, null, scheduler);
   }
 
   @Test(expected = IAE.class)
   public void testExceptionalCreationDoubleURI()
   {
-    new URIExtractionNamespace(
+    new UriExtractionNamespace(
         namespace.getUri(),
         namespace.getUri(),
         null,
@@ -427,7 +427,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   @Test(expected = IAE.class)
   public void testExceptionalCreationURIWithPattern()
   {
-    new URIExtractionNamespace(
+    new UriExtractionNamespace(
         namespace.getUri(),
         null,
         "",
@@ -440,7 +440,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   @Test(expected = IAE.class)
   public void testExceptionalCreationURIWithLegacyPattern()
   {
-    new URIExtractionNamespace(
+    new UriExtractionNamespace(
         namespace.getUri(),
         null,
         null,
@@ -453,7 +453,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   @Test(expected = IAE.class)
   public void testLegacyMix()
   {
-    new URIExtractionNamespace(
+    new UriExtractionNamespace(
         null,
         namespace.getUri(),
         "",
@@ -467,7 +467,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   @Test(expected = IAE.class)
   public void testBadPattern()
   {
-    new URIExtractionNamespace(
+    new UriExtractionNamespace(
         null,
         namespace.getUri(),
         "[",
@@ -480,7 +480,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   @Test
   public void testWeirdSchemaOnExactURI() throws Exception
   {
-    final URIExtractionNamespace extractionNamespace = new URIExtractionNamespace(
+    final UriExtractionNamespace extractionNamespace = new UriExtractionNamespace(
         new URI(
             FAKE_SCHEME,
             namespace.getUri().getUserInfo(),
@@ -496,19 +496,19 @@ public class URIExtractionNamespaceCacheFactoryTest
         Period.millis((int) namespace.getPollMs()),
         null
     );
-    Assert.assertNotNull(populator.populateCache(extractionNamespace, null, null, scheduler));
+    Assert.assertNotNull(generator.generateCache(extractionNamespace, null, null, scheduler));
   }
 
   @Test(timeout = 10_000)
   public void testDeleteOnScheduleFail() throws Exception
   {
     Assert.assertNull(scheduler.scheduleAndWait(
-        new URIExtractionNamespace(
+        new UriExtractionNamespace(
             new URI("file://tmp/I_DONT_REALLY_EXIST" +
                     UUID.randomUUID().toString()),
             null,
             null,
-            new URIExtractionNamespace.JSONFlatDataParser(
+            new UriExtractionNamespace.JSONFlatDataParser(
                 new DefaultObjectMapper(),
                 "key",
                 "val"

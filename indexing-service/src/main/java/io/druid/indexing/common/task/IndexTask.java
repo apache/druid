@@ -77,7 +77,7 @@ import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
-import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriver;
+import io.druid.segment.realtime.appenderator.AppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
@@ -400,7 +400,7 @@ public class IndexTask extends AbstractTask
 
     try (
         final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema);
-        final FiniteAppenderatorDriver driver = newDriver(
+        final AppenderatorDriver driver = newDriver(
             appenderator,
             toolbox,
             segmentAllocator,
@@ -543,14 +543,14 @@ public class IndexTask extends AbstractTask
     );
   }
 
-  private FiniteAppenderatorDriver newDriver(
+  private AppenderatorDriver newDriver(
       final Appenderator appenderator,
       final TaskToolbox toolbox,
       final SegmentAllocator segmentAllocator,
       final FireDepartmentMetrics metrics
   )
   {
-    return new FiniteAppenderatorDriver(
+    return new AppenderatorDriver(
         appenderator,
         segmentAllocator,
         new NoopSegmentHandoffNotifierFactory(), // don't wait for handoff since we don't serve queries

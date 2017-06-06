@@ -57,6 +57,34 @@ public class DefaultLimitSpec implements LimitSpec
   private final List<OrderByColumnSpec> columns;
   private final int limit;
 
+  /**
+   * Check if a limitSpec has columns in the sorting order that are not part of the grouping fields represented
+   * by `dimensions`.
+   *
+   * @param limitSpec LimitSpec, assumed to be non-null
+   * @param dimensions Grouping fields for a groupBy query
+   * @return True if limitSpec has sorting columns not contained in dimensions
+   */
+  public static boolean sortingOrderHasNonGroupingFields(DefaultLimitSpec limitSpec, List<DimensionSpec> dimensions)
+  {
+    for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
+      int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
+      if (dimIndex < 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static StringComparator getComparatorForDimName(DefaultLimitSpec limitSpec, String dimName) {
+    final OrderByColumnSpec orderBy = OrderByColumnSpec.getOrderByForDimName(limitSpec.getColumns(), dimName);
+    if (orderBy == null) {
+      return null;
+    }
+
+    return orderBy.getDimensionComparator();
+  }
+
   @JsonCreator
   public DefaultLimitSpec(
       @JsonProperty("columns") List<OrderByColumnSpec> columns,

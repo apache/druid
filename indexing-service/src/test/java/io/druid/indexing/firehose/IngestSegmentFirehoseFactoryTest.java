@@ -93,6 +93,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -230,6 +231,12 @@ public class IngestSegmentFirehoseFactoryTest
           public DataSegment push(File file, DataSegment segment) throws IOException
           {
             return segment;
+          }
+
+          @Override
+          public Map<String, Object> makeLoadSpec(URI uri)
+          {
+            throw new UnsupportedOperationException();
           }
         },
         new DataSegmentKiller()
