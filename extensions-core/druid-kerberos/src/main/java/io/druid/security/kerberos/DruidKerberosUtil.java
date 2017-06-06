@@ -21,6 +21,7 @@ package io.druid.security.kerberos;
 
 import com.google.common.base.Strings;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
@@ -80,7 +81,7 @@ public class DruidKerberosUtil
       byte[] outToken = gssContext.initSecContext(inToken, 0, inToken.length);
       gssContext.dispose();
       // Base64 encoded and stringified token for server
-      return new String(base64codec.encode(outToken));
+      return StringUtils.fromUtf8(base64codec.encode(outToken));
     }
     catch (GSSException | IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
       throw new AuthenticationException(e);

@@ -24,6 +24,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -101,7 +102,7 @@ public class HyperLogLogCollectorTest
 
     int count;
     for (count = 0; count < 100_000_000; ++count) {
-      md.update(Integer.toString(count).getBytes());
+      md.update(StringUtils.toUtf8(Integer.toString(count)));
 
       byte[] hashed = fn.hashBytes(md.digest()).asBytes();
 
@@ -555,7 +556,7 @@ public class HyperLogLogCollectorTest
 
       int numThings = 500000;
       for (int i = 0; i < numThings; i++) {
-        md.update(Integer.toString(random.nextInt()).getBytes());
+        md.update(StringUtils.toUtf8(Integer.toString(random.nextInt())));
         byte[] hashedVal = fn.hashBytes(md.digest()).asBytes();
 
         if (i % 2 == 0) {

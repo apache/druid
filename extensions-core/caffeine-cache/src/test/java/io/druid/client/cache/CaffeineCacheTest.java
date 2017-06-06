@@ -26,14 +26,13 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,8 +48,8 @@ import java.util.concurrent.ForkJoinPool;
 public class CaffeineCacheTest
 {
   private static final int RANDOM_SEED = 3478178;
-  private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
-  private static final byte[] HO = "hooooooooooooooooooo".getBytes();
+  private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
+  private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
 
   private CaffeineCache cache;
   private final CaffeineCacheConfig cacheConfig = new CaffeineCacheConfig()

@@ -37,10 +37,10 @@ public class AppenderatorDriverAddResult
   public static AppenderatorDriverAddResult ok(
       SegmentIdentifier segmentIdentifier,
       int numRowsInSegment,
-      long persistedBytes
+      long totalNumRowsInAppenderator
   )
   {
-    return new AppenderatorDriverAddResult(segmentIdentifier, numRowsInSegment, persistedBytes);
+    return new AppenderatorDriverAddResult(segmentIdentifier, numRowsInSegment, totalNumRowsInAppenderator);
   }
 
   public static AppenderatorDriverAddResult fail()

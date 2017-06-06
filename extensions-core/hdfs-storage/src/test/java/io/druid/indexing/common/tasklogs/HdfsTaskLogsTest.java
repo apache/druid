@@ -23,6 +23,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import io.druid.tasklogs.TaskLogs;
@@ -114,9 +115,6 @@ public class HdfsTaskLogsTest
 
   private String readLog(TaskLogs taskLogs, String logFile, long offset) throws IOException
   {
-    return new String(
-        ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()),
-        Charsets.UTF_8
-    );
+    return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()));
   }
 }

@@ -21,7 +21,6 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -32,6 +31,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -457,7 +457,7 @@ public class IndexGeneratorJobTest
       ByteBuffer buf = ByteBuffer.allocate(4);
       buf.putInt(keyCount);
       BytesWritable key = new BytesWritable(buf.array());
-      BytesWritable value = new BytesWritable(line.getBytes(Charsets.UTF_8));
+      BytesWritable value = new BytesWritable(StringUtils.toUtf8(line));
       fileWriter.append(key, value);
       keyCount += 1;
     }

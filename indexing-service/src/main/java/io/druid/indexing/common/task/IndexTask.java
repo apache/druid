@@ -73,9 +73,9 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
+import io.druid.segment.realtime.appenderator.AppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
-import io.druid.segment.realtime.appenderator.AppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
@@ -288,10 +288,7 @@ public class IndexTask extends AbstractTask
     log.info("Determining intervals and shardSpecs");
     long determineShardSpecsStartMillis = System.currentTimeMillis();
     try (
-        final Firehose firehose = firehoseFactory.connect(
-            ingestionSchema.getDataSchema().getParser(),
-            firehoseTempDir
-        )
+        final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser(), firehoseTempDir)
     ) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();

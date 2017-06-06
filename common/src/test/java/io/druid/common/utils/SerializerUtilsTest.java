@@ -20,6 +20,7 @@
 package io.druid.common.utils;
 
 import io.druid.collections.IntList;
+import io.druid.java.util.common.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,7 +33,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.Charset;
 
 public class SerializerUtilsTest
 {
@@ -42,7 +42,6 @@ public class SerializerUtilsTest
   private  final int [] ints = {1,2,3};
   private  final float [] floats = {1.1f,2,3};
   private  final long [] longs = {3,2,1};
-  private  final Charset UTF8 = Charset.forName("UTF-8");
   private  byte [] stringsByte;
   private  byte [] intsByte;
   private  byte [] floatsByte;
@@ -56,9 +55,9 @@ public class SerializerUtilsTest
     DataOutputStream out = new DataOutputStream(bos);
     out.writeInt(strings.length);
     for (int i = 0;i < strings.length;i++) {
-      byte [] stringBytes = strings[i].getBytes(UTF8);
+      byte [] stringBytes = StringUtils.toUtf8(strings[i]);
       out.writeInt(stringBytes.length);
-      out.write(strings[i].getBytes());
+      out.write(StringUtils.toUtf8(strings[i]));
     }
     out.close();
     stringsByte = bos.toByteArray();

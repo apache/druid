@@ -69,7 +69,7 @@ public class AppenderatorDriverTest
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final int MAX_ROWS_IN_MEMORY = 10;
+  private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
   private static final long PUBLISH_TIMEOUT = 1000;
   private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
@@ -92,21 +92,19 @@ public class AppenderatorDriverTest
       )
   );
 
-  private SegmentAllocator allocator;
-  private AppenderatorTester appenderatorTester;
-  private Appenderator appenderator;
-  private TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
-  private AppenderatorDriver driver;
+  SegmentAllocator allocator;
+  AppenderatorTester appenderatorTester;
+  TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
+  AppenderatorDriver driver;
 
   @Before
   public void setUp()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
-    appenderator = appenderatorTester.getAppenderator();
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     segmentHandoffNotifierFactory = new TestSegmentHandoffNotifierFactory();
     driver = new AppenderatorDriver(
-        appenderator,
+        appenderatorTester.getAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
         new TestUsedSegmentChecker(),
@@ -335,30 +333,6 @@ public class AppenderatorDriverTest
 
     Assert.assertEquals(3, handedoffFromSequence0.getCommitMetadata());
     Assert.assertEquals(3, handedoffFromSequence1.getCommitMetadata());
-  }
-
-  @Test
-  public void testRegisterHandoff() throws IOException, InterruptedException, ExecutionException, TimeoutException
-  {
-    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
-
-    Assert.assertNull(driver.startJob());
-
-    for (int i = 0; i < ROWS.size(); i++) {
-      committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy" + i, committerSupplier).isOk());
-    }
-
-    driver.persist(committerSupplier.get());
-
-    final SegmentsAndMetadata published = driver.publish(
-        makeOkPublisher(),
-        committerSupplier.get(),
-        ImmutableList.of("dummy0")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-    driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
-
-    Assert.assertEquals(2, appenderator.getTotalRowCount());
   }
 
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)

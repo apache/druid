@@ -372,7 +372,7 @@ public class AppenderatorDriver implements Closeable
   /**
    * Return a segment usable for "timestamp". May return null if no segment can be allocated.
    *
-   * @param timestamp    data timestamp
+   * @param row          input row
    * @param sequenceName sequenceName for potential segment allocation
    *
    * @return identifier, or null
@@ -381,50 +381,46 @@ public class AppenderatorDriver implements Closeable
    */
   private SegmentIdentifier getSegment(final InputRow row, final String sequenceName) throws IOException
   {
-    final SegmentIdentifier existing = getActiveSegment(row.getTimestamp(), sequenceName);
-    if (existing != null) {
-      return existing;
-    } else {
-      // Allocate new segment.
-      final String previousSegmentId;
-      synchronized (activeSegments) {
-        previousSegmentId = lastSegmentIds.get(sequenceName);
-      }
-      final SegmentIdentifier newSegment = segmentAllocator.allocate(
-          row,
-          sequenceName,
-          previousSegmentId
-      );
+    synchronized (activeSegments) {
+      final DateTime timestamp = row.getTimestamp();
+      final SegmentIdentifier existing = getActiveSegment(timestamp, sequenceName);
+      if (existing != null) {
+        return existing;
+      } else {
+        // Allocate new segment.
+        final SegmentIdentifier newSegment = segmentAllocator.allocate(
+            row,
+            sequenceName,
+            lastSegmentIds.get(sequenceName)
+        );
 
-      if (newSegment != null) {
-        for (SegmentIdentifier identifier : appenderator.getSegments()) {
-          if (identifier.equals(newSegment)) {
-            throw new ISE(
-                "WTF?! Allocated segment[%s] which conflicts with existing segment[%s].",
-                newSegment,
-                identifier
-            );
+        if (newSegment != null) {
+          for (SegmentIdentifier identifier : appenderator.getSegments()) {
+            if (identifier.equals(newSegment)) {
+              throw new ISE(
+                  "WTF?! Allocated segment[%s] which conflicts with existing segment[%s].",
+                  newSegment,
+                  identifier
+              );
+            }
           }
+
+          log.info("New segment[%s] for sequenceName[%s].", newSegment, sequenceName);
+          addSegment(sequenceName, newSegment);
+        } else {
+          // Well, we tried.
+          log.warn("Cannot allocate segment for timestamp[%s], sequenceName[%s]. ", timestamp, sequenceName);
         }
 
-        log.info("New segment[%s] for sequenceName[%s].", newSegment, sequenceName);
-        addSegment(sequenceName, newSegment);
-      } else {
-        // Well, we tried.
-        log.warn("Cannot allocate segment for timestamp[%s], sequenceName[%s]. ", row.getTimestamp(), sequenceName);
+        return newSegment;
       }
-
-      return newSegment;
     }
   }
 
   /**
    * Move a set of identifiers out from "active", making way for newer segments.
    */
-  public boolean moveSegmentOut(
-      final String sequenceName,
-      final List<SegmentIdentifier> identifiers
-  )
+  public void moveSegmentOut(final String sequenceName, final List<SegmentIdentifier> identifiers)
   {
     synchronized (activeSegments) {
       final NavigableMap<Long, SegmentIdentifier> activeSegmentsForSequence = activeSegments.get(sequenceName);
@@ -439,10 +435,18 @@ public class AppenderatorDriver implements Closeable
           throw new ISE("WTF?! Asked to remove segment[%s] that didn't exist...", identifier);
         }
       }
-      return true;
     }
   }
 
+  /**
+   * Publish all pending segments.
+   *
+   * @param publisher segment publisher
+   * @param committer committer
+   *
+   * @return a {@link ListenableFuture} for the publish task which removes published {@code sequenceNames} from
+   *         {@code activeSegments} and {@code publishPendingSegments}
+   */
   public ListenableFuture<SegmentsAndMetadata> publishAll(
       final TransactionalSegmentPublisher publisher,
       final Committer committer
@@ -464,7 +468,7 @@ public class AppenderatorDriver implements Closeable
    * @param sequenceNames a collection of sequence names to be published
    *
    * @return a {@link ListenableFuture} for the submitted task which removes published {@code sequenceNames} from
-   *         {@code activeSegments} and {@code publishPendingSegments}.
+   *         {@code activeSegments} and {@code publishPendingSegments}
    */
   public ListenableFuture<SegmentsAndMetadata> publish(
       final TransactionalSegmentPublisher publisher,

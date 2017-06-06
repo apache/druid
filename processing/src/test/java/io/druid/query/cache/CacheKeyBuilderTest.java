@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.Cacheable;
 import org.junit.Test;
 
@@ -228,7 +228,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test".getBytes();
+        return StringUtils.toUtf8("test");
       }
     };
 
@@ -237,7 +237,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "testtest".getBytes();
+        return StringUtils.toUtf8("testtest");
       }
     };
 
@@ -358,7 +358,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "te".getBytes();
+        return StringUtils.toUtf8("te");
       }
     };
 
@@ -367,7 +367,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test1".getBytes();
+        return StringUtils.toUtf8("test1");
       }
     };
 
@@ -376,7 +376,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test2".getBytes();
+        return StringUtils.toUtf8("test2");
       }
     };
 

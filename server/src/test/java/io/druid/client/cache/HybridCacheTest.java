@@ -31,6 +31,7 @@ import io.druid.guice.CacheModule;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.annotations.Global;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,7 +40,7 @@ import java.util.Map;
 
 public class HybridCacheTest
 {
-  private static final byte[] HI = "hi".getBytes();
+  private static final byte[] HI = StringUtils.toUtf8("hi");
 
   @Test
   public void testInjection() throws Exception

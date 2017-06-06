@@ -60,6 +60,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -276,7 +277,7 @@ public class UriCacheGeneratorTest
     tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
     final ObjectMapper mapper = new DefaultObjectMapper();
     try (OutputStream ostream = outStreamSupplier.apply(tmpFile);
-         OutputStreamWriter out = new OutputStreamWriter(ostream)) {
+         OutputStreamWriter out = new OutputStreamWriter(ostream, StandardCharsets.UTF_8)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of(
           "boo",
           "bar",

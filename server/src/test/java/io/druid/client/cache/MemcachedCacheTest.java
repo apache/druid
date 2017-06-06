@@ -41,6 +41,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import net.spy.memcached.BroadcastOpFactory;
@@ -82,8 +83,8 @@ import java.util.concurrent.TimeoutException;
 public class MemcachedCacheTest
 {
   private static final Logger log = new Logger(MemcachedCacheTest.class);
-  private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
-  private static final byte[] HO = "hooooooooooooooooooo".getBytes();
+  private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
+  private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
   protected static final AbstractMonitor NOOP_MONITOR = new AbstractMonitor()
   {
     @Override

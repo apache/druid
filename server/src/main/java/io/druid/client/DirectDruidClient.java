@@ -43,7 +43,7 @@ import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
