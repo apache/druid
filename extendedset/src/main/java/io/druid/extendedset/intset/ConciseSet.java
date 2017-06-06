@@ -751,8 +751,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         break;
       case OR:
         res.last = Math.max(this.last, other.last);
-        invalidLast = false;
-        invalidLast |= thisItr.flush(res);
+        invalidLast = thisItr.flush(res);
         invalidLast |= otherItr.flush(res);
         break;
       case XOR:
@@ -1324,7 +1323,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
     boolean isSimilar = (this.lastWordIndex == other.lastWordIndex)
                         && (this.last == other.last);
     for (int i = 0; isSimilar && (i <= lastWordIndex); i++) {
-      isSimilar &= this.words[i] == other.words[i];
+      isSimilar = this.words[i] == other.words[i];
     }
 
     if (isSimilar) {

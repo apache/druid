@@ -80,6 +80,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -346,13 +347,10 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public ListenableFuture<Object> persistAll(final Committer committer)
+  public ListenableFuture<Object> persist(Collection<SegmentIdentifier> identifiers, Committer committer)
   {
-    // Submit persistAll task to the persistExecutor
-
     final Map<SegmentIdentifier, Integer> commitHydrants = Maps.newHashMap();
     final List<Pair<FireHydrant, SegmentIdentifier>> indexesToPersist = Lists.newArrayList();
-    final Set<SegmentIdentifier> identifiers = sinks.keySet();
     for (SegmentIdentifier identifier : identifiers) {
       final Sink sink = sinks.get(identifier);
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
@@ -438,8 +436,15 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
+  public ListenableFuture<Object> persistAll(final Committer committer)
+  {
+    // Submit persistAll task to the persistExecutor
+    return persist(sinks.keySet(), committer);
+  }
+
+  @Override
   public ListenableFuture<SegmentsAndMetadata> push(
-      final List<SegmentIdentifier> identifiers,
+      final Collection<SegmentIdentifier> identifiers,
       final Committer committer
   )
   {
@@ -454,7 +459,7 @@ public class AppenderatorImpl implements Appenderator
     }
 
     return Futures.transform(
-        persistAll(committer),
+        persist(identifiers, committer),
         new Function<Object, SegmentsAndMetadata>()
         {
           @Override
@@ -570,11 +575,9 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getIndexSpec()
       );
 
-      QueryableIndex index = indexIO.loadIndex(mergedFile);
-
       DataSegment segment = dataSegmentPusher.push(
           mergedFile,
-          sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+          sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
       );
 
       objectMapper.writeValue(descriptorFile, segment);
@@ -919,6 +922,14 @@ public class AppenderatorImpl implements Appenderator
             for (FireHydrant hydrant : sink) {
               if (cache != null) {
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+              }
+              try {
+                hydrant.getSegment().close();
+              }
+              catch (IOException e) {
+                log.makeAlert(e, "Failed to explicitly close segment[%s]", schema.getDataSource())
+                   .addData("identifier", hydrant.getSegment().getIdentifier())
+                   .emit();
               }
             }
 

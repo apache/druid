@@ -51,7 +51,7 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(jvmArgsPrepend = "-server", value = 1)
+@Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
 public class IndexIngestionBenchmark

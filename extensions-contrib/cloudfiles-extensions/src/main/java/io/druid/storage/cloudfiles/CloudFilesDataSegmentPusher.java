@@ -34,6 +34,8 @@ import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class CloudFilesDataSegmentPusher implements DataSegmentPusher
@@ -75,7 +77,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
-    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), inSegment);
+    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), getStorageDir(inSegment));
 
     File descriptorFile = null;
     File zipOutFile = null;
@@ -112,18 +114,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
 
               final DataSegment outSegment = inSegment
                   .withSize(indexSize)
-                  .withLoadSpec(
-                      ImmutableMap.<String, Object>of(
-                          "type",
-                          CloudFilesStorageDruidModule.SCHEME,
-                          "region",
-                          segmentData.getRegion(),
-                          "container",
-                          segmentData.getContainer(),
-                          "path",
-                          segmentData.getPath()
-                      )
-                  )
+                  .withLoadSpec(makeLoadSpec(new URI(segmentData.getPath())))
                   .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               return outSegment;
@@ -145,5 +136,20 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
         descriptorFile.delete();
       }
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI uri)
+  {
+    return ImmutableMap.<String, Object>of(
+        "type",
+        CloudFilesStorageDruidModule.SCHEME,
+        "region",
+        objectApi.getRegion(),
+        "container",
+        objectApi.getContainer(),
+        "path",
+        uri.toString()
+    );
   }
 }

@@ -122,6 +122,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -477,6 +478,12 @@ public class TaskLifecycleTest
         pushedSegments++;
         return segment;
       }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
+      }
     };
   }
 
@@ -649,7 +656,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null)
         ),
         null,
         MAPPER
@@ -707,7 +714,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null)
         ),
         null,
         MAPPER
@@ -1017,6 +1024,12 @@ public class TaskLifecycleTest
       {
         throw new RuntimeException("FAILURE");
       }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
+      }
     };
 
     tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc);
@@ -1066,7 +1079,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null, null)
         ),
         null,
         MAPPER

@@ -104,7 +104,18 @@ public class KafkaTuningConfigTest
   @Test
   public void testCopyOf() throws Exception
   {
-    KafkaTuningConfig original = new KafkaTuningConfig(1, 2, new Period("PT3S"), new File("/tmp/xxx"), 4, new IndexSpec(), true, true, 5L, null);
+    KafkaTuningConfig original = new KafkaTuningConfig(
+        1,
+        2,
+        new Period("PT3S"),
+        new File("/tmp/xxx"),
+        4,
+        new IndexSpec(),
+        true,
+        true,
+        5L,
+        null
+    );
     KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());

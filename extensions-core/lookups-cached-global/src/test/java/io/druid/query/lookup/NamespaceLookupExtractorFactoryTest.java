@@ -39,7 +39,7 @@ import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.server.DruidNode;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
@@ -94,10 +94,13 @@ public class NamespaceLookupExtractorFactoryTest
               Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
           )
           {
-            if ("io.druid.server.lookup.namespace.cache.CacheScheduler".equals(valueId)) {
+            if (CacheScheduler.class.getName().equals(valueId)) {
               return scheduler;
+            } else if (ObjectMapper.class.getName().equals(valueId)) {
+              return mapper;
+            } else {
+              return null;
             }
-            return null;
           }
         }
     );
@@ -106,10 +109,10 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testSimpleSerde() throws Exception
   {
-    final URIExtractionNamespace uriExtractionNamespace = new URIExtractionNamespace(
+    final UriExtractionNamespace uriExtractionNamespace = new UriExtractionNamespace(
         temporaryFolder.newFolder().toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
 
         Period.millis(0),
         null
@@ -452,7 +455,7 @@ public class NamespaceLookupExtractorFactoryTest
         LookupExtractorFactory.class
     )));
     Assert.assertEquals(
-        URIExtractionNamespace.class,
+        UriExtractionNamespace.class,
         namespaceLookupExtractorFactory.getExtractionNamespace().getClass()
     );
     Assert.assertFalse(namespaceLookupExtractorFactory.replaces(mapper.readValue(str, LookupExtractorFactory.class)));

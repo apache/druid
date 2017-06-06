@@ -42,6 +42,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final IndexSpec indexSpec;
   private final boolean buildV9Directly;
   private final boolean reportParseExceptions;
+  @Deprecated
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
 
@@ -152,6 +153,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return reportParseExceptions;
   }
 
+  @Deprecated
   @JsonProperty
   public long getHandoffConditionTimeout()
   {

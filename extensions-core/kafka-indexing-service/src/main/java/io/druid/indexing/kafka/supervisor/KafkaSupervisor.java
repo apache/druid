@@ -67,7 +67,6 @@ import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.metadata.EntryExistsException;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -96,7 +95,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Supervisor responsible for managing the KafkaIndexTasks for a single dataSource. At a high level, the class accepts a
@@ -113,6 +113,9 @@ public class KafkaSupervisor implements Supervisor
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000; // prevent us from running too often in response to events
   private static final long NOT_SET = -1;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
+  private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
+  private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
+  private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
 
   // Internal data structures
   // --------------------------------------------------------
@@ -146,14 +149,15 @@ public class KafkaSupervisor implements Supervisor
 
     Set<String> taskIds()
     {
-      return JavaCompatUtils.keySet(tasks);
+      return tasks.keySet();
     }
   }
 
   private static class TaskData
   {
-    TaskStatus status;
-    DateTime startTime;
+    volatile TaskStatus status;
+    volatile DateTime startTime;
+    volatile Map<Integer, Long> currentOffsets = new HashMap<>();
   }
 
   // Map<{group ID}, {actively reading task group}>; see documentation for TaskGroup class
@@ -196,23 +200,22 @@ public class KafkaSupervisor implements Supervisor
 
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
+  private final ScheduledExecutorService reportingExec;
   private final ListeningExecutorService workerExec;
   private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
+  private final Object consumerLock = new Object();
 
   private boolean listenerRegistered = false;
   private long lastRunTime;
 
   private volatile DateTime firstRunTime;
   private volatile KafkaConsumer consumer;
-  private volatile KafkaConsumer lagComputingConsumer;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
-
-  private final ScheduledExecutorService metricEmittingExec;
-  // used while reporting lag
-  private final Map<Integer, Long> lastCurrentOffsets = new HashMap<>();
+  private volatile Map<Integer, Long> latestOffsetsFromKafka;
+  private volatile DateTime offsetsLastUpdated;
 
   public KafkaSupervisor(
       final TaskStorage taskStorage,
@@ -238,7 +241,7 @@ public class KafkaSupervisor implements Supervisor
     this.supervisorId = String.format("KafkaSupervisor-%s", dataSource);
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
-    this.metricEmittingExec = Execs.scheduledSingleThreaded(supervisorId + "-Emitter-%d");
+    this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
 
     int workerThreads = (this.tuningConfig.getWorkerThreads() != null
                          ? this.tuningConfig.getWorkerThreads()
@@ -316,7 +319,6 @@ public class KafkaSupervisor implements Supervisor
 
       try {
         consumer = getKafkaConsumer();
-        lagComputingConsumer = getKafkaConsumer();
 
         exec.submit(
             new Runnable()
@@ -352,10 +354,19 @@ public class KafkaSupervisor implements Supervisor
             TimeUnit.MILLISECONDS
         );
 
-        metricEmittingExec.scheduleAtFixedRate(
-            computeAndEmitLag(taskClient),
-            ioConfig.getStartDelay().getMillis() + 10000, // wait for tasks to start up
-            Math.max(monitorSchedulerConfig.getEmitterPeriod().getMillis(), 60 * 1000),
+        reportingExec.scheduleAtFixedRate(
+            updateCurrentAndLatestOffsets(),
+            ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
+            Math.max(
+                tuningConfig.getOffsetFetchPeriod().getMillis(), MINIMUM_GET_OFFSET_PERIOD_MILLIS
+            ),
+            TimeUnit.MILLISECONDS
+        );
+
+        reportingExec.scheduleAtFixedRate(
+            emitLag(),
+            ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
+            monitorSchedulerConfig.getEmitterPeriod().getMillis(),
             TimeUnit.MILLISECONDS
         );
 
@@ -370,9 +381,6 @@ public class KafkaSupervisor implements Supervisor
       catch (Exception e) {
         if (consumer != null) {
           consumer.close();
-        }
-        if (lagComputingConsumer != null) {
-          lagComputingConsumer.close();
         }
         log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
            .emit();
@@ -391,7 +399,7 @@ public class KafkaSupervisor implements Supervisor
 
       try {
         scheduledExec.shutdownNow(); // stop recurring executions
-        metricEmittingExec.shutdownNow();
+        reportingExec.shutdownNow();
 
         Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
         if (taskRunner.isPresent()) {
@@ -525,7 +533,6 @@ public class KafkaSupervisor implements Supervisor
     public void handle() throws InterruptedException, ExecutionException, TimeoutException
     {
       consumer.close();
-      lagComputingConsumer.close();
 
       synchronized (stopLock) {
         stopped = true;
@@ -558,7 +565,7 @@ public class KafkaSupervisor implements Supervisor
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
       log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
-      killTaskGroupForPartitions(JavaCompatUtils.keySet(taskGroups));
+      killTaskGroupForPartitions(taskGroups.keySet());
     } else if (!(dataSourceMetadata instanceof KafkaDataSourceMetadata)) {
       throw new IAE("Expected KafkaDataSourceMetadata but found instance of [%s]", dataSourceMetadata.getClass());
     } else {
@@ -614,8 +621,7 @@ public class KafkaSupervisor implements Supervisor
           }
         }
         if (metadataUpdateSuccess) {
-          killTaskGroupForPartitions(JavaCompatUtils.keySet(resetKafkaMetadata.getKafkaPartitions()
-                                                                              .getPartitionOffsetMap()));
+          killTaskGroupForPartitions(resetKafkaMetadata.getKafkaPartitions().getPartitionOffsetMap().keySet());
         } else {
           throw new ISE("Unable to reset metadata");
         }
@@ -635,7 +641,7 @@ public class KafkaSupervisor implements Supervisor
       TaskGroup taskGroup = taskGroups.get(getTaskGroupIdForPartition(partition));
       if (taskGroup != null) {
         // kill all tasks in this task group
-        for (String taskId : JavaCompatUtils.keySet(taskGroup.tasks)) {
+        for (String taskId : taskGroup.tasks.keySet()) {
           log.info("Reset dataSource[%s] - killing task [%s]", dataSource, taskId);
           killTask(taskId);
         }
@@ -747,7 +753,9 @@ public class KafkaSupervisor implements Supervisor
   {
     Map<String, List<PartitionInfo>> topics;
     try {
-      topics = consumer.listTopics(); // updates the consumer's list of partitions from the brokers
+      synchronized (consumerLock) {
+        topics = consumer.listTopics(); // updates the consumer's list of partitions from the brokers
+      }
     }
     catch (Exception e) { // calls to the consumer throw NPEs when the broker doesn't respond
       log.warn(
@@ -1342,13 +1350,9 @@ public class KafkaSupervisor implements Supervisor
   void createNewTasks()
   {
     // check that there is a current task group for each group of partitions in [partitionGroups]
-    for (Integer groupId : JavaCompatUtils.keySet(partitionGroups)) {
+    for (Integer groupId : partitionGroups.keySet()) {
       if (!taskGroups.containsKey(groupId)) {
-        log.info(
-            "Creating new task group [%d] for partitions %s",
-            groupId,
-            JavaCompatUtils.keySet(partitionGroups.get(groupId))
-        );
+        log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
 
         Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
             DateTime.now().minus(ioConfig.getLateMessageRejectionPeriod().get())
@@ -1507,18 +1511,20 @@ public class KafkaSupervisor implements Supervisor
 
   private long getOffsetFromKafkaForPartition(int partition, boolean useEarliestOffset)
   {
-    TopicPartition topicPartition = new TopicPartition(ioConfig.getTopic(), partition);
-    if (!consumer.assignment().contains(topicPartition)) {
-      consumer.assign(Collections.singletonList(topicPartition));
-    }
+    synchronized (consumerLock) {
+      TopicPartition topicPartition = new TopicPartition(ioConfig.getTopic(), partition);
+      if (!consumer.assignment().contains(topicPartition)) {
+        consumer.assign(Collections.singletonList(topicPartition));
+      }
 
-    if (useEarliestOffset) {
-      consumer.seekToBeginning(Collections.singletonList(topicPartition));
-    } else {
-      consumer.seekToEnd(Collections.singletonList(topicPartition));
-    }
+      if (useEarliestOffset) {
+        consumer.seekToBeginning(Collections.singletonList(topicPartition));
+      } else {
+        consumer.seekToEnd(Collections.singletonList(topicPartition));
+      }
 
-    return consumer.position(topicPartition);
+      return consumer.position(topicPartition);
+    }
   }
 
   /**
@@ -1602,28 +1608,30 @@ public class KafkaSupervisor implements Supervisor
 
   private KafkaSupervisorReport generateReport(boolean includeOffsets)
   {
-    int numPartitions = 0;
-    for (Map<Integer, Long> partitionGroup : partitionGroups.values()) {
-      numPartitions += partitionGroup.size();
-    }
+    int numPartitions = partitionGroups.values().stream().mapToInt(Map::size).sum();
 
+    Map<Integer, Long> partitionLag = getLagPerPartition(getHighestCurrentOffsets());
     KafkaSupervisorReport report = new KafkaSupervisorReport(
         dataSource,
         DateTime.now(),
         ioConfig.getTopic(),
         numPartitions,
         ioConfig.getReplicas(),
-        ioConfig.getTaskDuration().getMillis() / 1000
+        ioConfig.getTaskDuration().getMillis() / 1000,
+        includeOffsets ? latestOffsetsFromKafka : null,
+        includeOffsets ? partitionLag : null,
+        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
+        includeOffsets ? offsetsLastUpdated : null
     );
 
     List<TaskReportData> taskReports = Lists.newArrayList();
-    List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
 
     try {
       for (TaskGroup taskGroup : taskGroups.values()) {
         for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
           String taskId = entry.getKey();
           DateTime startTime = entry.getValue().startTime;
+          Map<Integer, Long> currentOffsets = entry.getValue().currentOffsets;
           Long remainingSeconds = null;
           if (startTime != null) {
             remainingSeconds = Math.max(
@@ -1634,17 +1642,14 @@ public class KafkaSupervisor implements Supervisor
           taskReports.add(
               new TaskReportData(
                   taskId,
-                  (includeOffsets ? taskGroup.partitionOffsets : null),
-                  null,
+                  includeOffsets ? taskGroup.partitionOffsets : null,
+                  includeOffsets ? currentOffsets : null,
                   startTime,
                   remainingSeconds,
-                  TaskReportData.TaskType.ACTIVE
+                  TaskReportData.TaskType.ACTIVE,
+                  includeOffsets ? getLagPerPartition(currentOffsets) : null
               )
           );
-
-          if (includeOffsets) {
-            futures.add(taskClient.getCurrentOffsetsAsync(taskId, false));
-          }
         }
       }
 
@@ -1653,6 +1658,7 @@ public class KafkaSupervisor implements Supervisor
           for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
             String taskId = entry.getKey();
             DateTime startTime = entry.getValue().startTime;
+            Map<Integer, Long> currentOffsets = entry.getValue().currentOffsets;
             Long remainingSeconds = null;
             if (taskGroup.completionTimeout != null) {
               remainingSeconds = Math.max(0, taskGroup.completionTimeout.getMillis() - DateTime.now().getMillis())
@@ -1662,30 +1668,19 @@ public class KafkaSupervisor implements Supervisor
             taskReports.add(
                 new TaskReportData(
                     taskId,
-                    (includeOffsets ? taskGroup.partitionOffsets : null),
-                    null,
+                    includeOffsets ? taskGroup.partitionOffsets : null,
+                    includeOffsets ? currentOffsets : null,
                     startTime,
                     remainingSeconds,
-                    TaskReportData.TaskType.PUBLISHING
+                    TaskReportData.TaskType.PUBLISHING,
+                    null
                 )
             );
-
-            if (includeOffsets) {
-              futures.add(taskClient.getCurrentOffsetsAsync(taskId, false));
-            }
           }
         }
       }
 
-      List<Map<Integer, Long>> results = Futures.successfulAsList(futures)
-                                                .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-      for (int i = 0; i < taskReports.size(); i++) {
-        TaskReportData reportData = taskReports.get(i);
-        if (includeOffsets) {
-          reportData.setCurrentOffsets(results.get(i));
-        }
-        report.addTask(reportData);
-      }
+      taskReports.stream().forEach(report::addTask);
     }
     catch (Exception e) {
       log.warn(e, "Failed to generate status report");
@@ -1696,111 +1691,128 @@ public class KafkaSupervisor implements Supervisor
 
   private Runnable buildRunTask()
   {
-    return new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        notices.add(new RunNotice());
+    return () -> notices.add(new RunNotice());
+  }
+
+  private void updateLatestOffsetsFromKafka()
+  {
+    synchronized (consumerLock) {
+      final Map<String, List<PartitionInfo>> topics = consumer.listTopics();
+
+      if (topics == null || !topics.containsKey(ioConfig.getTopic())) {
+        throw new ISE("Could not retrieve partitions for topic [%s]", ioConfig.getTopic());
+      }
+
+      final Set<TopicPartition> topicPartitions = topics.get(ioConfig.getTopic())
+                                                        .stream()
+                                                        .map(x -> new TopicPartition(x.topic(), x.partition()))
+                                                        .collect(Collectors.toSet());
+      consumer.assign(topicPartitions);
+      consumer.seekToEnd(topicPartitions);
+
+      latestOffsetsFromKafka = topicPartitions
+          .stream()
+          .collect(Collectors.toMap(TopicPartition::partition, consumer::position));
+    }
+  }
+
+  private Map<Integer, Long> getHighestCurrentOffsets()
+  {
+    return taskGroups
+        .values()
+        .stream()
+        .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
+        .flatMap(taskData -> taskData.getValue().currentOffsets.entrySet().stream())
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Long::max));
+  }
+
+  private Map<Integer, Long> getLagPerPartition(Map<Integer, Long> currentOffsets)
+  {
+    return currentOffsets
+        .entrySet()
+        .stream()
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                e -> latestOffsetsFromKafka != null
+                     && latestOffsetsFromKafka.get(e.getKey()) != null
+                     && e.getValue() != null
+                     ? latestOffsetsFromKafka.get(e.getKey()) - e.getValue()
+                     : null
+            )
+        );
+  }
+
+  private Runnable emitLag()
+  {
+    return () -> {
+      try {
+        Map<Integer, Long> highestCurrentOffsets = getHighestCurrentOffsets();
+
+        if (latestOffsetsFromKafka == null) {
+          throw new ISE("Latest offsets from Kafka have not been fetched");
+        }
+
+        if (!latestOffsetsFromKafka.keySet().equals(highestCurrentOffsets.keySet())) {
+          log.warn(
+              "Lag metric: Kafka partitions %s do not match task partitions %s",
+              latestOffsetsFromKafka.keySet(),
+              highestCurrentOffsets.keySet()
+          );
+        }
+
+        long lag = getLagPerPartition(highestCurrentOffsets)
+            .values()
+            .stream()
+            .mapToLong(x -> Math.max(x, 0))
+            .sum();
+
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", lag)
+        );
+      }
+      catch (Exception e) {
+        log.warn(e, "Unable to compute Kafka lag");
       }
     };
   }
 
-  private Runnable computeAndEmitLag(final KafkaIndexTaskClient taskClient)
+  private void updateCurrentOffsets() throws InterruptedException, ExecutionException, TimeoutException
   {
-    return new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          final Map<String, List<PartitionInfo>> topics = lagComputingConsumer.listTopics();
-          final List<PartitionInfo> partitionInfoList = topics.get(ioConfig.getTopic());
-          lagComputingConsumer.assign(
-              Lists.transform(partitionInfoList, new Function<PartitionInfo, TopicPartition>()
-              {
-                @Override
-                public TopicPartition apply(PartitionInfo input)
-                {
-                  return new TopicPartition(ioConfig.getTopic(), input.partition());
-                }
-              })
-          );
-          final Map<Integer, Long> offsetsResponse = new ConcurrentHashMap<>();
-          final List<ListenableFuture<Void>> futures = Lists.newArrayList();
-          for (TaskGroup taskGroup : taskGroups.values()) {
-            for (String taskId : taskGroup.taskIds()) {
-              futures.add(Futures.transform(
-                  taskClient.getCurrentOffsetsAsync(taskId, false),
-                  new Function<Map<Integer, Long>, Void>()
-                  {
-                    @Override
-                    public Void apply(Map<Integer, Long> taskResponse)
-                    {
-                      if (taskResponse != null) {
-                        for (final Map.Entry<Integer, Long> partitionOffsets : taskResponse.entrySet()) {
-                          offsetsResponse.compute(partitionOffsets.getKey(), new BiFunction<Integer, Long, Long>()
-                          {
-                            @Override
-                            public Long apply(Integer key, Long existingOffsetInMap)
-                            {
-                              // If existing value is null use the offset returned by task
-                              // otherwise use the max (makes sure max offset is taken from replicas)
-                              return existingOffsetInMap == null
-                                     ? partitionOffsets.getValue()
-                                     : Math.max(partitionOffsets.getValue(), existingOffsetInMap);
-                            }
-                          });
-                        }
-                      }
-                      return null;
-                    }
-                  }
-                          )
-              );
-            }
-          }
-          // not using futureTimeoutInSeconds as its min value is 120 seconds
-          // and minimum emission period for this metric is 60 seconds
-          Futures.successfulAsList(futures).get(30, TimeUnit.SECONDS);
+    final List<ListenableFuture<Void>> futures = Stream.concat(
+        taskGroups.values().stream().flatMap(taskGroup -> taskGroup.tasks.entrySet().stream()),
+        pendingCompletionTaskGroups.values()
+                                   .stream()
+                                   .flatMap(List::stream)
+                                   .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
+    ).map(
+        task -> Futures.transform(
+            taskClient.getCurrentOffsetsAsync(task.getKey(), false),
+            (Function<Map<Integer, Long>, Void>) (currentOffsets) -> {
 
-          // for each partition, seek to end to get the highest offset
-          // check the offsetsResponse map for the latest consumed offset
-          // if partition info not present in offsetsResponse then use lastCurrentOffsets map
-          // if not present there as well, fail the compute
+              if (currentOffsets != null && !currentOffsets.isEmpty()) {
+                task.getValue().currentOffsets = currentOffsets;
+              }
 
-          long lag = 0;
-          for (PartitionInfo partitionInfo : partitionInfoList) {
-            long diff;
-            final TopicPartition topicPartition = new TopicPartition(ioConfig.getTopic(), partitionInfo.partition());
-            lagComputingConsumer.seekToEnd(ImmutableList.of(topicPartition));
-            if (offsetsResponse.get(topicPartition.partition()) != null) {
-              diff = lagComputingConsumer.position(topicPartition) - offsetsResponse.get(topicPartition.partition());
-              lastCurrentOffsets.put(topicPartition.partition(), offsetsResponse.get(topicPartition.partition()));
-            } else if (lastCurrentOffsets.get(topicPartition.partition()) != null) {
-              diff = lagComputingConsumer.position(topicPartition) - lastCurrentOffsets.get(topicPartition.partition());
-            } else {
-              throw new ISE("Could not find latest consumed offset for partition [%d]", topicPartition.partition());
+              return null;
             }
-            lag += diff;
-            log.debug(
-                "Topic - [%s] Partition - [%d] : Partition lag [%,d], Total lag so far [%,d]",
-                topicPartition.topic(),
-                topicPartition.partition(),
-                diff,
-                lag
-            );
-          }
-          emitter.emit(
-              ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", lag)
-          );
-        }
-        catch (InterruptedException e) {
-          // do nothing, probably we are shutting down
-        }
-        catch (Exception e) {
-          log.warn(e, "Unable to compute Kafka lag");
-        }
+        )
+    ).collect(Collectors.toList());
+
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+  }
+
+  @VisibleForTesting
+  Runnable updateCurrentAndLatestOffsets()
+  {
+    return () -> {
+      try {
+        updateCurrentOffsets();
+        updateLatestOffsetsFromKafka();
+        offsetsLastUpdated = DateTime.now();
+      }
+      catch (Exception e) {
+        log.warn(e, "Exception while getting current/latest offsets");
       }
     };
   }

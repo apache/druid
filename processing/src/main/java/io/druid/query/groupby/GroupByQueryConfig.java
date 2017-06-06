@@ -27,6 +27,7 @@ import io.druid.query.groupby.strategy.GroupByStrategySelector;
 public class GroupByQueryConfig
 {
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
+  public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
@@ -65,6 +66,9 @@ public class GroupByQueryConfig
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
   private long maxOnDiskStorage = 0L;
+
+  @JsonProperty
+  private boolean forcePushDownLimit = false;
 
   @JsonProperty
   private Class<? extends GroupByQueryMetricsFactory> queryMetricsFactory;
@@ -129,6 +133,11 @@ public class GroupByQueryConfig
     return maxOnDiskStorage;
   }
 
+  public boolean isForcePushDownLimit()
+  {
+    return forcePushDownLimit;
+  }
+
   public Class<? extends GroupByQueryMetricsFactory> getQueryMetricsFactory()
   {
     return queryMetricsFactory != null ? queryMetricsFactory : DefaultGroupByQueryMetricsFactory.class;
@@ -138,7 +147,7 @@ public class GroupByQueryConfig
   {
     this.queryMetricsFactory = queryMetricsFactory;
   }
-
+  
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
@@ -172,6 +181,7 @@ public class GroupByQueryConfig
         ((Number) query.getContextValue(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getMaxMergingDictionarySize())).longValue(),
         getMaxMergingDictionarySize()
     );
+    newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     return newConfig;
   }
 }

@@ -28,17 +28,20 @@ import java.util.Map;
 public class FiniteAppenderatorDriverMetadata
 {
   private final Map<String, List<SegmentIdentifier>> activeSegments;
+  private final Map<String, List<SegmentIdentifier>> publishPendingSegments;
   private final Map<String, String> lastSegmentIds;
   private final Object callerMetadata;
 
   @JsonCreator
   public FiniteAppenderatorDriverMetadata(
       @JsonProperty("activeSegments") Map<String, List<SegmentIdentifier>> activeSegments,
+      @JsonProperty("publishPendingSegments") Map<String, List<SegmentIdentifier>> publishPendingSegments,
       @JsonProperty("lastSegmentIds") Map<String, String> lastSegmentIds,
       @JsonProperty("callerMetadata") Object callerMetadata
   )
   {
     this.activeSegments = activeSegments;
+    this.publishPendingSegments = publishPendingSegments;
     this.lastSegmentIds = lastSegmentIds;
     this.callerMetadata = callerMetadata;
   }
@@ -47,6 +50,12 @@ public class FiniteAppenderatorDriverMetadata
   public Map<String, List<SegmentIdentifier>> getActiveSegments()
   {
     return activeSegments;
+  }
+
+  @JsonProperty
+  public Map<String, List<SegmentIdentifier>> getPublishPendingSegments()
+  {
+    return publishPendingSegments;
   }
 
   @JsonProperty
@@ -66,6 +75,7 @@ public class FiniteAppenderatorDriverMetadata
   {
     return "FiniteAppenderatorDriverMetadata{" +
            "activeSegments=" + activeSegments +
+           ", publishPendingSegments=" + publishPendingSegments +
            ", lastSegmentIds=" + lastSegmentIds +
            ", callerMetadata=" + callerMetadata +
            '}';

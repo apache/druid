@@ -525,7 +525,8 @@ public class IndexGeneratorJobTest
                 buildV9Directly,
                 null,
                 forceExtendableShardSpecs,
-                false
+                false,
+                null
             )
         )
     );
