@@ -21,6 +21,8 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -195,9 +197,9 @@ public class ByteBufferMinMaxOffsetHeapTest
   {
     int limit = 100;
 
-    ArrayList<Integer> values = Lists.newArrayList(
+    IntList values = new IntArrayList(new int[] {
         1, 20, 1000, 2, 3, 30, 40, 10, 11, 12, 13, 300, 400, 500, 600
-    );
+    });
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
@@ -212,7 +214,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     Assert.assertTrue(heap.isIntact());
 
     Collections.sort(values);
-    values.remove((Number) 12);
+    values.rem(12);
 
     List<Integer> actual = Lists.newArrayList();
     for (int i = 0; i < values.size(); i++){
@@ -228,10 +230,10 @@ public class ByteBufferMinMaxOffsetHeapTest
   {
     int limit = 100;
 
-    ArrayList<Integer> values = Lists.newArrayList(
+    IntList values = new IntArrayList(new int[] {
         1, 20, 1000, 2, 3, 30, 40, 10, 11, 12, 13, 300, 400, 500, 600, 4, 5,
         6, 7, 8, 9, 4, 5, 200, 250
-    );
+    });
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
@@ -245,7 +247,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     Assert.assertTrue(heap.isIntact());
 
     Collections.sort(values);
-    values.remove((Number) 2);
+    values.rem(2);
     Assert.assertTrue(heap.isIntact());
 
     List<Integer> actual = Lists.newArrayList();
