@@ -117,6 +117,7 @@ public class PolyBindTest
     }
     try {
       Assert.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
+      Assert.fail(); // should never be reached
     }
     catch (Exception e) {
       Assert.assertTrue(e instanceof ProvisionException);
