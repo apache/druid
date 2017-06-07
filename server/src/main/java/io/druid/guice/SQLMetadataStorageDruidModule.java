@@ -68,7 +68,7 @@ public class SQLMetadataStorageDruidModule implements Module
    */
   public void createBindingChoices(Binder binder, String defaultPropertyValue)
   {
-    PolyBind.createChoiceWithDefaultNoScope(
+    PolyBind.createChoiceWithDefault(
         binder, PROPERTY, Key.get(MetadataStorageConnector.class), null, defaultPropertyValue
     );
     PolyBind.createChoiceWithDefaultNoScope(
@@ -78,7 +78,7 @@ public class SQLMetadataStorageDruidModule implements Module
         Key.get(NoopMetadataStorageProvider.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefaultNoScope(
+    PolyBind.createChoiceWithDefault(
         binder, PROPERTY, Key.get(SQLMetadataConnector.class), null, defaultPropertyValue
     );
     PolyBind.createChoiceWithDefaultNoScope(
