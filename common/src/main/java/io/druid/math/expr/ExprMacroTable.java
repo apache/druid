@@ -19,6 +19,7 @@
 
 package io.druid.math.expr;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,16 @@ public class ExprMacroTable
     return NIL;
   }
 
+  /**
+   * Returns an expr corresponding to a function call if this table has an entry for {@code functionName}.
+   * Otherwise, returns null.
+   *
+   * @param functionName function name
+   * @param args         function arguments
+   *
+   * @return expr for this function call, or null
+   */
+  @Nullable
   public Expr get(final String functionName, final List<Expr> args)
   {
     final ExprMacro exprMacro = macroMap.get(functionName.toLowerCase());

@@ -20,6 +20,7 @@
 package io.druid.math.expr;
 
 import com.google.common.math.LongMath;
+import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 
@@ -408,7 +409,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   @Override
   protected final long evalLong(long left, long right)
   {
-    return LongMath.pow(left, (int) right);
+    return LongMath.pow(left, Ints.checkedCast(right));
   }
 
   @Override

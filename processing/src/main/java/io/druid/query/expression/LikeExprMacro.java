@@ -41,7 +41,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     if (args.size() < 2 || args.size() > 3) {
-      throw new IAE("'%s' must have 2 or 3 arguments", name());
+      throw new IAE("Function[%s] must have 2 or 3 arguments", name());
     }
 
     final Expr arg = args.get(0);
@@ -58,7 +58,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
     if (escape != null && escape.length() != 1) {
       throw new IllegalArgumentException("Escape must be null or a single character");
     } else {
-      escapeChar = (escape == null || escape.isEmpty()) ? null : escape.charAt(0);
+      escapeChar = escape == null ? null : escape.charAt(0);
     }
 
     final LikeDimFilter.LikeMatcher likeMatcher = LikeDimFilter.LikeMatcher.from(

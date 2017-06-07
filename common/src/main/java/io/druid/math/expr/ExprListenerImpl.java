@@ -19,6 +19,7 @@
 
 package io.druid.math.expr;
 
+import io.druid.java.util.common.RE;
 import io.druid.math.expr.antlr.ExprBaseListener;
 import io.druid.math.expr.antlr.ExprParser;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -297,7 +298,7 @@ public class ExprListenerImpl extends ExprBaseListener
       // Built-in functions.
       final Function function = Parser.getFunction(fnName);
       if (function == null) {
-        throw new RuntimeException("function '" + fnName + "' is not defined.");
+        throw new RE("function '%s' is not defined.", fnName);
       }
       expr = new FunctionExpr(function, fnName, args);
     }
