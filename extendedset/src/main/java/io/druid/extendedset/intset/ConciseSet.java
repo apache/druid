@@ -468,7 +468,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
    * string. The bit <i>must</i> be appendable, that is it must represent an
    * integer that is strictly greater than the maximum integer in the set.
    * Note that the parameter range check is performed by the public method
-   * {@link #add(Integer)} and <i>not</i> in this method.
+   * {@link #add)} and <i>not</i> in this method.
    * <p/>
    * <b>NOTE:</b> This method assumes that the last element of {@link #words}
    * (i.e. <code>getLastWord()</code>) <i>must</i> be one of the
@@ -678,7 +678,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
    *
    * @return the result of the operation
    */
-  @SuppressWarnings("NonShortCircuitBooleanExpression")
   private ConciseSet performOperation(ConciseSet other, Operator operator)
   {
     // non-empty arguments
@@ -713,6 +712,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         if (!otherItr.isLiteral) {
           int minCount = Math.min(thisItr.count, otherItr.count);
           res.appendFill(minCount, operator.combineLiterals(thisItr.word, otherItr.word));
+          //noinspection NonShortCircuitBooleanExpression
           if (!thisItr.prepareNext(minCount) | !otherItr.prepareNext(minCount)) // NOT ||
           {
             break;
@@ -720,6 +720,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         } else {
           res.appendLiteral(operator.combineLiterals(thisItr.toLiteral(), otherItr.word));
           thisItr.word--;
+          //noinspection NonShortCircuitBooleanExpression
           if (!thisItr.prepareNext(1) | !otherItr.prepareNext()) // do NOT use "||"
           {
             break;
@@ -728,12 +729,14 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
       } else if (!otherItr.isLiteral) {
         res.appendLiteral(operator.combineLiterals(thisItr.word, otherItr.toLiteral()));
         otherItr.word--;
+        //noinspection NonShortCircuitBooleanExpression
         if (!thisItr.prepareNext() | !otherItr.prepareNext(1)) // do NOT use  "||"
         {
           break;
         }
       } else {
         res.appendLiteral(operator.combineLiterals(thisItr.word, otherItr.word));
+        //noinspection NonShortCircuitBooleanExpression
         if (!thisItr.prepareNext() | !otherItr.prepareNext()) // do NOT use  "||"
         {
           break;
@@ -1682,7 +1685,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   /**
    * {@inheritDoc}
    */
-  @SuppressWarnings("NonShortCircuitBooleanExpression")
   @Override
   public boolean containsAny(IntSet c)
   {
@@ -1718,6 +1720,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word & otherItr.word) != 0) {
             return true;
           }
+          //noinspection NonShortCircuitBooleanExpression
           if (!thisItr.prepareNext(minCount) | !otherItr.prepareNext(minCount)) // NOT ||
           {
             return false;
@@ -1727,6 +1730,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
             return true;
           }
           thisItr.word--;
+          //noinspection NonShortCircuitBooleanExpression
           if (!thisItr.prepareNext(1) | !otherItr.prepareNext()) // do NOT use "||"
           {
             return false;
@@ -1737,6 +1741,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           return true;
         }
         otherItr.word--;
+        //noinspection NonShortCircuitBooleanExpression
         if (!thisItr.prepareNext() | !otherItr.prepareNext(1)) // do NOT use  "||"
         {
           return false;
@@ -1745,6 +1750,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         if ((thisItr.word & otherItr.word) != ConciseSetUtils.ALL_ZEROS_LITERAL) {
           return true;
         }
+        //noinspection NonShortCircuitBooleanExpression
         if (!thisItr.prepareNext() | !otherItr.prepareNext()) // do NOT use  "||"
         {
           return false;
@@ -1756,7 +1762,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   /**
    * {@inheritDoc}
    */
-  @SuppressWarnings("NonShortCircuitBooleanExpression")
   @Override
   public boolean containsAtLeast(IntSet c, int minElements)
   {
@@ -1808,6 +1813,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
               return true;
             }
           }
+          //noinspection NonShortCircuitBooleanExpression
           if (!thisItr.prepareNext(minCount) | !otherItr.prepareNext(minCount)) // NOT ||
           {
             return false;
@@ -1818,6 +1824,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
             return true;
           }
           thisItr.word--;
+          //noinspection NonShortCircuitBooleanExpression
           if (!thisItr.prepareNext(1) | !otherItr.prepareNext()) // do NOT use "||"
           {
             return false;
@@ -1829,6 +1836,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           return true;
         }
         otherItr.word--;
+        //noinspection NonShortCircuitBooleanExpression
         if (!thisItr.prepareNext() | !otherItr.prepareNext(1)) // do NOT use  "||"
         {
           return false;
@@ -1838,6 +1846,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         if (res >= minElements) {
           return true;
         }
+        //noinspection NonShortCircuitBooleanExpression
         if (!thisItr.prepareNext() | !otherItr.prepareNext()) // do NOT use  "||"
         {
           return false;

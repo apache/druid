@@ -33,7 +33,6 @@ import org.apache.commons.cli.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -114,14 +113,11 @@ public class RabbitMQProducerMain
     // An extremely silly hack to maintain the above order in the help formatting.
     HelpFormatter formatter = new HelpFormatter();
     // Add a comparator to the HelpFormatter using the ArrayList above to sort by insertion order.
-    formatter.setOptionComparator(new Comparator(){
-      @SuppressWarnings("SuspiciousMethodCalls")
-      @Override
-      public int compare(Object o1, Object o2)
-      {
-        // I know this isn't fast, but who cares! The list is short.
-        return Integer.compare(optionList.indexOf(o1), optionList.indexOf(o2));
-      }
+    //noinspection ComparatorCombinators -- don't replace with comparingInt() to preserve comments
+    formatter.setOptionComparator((o1, o2) -> {
+      // I know this isn't fast, but who cares! The list is short.
+      //noinspection SuspiciousMethodCalls
+      return Integer.compare(optionList.indexOf(o1), optionList.indexOf(o2));
     });
 
     // Now we can add all the options to an Options instance. This is dumb!
