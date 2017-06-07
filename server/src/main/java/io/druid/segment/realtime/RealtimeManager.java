@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
@@ -54,11 +55,11 @@ import io.druid.segment.realtime.plumber.Plumbers;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.joda.time.Interval;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -74,6 +75,7 @@ public class RealtimeManager implements QuerySegmentWalker
    * key=data source name,value=mappings of partition number to FireChief
    */
   private final Map<String, Map<Integer, FireChief>> chiefs;
+  private ExecutorService fireChiefExecutor;
 
   @Inject
   public RealtimeManager(
@@ -104,39 +106,26 @@ public class RealtimeManager implements QuerySegmentWalker
   {
     serverAnnouncer.announce();
 
+    fireChiefExecutor = Execs.multiThreaded(fireDepartments.size(), "chief-%d");
+
     for (final FireDepartment fireDepartment : fireDepartments) {
       final DataSchema schema = fireDepartment.getDataSchema();
 
       final FireChief chief = new FireChief(fireDepartment, conglomerate);
-      Map<Integer, FireChief> partitionChiefs = chiefs.get(schema.getDataSource());
-      if (partitionChiefs == null) {
-        partitionChiefs = new HashMap<>();
-        chiefs.put(schema.getDataSource(), partitionChiefs);
-      }
-      partitionChiefs.put(fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(), chief);
+      chiefs.computeIfAbsent(schema.getDataSource(), k -> new HashMap<>())
+            .put(fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(), chief);
 
-      chief.setName(
-          String.format(
-              "chief-%s[%s]",
-              schema.getDataSource(),
-              fireDepartment.getTuningConfig().getShardSpec().getPartitionNum()
-          )
-      );
-      chief.setDaemon(true);
-      chief.start();
+      fireChiefExecutor.submit(chief);
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-    for (Map<Integer, FireChief> chiefs : this.chiefs.values()) {
-      for (FireChief chief : chiefs.values()) {
-        CloseQuietly.close(chief);
-      }
-    }
-
     serverAnnouncer.unannounce();
+    if (fireChiefExecutor != null) {
+      fireChiefExecutor.shutdownNow();
+    }
   }
 
   public FireDepartmentMetrics getMetrics(String datasource)
@@ -211,19 +200,16 @@ public class RealtimeManager implements QuerySegmentWalker
            );
   }
 
-  static class FireChief extends Thread implements Closeable
+  static class FireChief implements Runnable
   {
     private final FireDepartment fireDepartment;
     private final FireDepartmentMetrics metrics;
     private final RealtimeTuningConfig config;
     private final QueryRunnerFactoryConglomerate conglomerate;
 
-    private volatile Firehose firehose = null;
-    private volatile FirehoseV2 firehoseV2 = null;
-    private volatile Plumber plumber = null;
-    private volatile boolean normalExit = true;
+    private Plumber plumber;
 
-    public FireChief(FireDepartment fireDepartment, QueryRunnerFactoryConglomerate conglomerate)
+    FireChief(FireDepartment fireDepartment, QueryRunnerFactoryConglomerate conglomerate)
     {
       this.fireDepartment = fireDepartment;
       this.conglomerate = conglomerate;
@@ -231,59 +217,33 @@ public class RealtimeManager implements QuerySegmentWalker
       this.metrics = fireDepartment.getMetrics();
     }
 
-    public Firehose initFirehose()
+    private Firehose initFirehose()
     {
-      synchronized (this) {
-        if (firehose == null) {
-          try {
-            log.info("Calling the FireDepartment and getting a Firehose.");
-            firehose = fireDepartment.connect();
-            log.info("Firehose acquired!");
-          }
-          catch (IOException e) {
-            throw Throwables.propagate(e);
-          }
-        } else {
-          log.warn("Firehose already connected, skipping initFirehose().");
-        }
-
-        return firehose;
+      try {
+        log.info("Calling the FireDepartment and getting a Firehose.");
+        return fireDepartment.connect();
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
       }
     }
 
-    public FirehoseV2 initFirehoseV2(Object metaData)
+    private FirehoseV2 initFirehoseV2(Object metaData)
     {
-      synchronized (this) {
-        if (firehoseV2 == null) {
-          try {
-            log.info("Calling the FireDepartment and getting a FirehoseV2.");
-            firehoseV2 = fireDepartment.connect(metaData);
-            log.info("FirehoseV2 acquired!");
-          }
-          catch (IOException e) {
-            throw Throwables.propagate(e);
-          }
-        } else {
-          log.warn("FirehoseV2 already connected, skipping initFirehoseV2().");
-        }
-
-        return firehoseV2;
+      try {
+        log.info("Calling the FireDepartment and getting a FirehoseV2.");
+        return fireDepartment.connect(metaData);
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
       }
     }
 
-    public Plumber initPlumber()
+    Plumber initPlumber()
     {
-      synchronized (this) {
-        if (plumber == null) {
-          log.info("Someone get us a plumber!");
-          plumber = fireDepartment.findPlumber();
-          log.info("We have our plumber!");
-        } else {
-          log.warn("Plumber already trained, skipping initPlumber().");
-        }
-
-        return plumber;
-      }
+      log.info("Someone get us a plumber!");
+      plumber = fireDepartment.findPlumber();
+      return plumber;
     }
 
     public FireDepartmentMetrics getMetrics()
@@ -294,7 +254,11 @@ public class RealtimeManager implements QuerySegmentWalker
     @Override
     public void run()
     {
-      plumber = initPlumber();
+      Firehose firehose = null;
+      FirehoseV2 firehoseV2 = null;
+      boolean normalExit = true;
+
+      initPlumber();
 
       try {
         Object metadata = plumber.startJob();
@@ -306,7 +270,6 @@ public class RealtimeManager implements QuerySegmentWalker
           firehose = initFirehose();
           runFirehose(firehose);
         }
-
       }
       catch (RuntimeException e) {
         log.makeAlert(
@@ -326,10 +289,9 @@ public class RealtimeManager implements QuerySegmentWalker
       }
       finally {
         CloseQuietly.close(firehose);
+        CloseQuietly.close(firehoseV2);
         if (normalExit) {
           plumber.finishJob();
-          plumber = null;
-          firehose = null;
         }
       }
     }
@@ -394,17 +356,6 @@ public class RealtimeManager implements QuerySegmentWalker
       QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
       return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      synchronized (this) {
-        if (firehose != null) {
-          normalExit = false;
-          firehose.close();
-        }
-      }
     }
   }
 }

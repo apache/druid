@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -78,6 +79,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -90,6 +92,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -97,6 +100,7 @@ import java.util.concurrent.TimeUnit;
 public class RealtimeManagerTest
 {
   private static QueryRunnerFactory factory;
+  private static ExecutorService fireChiefExecutor;
 
   private RealtimeManager realtimeManager;
   private RealtimeManager realtimeManager2;
@@ -114,6 +118,7 @@ public class RealtimeManagerTest
   public static void setupStatic()
   {
     factory = initFactory();
+    fireChiefExecutor = Execs.multiThreaded(2, "chief-%d");
   }
 
   @Before
@@ -336,20 +341,22 @@ public class RealtimeManagerTest
         )
     );
 
-    startFireChiefWithPartitionNum(fireChief_0, 0);
-    startFireChiefWithPartitionNum(fireChief_1, 1);
+    fireChiefExecutor.submit(fireChief_0);
+    fireChiefExecutor.submit(fireChief_1);
   }
 
-  private void startFireChiefWithPartitionNum(RealtimeManager.FireChief fireChief, int partitionNum)
+  @After
+  public void tearDown() throws Exception
   {
-    fireChief.setName(
-        String.format(
-            "chief-%s[%s]",
-            "testing",
-            partitionNum
-        )
-    );
-    fireChief.start();
+    realtimeManager.stop();
+    realtimeManager2.stop();
+    realtimeManager3.stop();
+  }
+
+  @AfterClass
+  public static void tearDownStatic()
+  {
+    fireChiefExecutor.shutdownNow();
   }
 
   @Test
@@ -682,14 +689,6 @@ public class RealtimeManagerTest
     return GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
   }
 
-  @After
-  public void tearDown() throws Exception
-  {
-    realtimeManager.stop();
-    realtimeManager2.stop();
-    realtimeManager3.stop();
-  }
-
   private TestInputRowHolder makeRow(final long timestamp)
   {
     return new TestInputRowHolder(timestamp, null);
@@ -767,35 +766,6 @@ public class RealtimeManagerTest
           return 0;
         }
       };
-    }
-  }
-
-  private static class InfiniteTestFirehose implements Firehose
-  {
-    private boolean hasMore = true;
-
-    @Override
-    public boolean hasMore()
-    {
-      return hasMore;
-    }
-
-    @Override
-    public InputRow nextRow()
-    {
-      return null;
-    }
-
-    @Override
-    public Runnable commit()
-    {
-      return Runnables.getNoopRunnable();
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      hasMore = false;
     }
   }
 
