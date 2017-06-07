@@ -86,6 +86,18 @@ public class PolyBind
     return binder.bind(interfaceKey).toProvider(new ConfiggedProvider<T>(interfaceKey, property, defaultKey, defaultPropertyValue));
   }
 
+  static <T> void createChoiceWithDefaultNoScope(
+      Binder binder,
+      String property,
+      Key<T> interfaceKey,
+      Key<? extends T> defaultKey,
+      String defaultPropertyValue
+  )
+  {
+    createChoiceWithDefault(binder, property, interfaceKey, defaultKey, defaultPropertyValue);
+    optionBinder(binder, interfaceKey).addBinding(defaultPropertyValue).to(defaultKey);
+  }
+
   /**
    * Binds an option for a specific choice.  The choice must already be registered on the injector for this to work.
    *

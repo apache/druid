@@ -68,97 +68,97 @@ public class SQLMetadataStorageDruidModule implements Module
    */
   public void createBindingChoices(Binder binder, String defaultPropertyValue)
   {
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder, PROPERTY, Key.get(MetadataStorageConnector.class), null, defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataStorageProvider.class),
         Key.get(NoopMetadataStorageProvider.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder, PROPERTY, Key.get(SQLMetadataConnector.class), null, defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataSegmentManager.class),
         Key.get(SQLMetadataSegmentManager.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataSegmentManagerProvider.class),
         Key.get(SQLMetadataSegmentManagerProvider.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataRuleManager.class),
         Key.get(SQLMetadataRuleManager.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataRuleManagerProvider.class),
         Key.get(SQLMetadataRuleManagerProvider.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataSegmentPublisher.class),
         Key.get(SQLMetadataSegmentPublisher.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataSegmentPublisherProvider.class),
         Key.get(SQLMetadataSegmentPublisherProvider.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(IndexerMetadataStorageCoordinator.class),
         Key.get(IndexerSQLMetadataStorageCoordinator.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataStorageActionHandlerFactory.class),
         Key.get(SQLMetadataStorageActionHandlerFactory.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataStorageUpdaterJobHandler.class),
         Key.get(SQLMetadataStorageUpdaterJobHandler.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(AuditManager.class),
         Key.get(SQLAuditManager.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(AuditManagerProvider.class),
         Key.get(SQLAuditManagerProvider.class),
         defaultPropertyValue
     );
-    PolyBind.createChoiceWithDefault(
+    PolyBind.createChoiceWithDefaultNoScope(
         binder,
         PROPERTY,
         Key.get(MetadataSupervisorManager.class),
