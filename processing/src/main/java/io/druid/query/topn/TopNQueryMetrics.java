@@ -20,6 +20,10 @@
 package io.druid.query.topn;
 
 import io.druid.query.QueryMetrics;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.Cursor;
+
+import java.util.List;
 
 /**
  * Specialization of {@link QueryMetrics} for {@link TopNQuery}.
@@ -47,4 +51,42 @@ public interface TopNQueryMetrics extends QueryMetrics<TopNQuery>
    * metric is a metric of not long or double type, but it could be redefined in the implementation of this method.
    */
   void numComplexMetrics(TopNQuery query);
+
+  void dimensionCardinality(int cardinality);
+
+  void algorithm(TopNAlgorithm algorithm);
+
+  /**
+   * This method is called exactly once with each cursor, processed for the query.
+   */
+  void cursor(Cursor cursor);
+
+  /**
+   * This method is called exactly once with the columnValueSelector object of each cursor, processed for the query.
+   */
+  void columnValueSelector(ColumnValueSelector columnValueSelector);
+
+  /**
+   * This method may set {@link TopNParams#getNumValuesPerPass()} of the query as dimension.
+   */
+  void numValuesPerPass(TopNParams params);
+
+  /**
+   * Called with the number of rows, processed via each cursor, processed for the query within the segment. The total
+   * number of processed rows, reported via this method for a TopNQueryMetrics instance, is smaller or equal to
+   * {@link #reportPreFilteredRows(long)}, because {@link #postFilters(List)} are additionally applied. If there
+   * are no postFilters, preFilteredRows and processedRows are equal.
+   */
+  TopNQueryMetrics addProcessedRows(long numRows);
+
+  /**
+   * Calls to this method and {@link #stopRecordingScanTime()} wrap scanning of each cursor, processed for the
+   * query.
+   */
+  void startRecordingScanTime();
+
+  /**
+   * Calls of {@link #startRecordingScanTime()} and this method wrap scanning of each cursor, processed for the query.
+   */
+  TopNQueryMetrics stopRecordingScanTime();
 }
