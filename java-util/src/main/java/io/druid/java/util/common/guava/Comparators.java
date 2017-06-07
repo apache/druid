@@ -42,7 +42,10 @@ public class Comparators
     }
   };
 
+  //CHECKSTYLE.OFF: Regexp
+  // Ordering.natural().nullsFirst() is generally prohibited, but we need a single exception.
   private static final Ordering NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
+  //CHECKSTYLE.ON: Regexp
 
   @SuppressWarnings("unchecked")
   public static <T> Ordering<T> alwaysEqual()
