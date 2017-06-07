@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
@@ -50,32 +51,45 @@ public class AndFilter implements BooleanFilter
     this.filters = filters;
   }
 
-  public static ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector, List<Filter> filters)
+  public static <T> ImmutableBitmap getBitmapIndex(
+      BitmapIndexSelector selector,
+      BitmapResultFactory<T> bitmapResultFactory,
+      List<Filter> filters
+  )
+  {
+    return bitmapResultFactory.toImmutableBitmap(getBitmapResult(selector, bitmapResultFactory, filters));
+  }
+
+  private static <T> T getBitmapResult(
+      BitmapIndexSelector selector,
+      BitmapResultFactory<T> bitmapResultFactory,
+      List<Filter> filters
+  )
   {
     if (filters.size() == 1) {
-      return filters.get(0).getBitmapIndex(selector);
+      return filters.get(0).getBitmapResult(selector, bitmapResultFactory);
     }
 
-    final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(filters.size());
+    final List<T> bitmapResults = Lists.newArrayListWithCapacity(filters.size());
     for (final Filter filter : filters) {
       Preconditions.checkArgument(filter.supportsBitmapIndex(selector),
                                   "Filter[%s] does not support bitmap index", filter
       );
-      final ImmutableBitmap bitmapIndex = filter.getBitmapIndex(selector);
-      if (bitmapIndex.isEmpty()) {
+      final T bitmapResult = filter.getBitmapResult(selector, bitmapResultFactory);
+      if (bitmapResultFactory.isEmpty(bitmapResult)) {
         // Short-circuit.
-        return Filters.allFalse(selector);
+        return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
       }
-      bitmaps.add(bitmapIndex);
+      bitmapResults.add(bitmapResult);
     }
 
-    return selector.getBitmapFactory().intersection(bitmaps);
+    return bitmapResultFactory.intersection(bitmapResults);
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
-    return getBitmapIndex(selector, filters);
+    return getBitmapResult(selector, bitmapResultFactory, filters);
   }
 
   @Override

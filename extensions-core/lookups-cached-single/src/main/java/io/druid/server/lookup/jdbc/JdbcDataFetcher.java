@@ -193,6 +193,16 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
 
   }
 
+  @Override
+  public String toString()
+  {
+    return "JdbcDataFetcher{" +
+           "table='" + table + '\'' +
+           ", keyColumn='" + keyColumn + '\'' +
+           ", valueColumn='" + valueColumn + '\'' +
+           '}';
+  }
+
   private DBI getDbi()
   {
     return dbi;

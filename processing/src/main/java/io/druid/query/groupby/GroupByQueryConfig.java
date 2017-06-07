@@ -184,4 +184,20 @@ public class GroupByQueryConfig
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     return newConfig;
   }
+
+  @Override
+  public String toString()
+  {
+    return "GroupByQueryConfig{" +
+           "defaultStrategy='" + defaultStrategy + '\'' +
+           ", singleThreaded=" + singleThreaded +
+           ", maxIntermediateRows=" + maxIntermediateRows +
+           ", maxResults=" + maxResults +
+           ", bufferGrouperMaxSize=" + bufferGrouperMaxSize +
+           ", bufferGrouperMaxLoadFactor=" + bufferGrouperMaxLoadFactor +
+           ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
+           ", maxMergingDictionarySize=" + maxMergingDictionarySize +
+           ", maxOnDiskStorage=" + maxOnDiskStorage +
+           '}';
+  }
 }

@@ -36,7 +36,7 @@ The historical node uses several of the global configs in [Configuration](../con
 |`druid.segmentCache.infoDir`|Historical nodes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
 |`druid.segmentCache.announceIntervalMillis`|How frequently to announce segments while segments are loading from cache. Set this value to zero to wait for all segments to be loaded before announcing.|5000 (5 seconds)|
 |`druid.segmentCache.numLoadingThreads`|How many segments to load concurrently from from deep storage.|1|
-|`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently from local storage at startup.|1|
+|`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently from local storage at startup.|Same as numLoadingThreads|
 
 ### Query Configs
 

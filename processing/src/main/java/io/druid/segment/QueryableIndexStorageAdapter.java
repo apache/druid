@@ -24,11 +24,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.io.Closer;
 import io.druid.query.BaseQuery;
+import io.druid.query.BitmapResultFactory;
+import io.druid.query.DefaultBitmapResultFactory;
+import io.druid.query.QueryMetrics;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
@@ -49,8 +53,10 @@ import io.druid.segment.historical.HistoricalFloatColumnSelector;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -193,7 +199,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       Interval interval,
       VirtualColumns virtualColumns,
       Granularity gran,
-      boolean descending
+      boolean descending,
+      @Nullable QueryMetrics<?> queryMetrics
   )
   {
     Interval actualInterval = interval;
@@ -222,8 +229,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         index
     );
 
+    final int totalRows = index.getNumRows();
 
-    /**
+    /*
      * Filters can be applied in two stages:
      * pre-filtering: Use bitmap indexes to prune the set of rows to be scanned.
      * post-filtering: Iterate through rows and apply the filter to the row values
@@ -238,11 +246,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
      * Any subfilters that cannot be processed entirely with bitmap indexes will be moved to the post-filtering stage.
      */
     final Offset offset;
+    final List<Filter> preFilters;
     final List<Filter> postFilters = new ArrayList<>();
+    int preFilteredRows = totalRows;
     if (filter == null) {
-      offset = new NoFilterOffset(0, index.getNumRows(), descending);
+      preFilters = Collections.emptyList();
+      offset = new NoFilterOffset(0, totalRows, descending);
     } else {
-      final List<Filter> preFilters = new ArrayList<>();
+      preFilters = new ArrayList<>();
 
       if (filter instanceof AndFilter) {
         // If we get an AndFilter, we can split the subfilters across both filtering stages
@@ -265,12 +276,23 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       if (preFilters.size() == 0) {
         offset = new NoFilterOffset(0, index.getNumRows(), descending);
       } else {
-        // Use AndFilter.getBitmapIndex to intersect the preFilters to get its short-circuiting behavior.
-        offset = BitmapOffset.of(
-            AndFilter.getBitmapIndex(selector, preFilters),
-            descending,
-            (long) getNumRows()
-        );
+        if (queryMetrics != null) {
+          BitmapResultFactory<?> bitmapResultFactory =
+              queryMetrics.makeBitmapResultFactory(selector.getBitmapFactory());
+          long bitmapConstructionStartNs = System.nanoTime();
+          // Use AndFilter.getBitmapResult to intersect the preFilters to get its short-circuiting behavior.
+          ImmutableBitmap bitmapIndex = AndFilter.getBitmapIndex(selector, bitmapResultFactory, preFilters);
+          preFilteredRows = bitmapIndex.size();
+          offset = BitmapOffset.of(bitmapIndex, descending, totalRows);
+          queryMetrics.reportBitmapConstructionTime(System.nanoTime() - bitmapConstructionStartNs);
+        } else {
+          BitmapResultFactory<?> bitmapResultFactory = new DefaultBitmapResultFactory(selector.getBitmapFactory());
+          offset = BitmapOffset.of(
+              AndFilter.getBitmapIndex(selector, bitmapResultFactory, preFilters),
+              descending,
+              totalRows
+          );
+        }
       }
     }
 
@@ -281,6 +303,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       postFilter = postFilters.get(0);
     } else {
       postFilter = new AndFilter(postFilters);
+    }
+
+    if (queryMetrics != null) {
+      queryMetrics.preFilters(preFilters);
+      queryMetrics.postFilters(postFilters);
+      queryMetrics.reportSegmentRows(totalRows);
+      queryMetrics.reportPreFilteredRows(preFilteredRows);
     }
 
     return Sequences.filter(

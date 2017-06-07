@@ -77,7 +77,8 @@ public class IngestSegmentFirehose implements Firehose
                             adapter.getInterval(),
                             VirtualColumns.EMPTY,
                             Granularities.ALL,
-                            false
+                            false,
+                            null
                         ), new Function<Cursor, Sequence<InputRow>>()
                         {
                           @Nullable

@@ -19,16 +19,46 @@
 
 package io.druid.java.util.common.guava;
 
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 
 /**
  */
 public class Comparators
 {
+
+  private static final Ordering<Object> ALWAYS_EQUAL = new Ordering<Object>()
+  {
+    @SuppressWarnings("ComparatorMethodParameterNotUsed")
+    @Override
+    public int compare(@Nullable Object left, @Nullable Object right)
+    {
+      return 0;
+    }
+  };
+
+  //CHECKSTYLE.OFF: Regexp
+  // Ordering.natural().nullsFirst() is generally prohibited, but we need a single exception.
+  private static final Ordering NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
+  //CHECKSTYLE.ON: Regexp
+
+  @SuppressWarnings("unchecked")
+  public static <T> Ordering<T> alwaysEqual()
+  {
+    return (Ordering<T>) ALWAYS_EQUAL;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T extends Comparable<? super T>> Ordering<T> naturalNullsFirst()
+  {
+    return NATURAL_NULLS_FIRST;
+  }
+
   /**
    * This is a "reverse" comparator.  Positive becomes negative, negative becomes positive and 0 (equal) stays the same.
    * This was poorly named as "inverse" as it's not really inverting a true/false relationship
