@@ -49,7 +49,8 @@ public class TimestampSpec
   private final String timestampFormat;
   // this value should never be set for production data
   private final DateTime missingValue;
-  private final transient Function<Object, DateTime> timestampConverter;
+  /** This field is a derivative of {@link #timestampFormat}; not checked in {@link #equals} and {@link #hashCode} */
+  private final Function<Object, DateTime> timestampConverter;
 
   // remember last value parsed
   private transient ParseCtx parseCtx = new ParseCtx();

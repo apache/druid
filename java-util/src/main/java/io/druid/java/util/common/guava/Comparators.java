@@ -42,9 +42,18 @@ public class Comparators
     }
   };
 
+  private static final Ordering NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
+
+  @SuppressWarnings("unchecked")
   public static <T> Ordering<T> alwaysEqual()
   {
     return (Ordering<T>) ALWAYS_EQUAL;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T extends Comparable<? super T>> Ordering<T> naturalNullsFirst()
+  {
+    return NATURAL_NULLS_FIRST;
   }
 
   /**

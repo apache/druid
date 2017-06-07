@@ -60,6 +60,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
@@ -2167,7 +2168,7 @@ public class CachingClusteredClientTest
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable<>(
-                        Ordering.<Result<Object>>natural().nullsFirst(),
+                        Comparators.naturalNullsFirst(),
                         FunctionalIterable
                             .create(new RangeIterable(expectedResultsRangeStart, expectedResultsRangeEnd))
                             .transformCat(

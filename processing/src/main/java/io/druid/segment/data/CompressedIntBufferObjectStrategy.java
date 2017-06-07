@@ -19,8 +19,8 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.guava.Comparators;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -28,7 +28,6 @@ import java.nio.IntBuffer;
 
 public class CompressedIntBufferObjectStrategy extends FixedSizeCompressedObjectStrategy<IntBuffer>
 {
-  public static final Ordering<Comparable> ORDERING = Ordering.natural().nullsFirst();
 
   public static CompressedIntBufferObjectStrategy getBufferForOrder(final ByteOrder order, final CompressionStrategy compression, final int sizePer)
   {
@@ -50,7 +49,7 @@ public class CompressedIntBufferObjectStrategy extends FixedSizeCompressedObject
           @Override
           public int compare(IntBuffer lhs, IntBuffer rhs)
           {
-            return ORDERING.compare(lhs, rhs);
+            return Comparators.<IntBuffer>naturalNullsFirst().compare(lhs, rhs);
           }
 
           @Override
