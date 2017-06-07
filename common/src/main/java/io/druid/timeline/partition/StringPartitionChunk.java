@@ -19,16 +19,10 @@
 
 package io.druid.timeline.partition;
 
-import com.google.common.collect.Ordering;
-
-import java.util.Comparator;
-
 /**
  */
 public class StringPartitionChunk<T> implements PartitionChunk<T>
 {
-  private static final Comparator<Integer> comparator = Ordering.<Integer>natural().nullsFirst();
-
   private final String start;
   private final String end;
   private final int chunkNumber;
@@ -95,7 +89,7 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
     if (chunk instanceof StringPartitionChunk) {
       StringPartitionChunk<T> stringChunk = (StringPartitionChunk<T>) chunk;
 
-      return comparator.compare(chunkNumber, stringChunk.chunkNumber);
+      return Integer.compare(chunkNumber, stringChunk.chunkNumber);
     }
     throw new IllegalArgumentException("Cannot compare against something that is not a StringPartitionChunk.");
   }

@@ -276,7 +276,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
             OffsetStore offsetStore = defaultMQPullConsumer.getOffsetStore();
             Set<MessageQueue> updated = new HashSet<>();
             // calculate offsets according to consuming windows.
-            for (ConcurrentHashMap.Entry<MessageQueue, ConcurrentSkipListSet<Long>> entry : windows.entrySet()) {
+            for (Map.Entry<MessageQueue, ConcurrentSkipListSet<Long>> entry : windows.entrySet()) {
               while (!entry.getValue().isEmpty()) {
 
                 long offset = offsetStore.readOffset(entry.getKey(), ReadOffsetType.MEMORY_FIRST_THEN_STORE);
@@ -539,7 +539,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         topicQueueMap.put(topic, mqDivided);
 
         // Remove message queues that are re-assigned to other clients.
-        Iterator<ConcurrentHashMap.Entry<MessageQueue, ConcurrentSkipListSet<MessageExt>>> it =
+        Iterator<Map.Entry<MessageQueue, ConcurrentSkipListSet<MessageExt>>> it =
             messageQueueTreeSetMap.entrySet().iterator();
         while (it.hasNext()) {
           if (!mqDivided.contains(it.next().getKey())) {

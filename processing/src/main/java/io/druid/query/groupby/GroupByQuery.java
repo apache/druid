@@ -36,6 +36,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
@@ -80,8 +81,6 @@ import java.util.Set;
 public class GroupByQuery extends BaseQuery<Row>
 {
   public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
-
-  private final static Comparator NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
 
   private final static Comparator<Row> NON_GRANULAR_TIME_COMP = (Row lhs, Row rhs) -> Longs.compare(
       lhs.getTimestampFromEpoch(),
@@ -327,7 +326,7 @@ public class GroupByQuery extends BaseQuery<Row>
             return rowOrdering.compare((Row) lhs, (Row) rhs);
           } else {
             // Probably bySegment queries
-            return NATURAL_NULLS_FIRST.compare(lhs, rhs);
+            return ((Ordering) Comparators.naturalNullsFirst()).compare(lhs, rhs);
           }
         }
     );
@@ -563,7 +562,7 @@ public class GroupByQuery extends BaseQuery<Row>
             ((Number) rhs.getRaw(dimension.getOutputName())).doubleValue()
         );
       } else {
-        dimCompare = NATURAL_NULLS_FIRST.compare(
+        dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(
             lhs.getRaw(dimension.getOutputName()),
             rhs.getRaw(dimension.getOutputName())
         );
@@ -603,7 +602,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
       if (isNumericField.get(i)) {
         if (comparator == StringComparators.NUMERIC) {
-          dimCompare = NATURAL_NULLS_FIRST.compare(
+          dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(
               rhs.getRaw(fieldName),
               lhs.getRaw(fieldName)
           );

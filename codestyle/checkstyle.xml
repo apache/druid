@@ -29,10 +29,18 @@
     <property name="fileExtensions" value="java"/>
   </module>
 
+  <module name="SuppressionCommentFilter">
+    <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
+    <property name="onCommentFormat" value="CHECKSTYLE.ON\: ([\w\|]+)"/>
+    <property name="checkFormat" value="$1"/>
+  </module>
+
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
 
   <module name="TreeWalker">
+    <module name="FileContentsHolder"/>
+
     <!-- See http://checkstyle.sourceforge.net/checks.html for examples -->
 
     <!--<module name="LineLength">-->
@@ -44,19 +52,24 @@
     <module name="UnusedImports" />
     <module name="NeedBraces"/>
     <module name="Regexp">
-      <!-- Prohibit using Guava's Closer, see comment in io.druid.java.util.common.io.Closer -->
       <property name="format" value="com\.google\.common\.io\.Closer"/>
       <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use io.druid.java.util.common.io.Closer instead of Guava's Closer"/>
     </module>
     <module name="Regexp">
-      <!-- Prohibit IntelliJ-style commented code lines from being committed -->
       <property name="format" value="^// {2}"/>
       <property name="illegalPattern" value="true"/>
+      <property name="message" value="Don't commit IntelliJ-style commented code lines"/>
     </module>
     <module name="Regexp">
-      <!-- Force comments to classes and methods to be Javadoc comments -->
       <property name="format" value="/\*[^\*].*?\n(\s*\*.*?\n)*\s+\*/[\s\n]*(transient|volatile|strictfp|synchronized|native|abstract|class|interface|enum|static|private|public|protected|default|void|byte|char|short|int|float|long|double|[A-Z])"/>
       <property name="illegalPattern" value="true"/>
+      <property name="message" value="Comments to classes and methods must be Javadoc comments"/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="natural\(\)[\s\n]*\.[\s\n]*nullsFirst\(\)"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use Comparators.naturalNullsFirst() instead of Ordering.natural().nullsFirst()"/>
     </module>
   </module>
 </module>

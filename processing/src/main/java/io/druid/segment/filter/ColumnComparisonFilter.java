@@ -113,7 +113,7 @@ public class ColumnComparisonFilter implements Filter
   public static boolean overlap(String[] a, String[] b) {
     if (a == null || b == null) {
       // They only have overlap if both are null.
-      return a == b;
+      return a == null && b == null;
     }
     if (a.length == 0 && b.length == 0) {
       return true;

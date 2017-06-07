@@ -239,4 +239,12 @@ public class PollingLookup extends LookupExtractor
     }
   }
 
+  @Override
+  public String toString()
+  {
+    return "PollingLookup{" +
+           "dataFetcher=" + dataFetcher +
+           ", id='" + id + '\'' +
+           '}';
+  }
 }
