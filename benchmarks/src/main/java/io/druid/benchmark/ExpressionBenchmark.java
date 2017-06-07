@@ -166,7 +166,8 @@ public class ExpressionBenchmark
         index.getDataInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,
-        false
+        false,
+        null
     );
 
     final List<Double> results = Sequences.toList(
