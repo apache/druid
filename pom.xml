@@ -738,6 +738,10 @@
                         <artifactId>google-http-client-jackson2</artifactId>
                     </exclusion>
                     <exclusion>
+                        <groupId>com.google.http-client</groupId>
+                        <artifactId>google-http-client-jackson2</artifactId>
+                    </exclusion>
+                    <exclusion>
                         <groupId>com.fasterxml.jackson.core</groupId>
                         <artifactId>jackson-databind</artifactId>
                     </exclusion>
