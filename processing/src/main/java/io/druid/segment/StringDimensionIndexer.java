@@ -428,7 +428,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       {
         if (extractionFn == null) {
           final int valueId = lookupId(value);
-          if (valueId >= 0 || value == null) {
+          if (value == null || (valueId >= 0 && valueId < maxId)) {
             return new ValueMatcher()
             {
               @Override
