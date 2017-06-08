@@ -70,9 +70,6 @@ public class GroupByQueryConfig
   @JsonProperty
   private boolean forcePushDownLimit = false;
 
-  @JsonProperty
-  private Class<? extends GroupByQueryMetricsFactory> queryMetricsFactory;
-
   public String getDefaultStrategy()
   {
     return defaultStrategy;
@@ -136,16 +133,6 @@ public class GroupByQueryConfig
   public boolean isForcePushDownLimit()
   {
     return forcePushDownLimit;
-  }
-
-  public Class<? extends GroupByQueryMetricsFactory> getQueryMetricsFactory()
-  {
-    return queryMetricsFactory != null ? queryMetricsFactory : DefaultGroupByQueryMetricsFactory.class;
-  }
-
-  public void setQueryMetricsFactory(Class<? extends GroupByQueryMetricsFactory> queryMetricsFactory)
-  {
-    this.queryMetricsFactory = queryMetricsFactory;
   }
   
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
