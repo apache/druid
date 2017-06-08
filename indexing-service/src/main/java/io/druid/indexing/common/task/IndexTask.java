@@ -449,7 +449,9 @@ public class IndexTask extends AbstractTask
   )
   {
     if (useExtendableShardSpec) {
-      return NumberedShardSpec::new;
+      // 0 partitions means there's no core partitions. See NumberedPartitionChunk.isStart() and
+      // NumberedPartitionChunk.isEnd().
+      return (shardId, notUsed) -> new NumberedShardSpec(shardId, 0);
     } else {
       if (numShards == null) {
         throw new ISE("numShards must not be null");
