@@ -66,8 +66,8 @@
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
         <jersey.version>1.19.3</jersey.version>
-        <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
-        <jackson.version>2.4.6</jackson.version>
+        <!-- Need 2.6.5 for compatibility with Spark -->
+        <jackson.version>2.6.5</jackson.version>
         <log4j.version>2.5</log4j.version>
         <netty.version>4.1.11.Final</netty.version>
         <slf4j.version>1.7.12</slf4j.version>
