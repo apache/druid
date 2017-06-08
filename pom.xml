@@ -186,7 +186,7 @@
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk</artifactId>
+                <artifactId>aws-java-sdk-ec2</artifactId>
                 <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
                      Need to update Druid to use Jackson 2.6+ -->
                 <version>1.10.77</version>
@@ -206,14 +206,6 @@
                     <exclusion>
                         <groupId>commons-codec</groupId>
                         <artifactId>commons-codec</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.amazonaws</groupId>
-                        <artifactId>aws-java-sdk-swf-libraries</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.amazonaws</groupId>
-                        <artifactId>aws-java-sdk-models</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
