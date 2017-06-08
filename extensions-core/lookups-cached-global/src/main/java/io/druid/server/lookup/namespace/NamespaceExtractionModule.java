@@ -77,13 +77,9 @@ public class NamespaceExtractionModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoiceWithDefault(
-        binder,
-        TYPE_PREFIX,
-        Key.get(NamespaceExtractionCacheManager.class),
-        Key.get(OnHeapNamespaceExtractionCacheManager.class),
-        "onHeap"
-    ).in(LazySingleton.class);
+    PolyBind
+        .createChoiceWithDefault(binder, TYPE_PREFIX, Key.get(NamespaceExtractionCacheManager.class), "onHeap")
+        .in(LazySingleton.class);
 
     PolyBind
         .optionBinder(binder, Key.get(NamespaceExtractionCacheManager.class))

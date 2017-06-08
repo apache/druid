@@ -55,7 +55,7 @@ public class PolyBindTest
                   {
                     binder.bind(Properties.class).toInstance(props);
                     PolyBind.createChoice(binder, "billy", Key.get(Gogo.class), Key.get(GoA.class));
-                    PolyBind.createChoiceWithDefault(binder, "sally", Key.get(GogoSally.class), null, "b");
+                    PolyBind.createChoiceWithDefault(binder, "sally", Key.get(GogoSally.class), "b");
 
                   }
                 }
