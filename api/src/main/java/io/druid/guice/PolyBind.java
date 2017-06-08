@@ -31,6 +31,7 @@ import com.google.inject.binder.ScopedBindingBuilder;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.util.Types;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.ParameterizedType;
 import java.util.Map;
 import java.util.Properties;
@@ -59,10 +60,9 @@ public class PolyBind
       Binder binder,
       String property,
       Key<T> interfaceKey,
-      Key<? extends T> defaultKey
+      @Nullable Key<? extends T> defaultKey
   )
   {
-    Preconditions.checkNotNull(defaultKey);
     ConfiggedProvider<T> provider = new ConfiggedProvider<>(interfaceKey, property, defaultKey, null);
     return binder.bind(interfaceKey).toProvider(provider);
   }
@@ -137,7 +137,9 @@ public class PolyBind
   {
     private final Key<T> key;
     private final String property;
+    @Nullable
     private final Key<? extends T> defaultKey;
+    @Nullable
     private final String defaultPropertyValue;
 
     private Injector injector;
@@ -146,8 +148,8 @@ public class PolyBind
     ConfiggedProvider(
         Key<T> key,
         String property,
-        Key<? extends T> defaultKey,
-        String defaultPropertyValue
+        @Nullable Key<? extends T> defaultKey,
+        @Nullable String defaultPropertyValue
     )
     {
       this.key = key;
@@ -185,6 +187,9 @@ public class PolyBind
       String implName = props.getProperty(property);
       if (implName == null) {
         if (defaultPropertyValue == null) {
+          if (defaultKey == null) {
+            throw new ProvisionException(String.format("Some value must be configured for [%s]", key));
+          }
           return injector.getInstance(defaultKey);
         }
         implName = defaultPropertyValue;
