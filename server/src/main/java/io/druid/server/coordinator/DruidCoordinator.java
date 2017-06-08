@@ -364,22 +364,36 @@ public class DruidCoordinator
   }
 
   public void moveSegment(
-      final ImmutableDruidServer fromServer,
-      final ImmutableDruidServer toServer,
-      final String segmentName,
+      ImmutableDruidServer fromServer,
+      ImmutableDruidServer toServer,
+      DataSegment segment,
       final LoadPeonCallback callback
   )
   {
+    if (segment == null) {
+      log.makeAlert(new IAE("Can not move null DataSegment"), "Exception moving null segment").emit();
+      if (callback != null) {
+        callback.execute();
+      }
+    }
+    String segmentName = segment.getIdentifier();
     try {
       if (fromServer.getMetadata().equals(toServer.getMetadata())) {
         throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentName, fromServer.getName());
       }
 
-      final DataSegment segment = fromServer.getSegment(segmentName);
-      if (segment == null) {
-        throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, fromServer.getName());
+      DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(segment.getDataSource());
+      if (dataSource == null) {
+        throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentName);
       }
 
+      // get segment information from MetadataSegmentManager instead of getting it from fromServer's.
+      // This is useful when MetadataSegmentManager and fromServer DataSegment's are different for same
+      // identifier (say loadSpec differs because of deep storage migration).
+      final DataSegment segmentToLoad = dataSource.getSegment(segment.getIdentifier());
+      if (segmentToLoad == null) {
+        throw new IAE("No segment metadata found for segment Id [%s]", segment.getIdentifier());
+      }
       final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
         throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", toServer.getName());
@@ -391,12 +405,12 @@ public class DruidCoordinator
       }
 
       final ServerHolder toHolder = new ServerHolder(toServer, loadPeon);
-      if (toHolder.getAvailableSize() < segment.getSize()) {
+      if (toHolder.getAvailableSize() < segmentToLoad.getSize()) {
         throw new IAE(
             "Not enough capacity on server [%s] for segment [%s]. Required: %,d, available: %,d.",
             toServer.getName(),
-            segment,
-            segment.getSize(),
+            segmentToLoad,
+            segmentToLoad.getSize(),
             toHolder.getAvailableSize()
         );
       }
@@ -409,7 +423,7 @@ public class DruidCoordinator
       );
 
       loadPeon.loadSegment(
-          segment,
+          segmentToLoad,
           new LoadPeonCallback()
           {
             @Override
