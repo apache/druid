@@ -34,7 +34,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -122,10 +122,10 @@ public class RealtimeManager implements QuerySegmentWalker
   @LifecycleStop
   public void stop()
   {
-    serverAnnouncer.unannounce();
     if (fireChiefExecutor != null) {
       fireChiefExecutor.shutdownNow();
     }
+    serverAnnouncer.unannounce();
   }
 
   public FireDepartmentMetrics getMetrics(String datasource)
@@ -239,11 +239,10 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    Plumber initPlumber()
+    void initPlumber()
     {
       log.info("Someone get us a plumber!");
       plumber = fireDepartment.findPlumber();
-      return plumber;
     }
 
     public FireDepartmentMetrics getMetrics()
@@ -254,45 +253,38 @@ public class RealtimeManager implements QuerySegmentWalker
     @Override
     public void run()
     {
-      Firehose firehose = null;
-      FirehoseV2 firehoseV2 = null;
-      boolean normalExit = true;
-
       initPlumber();
 
-      try {
+      try (Closer closer = Closer.create()) {
         Object metadata = plumber.startJob();
 
+        Firehose firehose;
+        FirehoseV2 firehoseV2;
         if (fireDepartment.checkFirehoseV2()) {
           firehoseV2 = initFirehoseV2(metadata);
+          closer.register(firehoseV2);
           runFirehoseV2(firehoseV2);
         } else {
           firehose = initFirehose();
+          closer.register(firehose);
           runFirehose(firehose);
         }
+        // pluber.finishJob() is called only when every processing is successfully finished.
+        closer.register(() -> plumber.finishJob());
       }
-      catch (RuntimeException e) {
+      catch (Exception e) {
         log.makeAlert(
             e,
             "[%s] aborted realtime processing[%s]",
             e.getClass().getSimpleName(),
             fireDepartment.getDataSchema().getDataSource()
         ).emit();
-        normalExit = false;
         throw Throwables.propagate(e);
       }
       catch (Error e) {
         log.makeAlert(e, "Error aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
            .emit();
-        normalExit = false;
         throw e;
-      }
-      finally {
-        CloseQuietly.close(firehose);
-        CloseQuietly.close(firehoseV2);
-        if (normalExit) {
-          plumber.finishJob();
-        }
       }
     }
 
