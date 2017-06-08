@@ -24,12 +24,12 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -51,7 +51,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -60,8 +59,6 @@ import java.util.function.Function;
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
   private static final Function<Object, String> STRING_TRANSFORMER = o -> o != null ? o.toString() : null;
-
-  private static final Comparator<String> UNENCODED_COMPARATOR = Ordering.natural().nullsFirst();
 
   private static class DimensionDictionary
   {
@@ -227,7 +224,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         }
         if (multiValueHandling.needSorting()) {
           // Sort multival row by their unencoded values first.
-          Arrays.sort(dimensionValues, UNENCODED_COMPARATOR);
+          Arrays.sort(dimensionValues, Comparators.naturalNullsFirst());
         }
 
         final int[] retVal = new int[dimensionValues.length];

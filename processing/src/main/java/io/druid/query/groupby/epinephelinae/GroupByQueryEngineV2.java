@@ -442,9 +442,18 @@ outer:
     }
 
     @Override
-    public Grouper.KeyComparator bufferComparator()
+    public Grouper.BufferComparator bufferComparator()
     {
       // No sorting, let mergeRunners handle that
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Grouper.BufferComparator bufferComparatorWithAggregators(
+        AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets
+    )
+    {
+      // not called on this
       throw new UnsupportedOperationException();
     }
 

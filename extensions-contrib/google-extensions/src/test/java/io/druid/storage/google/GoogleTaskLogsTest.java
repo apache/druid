@@ -20,10 +20,10 @@
 package io.druid.storage.google;
 
 import com.google.api.client.http.InputStreamContent;
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
@@ -35,8 +35,8 @@ import org.junit.Test;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
@@ -62,7 +62,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
 
     try {
       final File logFile = new File(tmpDir, "log");
-      BufferedWriter output = new BufferedWriter(new FileWriter(logFile));
+      BufferedWriter output = java.nio.file.Files.newBufferedWriter(logFile.toPath(), StandardCharsets.UTF_8);
       output.write("test");
       output.close();
 
@@ -86,9 +86,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
     final String logPath = prefix + "/" + taskid;
     expect(storage.exists(bucket, logPath)).andReturn(true);
     expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8))
-    );
+    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
@@ -108,9 +106,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
     final String logPath = prefix + "/" + taskid;
     expect(storage.exists(bucket, logPath)).andReturn(true);
     expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8))
-    );
+    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
@@ -130,9 +126,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
     final String logPath = prefix + "/" + taskid;
     expect(storage.exists(bucket, logPath)).andReturn(true);
     expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8))
-    );
+    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 

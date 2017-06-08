@@ -35,7 +35,7 @@ import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.SequenceInputStreamResponseHandler;
 import io.druid.audit.AuditInfo;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -219,7 +219,7 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream("server failed".getBytes()));
+    future.set(new ByteArrayInputStream(StringUtils.toUtf8("server failed")));
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -262,7 +262,7 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream("weird".getBytes()));
+    future.set(new ByteArrayInputStream(StringUtils.toUtf8("weird")));
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -400,7 +400,7 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream("server failed".getBytes()));
+    future.set(new ByteArrayInputStream(StringUtils.toUtf8("server failed")));
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -442,7 +442,7 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream("weird".getBytes()));
+    future.set(new ByteArrayInputStream(StringUtils.toUtf8("weird")));
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),

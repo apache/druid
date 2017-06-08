@@ -20,6 +20,7 @@
 package io.druid.common.utils;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Map;

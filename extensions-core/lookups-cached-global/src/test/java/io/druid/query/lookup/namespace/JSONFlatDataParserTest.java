@@ -92,7 +92,7 @@ public class JSONFlatDataParserTest
   @Test
   public void testSimpleParse() throws Exception
   {
-    final URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
+    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         MAPPER,
         "key",
         "val"
@@ -106,7 +106,7 @@ public class JSONFlatDataParserTest
   @Test
   public void testParseWithNullValues() throws Exception
   {
-    final URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
+    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         MAPPER,
         "key",
         "otherVal"
@@ -120,7 +120,7 @@ public class JSONFlatDataParserTest
   @Test
   public void testParseWithEmptyValues() throws Exception
   {
-    final URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
+    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         MAPPER,
         "key",
         "canBeEmpty"
@@ -134,7 +134,7 @@ public class JSONFlatDataParserTest
   @Test
   public void testFailParseOnKeyMissing() throws Exception
   {
-    final URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
+    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         MAPPER,
         "keyWHOOPS",
         "val"

@@ -30,6 +30,7 @@ import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentMover;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
@@ -70,7 +71,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
       final String targetS3BaseKey = MapUtils.getString(targetLoadSpec, "baseKey");
 
-      final String targetS3Path = S3Utils.constructSegmentPath(targetS3BaseKey, segment);
+      final String targetS3Path = S3Utils.constructSegmentPath(targetS3BaseKey, DataSegmentPusher.getDefaultStorageDir(segment));
       String targetS3DescriptorPath = S3Utils.descriptorPathForSegmentPath(targetS3Path);
 
       if (targetS3Bucket.isEmpty()) {

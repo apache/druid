@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
@@ -35,6 +34,7 @@ import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 
 import java.util.Comparator;
@@ -222,11 +222,7 @@ public class SketchHolder
 
   private static Sketch deserializeFromBase64EncodedString(String str)
   {
-    return deserializeFromByteArray(
-        Base64.decodeBase64(
-            str.getBytes(Charsets.UTF_8)
-        )
-    );
+    return deserializeFromByteArray(Base64.decodeBase64(StringUtils.toUtf8(str)));
   }
 
   private static Sketch deserializeFromByteArray(byte[] data)

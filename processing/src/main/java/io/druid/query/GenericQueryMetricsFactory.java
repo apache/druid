@@ -29,6 +29,9 @@ package io.druid.query;
  *    .optionBinder(binder, Key.get(GenericQueryMetricsFactory.class))
  *    .addBinding("myCustomGenericQueryMetricsFactory")
  *    .to(MyCustomGenericQueryMetricsFactory.class);
+ *
+ * And then setting property:
+ * druid.query.generic.queryMetricsFactory=myCustomGenericQueryMetricsFactory
  */
 public interface GenericQueryMetricsFactory
 {

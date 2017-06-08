@@ -21,6 +21,7 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -30,7 +31,6 @@ import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.rel.QueryMaker;
-import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.rel.type.RelDataType;
@@ -38,7 +38,6 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 
 import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
-import java.io.IOException;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +61,7 @@ public class DruidStatement implements Closeable
   private final String connectionId;
   private final int statementId;
   private final Map<String, Object> queryContext;
+  private final Runnable onClose;
   private final Object lock = new Object();
 
   private State state = State.NEW;
@@ -72,11 +72,17 @@ public class DruidStatement implements Closeable
   private Yielder<Object[]> yielder;
   private int offset = 0;
 
-  public DruidStatement(final String connectionId, final int statementId, final Map<String, Object> queryContext)
+  public DruidStatement(
+      final String connectionId,
+      final int statementId,
+      final Map<String, Object> queryContext,
+      final Runnable onClose
+  )
   {
-    this.connectionId = connectionId;
+    this.connectionId = Preconditions.checkNotNull(connectionId, "connectionId");
     this.statementId = statementId;
-    this.queryContext = queryContext;
+    this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
+    this.onClose = Preconditions.checkNotNull(onClose, "onClose");
   }
 
   public static List<ColumnMetaData> createColumnMetaData(final RelDataType rowType)
@@ -134,15 +140,21 @@ public class DruidStatement implements Closeable
         this.signature = Meta.Signature.create(
             createColumnMetaData(plannerResult.rowType()),
             query,
-            new ArrayList<AvaticaParameter>(),
+            new ArrayList<>(),
             Meta.CursorFactory.ARRAY,
             Meta.StatementType.SELECT // We only support SELECT
         );
         this.state = State.PREPARED;
       }
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
+    catch (Throwable t) {
+      try {
+        close();
+      }
+      catch (Throwable t1) {
+        t.addSuppressed(t1);
+      }
+      throw Throwables.propagate(t);
     }
 
     return this;
@@ -153,16 +165,27 @@ public class DruidStatement implements Closeable
     synchronized (lock) {
       ensure(State.PREPARED);
 
-      final Sequence<Object[]> baseSequence = plannerResult.run();
+      try {
+        final Sequence<Object[]> baseSequence = plannerResult.run();
 
-      // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
-      final Sequence<Object[]> retSequence =
-          maxRowCount >= 0 && maxRowCount <= Integer.MAX_VALUE
-          ? Sequences.limit(baseSequence, (int) maxRowCount)
-          : baseSequence;
+        // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
+        final Sequence<Object[]> retSequence =
+            maxRowCount >= 0 && maxRowCount <= Integer.MAX_VALUE
+            ? Sequences.limit(baseSequence, (int) maxRowCount)
+            : baseSequence;
 
-      yielder = Yielders.each(retSequence);
-      state = State.RUNNING;
+        yielder = Yielders.each(retSequence);
+        state = State.RUNNING;
+      }
+      catch (Throwable t) {
+        try {
+          close();
+        }
+        catch (Throwable t1) {
+          t.addSuppressed(t1);
+        }
+        throw t;
+      }
 
       return this;
     }
@@ -254,18 +277,39 @@ public class DruidStatement implements Closeable
   public void close()
   {
     synchronized (lock) {
+      final State oldState = state;
       state = State.DONE;
 
-      if (yielder != null) {
-        Yielder<Object[]> theYielder = this.yielder;
-        this.yielder = null;
+      try {
+        if (yielder != null) {
+          Yielder<Object[]> theYielder = this.yielder;
+          this.yielder = null;
 
-        // Put the close last, so any exceptions it throws are after we did the other cleanup above.
-        try {
+          // Put the close last, so any exceptions it throws are after we did the other cleanup above.
           theYielder.close();
         }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
+      }
+      catch (Throwable t) {
+        if (oldState != State.DONE) {
+          // First close. Run the onClose function.
+          try {
+            onClose.run();
+          }
+          catch (Throwable t1) {
+            t.addSuppressed(t1);
+          }
+        }
+
+        throw Throwables.propagate(t);
+      }
+
+      if (oldState != State.DONE) {
+        // First close. Run the onClose function.
+        try {
+          onClose.run();
+        }
+        catch (Throwable t) {
+          throw Throwables.propagate(t);
         }
       }
     }

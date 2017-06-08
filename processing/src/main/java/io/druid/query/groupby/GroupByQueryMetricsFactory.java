@@ -26,6 +26,9 @@ package io.druid.query.groupby;
  *    .optionBinder(binder, Key.get(GroupByQueryMetricsFactory.class))
  *    .addBinding("myCustomGroupByQueryMetricsFactory")
  *    .to(MyCustomGroupByQueryMetricsFactory.class);
+ *
+ * And then setting property:
+ * druid.query.groupBy.queryMetricsFactory=myCustomGroupByQueryMetricsFactory
  */
 public interface GroupByQueryMetricsFactory
 {

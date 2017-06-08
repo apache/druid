@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.theta.SetOperation;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
@@ -131,7 +132,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = fieldName.getBytes();
+    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + Ints.BYTES + fieldNameBytes.length)
                      .put(cacheId)
                      .putInt(size)

@@ -26,6 +26,9 @@ package io.druid.query.timeseries;
  *    .optionBinder(binder, Key.get(TimeseriesQueryMetricsFactory.class))
  *    .addBinding("myCustomTimeseriesQueryMetricsFactory")
  *    .to(MyCustomTimeseriesQueryMetricsFactory.class);
+ *
+ * And then setting property:
+ * druid.query.timeseries.queryMetricsFactory=myCustomTimeseriesQueryMetricsFactory
  */
 public interface TimeseriesQueryMetricsFactory
 {

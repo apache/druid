@@ -30,8 +30,9 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -48,7 +49,7 @@ public class FileRequestLoggerTest
     ObjectMapper objectMapper = new ObjectMapper();
     DateTime dateTime = new DateTime();
     File logDir = temporaryFolder.newFolder();
-    String actualLogString = new String(dateTime.toString()+"\t"+HOST);
+    String actualLogString = dateTime.toString() + "\t" + HOST;
 
     FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir);
     fileRequestLogger.start();
@@ -58,7 +59,7 @@ public class FileRequestLoggerTest
     EasyMock.replay(requestLogLine);
     fileRequestLogger.log(requestLogLine);
     File logFile = new File(logDir, dateTime.toString("yyyy-MM-dd'.log'"));
-    String logString = CharStreams.toString(new FileReader(logFile));
+    String logString = CharStreams.toString(Files.newBufferedReader(logFile.toPath(), StandardCharsets.UTF_8));
     Assert.assertTrue(logString.contains(actualLogString));
     fileRequestLogger.stop();
   }

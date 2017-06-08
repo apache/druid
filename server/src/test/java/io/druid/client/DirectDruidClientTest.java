@@ -33,6 +33,7 @@ import io.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.java.util.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -182,7 +183,11 @@ public class DirectDruidClientTest
     Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
     // produce result for first connection
-    futureResult.set(new ByteArrayInputStream("[{\"timestamp\":\"2014-01-01T01:02:03Z\", \"result\": 42.0}]".getBytes()));
+    futureResult.set(
+        new ByteArrayInputStream(
+            StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\", \"result\": 42.0}]")
+        )
+    );
     List<Result> results = Sequences.toList(s1, Lists.<Result>newArrayList());
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(new DateTime("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
@@ -330,7 +335,11 @@ public class DirectDruidClientTest
     serverSelector.addServerAndUpdateSegment(queryableDruidServer, dataSegment);
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-    interruptionFuture.set(new ByteArrayInputStream("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}".getBytes()));
+    interruptionFuture.set(
+        new ByteArrayInputStream(
+            StringUtils.toUtf8("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}")
+        )
+    );
     Sequence results = client1.run(query, defaultContext);
 
     QueryInterruptedException actualException = null;

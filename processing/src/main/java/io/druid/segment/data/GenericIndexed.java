@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.common.utils.SerializerUtils;
@@ -28,6 +27,7 @@ import io.druid.io.OutputBytes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -77,7 +77,6 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
   static final byte VERSION_TWO = 0x2;
   static final byte REVERSE_LOOKUP_ALLOWED = 0x1;
   static final byte REVERSE_LOOKUP_DISALLOWED = 0x0;
-  private final static Ordering<String> NATURAL_STRING_ORDERING = Ordering.natural().nullsFirst();
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   public static final ObjectStrategy<String> STRING_STRATEGY = new CacheableObjectStrategy<String>()
@@ -106,7 +105,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     @Override
     public int compare(String o1, String o2)
     {
-      return NATURAL_STRING_ORDERING.compare(o1, o2);
+      return Comparators.<String>naturalNullsFirst().compare(o1, o2);
     }
   };
 

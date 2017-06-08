@@ -34,13 +34,12 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -77,7 +76,7 @@ public class VSizeSerdeBenchmark
     // to construct a heapByteBuffer since they have different performance
     File base = new File(this.getClass().getClassLoader().getResource("").toURI());
     dummy = new File(base, "dummy");
-    try (Writer writer = new BufferedWriter(new FileWriter(dummy))) {
+    try (Writer writer = java.nio.file.Files.newBufferedWriter(dummy.toPath(), StandardCharsets.UTF_8)) {
       String EMPTY_STRING = "        ";
       for (int i = 0; i < values + 10; i++) {
         writer.write(EMPTY_STRING);

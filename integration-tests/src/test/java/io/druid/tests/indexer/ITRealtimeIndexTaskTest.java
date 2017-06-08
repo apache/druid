@@ -45,6 +45,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -187,7 +188,10 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
     BufferedReader reader = null;
     InputStreamReader isr = null;
     try {
-      isr = new InputStreamReader(ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE));
+      isr = new InputStreamReader(
+          ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE),
+          StandardCharsets.UTF_8
+      );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

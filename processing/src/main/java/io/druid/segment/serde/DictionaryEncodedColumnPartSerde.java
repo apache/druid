@@ -507,9 +507,10 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       )
       {
         switch (version) {
-          case UNCOMPRESSED_MULTI_VALUE:
+          case UNCOMPRESSED_MULTI_VALUE: {
             return VSizeIndexed.readFromByteBuffer(buffer);
-          case COMPRESSED:
+          }
+          case COMPRESSED: {
             if (Feature.MULTI_VALUE.isSet(flags)) {
               return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
             } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
@@ -517,6 +518,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             } else {
               throw new IAE("Unrecognized multi-value flag[%d]", flags);
             }
+          }
           default:
             throw new IAE("Unsupported multi-value version[%s]", version);
         }

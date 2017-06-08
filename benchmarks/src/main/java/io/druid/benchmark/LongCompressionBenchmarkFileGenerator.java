@@ -29,17 +29,14 @@ import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URISyntaxException;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.List;
@@ -123,7 +120,7 @@ public class LongCompressionBenchmarkFileGenerator
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
       final File dataFile = new File(dir, entry.getKey());
       dataFile.delete();
-      try (Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(dataFile)))) {
+      try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
         for (int i = 0; i < ROW_NUM; i++) {
           writer.write((long) entry.getValue().generateRowValue() + "\n");
         }
@@ -147,7 +144,7 @@ public class LongCompressionBenchmarkFileGenerator
               encoding,
               compression
           );
-          BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(dataFile)));
+          BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8);
 
           try (FileChannel output = FileChannel.open(
               compFile.toPath(),

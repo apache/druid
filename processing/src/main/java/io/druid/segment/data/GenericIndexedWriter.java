@@ -25,6 +25,7 @@ import io.druid.io.Channels;
 import io.druid.io.OutputBytes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.segment.serde.Serializer;
@@ -129,7 +130,7 @@ public class GenericIndexedWriter<T> implements Serializer
     this.filenameBase = filenameBase;
     this.strategy = strategy;
     this.fileSizeLimit = fileSizeLimit;
-    fileNameByteArray = filenameBase.getBytes();
+    fileNameByteArray = StringUtils.toUtf8(filenameBase);
   }
 
   public static String generateValueFileName(String fileNameBase, int fileNum)

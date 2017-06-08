@@ -59,7 +59,7 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
     this.probability = probability;
     this.fieldName = fieldName;
 
-    if (probability < 0 | probability > 1) {
+    if (probability < 0 || probability > 1) {
       throw new IAE("Illegal probability[%s], must be strictly between 0 and 1", probability);
     }
   }
