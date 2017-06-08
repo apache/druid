@@ -74,7 +74,6 @@ public class QuantileSqlAggregator implements SqlAggregator
   )
   {
     final RowExtraction rex = Expressions.toRowExtraction(
-        operatorTable,
         plannerContext,
         rowSignature.getRowOrder(),
         Expressions.fromFieldAccess(

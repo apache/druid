@@ -20,11 +20,11 @@
 package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +36,7 @@ import java.util.Arrays;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
   @Parameterized.Parameters(name="descending={0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException

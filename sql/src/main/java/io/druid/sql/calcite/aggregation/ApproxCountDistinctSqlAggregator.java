@@ -78,7 +78,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         Iterables.getOnlyElement(aggregateCall.getArgList())
     );
     final RowExtraction rex = Expressions.toRowExtraction(
-        operatorTable,
         plannerContext,
         rowSignature.getRowOrder(),
         rexNode

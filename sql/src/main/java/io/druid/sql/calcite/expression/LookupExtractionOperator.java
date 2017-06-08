@@ -22,7 +22,6 @@ package io.druid.sql.calcite.expression;
 import com.google.inject.Inject;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -58,7 +57,6 @@ public class LookupExtractionOperator implements SqlExtractionOperator
 
   @Override
   public RowExtraction convert(
-      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
@@ -66,7 +64,6 @@ public class LookupExtractionOperator implements SqlExtractionOperator
   {
     final RexCall call = (RexCall) expression;
     final RowExtraction rex = Expressions.toRowExtraction(
-        operatorTable,
         plannerContext,
         rowOrder,
         call.getOperands().get(0)

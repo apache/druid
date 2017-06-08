@@ -17,28 +17,19 @@
  * under the License.
  */
 
-package io.druid.query.lookup;
+package io.druid.query.expression;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import com.google.common.collect.ImmutableList;
+import io.druid.math.expr.ExprMacroTable;
 
-import java.io.IOException;
+import javax.inject.Inject;
+import java.util.Set;
 
-public class LookupConfigTest
+public class GuiceExprMacroTable extends ExprMacroTable
 {
-
-  ObjectMapper mapper = TestHelper.getJsonMapper();
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Test
-  public void TestSerDesr() throws IOException
+  @Inject
+  public GuiceExprMacroTable(final Set<ExprMacro> macros)
   {
-    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
-    Assert.assertEquals(lookupConfig, mapper.reader(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig)));
+    super(ImmutableList.copyOf(macros));
   }
 }

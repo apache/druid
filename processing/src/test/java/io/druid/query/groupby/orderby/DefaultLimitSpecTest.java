@@ -36,6 +36,7 @@ import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.TestHelper;
 import org.joda.time.DateTime;
@@ -67,7 +68,7 @@ public class DefaultLimitSpecTest
   @Test
   public void testSerde() throws Exception
   {
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
 
     //defaults
     String json = "{\"type\": \"default\"}";
@@ -260,7 +261,7 @@ public class DefaultLimitSpecTest
     limitFn = limitSpec.build(
         ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec("k1", "k1")),
         ImmutableList.<AggregatorFactory>of(new LongSumAggregatorFactory("k2", "k2")),
-        ImmutableList.<PostAggregator>of(new ExpressionPostAggregator("k1", "1 + 1"))
+        ImmutableList.<PostAggregator>of(new ExpressionPostAggregator("k1", "1 + 1", null, TestExprMacroTable.INSTANCE))
     );
     Assert.assertEquals(
         (List)ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),

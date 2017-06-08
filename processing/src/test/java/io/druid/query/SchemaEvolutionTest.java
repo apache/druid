@@ -40,6 +40,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -261,8 +262,8 @@ public class SchemaEvolutionTest
             ImmutableList.of(
                 new LongSumAggregatorFactory("a", "c1"),
                 new DoubleSumAggregatorFactory("b", "c1"),
-                new LongSumAggregatorFactory("c", null, "c1 * 1"),
-                new DoubleSumAggregatorFactory("d", null, "c1 * 1")
+                new LongSumAggregatorFactory("c", null, "c1 * 1", TestExprMacroTable.INSTANCE),
+                new DoubleSumAggregatorFactory("d", null, "c1 * 1", TestExprMacroTable.INSTANCE)
             )
         )
         .build();
