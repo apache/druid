@@ -40,6 +40,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.BaseQuery;
 import io.druid.query.Query;
@@ -378,6 +379,15 @@ public class RealtimeManagerTest
     Assert.assertTrue(plumber.isStartedJob());
     Assert.assertTrue(plumber.isFinishedJob());
     Assert.assertEquals(0, plumber.getPersistCount());
+  }
+
+  @Test
+  public void testStop() throws IOException
+  {
+    realtimeManager.start();
+    realtimeManager2.start();
+    realtimeManager.stop();
+    realtimeManager2.stop();
   }
 
   @Test
@@ -769,6 +779,8 @@ public class RealtimeManagerTest
     }
   }
 
+  static final Logger log = new Logger(RealtimeManagerTest.class);
+
   private static class TestFirehose implements Firehose
   {
     private final Iterator<TestInputRowHolder> rows;
@@ -804,6 +816,7 @@ public class RealtimeManagerTest
     @Override
     public void close() throws IOException
     {
+      log.info("firehose closed!");
     }
   }
 
@@ -830,6 +843,7 @@ public class RealtimeManagerTest
     @Override
     public void close() throws IOException
     {
+      log.info("firehosev2 closed!");
     }
 
     @Override

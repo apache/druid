@@ -262,15 +262,18 @@ public class RealtimeManager implements QuerySegmentWalker
         FirehoseV2 firehoseV2;
         if (fireDepartment.checkFirehoseV2()) {
           firehoseV2 = initFirehoseV2(metadata);
+          log.info("firehose2 connected");
           closer.register(firehoseV2);
           runFirehoseV2(firehoseV2);
         } else {
           firehose = initFirehose();
+          log.info("firehose connected");
           closer.register(firehose);
           runFirehose(firehose);
         }
         // pluber.finishJob() is called only when every processing is successfully finished.
         closer.register(() -> plumber.finishJob());
+        log.info("normalExit[%s]", true);
       }
       catch (Exception e) {
         log.makeAlert(
