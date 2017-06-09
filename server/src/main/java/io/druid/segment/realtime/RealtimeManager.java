@@ -290,6 +290,10 @@ public class RealtimeManager implements QuerySegmentWalker
             closer.register(() -> plumber.finishJob());
           }
         }
+        catch (InterruptedException e) {
+          log.warn("Interrupted while running a firehose");
+          throw closer.rethrow(e);
+        }
         catch (Exception e) {
           log.makeAlert(
               e,
