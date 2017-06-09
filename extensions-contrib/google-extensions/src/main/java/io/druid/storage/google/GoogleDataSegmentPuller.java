@@ -72,7 +72,7 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
           byteSource,
           outDir,
           GoogleUtils.GOOGLE_RETRY,
-          true
+          false
       );
       LOG.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
       return result;
