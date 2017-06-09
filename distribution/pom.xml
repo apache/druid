@@ -77,13 +77,9 @@
                                 <argument>-h</argument>
                                 <argument>org.apache.hadoop:hadoop-client:${hadoop.compile.version}</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-avro-extensions</argument>
-                                <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-caffeine-cache</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-datasketches</argument>
-                                <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-hdfs-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-histogram</argument>
                                 <argument>-c</argument>
@@ -214,17 +210,11 @@
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-distinctcount</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-rocketmq</argument>
-                                        <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-google-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-kafka-eight-simple-consumer</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:graphite-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-orc-extensions</argument>
-                                        <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-parquet-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-rabbitmq</argument>
                                         <argument>-c</argument>
@@ -233,8 +223,6 @@
                                         <argument>io.druid.extensions.contrib:sqlserver-metadata-storage</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:statsd-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-thrift-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
