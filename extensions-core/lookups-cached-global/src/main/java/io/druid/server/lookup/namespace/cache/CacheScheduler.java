@@ -452,8 +452,8 @@ public final class CacheScheduler
   }
 
   /**
-   * This method should be used from {@link io.druid.query.lookup.namespace.CacheGenerator#generateCache} implementations, to obtain
-   * a {@link VersionedCache} to be returned.
+   * This method should be used from {@link CacheGenerator#generateCache} implementations, to obtain a {@link
+   * VersionedCache} to be returned.
    *
    * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry}, for which VersionedCache is
    *                created
