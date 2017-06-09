@@ -70,10 +70,10 @@ public class CSVParseSpec extends ParseSpec
 
   @Deprecated
   public CSVParseSpec(
-      @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-      @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
-      @JsonProperty("listDelimiter") String listDelimiter,
-      @JsonProperty("columns") List<String> columns
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      String listDelimiter,
+      List<String> columns
   )
   {
     this(timestampSpec, dimensionsSpec, listDelimiter, columns, false, 0);
