@@ -53,16 +53,16 @@ public class StringComparators
       public int compare(String s, String s2)
       {
         return UnsignedBytes.lexicographicalComparator().compare(
-                StringUtils.toUtf8(s), StringUtils.toUtf8(s2));
+            StringUtils.toUtf8(s), StringUtils.toUtf8(s2));
       }
     }).nullsFirst();
     
-    @SuppressWarnings("StringEquality")
     @Override
     public int compare(String s, String s2)
     {
       // Avoid conversion to bytes for equal references
       // Assuming we mostly compare different strings, checking s.equals(s2) will only make the comparison slower.
+      //noinspection StringEquality
       if (s == s2) {
         return 0;
       }
@@ -319,10 +319,12 @@ public class StringComparators
         return Ints.compare(s.length(), s2.length());
       }
     }).nullsFirst().compound(Ordering.natural());
-    
+
     @Override
     public int compare(String s, String s2)
     {
+      // Optimization
+      //noinspection StringEquality
       if (s == s2) {
         return 0;
       }
@@ -372,12 +374,12 @@ public class StringComparators
 
   public static class NumericComparator extends StringComparator
   {
-    @SuppressWarnings("StringEquality")
     @Override
     public int compare(String o1, String o2)
     {
       // return if o1 and o2 are the same object
       // Assuming we mostly compare different strings, checking o1.equals(o2) will only make the comparison slower.
+      //noinspection StringEquality
       if (o1 == o2) {
         return 0;
       }

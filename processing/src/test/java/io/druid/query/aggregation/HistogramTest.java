@@ -21,7 +21,7 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -63,7 +63,7 @@ public class HistogramTest
     Double[] visualBreaks = {-1.0, -0.5, 0.0, 0.5, 1.0};
     Double[] visualCounts = { 123., 4., 56., 7. };
 
-    ObjectMapper objectMapper = new DefaultObjectMapper();
+    ObjectMapper objectMapper = TestHelper.getJsonMapper();
     String json = objectMapper.writeValueAsString(h.asVisual());
 
     Map<String,Object> expectedObj = Maps.newLinkedHashMap();

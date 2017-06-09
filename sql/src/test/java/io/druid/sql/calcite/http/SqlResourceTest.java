@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.server.initialization.ServerConfig;
@@ -78,9 +79,10 @@ public class SqlResourceTest
         CalciteTests.createMockSchema(walker, plannerConfig)
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     resource = new SqlResource(
         JSON_MAPPER,
-        new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig, new ServerConfig())
+        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig())
     );
   }
 

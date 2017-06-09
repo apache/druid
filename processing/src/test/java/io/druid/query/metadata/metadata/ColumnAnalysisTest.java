@@ -26,7 +26,7 @@ import org.junit.Test;
 
 public class ColumnAnalysisTest
 {
-  private final ObjectMapper MAPPER = TestHelper.getObjectMapper();
+  private final ObjectMapper MAPPER = TestHelper.getJsonMapper();
 
   private void assertSerDe(ColumnAnalysis analysis) throws Exception
   {

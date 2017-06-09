@@ -26,6 +26,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
@@ -56,7 +57,16 @@ public class ExpressionVirtualColumnTest
       ImmutableMap.<String, Object>of("x", 2.1, "y", 3L)
   );
 
-  private static final ExpressionVirtualColumn XPLUSY = new ExpressionVirtualColumn("expr", "x + y");
+  private static final ExpressionVirtualColumn XPLUSY = new ExpressionVirtualColumn(
+      "expr",
+      "x + y",
+      TestExprMacroTable.INSTANCE
+  );
+  private static final ExpressionVirtualColumn CONSTANT_LIKE = new ExpressionVirtualColumn(
+      "expr",
+      "like('foo', 'f%')",
+      TestExprMacroTable.INSTANCE
+  );
   private static final TestColumnSelectorFactory COLUMN_SELECTOR_FACTORY = new TestColumnSelectorFactory();
 
   @Test
@@ -167,9 +177,17 @@ public class ExpressionVirtualColumnTest
   }
 
   @Test
+  public void testLongSelectorWithConstantLikeExprMacro()
+  {
+    final LongColumnSelector selector = CONSTANT_LIKE.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW0);
+    Assert.assertEquals(1L, selector.get());
+  }
+
+  @Test
   public void testRequiredColumns()
   {
-    final ExpressionVirtualColumn virtualColumn = new ExpressionVirtualColumn("expr", "x + y");
-    Assert.assertEquals(ImmutableList.of("x", "y"), virtualColumn.requiredColumns());
+    Assert.assertEquals(ImmutableList.of("x", "y"), XPLUSY.requiredColumns());
   }
 }

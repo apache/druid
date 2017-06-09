@@ -27,6 +27,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
@@ -1385,7 +1386,8 @@ public class CalciteQueryTest
     // Use context to disable topN, so this query becomes a groupBy.
 
     testQuery(
-        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_NO_TOPN),
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_NO_TOPN,
         "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
         ImmutableList.<Query>of(
             GroupByQuery.builder()
@@ -1512,6 +1514,8 @@ public class CalciteQueryTest
   @Test
   public void testExpressionAggregations() throws Exception
   {
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+
     testQuery(
         "SELECT SUM(cnt * 3), LN(SUM(cnt) + SUM(m1)), SUM(cnt) / 0.25 FROM druid.foo",
         ImmutableList.<Query>of(
@@ -1520,9 +1524,9 @@ public class CalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(
-                      new LongSumAggregatorFactory("a0", null, "(\"cnt\" * 3)"),
-                      new LongSumAggregatorFactory("a1", "cnt", null),
-                      new DoubleSumAggregatorFactory("a2", "m1", null)
+                      new LongSumAggregatorFactory("a0", null, "(\"cnt\" * 3)", macroTable),
+                      new LongSumAggregatorFactory("a1", "cnt", null, macroTable),
+                      new DoubleSumAggregatorFactory("a2", "m1", null, macroTable)
                   ))
                   .postAggregators(ImmutableList.of(
                       new ExpressionPostAggregator("a3", "log((\"a1\" + \"a2\"))"),
@@ -3075,7 +3079,8 @@ public class CalciteQueryTest
   public void testSelectCurrentTimeAndDateLosAngeles() throws Exception
   {
     testQuery(
-        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_LOS_ANGELES),
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_LOS_ANGELES,
         "SELECT CURRENT_TIMESTAMP, CURRENT_DATE, CURRENT_DATE + INTERVAL '1' DAY",
         ImmutableList.of(),
         ImmutableList.of(
@@ -3088,7 +3093,8 @@ public class CalciteQueryTest
   public void testFilterOnCurrentTimestampLosAngeles() throws Exception
   {
     testQuery(
-        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_LOS_ANGELES),
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_LOS_ANGELES,
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'",
         ImmutableList.<Query>of(
@@ -3133,7 +3139,8 @@ public class CalciteQueryTest
     // "testFilterOnCurrentTimestampOnView" above.
 
     testQuery(
-        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_LOS_ANGELES),
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_LOS_ANGELES,
         "SELECT * FROM bview",
         ImmutableList.<Query>of(
             Druids.newTimeseriesQueryBuilder()
@@ -3575,7 +3582,8 @@ public class CalciteQueryTest
   public void testTimeseriesLosAngeles() throws Exception
   {
     testQuery(
-        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_LOS_ANGELES),
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_LOS_ANGELES,
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT FLOOR(__time TO MONTH) AS gran,\n"
         + "  cnt FROM druid.foo\n"
@@ -3606,7 +3614,8 @@ public class CalciteQueryTest
     // Tests that query context parameters are passed through to the underlying query engine.
 
     testQuery(
-        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS),
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT floor(__time TO HOUR) AS gran, cnt FROM druid.foo\n"
         + "  WHERE __time >= '2000-01-01' AND __time < '2000-01-02'\n"
@@ -3806,7 +3815,8 @@ public class CalciteQueryTest
   public void testGroupByExtractFloorTimeLosAngeles() throws Exception
   {
     testQuery(
-        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_LOS_ANGELES),
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_LOS_ANGELES,
         "SELECT\n"
         + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
         + "FROM druid.foo\n"
@@ -4196,7 +4206,8 @@ public class CalciteQueryTest
   ) throws Exception
   {
     testQuery(
-        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_DEFAULT),
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
         sql,
         expectedQueries,
         expectedResults
@@ -4210,11 +4221,12 @@ public class CalciteQueryTest
       final List<Object[]> expectedResults
   ) throws Exception
   {
-    testQuery(PlannerContext.create(plannerConfig, QUERY_CONTEXT_DEFAULT), sql, expectedQueries, expectedResults);
+    testQuery(plannerConfig, QUERY_CONTEXT_DEFAULT, sql, expectedQueries, expectedResults);
   }
 
   private void testQuery(
-      final PlannerContext plannerContext,
+      final PlannerConfig plannerConfig,
+      final Map<String, Object> queryContext,
       final String sql,
       final List<Query> expectedQueries,
       final List<Object[]> expectedResults
@@ -4222,25 +4234,26 @@ public class CalciteQueryTest
   {
     log.info("SQL: %s", sql);
     queryLogHook.clearRecordedQueries();
-    final List<Object[]> plannerResults = getResults(plannerContext, sql);
+    final List<Object[]> plannerResults = getResults(plannerConfig, queryContext, sql);
     verifyResults(sql, expectedQueries, expectedResults, plannerResults);
   }
 
   private List<Object[]> getResults(
-      final PlannerContext plannerContext,
+      final PlannerConfig plannerConfig,
+      final Map<String, Object> queryContext,
       final String sql
   ) throws Exception
   {
-    final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
     final InProcessViewManager viewManager = new InProcessViewManager();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig, viewManager);
     final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
-
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
         walker,
         operatorTable,
+        macroTable,
         plannerConfig,
         new ServerConfig()
     );
@@ -4258,7 +4271,7 @@ public class CalciteQueryTest
         + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
     );
 
-    try (DruidPlanner planner = plannerFactory.createPlanner(plannerContext.getQueryContext())) {
+    try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       final PlannerResult plan = planner.plan(sql);
       return Sequences.toList(plan.run(), Lists.<Object[]>newArrayList());
     }

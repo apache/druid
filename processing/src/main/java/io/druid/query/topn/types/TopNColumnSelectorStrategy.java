@@ -90,8 +90,9 @@ public interface TopNColumnSelectorStrategy
    * @param cursor Cursor for the segment being queried
    * @param rowSelector Integer lookup containing aggregators
    * @param aggregatesStore Map containing aggregators
+   * @return the number of processed rows (after postFilters are applied inside the cursor being processed)
    */
-  void dimExtractionScanAndAggregate(
+  long dimExtractionScanAndAggregate(
       final TopNQuery query,
       ValueSelectorType selector,
       Cursor cursor,

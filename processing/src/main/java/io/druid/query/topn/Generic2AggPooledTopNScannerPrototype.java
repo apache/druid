@@ -41,7 +41,7 @@ public final class Generic2AggPooledTopNScannerPrototype implements Generic2AggP
   )
   {
     int totalAggregatorsSize = aggregator1Size + aggregator2Size;
-    long scannedRows = 0;
+    long processedRows = 0;
     int positionToAllocate = 0;
     while (!cursor.isDoneOrInterrupted()) {
       final IndexedInts dimValues = dimensionSelector.getRow();
@@ -63,9 +63,9 @@ public final class Generic2AggPooledTopNScannerPrototype implements Generic2AggP
           positionToAllocate += totalAggregatorsSize;
         }
       }
-      scannedRows++;
+      processedRows++;
       cursor.advanceUninterruptibly();
     }
-    return scannedRows;
+    return processedRows;
   }
 }

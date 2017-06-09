@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
@@ -132,7 +133,7 @@ public class MetadataSegmentManagerTest
         true,
         "corrupt-version",
         true,
-        "corrupt-payload".getBytes()
+        StringUtils.toUtf8("corrupt-payload")
     );
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());

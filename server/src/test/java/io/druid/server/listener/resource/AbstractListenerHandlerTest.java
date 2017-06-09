@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.StringUtils;
 
+import io.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;

@@ -151,7 +151,7 @@ public class TestNG
 
   private static TestNG m_instance;
 
-  private static JCommander m_jCommander;
+  protected static JCommander m_jCommander;
 
   private List<String> m_commandLineMethods;
   protected List<XmlSuite> m_suites = Lists.newArrayList();

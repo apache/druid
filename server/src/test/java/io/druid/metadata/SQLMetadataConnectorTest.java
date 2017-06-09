@@ -18,6 +18,7 @@
  */
 package io.druid.metadata;
 
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -94,16 +95,28 @@ public class SQLMetadataConnectorTest
 
     Assert.assertNull(connector.lookup(tableName, "name", "payload", "emperor"));
 
-    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin".getBytes());
+    connector.insertOrUpdate(
+        tableName,
+        "name",
+        "payload",
+        "emperor",
+        StringUtils.toUtf8("penguin")
+    );
     Assert.assertArrayEquals(
-        "penguin".getBytes(),
+        StringUtils.toUtf8("penguin"),
         connector.lookup(tableName, "name", "payload", "emperor")
     );
 
-    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin chick".getBytes());
+    connector.insertOrUpdate(
+        tableName,
+        "name",
+        "payload",
+        "emperor",
+        StringUtils.toUtf8("penguin chick")
+    );
 
     Assert.assertArrayEquals(
-        "penguin chick".getBytes(),
+        StringUtils.toUtf8("penguin chick"),
         connector.lookup(tableName, "name", "payload", "emperor")
     );
 

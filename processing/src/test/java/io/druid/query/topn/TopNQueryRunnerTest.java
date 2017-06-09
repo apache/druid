@@ -39,6 +39,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
@@ -1976,7 +1977,7 @@ public class TopNQueryRunnerTest
     query = query.withAggregatorSpecs(
         Arrays.asList(
             QueryRunnerTestHelper.rowsCount,
-            new DoubleSumAggregatorFactory("index", null, "-index + 100")
+            new DoubleSumAggregatorFactory("index", null, "-index + 100", ExprMacroTable.nil())
         )
     );
 
@@ -4189,7 +4190,7 @@ public class TopNQueryRunnerTest
   }
 
   @Test
-  public void testFullOnTopNVirtualColumn()
+  public void testFullOnTopNLongVirtualColumn()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -4210,7 +4211,7 @@ public class TopNQueryRunnerTest
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-        .virtualColumns(new ExpressionVirtualColumn("ql_expr", "qualityLong"))
+        .virtualColumns(new ExpressionVirtualColumn("ql_expr", "qualityLong", ExprMacroTable.nil()))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(

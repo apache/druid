@@ -22,6 +22,7 @@ package io.druid.examples.rabbitmq;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -33,7 +34,6 @@ import org.apache.commons.cli.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -114,13 +114,11 @@ public class RabbitMQProducerMain
     // An extremely silly hack to maintain the above order in the help formatting.
     HelpFormatter formatter = new HelpFormatter();
     // Add a comparator to the HelpFormatter using the ArrayList above to sort by insertion order.
-    formatter.setOptionComparator(new Comparator(){
-      @Override
-      public int compare(Object o1, Object o2)
-      {
-        // I know this isn't fast, but who cares! The list is short.
-        return optionList.indexOf(o1) - optionList.indexOf(o2);
-      }
+    //noinspection ComparatorCombinators -- don't replace with comparingInt() to preserve comments
+    formatter.setOptionComparator((o1, o2) -> {
+      // I know this isn't fast, but who cares! The list is short.
+      //noinspection SuspiciousMethodCalls
+      return Integer.compare(optionList.indexOf(o1), optionList.indexOf(o2));
     });
 
     // Now we can add all the options to an Options instance. This is dumb!
@@ -197,7 +195,7 @@ public class RabbitMQProducerMain
 
       String line = String.format(msg_template, sdf.format(timer.getTime()), wp, gender, age);
 
-      channel.basicPublish(exchange, routingKey, null, line.getBytes());
+      channel.basicPublish(exchange, routingKey, null, StringUtils.toUtf8(line));
 
       System.out.println("Sent message: " + line);
 

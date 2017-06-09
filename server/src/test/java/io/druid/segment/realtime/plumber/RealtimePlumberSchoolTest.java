@@ -220,7 +220,7 @@ public class RealtimePlumberSchoolTest
         TestHelper.getTestIndexIO(),
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
-        TestHelper.getObjectMapper()
+        TestHelper.getJsonMapper()
     );
 
     metrics = new FireDepartmentMetrics();

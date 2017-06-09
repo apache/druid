@@ -26,12 +26,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -444,7 +444,7 @@ public class SchemalessIndexTest
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
 
       VersionedIntervalTimeline<Integer, File> timeline = new VersionedIntervalTimeline<Integer, File>(
-          Ordering.natural().nullsFirst()
+          Comparators.naturalNullsFirst()
       );
 
       ShardSpec noneShardSpec = NoneShardSpec.instance();

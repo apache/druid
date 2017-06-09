@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -56,18 +57,22 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class FiniteAppenderatorDriverTest
+public class AppenderatorDriverTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
-  private static final long HANDOFF_CONDITION_TIMEOUT = 0;
+  private static final long PUBLISH_TIMEOUT = 1000;
+  private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
 
   private static final List<InputRow> ROWS = Arrays.<InputRow>asList(
       new MapBasedInputRow(
@@ -89,21 +94,21 @@ public class FiniteAppenderatorDriverTest
 
   SegmentAllocator allocator;
   AppenderatorTester appenderatorTester;
-  FiniteAppenderatorDriver driver;
+  TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
+  AppenderatorDriver driver;
 
   @Before
   public void setUp()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
-    driver = new FiniteAppenderatorDriver(
+    segmentHandoffNotifierFactory = new TestSegmentHandoffNotifierFactory();
+    driver = new AppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
-        new TestSegmentHandoffNotifierFactory(),
+        segmentHandoffNotifierFactory,
         new TestUsedSegmentChecker(),
         OBJECT_MAPPER,
-        MAX_ROWS_PER_SEGMENT,
-        HANDOFF_CONDITION_TIMEOUT,
         new FireDepartmentMetrics()
     );
   }
@@ -124,13 +129,16 @@ public class FiniteAppenderatorDriverTest
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertNotNull(driver.add(ROWS.get(i), "dummy", committerSupplier));
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
     }
 
-    final SegmentsAndMetadata segmentsAndMetadata = driver.finish(
+    final SegmentsAndMetadata published = driver.publish(
         makeOkPublisher(),
-        committerSupplier.get()
-    );
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(
@@ -155,19 +163,176 @@ public class FiniteAppenderatorDriverTest
       InputRow row = new MapBasedInputRow(
           new DateTime("2000T01"),
           ImmutableList.of("dim2"),
-          ImmutableMap.<String, Object>of(
+          ImmutableMap.of(
               "dim2",
               String.format("bar-%d", i),
               "met1",
               2.0
           )
       );
-      Assert.assertNotNull(driver.add(row, "dummy", committerSupplier));
+      final AppenderatorDriverAddResult addResult = driver.add(row, "dummy", committerSupplier);
+      Assert.assertTrue(addResult.isOk());
+      if (addResult.getNumRowsInSegment() > MAX_ROWS_PER_SEGMENT) {
+        driver.moveSegmentOut("dummy", ImmutableList.of(addResult.getSegmentIdentifier()));
+      }
     }
 
-    final SegmentsAndMetadata segmentsAndMetadata = driver.finish(makeOkPublisher(), committerSupplier.get());
+    final SegmentsAndMetadata published = driver.publish(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
     Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
     Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndMetadata.getCommitMetadata());
+  }
+
+  @Test(timeout = 5000L, expected = TimeoutException.class)
+  public void testHandoffTimeout() throws Exception
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+    segmentHandoffNotifierFactory.disableHandoff();
+
+    Assert.assertNull(driver.startJob());
+
+    for (int i = 0; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
+    }
+
+    final SegmentsAndMetadata published = driver.publish(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void testPublishPerRow() throws IOException, InterruptedException, TimeoutException, ExecutionException
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+
+    Assert.assertNull(driver.startJob());
+
+    // Add the first row and publish immediately
+    {
+      committerSupplier.setMetadata(1);
+      Assert.assertTrue(driver.add(ROWS.get(0), "dummy", committerSupplier).isOk());
+
+      final SegmentsAndMetadata published = driver.publish(
+          makeOkPublisher(),
+          committerSupplier.get(),
+          ImmutableList.of("dummy")
+      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                            .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+      Assert.assertEquals(
+          ImmutableSet.of(
+              new SegmentIdentifier(DATA_SOURCE, new Interval("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0))
+          ),
+          asIdentifiers(segmentsAndMetadata.getSegments())
+      );
+
+      Assert.assertEquals(1, segmentsAndMetadata.getCommitMetadata());
+    }
+
+    // Add the second and third rows and publish immediately
+    for (int i = 1; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
+
+      final SegmentsAndMetadata published = driver.publish(
+          makeOkPublisher(),
+          committerSupplier.get(),
+          ImmutableList.of("dummy")
+      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                            .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+      Assert.assertEquals(
+          ImmutableSet.of(
+              // The second and third rows have the same dataSource, interval, and version, but different shardSpec of
+              // different partitionNum
+              new SegmentIdentifier(DATA_SOURCE, new Interval("2000T01/PT1H"), VERSION, new NumberedShardSpec(i - 1, 0))
+          ),
+          asIdentifiers(segmentsAndMetadata.getSegments())
+      );
+
+      Assert.assertEquals(i + 1, segmentsAndMetadata.getCommitMetadata());
+    }
+
+    driver.persist(committerSupplier.get());
+
+    // There is no remaining rows in the driver, and thus the result must be empty
+    final SegmentsAndMetadata published = driver.publish(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
+                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(
+        ImmutableSet.of(),
+        asIdentifiers(segmentsAndMetadata.getSegments())
+    );
+
+    Assert.assertEquals(3, segmentsAndMetadata.getCommitMetadata());
+  }
+
+  @Test
+  public void testIncrementalHandoff() throws Exception
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+
+    Assert.assertNull(driver.startJob());
+
+    committerSupplier.setMetadata(1);
+    Assert.assertTrue(driver.add(ROWS.get(0), "sequence_0", committerSupplier).isOk());
+
+    for (int i = 1; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "sequence_1", committerSupplier).isOk());
+    }
+
+    final ListenableFuture<SegmentsAndMetadata> futureForSequence0 = driver.publishAndRegisterHandoff(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("sequence_0")
+    );
+
+    final ListenableFuture<SegmentsAndMetadata> futureForSequence1 = driver.publishAndRegisterHandoff(
+        makeOkPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("sequence_1")
+    );
+
+    final SegmentsAndMetadata handedoffFromSequence0 = futureForSequence0.get(
+        HANDOFF_CONDITION_TIMEOUT,
+        TimeUnit.MILLISECONDS
+    );
+    final SegmentsAndMetadata handedoffFromSequence1 = futureForSequence1.get(
+        HANDOFF_CONDITION_TIMEOUT,
+        TimeUnit.MILLISECONDS
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            new SegmentIdentifier(DATA_SOURCE, new Interval("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0))
+        ),
+        asIdentifiers(handedoffFromSequence0.getSegments())
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            new SegmentIdentifier(DATA_SOURCE, new Interval("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0))
+        ),
+        asIdentifiers(handedoffFromSequence1.getSegments())
+    );
+
+    Assert.assertEquals(3, handedoffFromSequence0.getCommitMetadata());
+    Assert.assertEquals(3, handedoffFromSequence1.getCommitMetadata());
   }
 
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)
@@ -187,7 +352,7 @@ public class FiniteAppenderatorDriverTest
     );
   }
 
-  private TransactionalSegmentPublisher makeOkPublisher()
+  static TransactionalSegmentPublisher makeOkPublisher()
   {
     return new TransactionalSegmentPublisher()
     {
@@ -199,7 +364,7 @@ public class FiniteAppenderatorDriverTest
     };
   }
 
-  private static class TestCommitterSupplier<T> implements Supplier<Committer>
+  static class TestCommitterSupplier<T> implements Supplier<Committer>
   {
     private final AtomicReference<T> metadata = new AtomicReference<>();
 
@@ -229,7 +394,7 @@ public class FiniteAppenderatorDriverTest
     }
   }
 
-  private static class TestSegmentAllocator implements SegmentAllocator
+  static class TestSegmentAllocator implements SegmentAllocator
   {
     private final String dataSource;
     private final Granularity granularity;
@@ -264,8 +429,21 @@ public class FiniteAppenderatorDriverTest
     }
   }
 
-  private static class TestSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
+  static class TestSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
   {
+    private boolean handoffEnabled = true;
+    private long handoffDelay;
+
+    public void disableHandoff()
+    {
+      handoffEnabled = false;
+    }
+
+    public void setHandoffDelay(long delay)
+    {
+      handoffDelay = delay;
+    }
+
     @Override
     public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
     {
@@ -278,8 +456,19 @@ public class FiniteAppenderatorDriverTest
             final Runnable handOffRunnable
         )
         {
-          // Immediate handoff
-          exec.execute(handOffRunnable);
+          if (handoffEnabled) {
+
+            if (handoffDelay > 0) {
+              try {
+                Thread.sleep(handoffDelay);
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+            }
+
+            exec.execute(handOffRunnable);
+          }
           return true;
         }
 

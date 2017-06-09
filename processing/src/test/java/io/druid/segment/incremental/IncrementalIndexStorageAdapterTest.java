@@ -268,7 +268,8 @@ public class IncrementalIndexStorageAdapterTest
           interval,
           VirtualColumns.EMPTY,
           Granularities.NONE,
-          descending
+          descending,
+          null
       );
 
       Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
@@ -337,7 +338,8 @@ public class IncrementalIndexStorageAdapterTest
                                       )
                                   )
                                   .build(),
-            new IncrementalIndexStorageAdapter(index)
+            new IncrementalIndexStorageAdapter(index),
+            null
         ),
         Lists.<Result<TopNResultValue>>newLinkedList()
     );
@@ -407,7 +409,12 @@ public class IncrementalIndexStorageAdapterTest
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
     Sequence<Cursor> cursors = sa.makeCursors(
-        null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, Granularities.ALL, false
+        null,
+        new Interval(timestamp - 60_000, timestamp + 60_000),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
     );
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
@@ -485,7 +492,12 @@ public class IncrementalIndexStorageAdapterTest
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
     Sequence<Cursor> cursors = sa.makeCursors(
-        null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, Granularities.ALL, false
+        null,
+        new Interval(timestamp - 60_000, timestamp + 60_000),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
     );
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 

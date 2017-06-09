@@ -33,10 +33,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -53,17 +53,15 @@ public class LocalFirehoseFactoryTest
   public void setup() throws IOException
   {
     for (int i = 0; i < 5; i++) {
-      try (final Writer writer = new BufferedWriter(
-          new FileWriter(temporaryFolder.newFile("test_" + i))
-      )) {
+      try (final Writer writer =
+          Files.newBufferedWriter(temporaryFolder.newFile("test_" + i).toPath(), StandardCharsets.UTF_8)) {
         writer.write((20171225 + i) + "," + i + "th test file\n");
       }
     }
 
     for (int i = 0; i < 5; i++) {
-      try (final Writer writer = new BufferedWriter(
-          new FileWriter(temporaryFolder.newFile("filtered_" + i))
-      )) {
+      try (final Writer writer =
+          Files.newBufferedWriter(temporaryFolder.newFile("filtered_" + i).toPath(), StandardCharsets.UTF_8)) {
         writer.write((20171225 + i) + "," + i + "th filtered file\n");
       }
     }

@@ -27,6 +27,7 @@ import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
@@ -164,7 +165,10 @@ public class KafkaEmitter implements Emitter
 
       try {
         String resultJson = jsonMapper.writeValueAsString(result);
-        ObjectContainer<String> objectContainer = new ObjectContainer<>(resultJson, resultJson.getBytes().length);
+        ObjectContainer<String> objectContainer = new ObjectContainer<>(
+            resultJson,
+            StringUtils.toUtf8(resultJson).length
+        );
         if (event instanceof ServiceMetricEvent) {
           if (!metricQueue.offer(objectContainer)) {
             metricLost.incrementAndGet();

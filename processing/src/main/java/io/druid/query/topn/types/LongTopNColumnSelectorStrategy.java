@@ -62,7 +62,7 @@ public class LongTopNColumnSelectorStrategy
   }
 
   @Override
-  public void dimExtractionScanAndAggregate(
+  public long dimExtractionScanAndAggregate(
       TopNQuery query,
       LongColumnSelector selector,
       Cursor cursor,
@@ -70,6 +70,7 @@ public class LongTopNColumnSelectorStrategy
       Long2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
+    long processedRows = 0;
     while (!cursor.isDone()) {
       long key = selector.get();
       Aggregator[] theAggregators = aggregatesStore.get(key);
@@ -81,7 +82,9 @@ public class LongTopNColumnSelectorStrategy
         aggregator.aggregate();
       }
       cursor.advance();
+      processedRows++;
     }
+    return processedRows;
   }
 
   @Override

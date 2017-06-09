@@ -72,8 +72,10 @@ public class BucketTest
 
   @Test public void testEquals()
   {
+    //noinspection ObjectEqualsNull
     Assert.assertFalse("Object should not be equals to NULL", bucket.equals(null));
-    Assert.assertFalse("Objects do not have the same Class",bucket.equals(new Integer(0)));
+    //noinspection EqualsBetweenInconvertibleTypes
+    Assert.assertFalse("Objects do not have the same Class", bucket.equals(0));
     Assert.assertFalse("Objects do not have the same partitionNum",
         bucket.equals(new Bucket(shardNum, time, partitionNum + 1)));
     Assert.assertFalse("Objects do not have the same shardNum",

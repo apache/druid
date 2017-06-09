@@ -50,7 +50,6 @@ import io.druid.sql.calcite.filtration.BoundRefKey;
 import io.druid.sql.calcite.filtration.Bounds;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.avatica.util.TimeUnitRange;
@@ -145,7 +144,6 @@ public class Expressions
    * @return RowExtraction or null if not possible
    */
   public static RowExtraction toRowExtraction(
-      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
@@ -165,26 +163,26 @@ public class Expressions
           && operand.getType().getSqlTypeName() == SqlTypeName.TIMESTAMP) {
         // Handling casting TIMESTAMP to DATE by flooring to DAY.
         return FloorExtractionOperator.applyTimestampFloor(
-            toRowExtraction(operatorTable, plannerContext, rowOrder, operand),
+            toRowExtraction(plannerContext, rowOrder, operand),
             TimeUnits.toQueryGranularity(TimeUnitRange.DAY, plannerContext.getTimeZone())
         );
       } else {
         // Ignore other casts.
         // TODO(gianm): Probably not a good idea to ignore other CASTs like this.
-        return toRowExtraction(operatorTable, plannerContext, rowOrder, ((RexCall) expression).getOperands().get(0));
+        return toRowExtraction(plannerContext, rowOrder, ((RexCall) expression).getOperands().get(0));
       }
     } else {
       // Try conversion using a SqlExtractionOperator.
       final RowExtraction retVal;
 
       if (expression instanceof RexCall) {
-        final SqlExtractionOperator extractionOperator = operatorTable.lookupExtractionOperator(
+        final SqlExtractionOperator extractionOperator = plannerContext.getOperatorTable().lookupExtractionOperator(
             expression.getKind(),
             ((RexCall) expression).getOperator().getName()
         );
 
         retVal = extractionOperator != null
-                 ? extractionOperator.convert(operatorTable, plannerContext, rowOrder, expression)
+                 ? extractionOperator.convert(plannerContext, rowOrder, expression)
                  : null;
       } else {
         retVal = null;
@@ -196,7 +194,7 @@ public class Expressions
 
   /**
    * Translate a Calcite row-expression to a Druid PostAggregator. One day, when possible, this could be folded
-   * into {@link #toRowExtraction(DruidOperatorTable, PlannerContext, List, RexNode)} .
+   * into {@link #toRowExtraction(PlannerContext, List, RexNode)} .
    *
    * @param name                              name of the PostAggregator
    * @param rowOrder                          order of fields in the Druid rows to be extracted from
@@ -274,7 +272,7 @@ public class Expressions
 
   /**
    * Translate a row-expression to a Druid math expression. One day, when possible, this could be folded into
-   * {@link #toRowExtraction(DruidOperatorTable, PlannerContext, List, RexNode)}.
+   * {@link #toRowExtraction(PlannerContext, List, RexNode)}.
    *
    * @param rowOrder   order of fields in the Druid rows to be extracted from
    * @param expression expression meant to be applied on top of the rows
@@ -400,7 +398,6 @@ public class Expressions
    * @param expression     Calcite row expression
    */
   public static DimFilter toFilter(
-      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode expression
@@ -411,7 +408,7 @@ public class Expressions
         || expression.getKind() == SqlKind.NOT) {
       final List<DimFilter> filters = Lists.newArrayList();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
-        final DimFilter nextFilter = toFilter(operatorTable, plannerContext, rowSignature, rexNode);
+        final DimFilter nextFilter = toFilter(plannerContext, rowSignature, rexNode);
         if (nextFilter == null) {
           return null;
         }
@@ -428,7 +425,7 @@ public class Expressions
       }
     } else {
       // Handle filter conditions on everything else.
-      return toLeafFilter(operatorTable, plannerContext, rowSignature, expression);
+      return toLeafFilter(plannerContext, rowSignature, expression);
     }
   }
 
@@ -441,7 +438,6 @@ public class Expressions
    * @param expression     Calcite row expression
    */
   private static DimFilter toLeafFilter(
-      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode expression
@@ -458,7 +454,6 @@ public class Expressions
     if (kind == SqlKind.LIKE) {
       final List<RexNode> operands = ((RexCall) expression).getOperands();
       final RowExtraction rex = toRowExtraction(
-          operatorTable,
           plannerContext,
           rowSignature.getRowOrder(),
           operands.get(0)
@@ -498,7 +493,7 @@ public class Expressions
       }
 
       // lhs must be translatable to a RowExtraction to be filterable
-      final RowExtraction rex = toRowExtraction(operatorTable, plannerContext, rowSignature.getRowOrder(), lhs);
+      final RowExtraction rex = toRowExtraction(plannerContext, rowSignature.getRowOrder(), lhs);
       if (rex == null || !rex.isFilterable(rowSignature)) {
         return null;
       }

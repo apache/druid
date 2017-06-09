@@ -19,8 +19,8 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Floats;
+import io.druid.java.util.common.guava.Comparators;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -50,7 +50,7 @@ public class CompressedFloatBufferObjectStrategy extends FixedSizeCompressedObje
           @Override
           public int compare(FloatBuffer lhs, FloatBuffer rhs)
           {
-            return Ordering.natural().nullsFirst().compare(lhs, rhs);
+            return Comparators.<FloatBuffer>naturalNullsFirst().compare(lhs, rhs);
           }
 
           @Override

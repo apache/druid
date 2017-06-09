@@ -17,19 +17,19 @@
  * under the License.
  */
 
-package io.druid.java.util.common.collect;
+package io.druid.query.expression;
 
-import java.util.Map;
+import com.google.common.collect.ImmutableList;
+import io.druid.math.expr.ExprMacroTable;
+
+import javax.inject.Inject;
 import java.util.Set;
 
-public class JavaCompatUtils
+public class GuiceExprMacroTable extends ExprMacroTable
 {
-  /**
-   * Equivalent to theMap.keySet(), but works around a Java 7 compat issue. See also
-   * https://github.com/druid-io/druid/issues/3795.
-   */
-  public static <K, V> Set<K> keySet(Map<K, V> theMap)
+  @Inject
+  public GuiceExprMacroTable(final Set<ExprMacro> macros)
   {
-    return theMap.keySet();
+    super(ImmutableList.copyOf(macros));
   }
 }

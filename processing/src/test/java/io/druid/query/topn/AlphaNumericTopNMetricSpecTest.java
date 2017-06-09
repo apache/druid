@@ -22,7 +22,7 @@ package io.druid.query.topn;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -102,7 +102,7 @@ public class AlphaNumericTopNMetricSpecTest
                        + "    \"type\": \"alphaNumeric\",\n"
                        + "    \"previousStop\": \"test\"\n"
                        + "}";
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    ObjectMapper jsonMapper = TestHelper.getJsonMapper();
     TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), AlphaNumericTopNMetricSpec.class);
     TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), AlphaNumericTopNMetricSpec.class);
     Assert.assertEquals(expectedMetricSpec, actualMetricSpec);

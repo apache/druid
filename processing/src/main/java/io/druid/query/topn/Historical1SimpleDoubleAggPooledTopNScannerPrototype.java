@@ -48,7 +48,7 @@ public class Historical1SimpleDoubleAggPooledTopNScannerPrototype
   {
     // See TopNUtils.copyOffset() for explanation
     Offset offset = (Offset) TopNUtils.copyOffset(cursor);
-    long scannedRows = 0;
+    long processedRows = 0;
     int positionToAllocate = 0;
     while (offset.withinBounds() && !Thread.currentThread().isInterrupted()) {
       int rowNum = offset.getOffset();
@@ -66,9 +66,9 @@ public class Historical1SimpleDoubleAggPooledTopNScannerPrototype
           positionToAllocate += aggregatorSize;
         }
       }
-      scannedRows++;
+      processedRows++;
       offset.increment();
     }
-    return scannedRows;
+    return processedRows;
   }
 }

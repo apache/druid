@@ -20,7 +20,6 @@
 package io.druid.sql.calcite.expression;
 
 import io.druid.query.extraction.SubstringDimExtractionFn;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -40,7 +39,6 @@ public class SubstringExtractionOperator implements SqlExtractionOperator
 
   @Override
   public RowExtraction convert(
-      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
@@ -48,7 +46,6 @@ public class SubstringExtractionOperator implements SqlExtractionOperator
   {
     final RexCall call = (RexCall) expression;
     final RowExtraction arg = Expressions.toRowExtraction(
-        operatorTable,
         plannerContext,
         rowOrder,
         call.getOperands().get(0)

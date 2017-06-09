@@ -20,10 +20,16 @@
 package io.druid.query.filter;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
+import io.druid.query.DefaultBitmapResultFactory;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 /**
+ * {@link #getBitmapIndex} and {@link #getBitmapResult} methods both have default implementations, delegating to each
+ * other. Every implementation of {@link Filter} should override {@link #getBitmapResult}, currently it has a default
+ * implementation for compatibility with Filters in extensions. In Druid 0.11 {@link #getBitmapResult} is going to
+ * become an abstract method without a default implementation.
  */
 public interface Filter
 {
@@ -36,8 +42,15 @@ public interface Filter
    *
    * @see Filter#estimateSelectivity(BitmapIndexSelector)
    */
-  ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
+  default ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  {
+    return getBitmapResult(selector, new DefaultBitmapResultFactory(selector.getBitmapFactory()));
+  }
 
+  default <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  {
+    return bitmapResultFactory.wrapUnknown(getBitmapIndex(selector));
+  }
 
   /**
    * Estimate selectivity of this filter.

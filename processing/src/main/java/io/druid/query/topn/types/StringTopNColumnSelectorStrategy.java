@@ -77,7 +77,7 @@ public class StringTopNColumnSelectorStrategy
   }
 
   @Override
-  public void dimExtractionScanAndAggregate(
+  public long dimExtractionScanAndAggregate(
       TopNQuery query,
       DimensionSelector selector,
       Cursor cursor,
@@ -86,9 +86,9 @@ public class StringTopNColumnSelectorStrategy
   )
   {
     if (selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN) {
-      dimExtractionScanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector, aggregatesStore);
+      return dimExtractionScanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector, aggregatesStore);
     } else {
-      dimExtractionScanAndAggregateWithCardinalityUnknown(query, cursor, selector, aggregatesStore);
+      return dimExtractionScanAndAggregateWithCardinalityUnknown(query, cursor, selector, aggregatesStore);
     }
   }
 
@@ -121,7 +121,7 @@ public class StringTopNColumnSelectorStrategy
     }
   }
 
-  private void dimExtractionScanAndAggregateWithCardinalityKnown(
+  private long dimExtractionScanAndAggregateWithCardinalityKnown(
       TopNQuery query,
       Cursor cursor,
       DimensionSelector selector,
@@ -129,6 +129,7 @@ public class StringTopNColumnSelectorStrategy
       Map<String, Aggregator[]> aggregatesStore
   )
   {
+    long processedRows = 0;
     while (!cursor.isDone()) {
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0; i < dimValues.size(); ++i) {
@@ -149,16 +150,19 @@ public class StringTopNColumnSelectorStrategy
         }
       }
       cursor.advance();
+      processedRows++;
     }
+    return processedRows;
   }
 
-  private void dimExtractionScanAndAggregateWithCardinalityUnknown(
+  private long dimExtractionScanAndAggregateWithCardinalityUnknown(
       TopNQuery query,
       Cursor cursor,
       DimensionSelector selector,
       Map<String, Aggregator[]> aggregatesStore
   )
   {
+    long processedRows = 0;
     while (!cursor.isDone()) {
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0; i < dimValues.size(); ++i) {
@@ -175,6 +179,8 @@ public class StringTopNColumnSelectorStrategy
         }
       }
       cursor.advance();
+      processedRows++;
     }
+    return processedRows;
   }
 }
