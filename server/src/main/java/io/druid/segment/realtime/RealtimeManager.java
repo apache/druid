@@ -22,6 +22,7 @@ package io.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -34,6 +35,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -60,6 +62,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -122,8 +125,17 @@ public class RealtimeManager implements QuerySegmentWalker
   @LifecycleStop
   public void stop()
   {
-    if (fireChiefExecutor != null) {
-      fireChiefExecutor.shutdownNow();
+    try {
+      if (fireChiefExecutor != null) {
+        fireChiefExecutor.shutdownNow();
+        Preconditions.checkState(
+            fireChiefExecutor.awaitTermination(10, TimeUnit.SECONDS),
+            "persistExecutor not terminated"
+        );
+      }
+    }
+    catch (InterruptedException e) {
+      throw new ISE(e, "Failed to shutdown fireChiefExecutor during stop()");
     }
     serverAnnouncer.unannounce();
   }
@@ -255,56 +267,63 @@ public class RealtimeManager implements QuerySegmentWalker
     {
       initPlumber();
 
-      try (Closer closer = Closer.create()) {
-        Object metadata = plumber.startJob();
+      try {
+        final Closer closer = Closer.create();
 
-        Firehose firehose;
-        FirehoseV2 firehoseV2;
-        if (fireDepartment.checkFirehoseV2()) {
-          firehoseV2 = initFirehoseV2(metadata);
-          log.info("firehose2 connected");
-          closer.register(firehoseV2);
-          runFirehoseV2(firehoseV2);
-        } else {
-          firehose = initFirehose();
-          log.info("firehose connected");
-          closer.register(firehose);
-          runFirehose(firehose);
+        try {
+          Object metadata = plumber.startJob();
+
+          Firehose firehose;
+          FirehoseV2 firehoseV2;
+          final boolean success;
+          if (fireDepartment.checkFirehoseV2()) {
+            firehoseV2 = initFirehoseV2(metadata);
+            closer.register(firehoseV2);
+            success = runFirehoseV2(firehoseV2);
+          } else {
+            firehose = initFirehose();
+            closer.register(firehose);
+            success = runFirehose(firehose);
+          }
+          if (success) {
+            // pluber.finishJob() is called only when every processing is successfully finished.
+            closer.register(() -> plumber.finishJob());
+          }
         }
-        // pluber.finishJob() is called only when every processing is successfully finished.
-        closer.register(() -> plumber.finishJob());
-        log.info("normalExit[%s]", true);
+        catch (Exception e) {
+          log.makeAlert(
+              e,
+              "[%s] aborted realtime processing[%s]",
+              e.getClass().getSimpleName(),
+              fireDepartment.getDataSchema().getDataSource()
+          ).emit();
+          throw closer.rethrow(e);
+        }
+        catch (Error e) {
+          log.makeAlert(e, "Error aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
+             .emit();
+          throw closer.rethrow(e);
+        }
+        finally {
+          closer.close();
+        }
       }
-      catch (Exception e) {
-        log.makeAlert(
-            e,
-            "[%s] aborted realtime processing[%s]",
-            e.getClass().getSimpleName(),
-            fireDepartment.getDataSchema().getDataSource()
-        ).emit();
+      catch (IOException e) {
         throw Throwables.propagate(e);
-      }
-      catch (Error e) {
-        log.makeAlert(e, "Error aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
-           .emit();
-        throw e;
       }
     }
 
-    private void runFirehoseV2(FirehoseV2 firehose)
+    private boolean runFirehoseV2(FirehoseV2 firehose) throws Exception
     {
-      try {
-        firehose.start();
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to start firehoseV2");
-        return;
-      }
+      firehose.start();
 
       log.info("FirehoseV2 started");
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehoseV2(firehose);
       boolean haveRow = true;
       while (haveRow) {
+        if (Thread.interrupted()) {
+          return false;
+        }
         InputRow inputRow = null;
         int numRows = 0;
         try {
@@ -335,14 +354,19 @@ public class RealtimeManager implements QuerySegmentWalker
           metrics.incrementUnparseable();
         }
       }
+      return true;
     }
 
-    private void runFirehose(Firehose firehose)
+    private boolean runFirehose(Firehose firehose)
     {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
       while (firehose.hasMore()) {
+        if (Thread.interrupted()) {
+          return false;
+        }
         Plumbers.addNextRow(committerSupplier, firehose, plumber, config.isReportParseExceptions(), metrics);
       }
+      return true;
     }
 
     public <T> QueryRunner<T> getQueryRunner(Query<T> query)

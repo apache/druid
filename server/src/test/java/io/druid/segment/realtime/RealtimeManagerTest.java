@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -40,7 +41,6 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.BaseQuery;
 import io.druid.query.Query;
@@ -86,9 +86,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -101,7 +103,15 @@ import java.util.concurrent.TimeUnit;
 public class RealtimeManagerTest
 {
   private static QueryRunnerFactory factory;
+  private static QueryRunnerFactoryConglomerate conglomerate;
   private static ExecutorService fireChiefExecutor;
+
+  private static final List<TestInputRowHolder> rows = Arrays.asList(
+      makeRow(new DateTime("9000-01-01").getMillis()),
+      makeRow(new ParseException("parse error")),
+      null,
+      makeRow(new DateTime().getMillis())
+  );
 
   private RealtimeManager realtimeManager;
   private RealtimeManager realtimeManager2;
@@ -119,19 +129,20 @@ public class RealtimeManagerTest
   public static void setupStatic()
   {
     factory = initFactory();
+    conglomerate = new QueryRunnerFactoryConglomerate()
+    {
+      @Override
+      public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
+      {
+        return factory;
+      }
+    };
     fireChiefExecutor = Execs.multiThreaded(2, "chief-%d");
   }
 
   @Before
   public void setUp() throws Exception
   {
-    final List<TestInputRowHolder> rows = Arrays.asList(
-        makeRow(new DateTime("9000-01-01").getMillis()),
-        makeRow(new ParseException("parse error")),
-        null,
-        makeRow(new DateTime().getMillis())
-    );
-
     ObjectMapper jsonMapper = new DefaultObjectMapper();
 
     schema = new DataSchema(
@@ -295,15 +306,6 @@ public class RealtimeManagerTest
     FireDepartment department_0 = new FireDepartment(schema3, ioConfig, tuningConfig_0);
     FireDepartment department_1 = new FireDepartment(schema3, ioConfig2, tuningConfig_1);
 
-    QueryRunnerFactoryConglomerate conglomerate = new QueryRunnerFactoryConglomerate()
-    {
-      @Override
-      public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
-      {
-        return factory;
-      }
-    };
-
     chiefStartedLatch = new CountDownLatch(2);
 
     RealtimeManager.FireChief fireChief_0 = new RealtimeManager.FireChief(department_0, conglomerate)
@@ -325,7 +327,6 @@ public class RealtimeManagerTest
         chiefStartedLatch.countDown();
       }
     };
-
 
     realtimeManager3 = new RealtimeManager(
         Arrays.asList(department_0, department_1),
@@ -382,15 +383,6 @@ public class RealtimeManagerTest
   }
 
   @Test
-  public void testStop() throws IOException
-  {
-    realtimeManager.start();
-    realtimeManager2.start();
-    realtimeManager.stop();
-    realtimeManager2.stop();
-  }
-
-  @Test
   public void testRunV2() throws Exception
   {
     realtimeManager2.start();
@@ -409,6 +401,84 @@ public class RealtimeManagerTest
     Assert.assertTrue(plumber2.isStartedJob());
     Assert.assertTrue(plumber2.isFinishedJob());
     Assert.assertEquals(0, plumber2.getPersistCount());
+  }
+
+  @Test(timeout = 5000L)
+  public void testNormalStop() throws IOException, InterruptedException
+  {
+    final TestFirehose firehose = new TestFirehose(rows.iterator());
+    final TestFirehoseV2 firehoseV2 = new TestFirehoseV2(rows.iterator());
+    final RealtimeIOConfig ioConfig = new RealtimeIOConfig(
+        new FirehoseFactory()
+        {
+          @Override
+          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+          {
+            return firehose;
+          }
+        },
+        (schema, config, metrics) -> plumber,
+        null
+    );
+    RealtimeIOConfig ioConfig2 = new RealtimeIOConfig(
+        null,
+        (schema, config, metrics) -> plumber2,
+        (parser, arg) -> firehoseV2
+    );
+
+    final FireDepartment department_0 = new FireDepartment(schema3, ioConfig, tuningConfig_0);
+    final FireDepartment department_1 = new FireDepartment(schema3, ioConfig2, tuningConfig_1);
+
+    final RealtimeManager realtimeManager = new RealtimeManager(
+        Arrays.asList(department_0, department_1),
+        conglomerate,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
+        null
+    );
+
+    realtimeManager.start();
+    while (realtimeManager.getMetrics("testing").processed() < 2) {
+      Thread.sleep(100);
+    }
+    realtimeManager.stop();
+
+    Assert.assertTrue(firehose.isClosed());
+    Assert.assertTrue(firehoseV2.isClosed());
+    Assert.assertTrue(plumber.isFinishedJob());
+    Assert.assertTrue(plumber2.isFinishedJob());
+  }
+
+  @Test(timeout = 5000L)
+  public void testStopByInterruption() throws IOException
+  {
+    final SleepingFirehose firehose = new SleepingFirehose();
+    final RealtimeIOConfig ioConfig = new RealtimeIOConfig(
+        new FirehoseFactory()
+        {
+          @Override
+          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+          {
+            return firehose;
+          }
+        },
+        (schema, config, metrics) -> plumber,
+        null
+    );
+
+    final FireDepartment department_0 = new FireDepartment(schema, ioConfig, tuningConfig_0);
+
+    final RealtimeManager realtimeManager = new RealtimeManager(
+        Collections.singletonList(department_0),
+        conglomerate,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
+        null
+    );
+
+    realtimeManager.start();
+    realtimeManager.stop();
+
+    Assert.assertTrue(firehose.isClosed());
+    Assert.assertFalse(plumber.isFinishedJob());
   }
 
   @Test(timeout = 10_000L)
@@ -699,12 +769,12 @@ public class RealtimeManagerTest
     return GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
   }
 
-  private TestInputRowHolder makeRow(final long timestamp)
+  private static TestInputRowHolder makeRow(final long timestamp)
   {
     return new TestInputRowHolder(timestamp, null);
   }
 
-  private TestInputRowHolder makeRow(final RuntimeException e)
+  private static TestInputRowHolder makeRow(final RuntimeException e)
   {
     return new TestInputRowHolder(0, e);
   }
@@ -779,11 +849,10 @@ public class RealtimeManagerTest
     }
   }
 
-  static final Logger log = new Logger(RealtimeManagerTest.class);
-
   private static class TestFirehose implements Firehose
   {
     private final Iterator<TestInputRowHolder> rows;
+    private boolean closed;
 
     private TestFirehose(Iterator<TestInputRowHolder> rows)
     {
@@ -813,10 +882,15 @@ public class RealtimeManagerTest
       return Runnables.getNoopRunnable();
     }
 
+    public boolean isClosed()
+    {
+      return closed;
+    }
+
     @Override
     public void close() throws IOException
     {
-      log.info("firehose closed!");
+      closed = true;
     }
   }
 
@@ -825,6 +899,7 @@ public class RealtimeManagerTest
     private final Iterator<TestInputRowHolder> rows;
     private InputRow currRow;
     private boolean stop;
+    private boolean closed;
 
     private TestFirehoseV2(Iterator<TestInputRowHolder> rows)
     {
@@ -843,7 +918,12 @@ public class RealtimeManagerTest
     @Override
     public void close() throws IOException
     {
-      log.info("firehosev2 closed!");
+      closed = true;
+    }
+
+    public boolean isClosed()
+    {
+      return closed;
     }
 
     @Override
@@ -886,6 +966,47 @@ public class RealtimeManagerTest
     public void start() throws Exception
     {
       nextMessage();
+    }
+  }
+
+  private static class SleepingFirehose implements Firehose
+  {
+    private boolean closed;
+
+    @Override
+    public boolean hasMore()
+    {
+      try {
+        Thread.sleep(1000);
+      }
+      catch (InterruptedException e) {
+        throw Throwables.propagate(e);
+      }
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public InputRow nextRow()
+    {
+      return null;
+    }
+
+    @Override
+    public Runnable commit()
+    {
+      return null;
+    }
+
+    public boolean isClosed()
+    {
+      return closed;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      closed = true;
     }
   }
 
