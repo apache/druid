@@ -44,8 +44,10 @@ import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
@@ -648,7 +650,7 @@ public class IndexMerger
         }
 
         dataInterval = new Interval(minTime, maxTime);
-        serializerUtils.writeString(channel, String.format("%s/%s", minTime, maxTime));
+        serializerUtils.writeString(channel, StringUtils.safeFormat("%s/%s", minTime, maxTime));
         serializerUtils.writeString(channel, mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory()));
       }
       IndexIO.checkFileSize(indexFile);
@@ -825,7 +827,7 @@ public class IndexMerger
           if (columnCapabilities.get(input).isDictionaryEncoded()) {
             formatString = "dim_%s.drd";
           } else {
-            formatString = String.format("numeric_dim_%%s_%s.drd", IndexIO.BYTE_ORDER);
+            formatString = StringUtils.safeFormat("numeric_dim_%%s_%s.drd", IndexIO.BYTE_ORDER);
           }
           return GuavaUtils.formatFunction(formatString).apply(input);
         }
@@ -834,11 +836,11 @@ public class IndexMerger
       final ArrayList<String> expectedFiles = Lists.newArrayList(
           Iterables.concat(
               Arrays.asList(
-                  "index.drd", "inverted.drd", "spatial.drd", String.format("time_%s.drd", IndexIO.BYTE_ORDER)
+                  "index.drd", "inverted.drd", "spatial.drd", StringUtils.safeFormat("time_%s.drd", IndexIO.BYTE_ORDER)
               ),
               Iterables.transform(mergedDimensions, dimFilenameFunction),
               Iterables.transform(
-                  mergedMetrics, GuavaUtils.formatFunction(String.format("met_%%s_%s.drd", IndexIO.BYTE_ORDER))
+                  mergedMetrics, GuavaUtils.formatFunction(StringUtils.safeFormat("met_%%s_%s.drd", IndexIO.BYTE_ORDER))
               )
           )
       );
@@ -868,7 +870,7 @@ public class IndexMerger
 
       if (!smooshDir.delete()) {
         log.info("Unable to delete temporary dir[%s], contains[%s]", smooshDir, Arrays.asList(smooshDir.listFiles()));
-        throw new IOException(String.format("Unable to delete temporary dir[%s]", smooshDir));
+        throw new IOE("Unable to delete temporary dir[%s]", smooshDir);
       }
 
       createIndexDrdFile(
@@ -1044,7 +1046,7 @@ public class IndexMerger
       availableDimensions.writeToChannel(channel);
       availableMetrics.writeToChannel(channel);
       serializerUtils.writeString(
-          channel, String.format("%s/%s", dataInterval.getStart(), dataInterval.getEnd())
+          channel, StringUtils.safeFormat("%s/%s", dataInterval.getStart(), dataInterval.getEnd())
       );
       serializerUtils.writeString(
           channel, mapper.writeValueAsString(bitmapSerdeFactory)

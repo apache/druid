@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
@@ -133,7 +134,7 @@ public class DruidAvaticaHandlerTest
     server = new Server(new InetSocketAddress("127.0.0.1", port));
     server.setHandler(handler);
     server.start();
-    url = String.format(
+    url = StringUtils.safeFormat(
         "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
         port,
         DruidAvaticaHandler.AVATICA_PATH
@@ -378,7 +379,7 @@ public class DruidAvaticaHandlerTest
         Executors.newFixedThreadPool(AVATICA_CONFIG.getMaxStatementsPerConnection())
     );
     for (int i = 0; i < 2000; i++) {
-      final String query = String.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
+      final String query = StringUtils.safeFormat("SELECT COUNT(*) + %s AS ci FROM foo", i);
       futures.add(
           exec.submit(() -> {
             try (

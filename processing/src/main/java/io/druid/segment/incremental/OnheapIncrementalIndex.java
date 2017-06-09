@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
@@ -304,7 +305,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     final boolean canAdd = size() < maxRowCount;
     if (!canAdd) {
-      outOfRowsReason = String.format("Maximum number of rows [%d] reached", maxRowCount);
+      outOfRowsReason = StringUtils.safeFormat("Maximum number of rows [%d] reached", maxRowCount);
     }
     return canAdd;
   }

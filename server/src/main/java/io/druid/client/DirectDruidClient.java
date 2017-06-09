@@ -192,8 +192,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     }
 
     final ListenableFuture<InputStream> future;
-    final String url = String.format("http://%s/druid/v2/", host);
-    final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
+    final String url = StringUtils.safeFormat("http://%s/druid/v2/", host);
+    final String cancelUrl = StringUtils.safeFormat("http://%s/druid/v2/%s", host, query.getId());
 
     try {
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);

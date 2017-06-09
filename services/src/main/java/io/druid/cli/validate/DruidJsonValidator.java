@@ -111,7 +111,7 @@ public class DruidJsonValidator extends GuiceRunnable
   {
     File file = new File(jsonFile);
     if (!file.exists()) {
-      System.out.printf("File[%s] does not exist.%n", file);
+      LOG.info("File[%s] does not exist.%n", file);
     }
 
     final Injector injector = makeInjector();
@@ -197,7 +197,7 @@ public class DruidJsonValidator extends GuiceRunnable
       }
     }
     catch (Exception e) {
-      System.out.println("INVALID JSON!");
+      LOG.error(e, "INVALID JSON!");
       throw Throwables.propagate(e);
     }
   }

@@ -22,6 +22,7 @@ package io.druid.sql.calcite.planner;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlExtractionOperator;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -54,14 +55,14 @@ public class DruidOperatorTable implements SqlOperatorTable
     this.extractionOperators = Maps.newHashMap();
 
     for (SqlAggregator aggregator : aggregators) {
-      final String lcname = aggregator.calciteFunction().getName().toLowerCase();
+      final String lcname = StringUtils.toLowerCase(aggregator.calciteFunction().getName());
       if (this.aggregators.put(lcname, aggregator) != null) {
         throw new ISE("Cannot have two operators with name[%s]", lcname);
       }
     }
 
     for (SqlExtractionOperator extractionFunction : extractionOperators) {
-      final String lcname = extractionFunction.calciteFunction().getName().toLowerCase();
+      final String lcname = StringUtils.toLowerCase(extractionFunction.calciteFunction().getName());
       if (this.aggregators.containsKey(lcname) || this.extractionOperators.put(lcname, extractionFunction) != null) {
         throw new ISE("Cannot have two operators with name[%s]", lcname);
       }
@@ -70,12 +71,12 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   public SqlAggregator lookupAggregator(final String opName)
   {
-    return aggregators.get(opName.toLowerCase());
+    return aggregators.get(StringUtils.toLowerCase(opName));
   }
 
   public SqlExtractionOperator lookupExtractionOperator(final SqlKind kind, final String opName)
   {
-    final SqlExtractionOperator extractionOperator = extractionOperators.get(opName.toLowerCase());
+    final SqlExtractionOperator extractionOperator = extractionOperators.get(StringUtils.toLowerCase(opName));
     if (extractionOperator != null && extractionOperator.calciteFunction().getKind() == kind) {
       return extractionOperator;
     } else {
@@ -92,12 +93,13 @@ public class DruidOperatorTable implements SqlOperatorTable
   )
   {
     if (opName.names.size() == 1 && syntax == SqlSyntax.FUNCTION) {
-      final SqlAggregator aggregator = aggregators.get(opName.getSimple().toLowerCase());
+      final SqlAggregator aggregator = aggregators.get(StringUtils.toLowerCase(opName.getSimple()));
       if (aggregator != null) {
         operatorList.add(aggregator.calciteFunction());
       }
 
-      final SqlExtractionOperator extractionFunction = extractionOperators.get(opName.getSimple().toLowerCase());
+      final SqlExtractionOperator extractionFunction =
+          extractionOperators.get(StringUtils.toLowerCase(opName.getSimple()));
       if (extractionFunction != null) {
         operatorList.add(extractionFunction.calciteFunction());
       }

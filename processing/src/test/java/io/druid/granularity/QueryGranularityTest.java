@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -725,12 +726,12 @@ public class QueryGranularityTest
 
       Assert.assertEquals(
           granularity,
-          mapper.readValue("\"" + granularityType.name().toUpperCase() + "\"", Granularity.class)
+          mapper.readValue("\"" + StringUtils.toUpperCase(granularityType.name()) + "\"", Granularity.class)
       );
 
       Assert.assertEquals(
           granularity,
-          mapper.readValue("\"" + granularityType.name().toLowerCase() + "\"", Granularity.class)
+          mapper.readValue("\"" + StringUtils.toLowerCase(granularityType.name()) + "\"", Granularity.class)
       );
 
       Assert.assertEquals(
@@ -740,12 +741,12 @@ public class QueryGranularityTest
 
       if (granularityType == GranularityType.ALL || granularityType == GranularityType.NONE) {
         Assert.assertEquals(
-            "{\"type\":\"" + granularityType.name().toLowerCase() + "\"}",
+            "{\"type\":\"" + StringUtils.toLowerCase(granularityType.name()) + "\"}",
             mapper.writeValueAsString(granularity)
         );
       } else {
         Assert.assertEquals(
-            "\"" + granularityType.name().toUpperCase() + "\"",
+            "\"" + StringUtils.toUpperCase(granularityType.name()) + "\"",
             mapper.writeValueAsString(granularity)
         );
       }

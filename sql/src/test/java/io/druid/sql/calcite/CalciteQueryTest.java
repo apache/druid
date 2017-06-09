@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.hll.HLLCV1;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Sequences;
@@ -4288,10 +4289,10 @@ public class CalciteQueryTest
       log.info("row #%d: %s", i, Arrays.toString(results.get(i)));
     }
 
-    Assert.assertEquals(String.format("result count: %s", sql), expectedResults.size(), results.size());
+    Assert.assertEquals(StringUtils.safeFormat("result count: %s", sql), expectedResults.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(
-          String.format("result #%d: %s", i + 1, sql),
+          StringUtils.safeFormat("result #%d: %s", i + 1, sql),
           expectedResults.get(i),
           results.get(i)
       );
@@ -4301,13 +4302,13 @@ public class CalciteQueryTest
       final List<Query> recordedQueries = queryLogHook.getRecordedQueries();
 
       Assert.assertEquals(
-          String.format("query count: %s", sql),
+          StringUtils.safeFormat("query count: %s", sql),
           expectedQueries.size(),
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
         Assert.assertEquals(
-            String.format("query #%d: %s", i + 1, sql),
+            StringUtils.safeFormat("query #%d: %s", i + 1, sql),
             expectedQueries.get(i),
             recordedQueries.get(i)
         );

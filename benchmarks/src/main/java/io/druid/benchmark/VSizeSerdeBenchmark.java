@@ -20,6 +20,7 @@
 package io.druid.benchmark;
 
 import com.google.common.io.Files;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.data.VSizeLongSerde;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -50,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class VSizeSerdeBenchmark
 {
+  private static final Logger log = new Logger(VSizeSerdeBenchmark.class);
   @Param({"500000"})
   private int values;
 
@@ -102,7 +104,7 @@ public class VSizeSerdeBenchmark
   public void tearDown()
   {
     dummy.delete();
-    System.out.println(sum);
+    log.info("%d", sum);
   }
 
   @Benchmark

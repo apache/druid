@@ -30,6 +30,7 @@ import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -253,7 +254,7 @@ public abstract class BaseFilterTest
         for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry : finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              final String testName = String.format(
+              final String testName = StringUtils.safeFormat(
                   "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
                   bitmapSerdeFactoryEntry.getKey(),
                   indexMergerEntry.getKey(),

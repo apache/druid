@@ -54,6 +54,8 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -154,7 +156,7 @@ public class IngestSegmentFirehoseFactoryTest
     }
 
     if (!persistDir.mkdirs() && !persistDir.exists()) {
-      throw new IOException(String.format("Could not create directory at [%s]", persistDir.getAbsolutePath()));
+      throw new IOE("Could not create directory at [%s]", persistDir.getAbsolutePath());
     }
     INDEX_MERGER.persist(index, persistDir, indexSpec);
 
@@ -343,7 +345,7 @@ public class IngestSegmentFirehoseFactoryTest
                       ),
                       INDEX_IO
                   ),
-                  String.format(
+                  StringUtils.safeFormat(
                       "DimNames[%s]MetricNames[%s]ParserDimNames[%s]",
                       dim_names == null ? "null" : "dims",
                       metric_names == null ? "null" : "metrics",

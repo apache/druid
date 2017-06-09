@@ -59,6 +59,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
 import io.druid.guice.security.DruidAuthModule;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.server.initialization.EmitterModule;
@@ -213,7 +214,7 @@ public class Initialization
 
         if (!extensionDir.isDirectory()) {
           throw new ISE(
-              String.format(
+              StringUtils.safeFormat(
                   "Extension [%s] specified in \"druid.extensions.loadList\" didn't exist!?",
                   extensionDir.getAbsolutePath()
               )
@@ -251,7 +252,7 @@ public class Initialization
       // find the hadoop dependency with the version specified in coordinate
       if (!hadoopDependencyDir.isDirectory() || !versionDir.isDirectory()) {
         throw new ISE(
-            String.format("Hadoop dependency [%s] didn't exist!?", versionDir.getAbsolutePath())
+            StringUtils.safeFormat("Hadoop dependency [%s] didn't exist!?", versionDir.getAbsolutePath())
         );
       }
       hadoopDependenciesToLoad[i++] = versionDir;

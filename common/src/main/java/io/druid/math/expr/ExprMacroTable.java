@@ -19,6 +19,8 @@
 
 package io.druid.math.expr;
 
+import io.druid.java.util.common.StringUtils;
+
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
@@ -35,7 +37,7 @@ public class ExprMacroTable
   {
     this.macroMap = macros.stream().collect(
         Collectors.toMap(
-            m -> m.name().toLowerCase(),
+            m -> StringUtils.toLowerCase(m.name()),
             m -> m
         )
     );
@@ -58,7 +60,7 @@ public class ExprMacroTable
   @Nullable
   public Expr get(final String functionName, final List<Expr> args)
   {
-    final ExprMacro exprMacro = macroMap.get(functionName.toLowerCase());
+    final ExprMacro exprMacro = macroMap.get(StringUtils.toLowerCase(functionName));
     if (exprMacro == null) {
       return null;
     }

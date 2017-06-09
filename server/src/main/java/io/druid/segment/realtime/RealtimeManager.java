@@ -33,6 +33,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -116,7 +117,7 @@ public class RealtimeManager implements QuerySegmentWalker
       partitionChiefs.put(fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(), chief);
 
       chief.setName(
-          String.format(
+          StringUtils.safeFormat(
               "chief-%s[%s]",
               schema.getDataSource(),
               fireDepartment.getTuningConfig().getShardSpec().getPartitionNum()

@@ -42,6 +42,8 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
@@ -242,7 +244,7 @@ public class IndexIO
   {
     final long fileSize = indexFile.length();
     if (fileSize > Integer.MAX_VALUE) {
-      throw new IOException(String.format("File[%s] too large[%s]", indexFile, fileSize));
+      throw new IOE("File[%s] too large[%d]", indexFile, fileSize);
     }
   }
 
@@ -384,7 +386,7 @@ public class IndexIO
         indexIn = new FileInputStream(new File(inDir, "index.drd"));
         byte theVersion = (byte) indexIn.read();
         if (theVersion != V8_VERSION) {
-          throw new IllegalArgumentException(String.format("Unknown version[%s]", theVersion));
+          throw new IAE("Unknown version[%d]", theVersion);
         }
       }
       finally {
@@ -544,7 +546,7 @@ public class IndexIO
 
             ByteBuffer dimBuffer = v8SmooshedFiles.mapFile(filename);
             String dimension = serializerUtils.readString(dimBuffer);
-            if (!filename.equals(String.format("dim_%s.drd", dimension))) {
+            if (!filename.equals(StringUtils.safeFormat("dim_%s.drd", dimension))) {
               throw new ISE("loaded dimension[%s] from file[%s]", dimension, filename);
             }
 
@@ -693,7 +695,7 @@ public class IndexIO
             // NOTE: identifying numeric dimensions by using a different filename pattern is meant to allow the
             // legacy merger (which will be deprecated) to support long/float dims. Going forward, the V9 merger
             // should be used instead if any dimension types beyond String are needed.
-            if (!filename.endsWith(String.format("%s.drd", BYTE_ORDER))) {
+            if (!filename.endsWith(StringUtils.safeFormat("%s.drd", BYTE_ORDER))) {
               skippedFiles.add(filename);
               continue;
             }
@@ -741,7 +743,7 @@ public class IndexIO
 
             final ColumnDescriptor serdeficator = builder.build();
             makeColumn(v9Smoosher, metric, serdeficator);
-          } else if (String.format("time_%s.drd", BYTE_ORDER).equals(filename)) {
+          } else if (StringUtils.safeFormat("time_%s.drd", BYTE_ORDER).equals(filename)) {
             CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
                 v8SmooshedFiles.mapFile(filename),
                 BYTE_ORDER,
@@ -965,7 +967,7 @@ public class IndexIO
 
       final int theVersion = Ints.fromByteArray(Files.toByteArray(new File(inDir, "version.bin")));
       if (theVersion != V9_VERSION) {
-        throw new IllegalArgumentException(String.format("Expected version[9], got[%s]", theVersion));
+        throw new IAE("Expected version[9], got[%d]", theVersion);
       }
 
       SmooshedFileMapper smooshedFiles = Smoosh.map(inDir);
@@ -1047,21 +1049,21 @@ public class IndexIO
 
   public static File makeDimFile(File dir, String dimension)
   {
-    return new File(dir, String.format("dim_%s.drd", dimension));
+    return new File(dir, StringUtils.safeFormat("dim_%s.drd", dimension));
   }
 
   public static File makeNumericDimFile(File dir, String dimension, ByteOrder order)
   {
-    return new File(dir, String.format("numeric_dim_%s_%s.drd", dimension, order));
+    return new File(dir, StringUtils.safeFormat("numeric_dim_%s_%s.drd", dimension, order));
   }
 
   public static File makeTimeFile(File dir, ByteOrder order)
   {
-    return new File(dir, String.format("time_%s.drd", order));
+    return new File(dir, StringUtils.safeFormat("time_%s.drd", order));
   }
 
   public static File makeMetricFile(File dir, String metricName, ByteOrder order)
   {
-    return new File(dir, String.format("met_%s_%s.drd", metricName, order));
+    return new File(dir, StringUtils.safeFormat("met_%s_%s.drd", metricName, order));
   }
 }

@@ -19,6 +19,7 @@
 
 package io.druid.initialization;
 
+import io.druid.java.util.common.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -49,7 +50,7 @@ public class LogLevelAdjuster implements LogLevelAdjusterMBean
     final Level level = Logger.getLogger(packageName).getEffectiveLevel();
 
     if (log.isInfoEnabled()) {
-      log.info(String.format("Asked to look up level for package[%s] => [%s]", packageName, level));
+      log.info(StringUtils.safeFormat("Asked to look up level for package[%s] => [%s]", packageName, level));
     }
 
     return level.toString();
@@ -64,7 +65,7 @@ public class LogLevelAdjuster implements LogLevelAdjusterMBean
     }
 
     if (log.isInfoEnabled()) {
-      log.info(String.format("Setting log level for package[%s] => [%s]", packageName, theLevel));
+      log.info(StringUtils.safeFormat("Setting log level for package[%s] => [%s]", packageName, theLevel));
     }
 
     Logger.getLogger(packageName).setLevel(theLevel);

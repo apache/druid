@@ -90,7 +90,7 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   @Override
   public String toString()
   {
-    return String.format("regex_matches(%s)", expr);
+    return StringUtils.safeFormat("regex_matches(%s)", expr);
   }
 
   @Override

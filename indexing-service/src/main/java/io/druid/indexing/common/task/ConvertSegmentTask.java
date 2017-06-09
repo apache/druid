@@ -33,6 +33,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
@@ -390,7 +391,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
 
       // Appending to the version makes a new version that inherits most comparability parameters of the original
       // version, but is "newer" than said original version.
-      DataSegment updatedSegment = segment.withVersion(String.format("%s_v%s", segment.getVersion(), outVersion));
+      DataSegment updatedSegment = segment.withVersion(StringUtils.safeFormat("%s_v%s", segment.getVersion(), outVersion));
       updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
 
       actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));

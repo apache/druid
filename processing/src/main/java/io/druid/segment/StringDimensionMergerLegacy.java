@@ -30,6 +30,7 @@ import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
@@ -95,7 +96,7 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
     long dimStartTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 
-    String bmpFilename = String.format("%s.inverted", dimensionName);
+    String bmpFilename = StringUtils.safeFormat("%s.inverted", dimensionName);
     bitmapWriter = new GenericIndexedWriter<>(
         ioPeon,
         bmpFilename,
@@ -126,7 +127,7 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
     spatialWriter = null;
     boolean hasSpatial = capabilities.hasSpatialIndexes();
     if (hasSpatial) {
-      String spatialFilename = String.format("%s.spatial", dimensionName);
+      String spatialFilename = StringUtils.safeFormat("%s.spatial", dimensionName);
       spatialWriter = new ByteBufferWriter<>(
           ioPeon, spatialFilename, new IndexedRTree.ImmutableRTreeObjectStrategy(bmpFactory)
       );

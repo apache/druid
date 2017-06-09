@@ -38,6 +38,7 @@ import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.BaseQuery;
@@ -343,7 +344,7 @@ public class RealtimeManagerTest
   private void startFireChiefWithPartitionNum(RealtimeManager.FireChief fireChief, int partitionNum)
   {
     fireChief.setName(
-        String.format(
+        StringUtils.safeFormat(
             "chief-%s[%s]",
             "testing",
             partitionNum

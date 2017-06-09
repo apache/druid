@@ -35,6 +35,7 @@ import io.druid.client.DirectDruidClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
@@ -209,7 +210,7 @@ public class QueryResource implements QueryCountStatsProvider
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
-            .setName(String.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource().getNames(), queryId));
+            .setName(StringUtils.safeFormat("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource().getNames(), queryId));
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }

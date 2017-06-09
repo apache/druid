@@ -38,6 +38,7 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
@@ -68,8 +69,8 @@ public class WorkerTaskMonitorTest
 {
   private static final Joiner joiner = Joiner.on("/");
   private static final String basePath = "/test/druid";
-  private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
-  private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
+  private static final String tasksPath = StringUtils.safeFormat("%s/indexer/tasks/worker", basePath);
+  private static final String statusPath = StringUtils.safeFormat("%s/indexer/status/worker", basePath);
   private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000);
 
   private TestingCluster testingCluster;

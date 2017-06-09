@@ -21,6 +21,7 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -141,9 +142,9 @@ public class DimensionPredicateFilter implements Filter
   public String toString()
   {
     if (extractionFn != null) {
-      return String.format("%s(%s) = %s", extractionFn, dimension, basePredicateString);
+      return StringUtils.safeFormat("%s(%s) = %s", extractionFn, dimension, basePredicateString);
     } else {
-      return String.format("%s = %s", dimension, basePredicateString);
+      return StringUtils.safeFormat("%s = %s", dimension, basePredicateString);
     }
   }
 }

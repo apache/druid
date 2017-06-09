@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
 
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -88,8 +89,8 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     final String storageDir = this.getStorageDir(segment);
 
     return ImmutableMap.of(
-        "index", String.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
-        "descriptor", String.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME)
+        "index", StringUtils.safeFormat("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
+        "descriptor", StringUtils.safeFormat("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME)
     );
 
   }

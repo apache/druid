@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
 import org.junit.After;
@@ -278,7 +279,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
               final long indexedVal = indexed.get(j);
               if (Longs.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(String.format("Thread1[%d]: %d != %d", j, val, indexedVal));
+                reason.set(StringUtils.safeFormat("Thread1[%d]: %d != %d", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -317,7 +318,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
                 final long indexedVal = indexed2.get(j);
                 if (Longs.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(String.format("Thread2[%d]: %d != %d", j, val, indexedVal));
+                  reason.set(StringUtils.safeFormat("Thread2[%d]: %d != %d", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }

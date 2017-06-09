@@ -116,4 +116,14 @@ public class StringUtils
       return bob.toString();
     }
   }
+
+  public static String toLowerCase(String s)
+  {
+    return s.toLowerCase(Locale.ENGLISH);
+  }
+
+  public static String toUpperCase(String s)
+  {
+    return s.toUpperCase(Locale.ENGLISH);
+  }
 }

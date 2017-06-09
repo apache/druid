@@ -36,6 +36,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -381,7 +382,7 @@ public class GroupByQueryRunnerTest
     for (GroupByQueryConfig config : testConfigs()) {
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        final String testName = String.format(
+        final String testName = StringUtils.safeFormat(
             "config=%s, runner=%s",
             config.toString(),
             runner.toString()
@@ -2445,7 +2446,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.safeFormat("limit: %d", limit)
     );
   }
 
@@ -2492,7 +2493,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.safeFormat("limit: %d", limit)
     );
   }
 
@@ -2546,7 +2547,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.safeFormat("limit: %d", limit)
     );
   }
 

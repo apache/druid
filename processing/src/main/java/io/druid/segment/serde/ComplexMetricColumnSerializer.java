@@ -20,6 +20,7 @@
 package io.druid.segment.serde;
 
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.IndexIO;
 import io.druid.segment.MetricColumnSerializer;
 import io.druid.segment.MetricHolder;
@@ -58,7 +59,7 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
   public void open() throws IOException
   {
     writer = new GenericIndexedWriter(
-        ioPeon, String.format("%s_%s", metricName, outDir.getName()), serde.getObjectStrategy()
+        ioPeon, StringUtils.safeFormat("%s_%s", metricName, outDir.getName()), serde.getObjectStrategy()
     );
 
     writer.open();

@@ -70,7 +70,7 @@ public class OverlordResourceTestClient
 
   private String getIndexerURL()
   {
-    return String.format(
+    return StringUtils.safeFormat(
         "%s/druid/indexer/v1/",
         indexer
     );
@@ -134,7 +134,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = makeRequest(
           HttpMethod.GET,
-          String.format(
+          StringUtils.safeFormat(
               "%stask/%s/status",
               getIndexerURL(),
               URLEncoder.encode(taskID, "UTF-8")
@@ -176,7 +176,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = makeRequest(
           HttpMethod.GET,
-          String.format("%s%s", getIndexerURL(), identifier)
+          StringUtils.safeFormat("%s%s", getIndexerURL(), identifier)
       );
       LOG.info("Tasks %s response %s", identifier, response.getContent());
       return jsonMapper.readValue(
@@ -195,7 +195,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = makeRequest(
           HttpMethod.POST,
-          String.format(
+          StringUtils.safeFormat(
               "%stask/%s/shutdown", getIndexerURL(),
               URLEncoder.encode(taskID, "UTF-8")
           )
@@ -276,7 +276,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
-              HttpMethod.POST, new URL(String.format("%ssupervisor/%s/shutdown", getIndexerURL(), id))
+              HttpMethod.POST, new URL(StringUtils.safeFormat("%ssupervisor/%s/shutdown", getIndexerURL(), id))
           ),
           responseHandler
       ).get();

@@ -34,6 +34,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -162,7 +163,7 @@ public class MetadataTaskStorage implements TaskStorage
         status
     );
     if (!set) {
-      throw new IllegalStateException(String.format("Active task not found: %s", status.getId()));
+      throw new ISE("Active task not found: %s", status.getId());
     }
   }
 

@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import org.junit.Assert;
 import org.junit.Test;
@@ -224,7 +225,7 @@ public class CompressedFloatsSerdeTest
               final float indexedVal = indexed.get(j);
               if (Floats.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(String.format("Thread1[%d]: %f != %f", j, val, indexedVal));
+                reason.set(StringUtils.safeFormat("Thread1[%d]: %f != %f", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -263,7 +264,7 @@ public class CompressedFloatsSerdeTest
                 final float indexedVal = indexed2.get(j);
                 if (Floats.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(String.format("Thread2[%d]: %f != %f", j, val, indexedVal));
+                  reason.set(StringUtils.safeFormat("Thread2[%d]: %f != %f", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }

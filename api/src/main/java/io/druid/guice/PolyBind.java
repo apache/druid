@@ -29,6 +29,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.binder.ScopedBindingBuilder;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.util.Types;
+import io.druid.java.util.common.StringUtils;
 
 import java.lang.reflect.ParameterizedType;
 import java.util.Map;
@@ -172,7 +173,7 @@ public class PolyBind
       if (provider == null) {
         if (defaultKey == null) {
           throw new ProvisionException(
-              String.format("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
+              StringUtils.safeFormat("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
           );
         }
         return injector.getInstance(defaultKey);
