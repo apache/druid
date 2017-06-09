@@ -43,12 +43,6 @@ public class MainTest
         new Object[]{new CliHistorical()},
         new Object[]{new CliCoordinator()},
 
-        // Implements Runnable, not GuiceRunnable
-        //new Object[]{new CliHadoopIndexer()},
-
-        // Takes arguments. Cannot be used in this test
-        //new Object[]{new CliInternalHadoopIndexer()},
-
         new Object[]{new CliMiddleManager()},
         new Object[]{new CliRealtime()},
         new Object[]{new CliRealtimeExample()},

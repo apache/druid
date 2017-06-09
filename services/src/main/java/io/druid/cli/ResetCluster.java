@@ -30,7 +30,6 @@ import io.druid.guice.IndexingServiceTaskLogsModule;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
-import io.druid.indexing.common.task.HadoopTask;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
@@ -63,9 +62,6 @@ public class ResetCluster extends GuiceRunnable
   @Option(name = "--taskLogs", description = "delete all tasklogs")
   private boolean taskLogs;
 
-  @Option(name = "--hadoopWorkingPath", description = "delete hadoopWorkingPath")
-  private boolean hadoopWorkingPath;
-
 
   public ResetCluster()
   {
@@ -95,7 +91,7 @@ public class ResetCluster extends GuiceRunnable
   public void run()
   {
     if (all) {
-      metadataStore = segmentFiles = taskLogs = hadoopWorkingPath = true;
+      metadataStore = segmentFiles = taskLogs = true;
     }
 
     final Injector injector = makeInjector();
@@ -110,10 +106,6 @@ public class ResetCluster extends GuiceRunnable
 
     if (taskLogs) {
       deleteAllTaskLogs(injector);
-    }
-
-    if (hadoopWorkingPath) {
-      deleteIndexerHadoopWorkingDir(injector);
     }
   }
 
@@ -169,27 +161,6 @@ public class ResetCluster extends GuiceRunnable
       taskLogKiller.killAll();
     } catch (Exception ex) {
       log.error(ex, "Failed to cleanup TaskLogs.");
-    }
-  }
-
-  private void deleteIndexerHadoopWorkingDir(Injector injector)
-  {
-    try {
-      log.info("===========================================================================");
-      log.info("Deleting hadoopWorkingPath.");
-      log.info("===========================================================================");
-
-      TaskConfig taskConfig = injector.getInstance(TaskConfig.class);
-      HadoopTask.invokeForeignLoader(
-          "io.druid.indexer.HadoopWorkingDirCleaner",
-          new String[]{
-              taskConfig.getHadoopWorkingPath()
-          },
-          HadoopTask.buildClassLoader(null, taskConfig.getDefaultHadoopCoordinates())
-      );
-    }
-    catch (Exception ex) {
-      log.error(ex, "Failed to cleanup indexer hadoop working directory.");
     }
   }
 }

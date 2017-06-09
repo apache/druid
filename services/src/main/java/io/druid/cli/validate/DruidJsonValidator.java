@@ -31,7 +31,6 @@ import com.google.common.io.Resources;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.cli.GuiceRunnable;
@@ -42,8 +41,6 @@ import io.druid.guice.FirehoseModule;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.ParsersModule;
-import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.IndexingHadoopModule;
 import io.druid.indexing.common.task.Task;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
@@ -123,7 +120,6 @@ public class DruidJsonValidator extends GuiceRunnable
             Initialization.getFromExtensions(injector.getInstance(ExtensionsConfig.class), DruidModule.class),
             Arrays.asList(
                 new FirehoseModule(),
-                new IndexingHadoopModule(),
                 new IndexingServiceFirehoseModule(),
                 new LocalDataStorageDruidModule(),
                 new ParsersModule()
@@ -154,8 +150,6 @@ public class DruidJsonValidator extends GuiceRunnable
     try {
       if (type.equalsIgnoreCase("query")) {
         jsonMapper.readValue(file, Query.class);
-      } else if (type.equalsIgnoreCase("hadoopConfig")) {
-        jsonMapper.readValue(file, HadoopDruidIndexerConfig.class);
       } else if (type.equalsIgnoreCase("task")) {
         jsonMapper.readValue(file, Task.class);
       } else if (type.equalsIgnoreCase("parse")) {

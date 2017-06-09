@@ -27,8 +27,6 @@ import io.druid.client.indexing.ClientAppendQuery;
 import io.druid.client.indexing.ClientKillQuery;
 import io.druid.client.indexing.ClientMergeQuery;
 import io.druid.guice.FirehoseModule;
-import io.druid.indexer.HadoopIOConfig;
-import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -748,44 +746,5 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
     Assert.assertEquals(task.getTargetLoadSpec(), task2.getTargetLoadSpec());
-  }
-
-  @Test
-  public void testHadoopIndexTaskSerde() throws Exception
-  {
-    final HadoopIndexTask task = new HadoopIndexTask(
-        null,
-        new HadoopIngestionSpec(
-            new DataSchema(
-                "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
-                Granularities.DAY,
-                null,
-                ImmutableList.of(new Interval("2010-01-01/P1D"))
-            ),
-                jsonMapper
-            ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar"), null, null), null
-        ),
-        null,
-        null,
-        "blah",
-        jsonMapper,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(
-        task.getSpec().getTuningConfig().getJobProperties(),
-        task2.getSpec().getTuningConfig().getJobProperties()
-    );
-    Assert.assertEquals("blah", task.getClasspathPrefix());
-    Assert.assertEquals("blah", task2.getClasspathPrefix());
   }
 }

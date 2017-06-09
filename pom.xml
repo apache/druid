@@ -69,7 +69,6 @@
         <!-- Need 2.6.5 for compatibility with Spark -->
         <jackson.version>2.6.5</jackson.version>
         <log4j.version>2.5</log4j.version>
-        <netty.version>4.1.11.Final</netty.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.7.3</hadoop.compile.version>
@@ -82,11 +81,9 @@
         <module>api</module>
         <module>common</module>
         <module>examples</module>
-        <module>indexing-hadoop</module>
         <module>indexing-service</module>
         <module>processing</module>
         <module>server</module>
-        <module>sql</module>
         <module>services</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
@@ -96,11 +93,9 @@
         <module>extendedset</module>
         <module>hll</module>
         <!-- Core extensions -->
-        <module>extensions-core/avro-extensions</module>
         <module>extensions-core/caffeine-cache</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-kerberos</module>
-        <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
         <module>extensions-core/kafka-eight</module>
@@ -115,19 +110,15 @@
         <!-- Community extensions -->
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
-        <module>extensions-contrib/druid-rocketmq</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/kafka-eight-simpleConsumer</module>
         <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
-        <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
-        <module>extensions-contrib/orc-extensions</module>
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/google-extensions</module>
         <module>extensions-contrib/virtual-columns</module>
-        <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
         <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
@@ -488,11 +479,6 @@
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-security</artifactId>
                 <version>${jetty.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-                <version>${netty.version}</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
