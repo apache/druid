@@ -105,7 +105,7 @@ public class TimeBoundaryResultValue
 
     if (val instanceof DateTime) {
       return (DateTime) val;
-    } else if (val instanceof String) {
+    } else if (val instanceof String || val instanceof Long) {
       return new DateTime(val);
     } else {
       throw new IAE("Cannot get time from type[%s]", val.getClass());

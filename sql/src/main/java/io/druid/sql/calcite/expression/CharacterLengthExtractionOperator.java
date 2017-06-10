@@ -20,7 +20,6 @@
 package io.druid.sql.calcite.expression;
 
 import io.druid.query.extraction.StrlenExtractionFn;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
@@ -39,7 +38,6 @@ public class CharacterLengthExtractionOperator implements SqlExtractionOperator
 
   @Override
   public RowExtraction convert(
-      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
@@ -47,7 +45,6 @@ public class CharacterLengthExtractionOperator implements SqlExtractionOperator
   {
     final RexCall call = (RexCall) expression;
     final RowExtraction arg = Expressions.toRowExtraction(
-        operatorTable,
         plannerContext,
         rowOrder,
         call.getOperands().get(0)

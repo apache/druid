@@ -105,10 +105,10 @@ public class PooledTopNAlgorithm
   private interface ScanAndAggregate
   {
     /**
-     * If this implementation of ScanAndAggregate is executable with the given parameters, run it and return true.
-     * Otherwise return false (scanning and aggregation is not done).
+     * If this implementation of ScanAndAggregate is executable with the given parameters, run it and return the number
+     * of processed rows. Otherwise return -1 (scanning and aggregation is not done).
      */
-    boolean scanAndAggregate(
+    long scanAndAggregate(
         final PooledTopNParams params,
         final int[] positions,
         final BufferAggregator[] theAggregators
@@ -132,18 +132,17 @@ public class PooledTopNAlgorithm
           if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
             if (params.getDimSelector() instanceof SingleValueHistoricalDimensionSelector &&
                 ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
-              scanAndAggregateHistorical1SimpleDoubleAgg(
+              return scanAndAggregateHistorical1SimpleDoubleAgg(
                   params,
                   positions,
                   (SimpleDoubleBufferAggregator) aggregator,
                   (HistoricalCursor) cursor,
                   defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner
               );
-              return true;
             }
           }
         }
-        return false;
+        return -1;
       });
     }
     if (specializeHistorical1SimpleDoubleAggPooledTopN) {
@@ -154,36 +153,33 @@ public class PooledTopNAlgorithm
           if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
             if (params.getDimSelector() instanceof HistoricalDimensionSelector &&
                 ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
-              scanAndAggregateHistorical1SimpleDoubleAgg(
+              return scanAndAggregateHistorical1SimpleDoubleAgg(
                   params,
                   positions,
                   (SimpleDoubleBufferAggregator) aggregator,
                   (HistoricalCursor) cursor,
                   defaultHistorical1SimpleDoubleAggScanner
               );
-              return true;
             }
           }
         }
-        return false;
+        return -1;
       });
     }
     if (specializeGeneric1AggPooledTopN) {
       specializedScanAndAggregateImplementations.add((params, positions, theAggregators) -> {
         if (theAggregators.length == 1) {
-          scanAndAggregateGeneric1Agg(params, positions, theAggregators[0], params.getCursor());
-          return true;
+          return scanAndAggregateGeneric1Agg(params, positions, theAggregators[0], params.getCursor());
         }
-        return false;
+        return -1;
       });
     }
     if (specializeGeneric2AggPooledTopN) {
       specializedScanAndAggregateImplementations.add((params, positions, theAggregators) -> {
         if (theAggregators.length == 2) {
-          scanAndAggregateGeneric2Agg(params, positions, theAggregators, params.getCursor());
-          return true;
+          return scanAndAggregateGeneric2Agg(params, positions, theAggregators, params.getCursor());
         }
-        return false;
+        return -1;
       });
     }
   }
@@ -313,7 +309,7 @@ public class PooledTopNAlgorithm
   }
 
   @Override
-  protected void scanAndAggregate(
+  protected long scanAndAggregate(
       final PooledTopNParams params,
       final int[] positions,
       final BufferAggregator[] theAggregators,
@@ -321,16 +317,18 @@ public class PooledTopNAlgorithm
   )
   {
     for (ScanAndAggregate specializedScanAndAggregate : specializedScanAndAggregateImplementations) {
-      if (specializedScanAndAggregate.scanAndAggregate(params, positions, theAggregators)) {
+      long processedRows = specializedScanAndAggregate.scanAndAggregate(params, positions, theAggregators);
+      if (processedRows >= 0) {
         BaseQuery.checkInterrupted();
-        return;
+        return processedRows;
       }
     }
-    scanAndAggregateDefault(params, positions, theAggregators);
+    long processedRows = scanAndAggregateDefault(params, positions, theAggregators);
     BaseQuery.checkInterrupted();
+    return processedRows;
   }
 
-  private static void scanAndAggregateHistorical1SimpleDoubleAgg(
+  private static long scanAndAggregateHistorical1SimpleDoubleAgg(
       PooledTopNParams params,
       int[] positions,
       SimpleDoubleBufferAggregator aggregator,
@@ -347,7 +345,7 @@ public class PooledTopNAlgorithm
         );
     Historical1AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(prototypeScanner);
 
-    long scannedRows = scanner.scanAndAggregate(
+    long processedRows = scanner.scanAndAggregate(
         (HistoricalDimensionSelector) params.getDimSelector(),
         aggregator.getSelector(),
         aggregator,
@@ -356,10 +354,11 @@ public class PooledTopNAlgorithm
         positions,
         params.getResultsBuf()
     );
-    specializationState.accountLoopIterations(scannedRows);
+    specializationState.accountLoopIterations(processedRows);
+    return processedRows;
   }
 
-  private static void scanAndAggregateGeneric1Agg(
+  private static long scanAndAggregateGeneric1Agg(
       PooledTopNParams params,
       int[] positions,
       BufferAggregator aggregator,
@@ -371,7 +370,7 @@ public class PooledTopNAlgorithm
     SpecializationState<Generic1AggPooledTopNScanner> specializationState = SpecializationService
         .getSpecializationState(prototypeClass, runtimeShape);
     Generic1AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(defaultGeneric1AggScanner);
-    long scannedRows = scanner.scanAndAggregate(
+    long processedRows = scanner.scanAndAggregate(
         params.getDimSelector(),
         aggregator,
         params.getAggregatorSizes()[0],
@@ -379,10 +378,11 @@ public class PooledTopNAlgorithm
         positions,
         params.getResultsBuf()
     );
-    specializationState.accountLoopIterations(scannedRows);
+    specializationState.accountLoopIterations(processedRows);
+    return processedRows;
   }
 
-  private static void scanAndAggregateGeneric2Agg(
+  private static long scanAndAggregateGeneric2Agg(
       PooledTopNParams params,
       int[] positions,
       BufferAggregator[] theAggregators,
@@ -395,7 +395,7 @@ public class PooledTopNAlgorithm
         .getSpecializationState(prototypeClass, runtimeShape);
     Generic2AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(defaultGeneric2AggScanner);
     int[] aggregatorSizes = params.getAggregatorSizes();
-    long scannedRows = scanner.scanAndAggregate(
+    long processedRows = scanner.scanAndAggregate(
         params.getDimSelector(),
         theAggregators[0],
         aggregatorSizes[0],
@@ -405,7 +405,8 @@ public class PooledTopNAlgorithm
         positions,
         params.getResultsBuf()
     );
-    specializationState.accountLoopIterations(scannedRows);
+    specializationState.accountLoopIterations(processedRows);
+    return processedRows;
   }
 
   /**
@@ -426,7 +427,7 @@ public class PooledTopNAlgorithm
    * still optimizes the high quantity of aggregate queries which benefit greatly from any speed improvements
    * (they simply take longer to start with).
    */
-  private static void scanAndAggregateDefault(
+  private static long scanAndAggregateDefault(
       final PooledTopNParams params,
       final int[] positions,
       final BufferAggregator[] theAggregators
@@ -451,6 +452,7 @@ public class PooledTopNAlgorithm
     final int aggSize = theAggregators.length;
     final int aggExtra = aggSize % AGG_UNROLL_COUNT;
     int currentPosition = 0;
+    long processedRows = 0;
     while (!cursor.isDoneOrInterrupted()) {
       final IndexedInts dimValues = dimSelector.getRow();
 
@@ -639,7 +641,9 @@ public class PooledTopNAlgorithm
         );
       }
       cursor.advanceUninterruptibly();
+      processedRows++;
     }
+    return processedRows;
   }
 
   /**

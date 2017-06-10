@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DruidFloatPredicate;
@@ -67,15 +68,16 @@ public class InFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (extractionFn == null) {
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-      return selector.getBitmapFactory().union(getBitmapIterable(bitmapIndex));
+      return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(bitmapIndex));
     } else {
       return Filters.matchPredicate(
           dimension,
           selector,
+          bitmapResultFactory,
           getPredicateFactory().makeStringPredicate()
       );
     }

@@ -32,7 +32,7 @@ import java.io.IOException;
  */
 public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<ImmutableBitmap>
 {
-  private static Ordering<ImmutableBitmap> comparator = new Ordering<ImmutableBitmap>()
+  private static final Ordering<ImmutableBitmap> COMPARATOR = new Ordering<ImmutableBitmap>()
   {
     @Override
     public int compare(
@@ -62,7 +62,7 @@ public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<Immu
   @Override
   public int compareTo(@Nullable ImmutableBitmap otherBitmap)
   {
-    return comparator.compare(immutableBitmap, otherBitmap);
+    return COMPARATOR.compare(immutableBitmap, otherBitmap);
   }
 
   @Override

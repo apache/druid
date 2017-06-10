@@ -25,6 +25,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryDataSource;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
@@ -73,6 +74,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       final RelOptCluster cluster,
       final RelOptTable table,
       final DruidTable druidTable,
+      final PlannerContext plannerContext,
       final QueryMaker queryMaker
   )
   {
@@ -193,8 +195,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         pw.item("filter", filtration.getDimFilter());
       }
       if (queryBuilder.getSelectProjection() != null) {
-        pw.item("selectDimensions", queryBuilder.getSelectProjection().getDimensions());
-        pw.item("selectMetrics", queryBuilder.getSelectProjection().getMetrics());
+        pw.item("selectProjection", queryBuilder.getSelectProjection());
       }
       if (queryBuilder.getGrouping() != null) {
         pw.item("dimensions", queryBuilder.getGrouping().getDimensions());

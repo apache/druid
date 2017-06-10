@@ -86,7 +86,7 @@ public class RemoteTestNG extends TestNG
   {
     CommandLineArgs cla = new CommandLineArgs();
     RemoteArgs ra = new RemoteArgs();
-    new JCommander(Arrays.asList(cla, ra), args);
+    m_jCommander = new JCommander(Arrays.asList(cla, ra), args);
     m_dontExit = ra.dontExit;
     if (cla.port != null && ra.serPort != null) {
       throw new TestNGException(

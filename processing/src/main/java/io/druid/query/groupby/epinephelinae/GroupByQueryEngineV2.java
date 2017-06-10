@@ -107,7 +107,8 @@ public class GroupByQueryEngineV2
         intervals.get(0),
         query.getVirtualColumns(),
         query.getGranularity(),
-        false
+        false,
+        null
     );
 
 

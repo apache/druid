@@ -371,6 +371,7 @@ public class CacheSchedulerTest
       lifecycle.stop();
     }
     while (!cacheManager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
+      // keep waiting
     }
 
     checkNoMoreRunning();
@@ -395,6 +396,7 @@ public class CacheSchedulerTest
       lifecycle.stop();
     }
     while (!cacheManager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
+      // keep waiting
     }
     Assert.assertTrue(scheduler.updatesStarted() >= numWaits);
     checkNoMoreRunning();

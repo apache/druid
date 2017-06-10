@@ -42,6 +42,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
@@ -416,7 +417,13 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .descending(descending)
-                                  .virtualColumns(new ExpressionVirtualColumn("expr", "index"))
+                                  .virtualColumns(
+                                      new ExpressionVirtualColumn(
+                                          "expr",
+                                          "index",
+                                          TestExprMacroTable.INSTANCE
+                                      )
+                                  )
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(

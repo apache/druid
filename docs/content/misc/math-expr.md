@@ -26,6 +26,7 @@ Also, the following built-in functions are supported.
 |cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING') returns expr with specified type. exception can be thrown |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
+|like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |timestamp|timestamp(expr[,format-string]) parses string expr into date then returns milli-seconds from java epoch. without 'format-string' it's regarded as ISO datetime format |
 |unix_timestamp|same with 'timestamp' function but returns seconds instead |
 

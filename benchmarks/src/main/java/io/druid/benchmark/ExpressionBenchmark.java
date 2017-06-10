@@ -31,6 +31,7 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.FloatColumnSelector;
@@ -112,7 +113,8 @@ public class ExpressionBenchmark
     this.expressionAggregatorFactory = new DoubleSumAggregatorFactory(
         "name",
         null,
-        "if(x>0,1.0+x,y+1)"
+        "if(x>0,1.0+x,y+1)",
+        TestExprMacroTable.INSTANCE
     );
   }
 
@@ -166,7 +168,8 @@ public class ExpressionBenchmark
         index.getDataInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,
-        false
+        false,
+        null
     );
 
     final List<Double> results = Sequences.toList(

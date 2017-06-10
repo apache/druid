@@ -21,10 +21,10 @@ package io.druid.query.aggregation.hyperloglog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Ordering;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -122,7 +122,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return Ordering.<HyperLogLogCollector>natural().nullsFirst();
+    return Comparators.naturalNullsFirst();
   }
 
   @Override

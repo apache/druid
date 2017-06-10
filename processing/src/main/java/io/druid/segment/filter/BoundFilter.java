@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.Pair;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
@@ -59,20 +60,25 @@ public class BoundFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (supportShortCircuit()) {
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
 
       if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
-        return doesMatch(null) ? Filters.allTrue(selector) : Filters.allFalse(selector);
+        if (doesMatch(null)) {
+          return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
+        } else {
+          return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
+        }
       }
 
-      return selector.getBitmapFactory().union(getBitmapIterator(boundDimFilter, bitmapIndex));
+      return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterator(boundDimFilter, bitmapIndex));
     } else {
       return Filters.matchPredicate(
           boundDimFilter.getDimension(),
           selector,
+          bitmapResultFactory,
           getPredicateFactory().makeStringPredicate()
       );
     }

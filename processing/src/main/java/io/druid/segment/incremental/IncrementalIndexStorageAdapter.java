@@ -27,6 +27,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
+import io.druid.query.QueryMetrics;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
@@ -194,7 +195,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       final Interval interval,
       final VirtualColumns virtualColumns,
       final Granularity gran,
-      final boolean descending
+      final boolean descending,
+      @Nullable QueryMetrics<?> queryMetrics
   )
   {
     if (index.isEmpty()) {

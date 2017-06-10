@@ -102,6 +102,7 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.TestHelper;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -149,7 +150,7 @@ import java.util.concurrent.TimeoutException;
 public class KafkaIndexTaskTest
 {
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);
-  private static final ObjectMapper objectMapper = new DefaultObjectMapper();
+  private static final ObjectMapper objectMapper = TestHelper.getJsonMapper();
   private static final long POLL_RETRY_MS = 100;
 
   private static TestingCluster zkServer;

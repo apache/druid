@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
@@ -58,14 +59,7 @@ public class ConstantPostAggregator implements PostAggregator
   @Override
   public Comparator getComparator()
   {
-    return new Comparator()
-    {
-      @Override
-      public int compare(Object o1, Object o2)
-      {
-        return 0;
-      }
-    };
+    return Comparators.alwaysEqual();
   }
 
   @Override

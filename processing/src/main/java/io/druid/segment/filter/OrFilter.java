@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
@@ -51,18 +52,18 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (filters.size() == 1) {
-      return filters.get(0).getBitmapIndex(selector);
+      return filters.get(0).getBitmapResult(selector, bitmapResultFactory);
     }
 
-    List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-    for (int i = 0; i < filters.size(); i++) {
-      bitmaps.add(filters.get(i).getBitmapIndex(selector));
+    List<T> bitmapResults = Lists.newArrayList();
+    for (Filter filter : filters) {
+      bitmapResults.add(filter.getBitmapResult(selector, bitmapResultFactory));
     }
 
-    return selector.getBitmapFactory().union(bitmaps);
+    return bitmapResultFactory.union(bitmapResults);
   }
 
   @Override

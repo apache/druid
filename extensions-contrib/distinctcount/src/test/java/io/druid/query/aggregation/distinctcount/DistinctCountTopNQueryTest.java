@@ -112,10 +112,7 @@ public class DistinctCountTopNQueryTest
                           .build();
 
     final Iterable<Result<TopNResultValue>> results = Sequences.toList(
-        engine.query(
-            query,
-            new IncrementalIndexStorageAdapter(index)
-        ),
+        engine.query(query, new IncrementalIndexStorageAdapter(index), null),
         Lists.<Result<TopNResultValue>>newLinkedList()
     );
 

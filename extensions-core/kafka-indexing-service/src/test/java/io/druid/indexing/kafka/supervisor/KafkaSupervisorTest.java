@@ -57,11 +57,11 @@ import io.druid.indexing.overlord.TaskRunnerListener;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -110,7 +110,7 @@ import static org.easymock.EasyMock.reset;
 @RunWith(Parameterized.class)
 public class KafkaSupervisorTest extends EasyMockSupport
 {
-  private static final ObjectMapper objectMapper = new DefaultObjectMapper();
+  private static final ObjectMapper objectMapper = TestHelper.getJsonMapper();
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;

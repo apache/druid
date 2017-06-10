@@ -28,9 +28,10 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
+public class TopNMapFn
 {
   public static Function<Object, Object> getValueTransformer(ValueType outputType)
   {
@@ -89,9 +90,8 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     this.topNAlgorithm = topNAlgorithm;
   }
 
-  @Override
   @SuppressWarnings("unchecked")
-  public Result<TopNResultValue> apply(Cursor cursor)
+  public Result<TopNResultValue> apply(final Cursor cursor, final @Nullable TopNQueryMetrics queryMetrics)
   {
     final ColumnSelectorPlus selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
         STRATEGY_FACTORY,
@@ -106,10 +106,14 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     TopNParams params = null;
     try {
       params = topNAlgorithm.makeInitParams(selectorPlus, cursor);
+      if (queryMetrics != null) {
+        queryMetrics.columnValueSelector(selectorPlus.getSelector());
+        queryMetrics.numValuesPerPass(params);
+      }
 
       TopNResultBuilder resultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, query);
 
-      topNAlgorithm.run(params, resultBuilder, null);
+      topNAlgorithm.run(params, resultBuilder, null, queryMetrics);
 
       return resultBuilder.build();
     }

@@ -19,7 +19,6 @@
 
 package io.druid.sql.calcite.expression;
 
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
@@ -38,17 +37,15 @@ public interface SqlExtractionOperator
   /**
    * Returns the Druid {@link RowExtraction} corresponding to a SQL {@code RexNode}.
    *
-   * @param operatorTable  Operator table that can be used to convert sub-expressions
    * @param plannerContext SQL planner context
    * @param rowOrder       order of fields in the Druid rows to be extracted from
    * @param expression     expression meant to be applied on top of the table
    *
    * @return (columnName, extractionFn) or null
    *
-   * @see ExpressionConversion#convert(ExpressionConverter, PlannerContext, List, RexNode)
+   * @see Expressions#toRowExtraction(PlannerContext, List, RexNode)
    */
   RowExtraction convert(
-      DruidOperatorTable operatorTable,
       PlannerContext plannerContext,
       List<String> rowOrder,
       RexNode expression

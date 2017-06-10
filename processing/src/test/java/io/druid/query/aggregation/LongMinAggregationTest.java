@@ -20,8 +20,8 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,7 +42,7 @@ public class LongMinAggregationTest
   public LongMinAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"longMin\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    longMinAggFactory = new DefaultObjectMapper().readValue(aggSpecJson , LongMinAggregatorFactory.class);
+    longMinAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, LongMinAggregatorFactory.class);
   }
 
   @Before
