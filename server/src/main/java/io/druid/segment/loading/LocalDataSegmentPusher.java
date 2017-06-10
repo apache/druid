@@ -21,10 +21,9 @@ package io.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
@@ -143,7 +142,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   {
     File descriptorFile = new File(outDir, "descriptor.json");
     log.info("Creating descriptor file at[%s]", descriptorFile);
-    Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(segment)), descriptorFile);
+    ByteSource.wrap(jsonMapper.writeValueAsBytes(segment)).copyTo(Files.asByteSink(descriptorFile));
     return segment;
   }
 }
