@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -80,7 +79,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -94,8 +92,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -104,7 +100,6 @@ public class RealtimeManagerTest
 {
   private static QueryRunnerFactory factory;
   private static QueryRunnerFactoryConglomerate conglomerate;
-  private static ExecutorService fireChiefExecutor;
 
   private static final List<TestInputRowHolder> rows = Arrays.asList(
       makeRow(new DateTime("9000-01-01").getMillis()),
@@ -120,7 +115,6 @@ public class RealtimeManagerTest
   private DataSchema schema2;
   private TestPlumber plumber;
   private TestPlumber plumber2;
-  private CountDownLatch chiefStartedLatch;
   private RealtimeTuningConfig tuningConfig_0;
   private RealtimeTuningConfig tuningConfig_1;
   private DataSchema schema3;
@@ -137,7 +131,6 @@ public class RealtimeManagerTest
         return factory;
       }
     };
-    fireChiefExecutor = Execs.multiThreaded(2, "chief-%d");
   }
 
   @Before
@@ -306,45 +299,12 @@ public class RealtimeManagerTest
     FireDepartment department_0 = new FireDepartment(schema3, ioConfig, tuningConfig_0);
     FireDepartment department_1 = new FireDepartment(schema3, ioConfig2, tuningConfig_1);
 
-    chiefStartedLatch = new CountDownLatch(2);
-
-    RealtimeManager.FireChief fireChief_0 = new RealtimeManager.FireChief(department_0, conglomerate)
-    {
-      @Override
-      public void run()
-      {
-        super.initPlumber();
-        chiefStartedLatch.countDown();
-      }
-    };
-
-    RealtimeManager.FireChief fireChief_1 = new RealtimeManager.FireChief(department_1, conglomerate)
-    {
-      @Override
-      public void run()
-      {
-        super.initPlumber();
-        chiefStartedLatch.countDown();
-      }
-    };
-
     realtimeManager3 = new RealtimeManager(
         Arrays.asList(department_0, department_1),
         conglomerate,
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        ImmutableMap.<String, Map<Integer, RealtimeManager.FireChief>>of(
-            "testing",
-            ImmutableMap.of(
-                0,
-                fireChief_0,
-                1,
-                fireChief_1
-            )
-        )
+        null
     );
-
-    fireChiefExecutor.submit(fireChief_0);
-    fireChiefExecutor.submit(fireChief_1);
   }
 
   @After
@@ -353,12 +313,6 @@ public class RealtimeManagerTest
     realtimeManager.stop();
     realtimeManager2.stop();
     realtimeManager3.stop();
-  }
-
-  @AfterClass
-  public static void tearDownStatic()
-  {
-    fireChiefExecutor.shutdownNow();
   }
 
   @Test
@@ -506,7 +460,18 @@ public class RealtimeManagerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 252L)
     );
 
-    chiefStartedLatch.await();
+    realtimeManager3.start();
+
+    while (realtimeManager3.getFireChiefs("testing").values().stream()
+                           .anyMatch(
+                               fireChief -> {
+                                 final Plumber plumber = fireChief.getPlumber();
+                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                               }
+                           )
+        ) {
+      Thread.sleep(10);
+    }
 
     for (QueryRunner runner : QueryRunnerTestHelper.makeQueryRunners((GroupByQueryRunnerFactory) factory)) {
       GroupByQuery query = GroupByQuery
@@ -564,7 +529,18 @@ public class RealtimeManagerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
-    chiefStartedLatch.await();
+    realtimeManager3.start();
+
+    while (realtimeManager3.getFireChiefs("testing").values().stream()
+                           .anyMatch(
+                               fireChief -> {
+                                 final Plumber plumber = fireChief.getPlumber();
+                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                               }
+                           )
+        ) {
+      Thread.sleep(10);
+    }
 
     for (QueryRunner runner : QueryRunnerTestHelper.makeQueryRunners((GroupByQueryRunnerFactory) factory)) {
       GroupByQuery query = GroupByQuery
@@ -661,7 +637,18 @@ public class RealtimeManagerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-28", "alias", "travel", "rows", 1L, "idx", 130L)
     );
 
-    chiefStartedLatch.await();
+    realtimeManager3.start();
+
+    while (realtimeManager3.getFireChiefs("testing").values().stream()
+                           .anyMatch(
+                               fireChief -> {
+                                 final Plumber plumber = fireChief.getPlumber();
+                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                               }
+                           )
+        ) {
+      Thread.sleep(10);
+    }
 
     final Interval interval_26_28 = new Interval("2011-03-26T00:00:00.000Z/2011-03-28T00:00:00.000Z");
     final Interval interval_28_29 = new Interval("2011-03-28T00:00:00.000Z/2011-03-29T00:00:00.000Z");

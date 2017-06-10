@@ -78,7 +78,9 @@ public class RealtimeManager implements QuerySegmentWalker
    * key=data source name,value=mappings of partition number to FireChief
    */
   private final Map<String, Map<Integer, FireChief>> chiefs;
+
   private ExecutorService fireChiefExecutor;
+  private boolean stopping;
 
   @Inject
   public RealtimeManager(
@@ -104,6 +106,12 @@ public class RealtimeManager implements QuerySegmentWalker
     this.chiefs = chiefs == null ? Maps.newHashMap() : Maps.newHashMap(chiefs);
   }
 
+  @VisibleForTesting
+  Map<Integer, FireChief> getFireChiefs(String dataSource)
+  {
+    return chiefs.get(dataSource);
+  }
+
   @LifecycleStart
   public void start() throws IOException
   {
@@ -125,6 +133,7 @@ public class RealtimeManager implements QuerySegmentWalker
   @LifecycleStop
   public void stop()
   {
+    stopping = true;
     try {
       if (fireChiefExecutor != null) {
         fireChiefExecutor.shutdownNow();
@@ -212,7 +221,7 @@ public class RealtimeManager implements QuerySegmentWalker
            );
   }
 
-  static class FireChief implements Runnable
+  class FireChief implements Runnable
   {
     private final FireDepartment fireDepartment;
     private final FireDepartmentMetrics metrics;
@@ -251,10 +260,16 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    void initPlumber()
+    private void initPlumber()
     {
       log.info("Someone get us a plumber!");
       plumber = fireDepartment.findPlumber();
+    }
+
+    @VisibleForTesting
+    Plumber getPlumber()
+    {
+      return plumber;
     }
 
     public FireDepartmentMetrics getMetrics()
@@ -325,7 +340,7 @@ public class RealtimeManager implements QuerySegmentWalker
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehoseV2(firehose);
       boolean haveRow = true;
       while (haveRow) {
-        if (Thread.interrupted()) {
+        if (Thread.interrupted() || stopping) {
           return false;
         }
         InputRow inputRow = null;
@@ -365,7 +380,7 @@ public class RealtimeManager implements QuerySegmentWalker
     {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
       while (firehose.hasMore()) {
-        if (Thread.interrupted()) {
+        if (Thread.interrupted() || stopping) {
           return false;
         }
         Plumbers.addNextRow(committerSupplier, firehose, plumber, config.isReportParseExceptions(), metrics);
