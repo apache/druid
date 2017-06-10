@@ -34,9 +34,9 @@ import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Map;
 
 public class GoogleDataSegmentPusher implements DataSegmentPusher
@@ -78,10 +78,8 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
       throws IOException
   {
     File descriptorFile = File.createTempFile("descriptor", ".json");
-    try (FileOutputStream stream = new FileOutputStream(descriptorFile)) {
-      stream.write(jsonMapper.writeValueAsBytes(segment));
-    }
-
+    // Avoid using Guava in DataSegmentPushers because of Hadoop incompatibilities
+    Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(segment));
     return descriptorFile;
   }
 
