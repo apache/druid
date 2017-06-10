@@ -40,6 +40,11 @@
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.druid</groupId>
+            <artifactId>druid-indexing-hadoop</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -55,6 +60,11 @@
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

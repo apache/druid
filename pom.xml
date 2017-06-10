@@ -81,6 +81,7 @@
         <module>api</module>
         <module>common</module>
         <module>examples</module>
+        <module>indexing-hadoop</module>
         <module>indexing-service</module>
         <module>processing</module>
         <module>server</module>
@@ -479,6 +480,11 @@
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-security</artifactId>
                 <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>4.0.42.Final</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
