@@ -114,7 +114,8 @@ public class S3DataSegmentPusher implements DataSegmentPusher
                                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               File descriptorFile = File.createTempFile("druid", "descriptor.json");
-              // Avoid using Guava in DataSegmentPushers because of Hadoop incompatibilities
+              // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+              // runtime, and because Guava deletes methods over time, that causes incompatibilities.
               Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
               S3Object descriptorObject = new S3Object(descriptorFile);
               descriptorObject.setBucketName(outputBucket);
