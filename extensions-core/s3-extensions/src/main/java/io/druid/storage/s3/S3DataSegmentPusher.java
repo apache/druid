@@ -22,8 +22,6 @@ package io.druid.storage.s3;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.CompressionUtils;
@@ -38,6 +36,7 @@ import org.jets3t.service.model.S3Object;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -115,7 +114,8 @@ public class S3DataSegmentPusher implements DataSegmentPusher
                                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               File descriptorFile = File.createTempFile("druid", "descriptor.json");
-              ByteSource.wrap(jsonMapper.writeValueAsBytes(outSegment)).copyTo(Files.asByteSink(descriptorFile));
+              // Avoid using Guava in DataSegmentPushers because of Hadoop incompatibilities
+              Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
               S3Object descriptorObject = new S3Object(descriptorFile);
               descriptorObject.setBucketName(outputBucket);
               descriptorObject.setKey(s3DescriptorPath);

@@ -21,8 +21,6 @@ package io.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -34,6 +32,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.UUID;
 
@@ -109,7 +108,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     // will be failed and will read the descriptor.json created by current push operation directly
     FileUtils.forceMkdir(outDir.getParentFile());
     try {
-      java.nio.file.Files.move(tmpOutDir.toPath(), outDir.toPath());
+      Files.move(tmpOutDir.toPath(), outDir.toPath());
     }
     catch (FileAlreadyExistsException e) {
       log.warn("Push destination directory[%s] exists, ignore this message if replication is configured.", outDir);
@@ -142,7 +141,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   {
     File descriptorFile = new File(outDir, "descriptor.json");
     log.info("Creating descriptor file at[%s]", descriptorFile);
-    ByteSource.wrap(jsonMapper.writeValueAsBytes(segment)).copyTo(Files.asByteSink(descriptorFile));
+    // Avoid using Guava in DataSegmentPushers because of Hadoop incompatibilities
+    Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(segment));
     return segment;
   }
 }
