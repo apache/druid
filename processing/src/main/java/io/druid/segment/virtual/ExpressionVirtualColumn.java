@@ -164,6 +164,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
         .appendString(name)
         .appendString(expression)
+        .appendString(outputType.toString())
         .build();
   }
 

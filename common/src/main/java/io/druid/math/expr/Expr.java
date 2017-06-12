@@ -60,6 +60,7 @@ public interface Expr
 
   interface ObjectBinding
   {
+    @Nullable
     Object get(String name);
   }
 
@@ -527,7 +528,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
-    return Evals.asDouble(left < right);
+    return Evals.asDouble(Double.compare(left, right) < 0);
   }
 }
 
@@ -553,7 +554,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
-    return Evals.asDouble(left <= right);
+    return Evals.asDouble(Double.compare(left, right) <= 0);
   }
 }
 
@@ -579,7 +580,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
-    return Evals.asDouble(left > right);
+    return Evals.asDouble(Double.compare(left, right) > 0);
   }
 }
 
@@ -605,7 +606,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
-    return Evals.asDouble(left >= right);
+    return Evals.asDouble(Double.compare(left, right) >= 0);
   }
 }
 
