@@ -58,13 +58,7 @@ public class RealtimeModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoiceWithDefault(
-        binder,
-        "druid.publish.type",
-        Key.get(SegmentPublisher.class),
-        null,
-        "metadata"
-    );
+    PolyBind.createChoiceWithDefault(binder, "druid.publish.type", Key.get(SegmentPublisher.class), "metadata");
     final MapBinder<String, SegmentPublisher> publisherBinder = PolyBind.optionBinder(
         binder,
         Key.get(SegmentPublisher.class)
