@@ -5,8 +5,11 @@ import sys
 
 import requests
 
+# tested with python 3.6 and requests 2.13.0
+
 if len(sys.argv) != 2:
   sys.stderr.write('usage: program <milestone-number>\n')
+  sys.stderr.write('Provide the github milestone number, not name. (e.g., 19 instead of 0.10.1)\n')
   sys.exit(1)
 
 milestone_num = sys.argv[1]
