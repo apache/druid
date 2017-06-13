@@ -53,7 +53,6 @@ import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -83,7 +82,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   protected MutableBitmap nullRowsBitmap;
   protected int rowCount = 0;
   protected ColumnCapabilities capabilities;
-  protected final File outDir;
   protected List<IndexableAdapter> adapters;
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
@@ -91,7 +89,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   public StringDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
-      File outDir,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
@@ -99,7 +96,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
-    this.outDir = outDir;
     this.progress = progress;
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
   }

@@ -46,6 +46,7 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
 {
   private static final Logger log = new Logger(StringDimensionMergerLegacy.class);
 
+  private final File outDir;
   private VSizeIndexedWriter encodedValueWriterV8;
 
   public StringDimensionMergerLegacy(
@@ -56,7 +57,8 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
       ProgressIndicator progress
   )
   {
-    super(dimensionName, indexSpec, outDir, capabilities, progress);
+    super(dimensionName, indexSpec, capabilities, progress);
+    this.outDir = outDir;
   }
 
   @Override

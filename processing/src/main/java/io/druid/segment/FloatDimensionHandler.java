@@ -52,13 +52,12 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
 
   @Override
   public DimensionMergerV9<Float> makeMerger(
-      IndexSpec indexSpec, File outDir, ColumnCapabilities capabilities, ProgressIndicator progress
+      IndexSpec indexSpec, ColumnCapabilities capabilities, ProgressIndicator progress
   ) throws IOException
   {
     return new FloatDimensionMergerV9(
         dimensionName,
         indexSpec,
-        outDir,
         capabilities,
         progress
     );

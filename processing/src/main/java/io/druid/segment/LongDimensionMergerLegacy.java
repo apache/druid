@@ -28,6 +28,7 @@ import java.io.IOException;
 
 public class LongDimensionMergerLegacy extends LongDimensionMergerV9 implements DimensionMergerLegacy<Long>
 {
+  private final File outDir;
   private LongMetricColumnSerializer serializerV8;
 
   public LongDimensionMergerLegacy(
@@ -38,7 +39,8 @@ public class LongDimensionMergerLegacy extends LongDimensionMergerV9 implements 
       ProgressIndicator progress
   )
   {
-    super(dimensionName, indexSpec, outDir, capabilities, progress);
+    super(dimensionName, indexSpec, capabilities, progress);
+    this.outDir = outDir;
   }
 
   @Override

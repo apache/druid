@@ -27,6 +27,7 @@ import java.io.IOException;
 
 public class FloatDimensionMergerLegacy extends FloatDimensionMergerV9 implements DimensionMergerLegacy<Float>
 {
+  private final File outDir;
   private FloatMetricColumnSerializer serializerV8;
 
   public FloatDimensionMergerLegacy(
@@ -37,7 +38,8 @@ public class FloatDimensionMergerLegacy extends FloatDimensionMergerV9 implement
       ProgressIndicator progress
   )
   {
-    super(dimensionName, indexSpec, outDir, capabilities, progress);
+    super(dimensionName, indexSpec, capabilities, progress);
+    this.outDir = outDir;
   }
 
   @Override

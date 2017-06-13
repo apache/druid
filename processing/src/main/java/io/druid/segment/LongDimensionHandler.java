@@ -52,13 +52,12 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
 
   @Override
   public DimensionMergerV9<Long> makeMerger(
-      IndexSpec indexSpec, File outDir, ColumnCapabilities capabilities, ProgressIndicator progress
+      IndexSpec indexSpec, ColumnCapabilities capabilities, ProgressIndicator progress
   ) throws IOException
   {
     return new LongDimensionMergerV9(
         dimensionName,
         indexSpec,
-        outDir,
         capabilities,
         progress
     );

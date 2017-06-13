@@ -44,8 +44,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.IOPeon;
-import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
@@ -55,7 +53,6 @@ import io.druid.segment.serde.LongGenericColumnPartSerde;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -131,16 +128,7 @@ public class IndexMergerV9 extends IndexMerger
     Closer closer = Closer.create();
     try {
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
-      final File v9TmpDir = new File(outDir, "v9-tmp");
-      FileUtils.forceMkdir(v9TmpDir);
-      registerDeleteDirectory(closer, v9TmpDir);
-      log.info("Start making v9 index files, outDir:%s", outDir);
 
-      File tmpPeonFilesDir = new File(v9TmpDir, "tmpPeonFiles");
-      FileUtils.forceMkdir(tmpPeonFilesDir);
-      registerDeleteDirectory(closer, tmpPeonFilesDir);
-      final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, false);
-      closer.register(ioPeon);
       long startTime = System.currentTimeMillis();
       Files.asByteSink(new File(outDir, "version.bin")).write(Ints.toByteArray(IndexIO.V9_VERSION));
       log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
@@ -161,7 +149,7 @@ public class IndexMergerV9 extends IndexMerger
       final DimensionHandler[] handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
       final List<DimensionMerger> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
-        mergers.add(handlers[i].makeMerger(indexSpec, v9TmpDir, dimCapabilities.get(i), progress));
+        mergers.add(handlers[i].makeMerger(indexSpec, dimCapabilities.get(i), progress));
       }
 
       /************* Setup Dim Conversions **************/

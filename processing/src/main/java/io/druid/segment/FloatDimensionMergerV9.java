@@ -27,7 +27,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.List;
@@ -38,14 +37,12 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
   protected ColumnCapabilities capabilities;
-  protected final File outDir;
 
   private FloatColumnSerializer serializer;
 
   public FloatDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
-      File outDir,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
@@ -53,7 +50,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
-    this.outDir = outDir;
     this.progress = progress;
 
     try {

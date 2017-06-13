@@ -192,12 +192,11 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
-      File outDir,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
   {
-    return new StringDimensionMergerV9(dimensionName, indexSpec, outDir, capabilities, progress);
+    return new StringDimensionMergerV9(dimensionName, indexSpec, capabilities, progress);
   }
 
   @Override
