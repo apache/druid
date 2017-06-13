@@ -621,7 +621,7 @@ public class GroupByQueryRunnerTest
   public void testGroupByWithOutputNameCollisions()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Duplicate output name[alias]");
+    expectedException.expectMessage("[alias] already defined");
 
     GroupByQuery query = GroupByQuery
         .builder()
