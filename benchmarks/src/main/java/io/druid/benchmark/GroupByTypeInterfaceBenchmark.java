@@ -442,6 +442,7 @@ public class GroupByTypeInterfaceBenchmark
         true,
         false,
         true,
+        true,
         rowsPerSegment
     );
   }

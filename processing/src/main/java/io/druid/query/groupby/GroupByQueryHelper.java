@@ -124,6 +124,7 @@ public class GroupByQueryHelper
           indexSchema,
           false,
           true,
+          true,
           sortResults,
           querySpecificConfig.getMaxResults(),
           bufferPool
@@ -132,6 +133,7 @@ public class GroupByQueryHelper
       index = new OnheapIncrementalIndex(
           indexSchema,
           false,
+          true,
           true,
           sortResults,
           querySpecificConfig.getMaxResults()

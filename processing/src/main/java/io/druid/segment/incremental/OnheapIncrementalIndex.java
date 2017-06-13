@@ -42,7 +42,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -63,15 +62,34 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
 
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts);
+  }
+
+  public OnheapIncrementalIndex(
+      IncrementalIndexSchema incrementalIndexSchema,
+      boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
+      boolean sortFacts,
+      int maxRowCount
+  )
+  {
+    this(
+        incrementalIndexSchema,
+        deserializeComplexMetrics,
+        reportParseExceptions,
+        false,
+        sortFacts,
+        maxRowCount
+    );
   }
 
   public OnheapIncrementalIndex(
@@ -154,14 +172,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   @Override
   protected Aggregator[] initAggs(
-      AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics
+      final AggregatorFactory[] metrics,
+      final Supplier<InputRow> rowSupplier,
+      final boolean deserializeComplexMetrics,
+      final boolean concurrentEventAdd
   )
   {
     selectors = Maps.newHashMap();
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),
-          new ObjectCachingColumnSelectorFactory(makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics))
+          new ObjectCachingColumnSelectorFactory(
+              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
+              concurrentEventAdd
+          )
       );
     }
 
@@ -366,14 +390,24 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   // here its made thread safe to support the special case of groupBy where the multiple threads can add concurrently to the IncrementalIndex.
   static class ObjectCachingColumnSelectorFactory implements ColumnSelectorFactory
   {
-    private final ConcurrentMap<String, LongColumnSelector> longColumnSelectorMap = Maps.newConcurrentMap();
-    private final ConcurrentMap<String, FloatColumnSelector> floatColumnSelectorMap = Maps.newConcurrentMap();
-    private final ConcurrentMap<String, ObjectColumnSelector> objectColumnSelectorMap = Maps.newConcurrentMap();
+    private final Map<String, LongColumnSelector> longColumnSelectorMap;
+    private final Map<String, FloatColumnSelector> floatColumnSelectorMap;
+    private final Map<String, ObjectColumnSelector> objectColumnSelectorMap;
     private final ColumnSelectorFactory delegate;
 
-    public ObjectCachingColumnSelectorFactory(ColumnSelectorFactory delegate)
+    public ObjectCachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
     {
       this.delegate = delegate;
+
+      if (concurrentEventAdd) {
+        longColumnSelectorMap = Maps.newConcurrentMap();
+        floatColumnSelectorMap = Maps.newConcurrentMap();
+        objectColumnSelectorMap = Maps.newConcurrentMap();
+      } else {
+        longColumnSelectorMap = Maps.newHashMap();
+        floatColumnSelectorMap = Maps.newHashMap();
+        objectColumnSelectorMap = Maps.newHashMap();
+      }
     }
 
     @Override

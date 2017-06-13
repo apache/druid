@@ -486,6 +486,7 @@ public class GroupByBenchmark
         true,
         false,
         true,
+        true,
         rowsPerSegment
     );
   }

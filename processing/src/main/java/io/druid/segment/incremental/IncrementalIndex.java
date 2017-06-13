@@ -219,7 +219,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean reportParseExceptions
+      final boolean reportParseExceptions,
+      final boolean concurrentEventAdd
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -238,7 +239,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         .setQueryGranularity(this.gran)
         .setRollup(this.rollup);
 
-    this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics);
+    this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
     this.metricDescs = Maps.newLinkedHashMap();
     for (AggregatorFactory metric : metrics) {
@@ -294,7 +295,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   protected abstract AggregatorType[] initAggs(
       AggregatorFactory[] metrics,
       Supplier<InputRow> rowSupplier,
-      boolean deserializeComplexMetrics
+      boolean deserializeComplexMetrics,
+      boolean concurrentEventAdd
   );
 
   // Note: This method needs to be thread safe.

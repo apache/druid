@@ -70,12 +70,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
 
@@ -89,6 +90,26 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       throw new IAE("bufferPool buffers capacity must be >= [%s]", aggsTotalSize);
     }
     aggBuffers.add(bb);
+  }
+
+  public OffheapIncrementalIndex(
+      IncrementalIndexSchema incrementalIndexSchema,
+      boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
+      boolean sortFacts,
+      int maxRowCount,
+      StupidPool<ByteBuffer> bufferPool
+  )
+  {
+    this(
+        incrementalIndexSchema,
+        deserializeComplexMetrics,
+        reportParseExceptions,
+        false,
+        sortFacts,
+        maxRowCount,
+        bufferPool
+    );
   }
 
   public OffheapIncrementalIndex(
@@ -140,7 +161,10 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   @Override
   protected BufferAggregator[] initAggs(
-      AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics
+      final AggregatorFactory[] metrics,
+      final Supplier<InputRow> rowSupplier,
+      final boolean deserializeComplexMetrics,
+      final boolean concurrentEventAdd
   )
   {
     selectors = Maps.newHashMap();
@@ -157,7 +181,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
       selectors.put(
           agg.getName(),
-          new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(columnSelectorFactory)
+          new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
       );
 
       if (i == 0) {
