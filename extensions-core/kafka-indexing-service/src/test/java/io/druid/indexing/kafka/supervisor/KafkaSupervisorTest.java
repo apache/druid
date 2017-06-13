@@ -26,6 +26,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.metamx.common.logger.Logger;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.core.LoggingEmitter;
+import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -106,11 +111,11 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
-import static org.easymock.EasyMock.verify;
 
 @RunWith(Parameterized.class)
 public class KafkaSupervisorTest extends EasyMockSupport
 {
+  private static final Logger log = new Logger(KafkaSupervisorTest.class);
   private static final ObjectMapper objectMapper = TestHelper.getJsonMapper();
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
@@ -122,6 +127,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   private static TestingCluster zkServer;
   private static TestBroker kafkaServer;
+  private static ServiceEmitter emitter;
   private static String kafkaHost;
   private static DataSchema dataSchema;
   private static int topicPostfix;
@@ -157,6 +163,18 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @BeforeClass
   public static void setupClass() throws Exception
   {
+    emitter = new ServiceEmitter(
+        "service",
+        "host",
+        new LoggingEmitter(
+            log,
+            LoggingEmitter.Level.ERROR,
+            new DefaultObjectMapper()
+        )
+    );
+    emitter.start();
+    EmittingLogger.registerEmitter(emitter);
+
     zkServer = new TestingCluster(1);
     zkServer.start();
 
@@ -192,7 +210,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         true,
         false,
         null,
-        null,
+        true,
         numThreads,
         TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
@@ -218,6 +236,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     zkServer.stop();
     zkServer = null;
+
+    emitter.close();
   }
 
   @Test
@@ -1713,56 +1733,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResetStateTopicChange() throws Exception
   {
-    // temporarily set tunningConfig with the resetOffsetAutomatically flag set
-    tuningConfig = new KafkaSupervisorTuningConfig(
-        1000,
-        50000,
-        new Period("P1Y"),
-        new File("/test"),
-        null,
-        null,
-        true,
-        false,
-        null,
-        true,
-        numThreads,
-        TEST_CHAT_THREADS,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null
-    );
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
 
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = getIOConfig(1, 1, true, "PT1H", null, false);
-    KafkaIndexTaskClientFactory taskClientFactory = getClientFactory();
-
-    supervisor = EasyMock.createMockBuilder(KafkaSupervisor.class)
-                         .withConstructor(
-                             taskStorage,
-                             taskMaster,
-                             indexerMetadataStorageCoordinator,
-                             taskClientFactory,
-                             objectMapper,
-                             new KafkaSupervisorSpec(
-                                 dataSchema,
-                                 tuningConfig,
-                                 kafkaSupervisorIOConfig,
-                                 null,
-                                 taskStorage,
-                                 taskMaster,
-                                 indexerMetadataStorageCoordinator,
-                                 taskClientFactory,
-                                 objectMapper,
-                                 new NoopServiceEmitter(),
-                                 new DruidMonitorSchedulerConfig()
-                             )
-                         )
-                         .addMockedMethod("reset")
-                         .createMock();
-    addSomeEvents(1);
     Capture<KafkaIndexTask> captured = Capture.newInstance();
+    addSomeEvents(1);
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
     expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
@@ -1770,16 +1747,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
     expect(taskQueue.add(capture(captured))).andReturn(true);
+    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
+    taskClient.close();
+    EasyMock.expectLastCall().once();
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-
-    // and particularly expect a call to reset the datasource state due to the topic mismatch and the resetOffsetAutomatically flag
-    supervisor.reset(null);
-    expectLastCall().atLeastOnce();
-    replay(supervisor, taskMaster, taskStorage, indexerMetadataStorageCoordinator);
+    taskRunner.unregisterListener("KafkaSupervisor-testDS");
+    replayAll();
 
     supervisor.start();
     supervisor.runInternal();
-    verify(supervisor, taskMaster, taskStorage, indexerMetadataStorageCoordinator);
+    supervisor.stop(false);
+    verifyAll();
   }
 
   private void addSomeEvents(int numEventsPerPartition) throws Exception
