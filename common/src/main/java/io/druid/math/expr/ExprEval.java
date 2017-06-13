@@ -182,7 +182,7 @@ public abstract class ExprEval<T>
     @Override
     public Expr toExpr()
     {
-      return new DoubleExpr(value == null ? null : value.doubleValue());
+      return new DoubleExpr(value.doubleValue());
     }
   }
 
@@ -222,7 +222,7 @@ public abstract class ExprEval<T>
     @Override
     public Expr toExpr()
     {
-      return new LongExpr(value == null ? null : value.longValue());
+      return new LongExpr(value.longValue());
     }
   }
 
@@ -237,12 +237,6 @@ public abstract class ExprEval<T>
     public final ExprType type()
     {
       return ExprType.STRING;
-    }
-
-    @Override
-    public final boolean isNull()
-    {
-      return value == null;
     }
 
     @Override

@@ -528,6 +528,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
+    // Use Double.compare for more consistent NaN handling.
     return Evals.asDouble(Double.compare(left, right) < 0);
   }
 }
@@ -554,6 +555,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
+    // Use Double.compare for more consistent NaN handling.
     return Evals.asDouble(Double.compare(left, right) <= 0);
   }
 }
@@ -580,6 +582,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
+    // Use Double.compare for more consistent NaN handling.
     return Evals.asDouble(Double.compare(left, right) > 0);
   }
 }
@@ -606,6 +609,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
+    // Use Double.compare for more consistent NaN handling.
     return Evals.asDouble(Double.compare(left, right) >= 0);
   }
 }

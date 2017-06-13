@@ -151,6 +151,7 @@ public class ExpressionPostAggregator implements PostAggregator
   public enum Ordering implements Comparator<Comparable>
   {
     // ensures the following order: numeric > NaN > Infinite
+    // The name may be referenced via Ordering.valueOf(ordering) in the constructor.
     numericFirst {
       @Override
       public int compare(Comparable lhs, Comparable rhs)
