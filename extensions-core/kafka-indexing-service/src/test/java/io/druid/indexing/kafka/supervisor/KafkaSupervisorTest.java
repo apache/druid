@@ -1778,7 +1778,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
-  private KafkaSupervisorIOConfig getIOConfig(
+  private KafkaSupervisor getSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -1787,7 +1787,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       boolean skipOffsetGaps
   )
   {
-    return new KafkaSupervisorIOConfig(
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
         replicas,
         taskCount,
@@ -1800,11 +1800,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         skipOffsetGaps
     );
-  }
 
-  private KafkaIndexTaskClientFactory getClientFactory()
-  {
-    return new KafkaIndexTaskClientFactory(null, null)
+    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(null, null)
     {
       @Override
       public KafkaIndexTaskClient build(
@@ -1821,26 +1818,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         return taskClient;
       }
     };
-  }
-
-  private KafkaSupervisor getSupervisor(
-      int replicas,
-      int taskCount,
-      boolean useEarliestOffset,
-      String duration,
-      Period lateMessageRejectionPeriod,
-      boolean skipOffsetGaps
-  )
-  {
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = getIOConfig(
-        replicas,
-        taskCount,
-        useEarliestOffset,
-        duration,
-        lateMessageRejectionPeriod,
-        skipOffsetGaps
-    );
-    KafkaIndexTaskClientFactory taskClientFactory = getClientFactory();
 
     return new TestableKafkaSupervisor(
         taskStorage,
