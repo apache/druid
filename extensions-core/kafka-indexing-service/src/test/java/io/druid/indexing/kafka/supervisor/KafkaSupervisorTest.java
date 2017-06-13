@@ -106,6 +106,7 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
+import static org.easymock.EasyMock.verify;
 
 @RunWith(Parameterized.class)
 public class KafkaSupervisorTest extends EasyMockSupport
@@ -1709,6 +1710,78 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void testResetStateTopicChange() throws Exception
+  {
+    // temporarily set tunningConfig with the resetOffsetAutomatically flag set
+    tuningConfig = new KafkaSupervisorTuningConfig(
+        1000,
+        50000,
+        new Period("P1Y"),
+        new File("/test"),
+        null,
+        null,
+        true,
+        false,
+        null,
+        true,
+        numThreads,
+        TEST_CHAT_THREADS,
+        TEST_CHAT_RETRIES,
+        TEST_HTTP_TIMEOUT,
+        TEST_SHUTDOWN_TIMEOUT,
+        null
+    );
+
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = getIOConfig(1, 1, true, "PT1H", null, false);
+    KafkaIndexTaskClientFactory taskClientFactory = getClientFactory();
+
+    supervisor = EasyMock.createMockBuilder(KafkaSupervisor.class)
+                         .withConstructor(
+                             taskStorage,
+                             taskMaster,
+                             indexerMetadataStorageCoordinator,
+                             taskClientFactory,
+                             objectMapper,
+                             new KafkaSupervisorSpec(
+                                 dataSchema,
+                                 tuningConfig,
+                                 kafkaSupervisorIOConfig,
+                                 null,
+                                 taskStorage,
+                                 taskMaster,
+                                 indexerMetadataStorageCoordinator,
+                                 taskClientFactory,
+                                 objectMapper,
+                                 new NoopServiceEmitter(),
+                                 new DruidMonitorSchedulerConfig()
+                             )
+                         )
+                         .addMockedMethod("reset")
+                         .createMock();
+    addSomeEvents(1);
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new KafkaPartitions("staleTopic", ImmutableMap.of(0, 10L))
+        )
+    ).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true);
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+
+    // and particularly expect a call to reset the datasource state due to the topic mismatch and the resetOffsetAutomatically flag
+    supervisor.reset(null);
+    expectLastCall().atLeastOnce();
+    replay(supervisor, taskMaster, taskStorage, indexerMetadataStorageCoordinator);
+
+    supervisor.start();
+    supervisor.runInternal();
+    verify(supervisor, taskMaster, taskStorage, indexerMetadataStorageCoordinator);
+  }
+
   private void addSomeEvents(int numEventsPerPartition) throws Exception
   {
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
@@ -1727,7 +1800,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
-  private KafkaSupervisor getSupervisor(
+  private KafkaSupervisorIOConfig getIOConfig(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -1736,7 +1809,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       boolean skipOffsetGaps
   )
   {
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+    return new KafkaSupervisorIOConfig(
         topic,
         replicas,
         taskCount,
@@ -1749,8 +1822,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         skipOffsetGaps
     );
+  }
 
-    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(null, null)
+  private KafkaIndexTaskClientFactory getClientFactory()
+  {
+    return new KafkaIndexTaskClientFactory(null, null)
     {
       @Override
       public KafkaIndexTaskClient build(
@@ -1767,6 +1843,26 @@ public class KafkaSupervisorTest extends EasyMockSupport
         return taskClient;
       }
     };
+  }
+
+  private KafkaSupervisor getSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      boolean skipOffsetGaps
+  )
+  {
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = getIOConfig(
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        duration,
+        lateMessageRejectionPeriod,
+        skipOffsetGaps
+    );
+    KafkaIndexTaskClientFactory taskClientFactory = getClientFactory();
 
     return new TestableKafkaSupervisor(
         taskStorage,

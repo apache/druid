@@ -1499,6 +1499,10 @@ public class KafkaSupervisor implements Supervisor
               partitions.getTopic(),
               ioConfig.getTopic()
           );
+          if (tuningConfig.isResetOffsetAutomatically()) {
+            // reset the dataSourceMetadata to a clean state
+            reset(null);
+          }
           return ImmutableMap.of();
         } else if (partitions.getPartitionOffsetMap() != null) {
           return partitions.getPartitionOffsetMap();
