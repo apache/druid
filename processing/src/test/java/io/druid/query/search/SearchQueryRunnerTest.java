@@ -745,13 +745,17 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithNullValueInDimension() throws Exception
   {
-    IncrementalIndex<Aggregator> index = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
-            .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis()).build(),
-        true,
-        10
-    );
+    IncrementalIndex<Aggregator> index = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.NONE)
+                .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+                .build()
+        )
+        .setReportParseExceptions(true)
+        .setMaxRowCount(10)
+        .build();
+
     index.add(
         new MapBasedInputRow(
             1481871600000L,

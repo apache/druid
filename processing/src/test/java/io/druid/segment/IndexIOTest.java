@@ -263,49 +263,53 @@ public class IndexIOTest
     this.exception = exception;
   }
 
-  final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex(
-      new IncrementalIndexSchema.Builder().withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
-                                          .withQueryGranularity(Granularities.NONE)
-                                          .withMetrics(
-                                              new AggregatorFactory[]{
-                                                  new CountAggregatorFactory(
-                                                      "count"
-                                                  )
-                                              }
-                                          )
-                                          .withDimensionsSpec(
-                                              new DimensionsSpec(
-                                                  DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                                                  null,
-                                                  null
-                                              )
-                                          )
-                                          .build(),
-      true,
-      1000000
-  );
+  final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex.Builder()
+      .setIncrementalIndexSchema(
+          new IncrementalIndexSchema.Builder()
+              .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
+              .withQueryGranularity(Granularities.NONE)
+              .withMetrics(
+                  new AggregatorFactory[]{
+                      new CountAggregatorFactory(
+                          "count"
+                      )
+                  }
+              )
+              .withDimensionsSpec(
+                  new DimensionsSpec(
+                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
+                      null,
+                      null
+                  )
+              )
+              .build()
+      )
+      .setMaxRowCount(1000000)
+      .build();
 
-  final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex(
-      new IncrementalIndexSchema.Builder().withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
-                                          .withQueryGranularity(Granularities.NONE)
-                                          .withMetrics(
-                                              new AggregatorFactory[]{
-                                                  new CountAggregatorFactory(
-                                                      "count"
-                                                  )
-                                              }
-                                          )
-                                          .withDimensionsSpec(
-                                              new DimensionsSpec(
-                                                  DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                                                  null,
-                                                  null
-                                              )
-                                          )
-                                          .build(),
-      true,
-      1000000
-  );
+  final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex.Builder()
+      .setIncrementalIndexSchema(
+          new IncrementalIndexSchema.Builder()
+              .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
+              .withQueryGranularity(Granularities.NONE)
+              .withMetrics(
+                  new AggregatorFactory[]{
+                      new CountAggregatorFactory(
+                          "count"
+                      )
+                  }
+              )
+              .withDimensionsSpec(
+                  new DimensionsSpec(
+                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
+                      null,
+                      null
+                  )
+              )
+              .build()
+      )
+      .setMaxRowCount(1000000)
+      .build();
 
   IndexableAdapter adapter1;
   IndexableAdapter adapter2;

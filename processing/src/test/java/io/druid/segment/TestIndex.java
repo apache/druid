@@ -267,7 +267,10 @@ public class TestIndex
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)
         .build();
-    final IncrementalIndex retVal = new OnheapIncrementalIndex(schema, true, 10000);
+    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(schema)
+        .setMaxRowCount(10000)
+        .build();
 
     try {
       return loadIncrementalIndex(retVal, source);

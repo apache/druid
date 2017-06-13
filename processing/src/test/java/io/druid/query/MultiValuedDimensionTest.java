@@ -60,6 +60,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
@@ -113,17 +114,17 @@ public class MultiValuedDimensionTest
   @BeforeClass
   public static void setupClass() throws Exception
   {
-    incrementalIndex = new OnheapIncrementalIndex(
-        0,
-        Granularities.NONE,
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("count")
-        },
-        true,
-        true,
-        true,
-        5000
-    );
+    incrementalIndex = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(0)
+                .withQueryGranularity(Granularities.NONE)
+                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .build()
+        )
+        .setMaxRowCount(5000)
+        .build();
 
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(

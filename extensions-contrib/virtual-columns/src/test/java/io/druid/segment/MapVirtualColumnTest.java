@@ -89,7 +89,10 @@ public class MapVirtualColumnTest
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
         .withQueryGranularity(Granularities.NONE)
         .build();
-    final IncrementalIndex index = new OnheapIncrementalIndex(schema, true, 10000);
+    final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(schema)
+        .setMaxRowCount(10000)
+        .build();
 
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(

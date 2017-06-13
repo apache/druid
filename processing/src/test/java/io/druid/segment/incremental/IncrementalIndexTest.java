@@ -103,7 +103,12 @@ public class IncrementalIndexTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new OnheapIncrementalIndex(schema, false, true, sortFacts, 1000);
+                  return new OnheapIncrementalIndex.Builder()
+                      .setIncrementalIndexSchema(schema)
+                      .setDeserializeComplexMetrics(false)
+                      .setSortFacts(sortFacts)
+                      .setMaxRowCount(1000)
+                      .build();
                 }
               }
           }
@@ -115,24 +120,24 @@ public class IncrementalIndexTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new OffheapIncrementalIndex(
-                      schema,
-                      true,
-                      true,
-                      sortFacts,
-                      1000000,
-                      new StupidPool<ByteBuffer>(
-                          "OffheapIncrementalIndex-bufferPool",
-                          new Supplier<ByteBuffer>()
-                          {
-                            @Override
-                            public ByteBuffer get()
-                            {
-                              return ByteBuffer.allocate(256 * 1024);
-                            }
-                          }
+                  return new OffheapIncrementalIndex.Builder()
+                      .setIncrementalIndexSchema(schema)
+                      .setSortFacts(sortFacts)
+                      .setMaxRowCount(1000000)
+                      .setBufferPool(
+                          new StupidPool<ByteBuffer>(
+                              "OffheapIncrementalIndex-bufferPool",
+                              new Supplier<ByteBuffer>()
+                              {
+                                @Override
+                                public ByteBuffer get()
+                                {
+                                  return ByteBuffer.allocate(256 * 1024);
+                                }
+                              }
+                          )
                       )
-                  );
+                      .build();
                 }
               }
           }

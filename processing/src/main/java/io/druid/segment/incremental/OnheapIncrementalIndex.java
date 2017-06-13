@@ -23,9 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.io.Closer;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
@@ -40,7 +38,9 @@ import io.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -58,7 +58,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   private String outOfRowsReason = null;
 
-  public OnheapIncrementalIndex(
+  protected OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -74,94 +74,76 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                                                    : new PlainFactsHolder(sortFacts);
   }
 
-  public OnheapIncrementalIndex(
-      IncrementalIndexSchema incrementalIndexSchema,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
-      boolean sortFacts,
-      int maxRowCount
-  )
+  public static class Builder
   {
-    this(
-        incrementalIndexSchema,
-        deserializeComplexMetrics,
-        reportParseExceptions,
-        false,
-        sortFacts,
-        maxRowCount
-    );
-  }
+    private IncrementalIndexSchema incrementalIndexSchema;
+    private boolean deserializeComplexMetrics;
+    private boolean reportParseExceptions;
+    private boolean concurrentEventAdd;
+    private boolean sortFacts;
+    private int maxRowCount;
 
-  public OnheapIncrementalIndex(
-      long minTimestamp,
-      Granularity gran,
-      final AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
-      boolean sortFacts,
-      int maxRowCount
-  )
-  {
-    this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withMetrics(metrics)
-                                            .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
-                                            .build(),
-        deserializeComplexMetrics,
-        reportParseExceptions,
-        sortFacts,
-        maxRowCount
-    );
-  }
+    public Builder()
+    {
+      incrementalIndexSchema = null;
+      deserializeComplexMetrics = true;
+      reportParseExceptions = true;
+      concurrentEventAdd = false;
+      sortFacts = true;
+      maxRowCount = 0;
+    }
 
-  public OnheapIncrementalIndex(
-      long minTimestamp,
-      Granularity gran,
-      boolean rollup,
-      DimensionsSpec dimensionsSpec,
-      AggregatorFactory[] metrics,
-      int maxRowCount
-  )
-  {
-    this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withDimensionsSpec(dimensionsSpec)
-                                            .withMetrics(metrics)
-                                            .withRollup(rollup)
-                                            .build(),
-        true,
-        true,
-        true,
-        maxRowCount
-    );
-  }
+    public Builder setIncrementalIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
+    {
+      this.incrementalIndexSchema = incrementalIndexSchema;
+      return this;
+    }
 
-  public OnheapIncrementalIndex(
-      long minTimestamp,
-      Granularity gran,
-      final AggregatorFactory[] metrics,
-      int maxRowCount
-  )
-  {
-    this(
-        minTimestamp,
-        gran,
-        IncrementalIndexSchema.DEFAULT_ROLLUP,
-        null,
-        metrics,
-        maxRowCount
-    );
-  }
+    public Builder setDeserializeComplexMetrics(final boolean deserializeComplexMetrics)
+    {
+      this.deserializeComplexMetrics = deserializeComplexMetrics;
+      return this;
+    }
 
-  public OnheapIncrementalIndex(
-      IncrementalIndexSchema incrementalIndexSchema,
-      boolean reportParseExceptions,
-      int maxRowCount
-  )
-  {
-    this(incrementalIndexSchema, true, reportParseExceptions, true, maxRowCount);
+    public Builder setReportParseExceptions(final boolean reportParseExceptions)
+    {
+      this.reportParseExceptions = reportParseExceptions;
+      return this;
+    }
+
+    public Builder setConcurrentEventAdd(final boolean concurrentEventAdd)
+    {
+      this.concurrentEventAdd = concurrentEventAdd;
+      return this;
+    }
+
+    public Builder setSortFacts(final boolean sortFacts)
+    {
+      this.sortFacts = sortFacts;
+      return this;
+    }
+
+    public Builder setMaxRowCount(final int maxRowCount)
+    {
+      this.maxRowCount = maxRowCount;
+      return this;
+    }
+
+    public OnheapIncrementalIndex build()
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OnheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount
+      );
+    }
   }
 
   @Override
@@ -270,7 +252,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     rowContainer.set(row);
 
-    for (int i = 0 ; i < aggs.length ; i++) {
+    for (int i = 0; i < aggs.length; i++) {
       final Aggregator agg = aggs[i];
       synchronized (agg) {
         try {
@@ -387,7 +369,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   // Caches references to selector objects for each column instead of creating a new object each time in order to save heap space.
   // In general the selectorFactory need not to thread-safe.
-  // here its made thread safe to support the special case of groupBy where the multiple threads can add concurrently to the IncrementalIndex.
+  // If required, set concurrentEventAdd to true to use concurrent hash map instead of vanilla hash map for thread-safe
+  // operations.
   static class ObjectCachingColumnSelectorFactory implements ColumnSelectorFactory
   {
     private final Map<String, LongColumnSelector> longColumnSelectorMap;
@@ -400,13 +383,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       this.delegate = delegate;
 
       if (concurrentEventAdd) {
-        longColumnSelectorMap = Maps.newConcurrentMap();
-        floatColumnSelectorMap = Maps.newConcurrentMap();
-        objectColumnSelectorMap = Maps.newConcurrentMap();
+        longColumnSelectorMap = new ConcurrentHashMap<>();
+        floatColumnSelectorMap = new ConcurrentHashMap<>();
+        objectColumnSelectorMap = new ConcurrentHashMap<>();
       } else {
-        longColumnSelectorMap = Maps.newHashMap();
-        floatColumnSelectorMap = Maps.newHashMap();
-        objectColumnSelectorMap = Maps.newHashMap();
+        longColumnSelectorMap = new HashMap<>();
+        floatColumnSelectorMap = new HashMap<>();
+        objectColumnSelectorMap = new HashMap<>();
       }
     }
 
@@ -419,49 +402,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     @Override
     public FloatColumnSelector makeFloatColumnSelector(String columnName)
     {
-      FloatColumnSelector existing = floatColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      } else {
-        FloatColumnSelector newSelector = delegate.makeFloatColumnSelector(columnName);
-        FloatColumnSelector prev = floatColumnSelectorMap.putIfAbsent(
-            columnName,
-            newSelector
-        );
-        return prev != null ? prev : newSelector;
-      }
+      return floatColumnSelectorMap.computeIfAbsent(columnName, delegate::makeFloatColumnSelector);
     }
 
     @Override
     public LongColumnSelector makeLongColumnSelector(String columnName)
     {
-      LongColumnSelector existing = longColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      } else {
-        LongColumnSelector newSelector = delegate.makeLongColumnSelector(columnName);
-        LongColumnSelector prev = longColumnSelectorMap.putIfAbsent(
-            columnName,
-            newSelector
-        );
-        return prev != null ? prev : newSelector;
-      }
+      return longColumnSelectorMap.computeIfAbsent(columnName, delegate::makeLongColumnSelector);
     }
 
     @Override
     public ObjectColumnSelector makeObjectColumnSelector(String columnName)
     {
-      ObjectColumnSelector existing = objectColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      } else {
-        ObjectColumnSelector newSelector = delegate.makeObjectColumnSelector(columnName);
-        ObjectColumnSelector prev = objectColumnSelectorMap.putIfAbsent(
-            columnName,
-            newSelector
-        );
-        return prev != null ? prev : newSelector;
-      }
+      return objectColumnSelectorMap.computeIfAbsent(columnName, delegate::makeObjectColumnSelector);
     }
 
     @Nullable

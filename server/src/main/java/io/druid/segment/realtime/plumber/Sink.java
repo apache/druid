@@ -254,7 +254,11 @@ public class Sink implements Iterable<FireHydrant>
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
         .build();
-    final IncrementalIndex newIndex = new OnheapIncrementalIndex(indexSchema, reportParseExceptions, maxRowsInMemory);
+    final IncrementalIndex newIndex = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(indexSchema)
+        .setReportParseExceptions(reportParseExceptions)
+        .setMaxRowCount(maxRowsInMemory)
+        .build();
 
     final FireHydrant old;
     synchronized (hydrantLock) {

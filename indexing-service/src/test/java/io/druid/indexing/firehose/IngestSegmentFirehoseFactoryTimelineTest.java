@@ -220,7 +220,10 @@ public class IngestSegmentFirehoseFactoryTimelineTest
             }
         )
         .build();
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(schema, true, rows.length);
+    final OnheapIncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(schema)
+        .setMaxRowCount(rows.length)
+        .build();
 
     for (InputRow row : rows) {
       try {

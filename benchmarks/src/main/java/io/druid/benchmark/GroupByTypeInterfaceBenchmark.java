@@ -433,18 +433,18 @@ public class GroupByTypeInterfaceBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
+    return new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
             .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(new DimensionsSpec(null, null, null))
-            .build(),
-        true,
-        false,
-        true,
-        true,
-        rowsPerSegment
-    );
+            .withDimensionsSpec(DimensionsSpec.ofEmpty())
+            .build()
+        )
+        .setReportParseExceptions(false)
+        .setConcurrentEventAdd(true)
+        .setMaxRowCount(rowsPerSegment)
+        .build();
   }
 
   @TearDown(Level.Trial)

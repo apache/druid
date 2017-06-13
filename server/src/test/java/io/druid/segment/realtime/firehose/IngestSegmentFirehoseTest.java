@@ -105,15 +105,16 @@ public class IngestSegmentFirehoseTest
 
     try (
         final QueryableIndex qi = indexIO.loadIndex(segmentDir);
-        final IncrementalIndex index = new OnheapIncrementalIndex(
-            new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(DIMENSIONS_SPEC_REINDEX)
-                .withQueryGranularity(Granularities.NONE)
-                .withMetrics(AGGREGATORS_REINDEX.toArray(new AggregatorFactory[]{}))
-                .build(),
-            true,
-            5000
-        )
+        final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+            .setIncrementalIndexSchema(
+                new IncrementalIndexSchema.Builder()
+                    .withDimensionsSpec(DIMENSIONS_SPEC_REINDEX)
+                    .withQueryGranularity(Granularities.NONE)
+                    .withMetrics(AGGREGATORS_REINDEX.toArray(new AggregatorFactory[]{}))
+                    .build()
+            )
+        .setMaxRowCount(5000)
+        .build();
     ) {
       final StorageAdapter sa = new QueryableIndexStorageAdapter(qi);
       final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
@@ -193,15 +194,16 @@ public class IngestSegmentFirehoseTest
     );
 
     try (
-        final IncrementalIndex index = new OnheapIncrementalIndex(
-            new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
-                .withQueryGranularity(Granularities.NONE)
-                .withMetrics(AGGREGATORS.toArray(new AggregatorFactory[]{}))
-                .build(),
-            true,
-            5000
-        )
+        final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+            .setIncrementalIndexSchema(
+                new IncrementalIndexSchema.Builder()
+                    .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
+                    .withQueryGranularity(Granularities.NONE)
+                    .withMetrics(AGGREGATORS.toArray(new AggregatorFactory[]{}))
+                    .build()
+            )
+        .setMaxRowCount(5000)
+        .build();
     ) {
       for (String line : rows) {
         index.add(parser.parse(line));

@@ -116,25 +116,29 @@ public class SpatialFilterBonusTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                            .withQueryGranularity(Granularities.DAY)
-                                            .withMetrics(METRIC_AGGS)
-                                            .withDimensionsSpec(
-                                                new DimensionsSpec(
-                                                    null,
-                                                    null,
-                                                    Arrays.asList(
-                                                        new SpatialDimensionSchema(
-                                                            "dim.geo",
-                                                            Lists.<String>newArrayList()
-                                                        )
-                                                    )
-                                                )
-                                            ).build(),
-        false,
-        NUM_POINTS
-    );
+    IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                .withQueryGranularity(Granularities.DAY)
+                .withMetrics(METRIC_AGGS)
+                .withDimensionsSpec(
+                    new DimensionsSpec(
+                        null,
+                        null,
+                        Arrays.asList(
+                            new SpatialDimensionSchema(
+                                "dim.geo",
+                                Lists.<String>newArrayList()
+                            )
+                        )
+                    )
+                ).build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(NUM_POINTS)
+        .build();
+
     theIndex.add(
         new MapBasedInputRow(
             new DateTime("2013-01-01").getMillis(),
@@ -255,66 +259,76 @@ public class SpatialFilterBonusTest
   private static QueryableIndex makeMergedQueryableIndex(final IndexSpec indexSpec)
   {
     try {
-      IncrementalIndex first = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Lists.<String>newArrayList()
-                                                          )
-                                                      )
-                                                  )
+      IncrementalIndex first = new OnheapIncrementalIndex.Builder()
+          .setIncrementalIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Lists.<String>newArrayList()
+                              )
+                          )
+                      )
 
-                                              ).build(),
-          false,
-          NUM_POINTS
-      );
-      IncrementalIndex second = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Lists.<String>newArrayList()
-                                                          )
-                                                      )
-                                                  )
-                                              ).build(),
-          false,
-          NUM_POINTS
-      );
-      IncrementalIndex third = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Lists.<String>newArrayList()
-                                                          )
-                                                      )
-                                                  )
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(NUM_POINTS)
+          .build();
 
-                                              ).build(),
-          false,
-          NUM_POINTS
-      );
+      IncrementalIndex second = new OnheapIncrementalIndex.Builder()
+          .setIncrementalIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Lists.<String>newArrayList()
+                              )
+                          )
+                      )
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(NUM_POINTS)
+          .build();
 
+      IncrementalIndex third = new OnheapIncrementalIndex.Builder()
+          .setIncrementalIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Lists.<String>newArrayList()
+                              )
+                          )
+                      )
+
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(NUM_POINTS)
+          .build();
 
       first.add(
           new MapBasedInputRow(

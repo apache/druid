@@ -119,7 +119,10 @@ public class TimeBoundaryQueryRunnerTest
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
-    return new OnheapIncrementalIndex(schema, true, maxRowCount);
+    return new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(schema)
+        .setMaxRowCount(maxRowCount)
+        .build();
   }
 
   private static String makeIdentifier(IncrementalIndex index, String version)

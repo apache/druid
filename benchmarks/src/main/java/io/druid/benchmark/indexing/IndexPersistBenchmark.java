@@ -155,18 +155,18 @@ public class IndexPersistBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
+    return new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
             .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withDimensionsSpec(DimensionsSpec.ofEmpty())
             .withRollup(rollup)
-            .build(),
-        true,
-        false,
-        true,
-        rowsPerSegment
-    );
+            .build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment)
+        .build();
   }
 
   @Benchmark

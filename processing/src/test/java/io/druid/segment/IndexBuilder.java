@@ -203,11 +203,11 @@ public class IndexBuilder
   )
   {
     Preconditions.checkNotNull(schema, "schema");
-    final IncrementalIndex incrementalIndex = new OnheapIncrementalIndex(
-        schema,
-        true,
-        maxRows
-    );
+    final IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(schema)
+        .setMaxRowCount(maxRows)
+        .build();
+
     for (InputRow row : rows) {
       try {
         incrementalIndex.add(row);

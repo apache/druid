@@ -237,11 +237,11 @@ public class IndexGeneratorJob implements Jobby
         .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
         .build();
 
-    OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
-        indexSchema,
-        !tuningConfig.isIgnoreInvalidRows(),
-        tuningConfig.getRowFlushBoundary()
-    );
+    OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(indexSchema)
+        .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows())
+        .setMaxRowCount(tuningConfig.getRowFlushBoundary())
+        .build();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
       newIndex.loadDimensionIterable(oldDimOrder, oldCapabilities);

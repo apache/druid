@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
@@ -117,7 +118,20 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         int maxRowCount
     )
     {
-      super(minTimestamp, gran, metrics, maxRowCount);
+      super(
+          new IncrementalIndexSchema.Builder()
+            .withMinTimestamp(minTimestamp)
+            .withQueryGranularity(gran)
+            .withDimensionsSpec(DimensionsSpec.ofEmpty())
+            .withMetrics(metrics)
+            .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+            .build(),
+        true,
+        true,
+        false,
+        true,
+        maxRowCount
+      );
     }
 
     @Override

@@ -124,18 +124,18 @@ public class IncrementalIndexReadBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
-            .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(new DimensionsSpec(null, null, null))
-            .withRollup(rollup)
-            .build(),
-        true,
-        false,
-        true,
-        rowsPerSegment
-    );
+    return new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.NONE)
+                .withMetrics(schemaInfo.getAggsArray())
+                .withDimensionsSpec(DimensionsSpec.ofEmpty())
+                .withRollup(rollup)
+                .build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment)
+        .build();
   }
 
   @Benchmark

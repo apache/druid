@@ -476,19 +476,19 @@ public class GroupByBenchmark
 
   private IncrementalIndex makeIncIndex(boolean withRollup)
   {
-    return new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
+    return new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
             .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withDimensionsSpec(DimensionsSpec.ofEmpty())
             .withRollup(withRollup)
-            .build(),
-        true,
-        false,
-        true,
-        true,
-        rowsPerSegment
-    );
+            .build()
+        )
+        .setReportParseExceptions(false)
+        .setConcurrentEventAdd(true)
+        .setMaxRowCount(rowsPerSegment)
+        .build();
   }
 
   @TearDown(Level.Trial)

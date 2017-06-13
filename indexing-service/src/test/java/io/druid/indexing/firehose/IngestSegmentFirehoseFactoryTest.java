@@ -143,11 +143,10 @@ public class IngestSegmentFirehoseFactoryTest
             }
         )
         .build();
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
-        schema,
-        true,
-        MAX_ROWS * MAX_SHARD_NUMBER
-    );
+    final OnheapIncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(schema)
+        .setMaxRowCount(MAX_ROWS * MAX_SHARD_NUMBER)
+        .build();
 
     for (Integer i = 0; i < MAX_ROWS; ++i) {
       index.add(ROW_PARSER.parse(buildRow(i.longValue())));

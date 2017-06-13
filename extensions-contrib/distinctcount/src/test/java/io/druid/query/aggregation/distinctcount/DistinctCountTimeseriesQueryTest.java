@@ -22,6 +22,7 @@ package io.druid.query.aggregation.distinctcount;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
@@ -34,6 +35,7 @@ import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
@@ -50,9 +52,19 @@ public class DistinctCountTimeseriesQueryTest
   {
     TimeseriesQueryEngine engine =  new TimeseriesQueryEngine();
 
-    IncrementalIndex index = new OnheapIncrementalIndex(
-        0, Granularities.SECOND, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
-    );
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(0)
+                .withQueryGranularity(Granularities.SECOND)
+                .withDimensionsSpec(DimensionsSpec.ofEmpty())
+                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
+                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .build()
+        )
+        .setMaxRowCount(1000)
+        .build();
+
     String visitor_id = "visitor_id";
     String client_type = "client_type";
     DateTime time = new DateTime("2016-03-04T00:00:00.000Z");

@@ -26,7 +26,6 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -37,6 +36,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -92,65 +92,85 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     aggBuffers.add(bb);
   }
 
-  public OffheapIncrementalIndex(
-      IncrementalIndexSchema incrementalIndexSchema,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
-      boolean sortFacts,
-      int maxRowCount,
-      StupidPool<ByteBuffer> bufferPool
-  )
+  public static class Builder
   {
-    this(
-        incrementalIndexSchema,
-        deserializeComplexMetrics,
-        reportParseExceptions,
-        false,
-        sortFacts,
-        maxRowCount,
-        bufferPool
-    );
-  }
+    private IncrementalIndexSchema incrementalIndexSchema;
+    private boolean deserializeComplexMetrics;
+    private boolean reportParseExceptions;
+    private boolean concurrentEventAdd;
+    private boolean sortFacts;
+    private int maxRowCount;
+    private StupidPool<ByteBuffer> bufferPool;
 
-  public OffheapIncrementalIndex(
-      long minTimestamp,
-      Granularity gran,
-      boolean rollup,
-      final AggregatorFactory[] metrics,
-      int maxRowCount,
-      StupidPool<ByteBuffer> bufferPool
-  )
-  {
-    this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withMetrics(metrics)
-                                            .withRollup(rollup)
-                                            .build(),
-        true,
-        true,
-        true,
-        maxRowCount,
-        bufferPool
-    );
-  }
+    public Builder()
+    {
+      incrementalIndexSchema = null;
+      deserializeComplexMetrics = true;
+      reportParseExceptions = true;
+      concurrentEventAdd = false;
+      sortFacts = true;
+      maxRowCount = 0;
+      bufferPool = null;
+    }
 
-  public OffheapIncrementalIndex(
-      long minTimestamp,
-      Granularity gran,
-      final AggregatorFactory[] metrics,
-      int maxRowCount,
-      StupidPool<ByteBuffer> bufferPool
-  )
-  {
-    this(
-        minTimestamp,
-        gran,
-        IncrementalIndexSchema.DEFAULT_ROLLUP,
-        metrics,
-        maxRowCount,
-        bufferPool
-    );
+    public Builder setIncrementalIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
+    {
+      this.incrementalIndexSchema = incrementalIndexSchema;
+      return this;
+    }
+
+    public Builder setDeserializeComplexMetrics(final boolean deserializeComplexMetrics)
+    {
+      this.deserializeComplexMetrics = deserializeComplexMetrics;
+      return this;
+    }
+
+    public Builder setReportParseExceptions(final boolean reportParseExceptions)
+    {
+      this.reportParseExceptions = reportParseExceptions;
+      return this;
+    }
+
+    public Builder setConcurrentEventAdd(final boolean concurrentEventAdd)
+    {
+      this.concurrentEventAdd = concurrentEventAdd;
+      return this;
+    }
+
+    public Builder setSortFacts(final boolean sortFacts)
+    {
+      this.sortFacts = sortFacts;
+      return this;
+    }
+
+    public Builder setMaxRowCount(final int maxRowCount)
+    {
+      this.maxRowCount = maxRowCount;
+      return this;
+    }
+
+    public Builder setBufferPool(final StupidPool<ByteBuffer> bufferPool)
+    {
+      this.bufferPool = bufferPool;
+      return this;
+    }
+
+    public OffheapIncrementalIndex build()
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OffheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount,
+          Objects.requireNonNull(bufferPool, "bufferPool is null")
+      );
+    }
   }
 
   @Override

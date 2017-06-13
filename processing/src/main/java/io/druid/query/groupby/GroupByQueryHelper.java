@@ -120,24 +120,22 @@ public class GroupByQueryHelper
         .build();
 
     if (query.getContextValue("useOffheap", false)) {
-      index = new OffheapIncrementalIndex(
-          indexSchema,
-          false,
-          true,
-          true,
-          sortResults,
-          querySpecificConfig.getMaxResults(),
-          bufferPool
-      );
+      index = new OffheapIncrementalIndex.Builder()
+          .setIncrementalIndexSchema(indexSchema)
+          .setDeserializeComplexMetrics(false)
+          .setConcurrentEventAdd(true)
+          .setSortFacts(sortResults)
+          .setMaxRowCount(querySpecificConfig.getMaxResults())
+          .setBufferPool(bufferPool)
+          .build();
     } else {
-      index = new OnheapIncrementalIndex(
-          indexSchema,
-          false,
-          true,
-          true,
-          sortResults,
-          querySpecificConfig.getMaxResults()
-      );
+      index = new OnheapIncrementalIndex.Builder()
+          .setIncrementalIndexSchema(indexSchema)
+          .setDeserializeComplexMetrics(false)
+          .setConcurrentEventAdd(true)
+          .setSortFacts(sortResults)
+          .setMaxRowCount(querySpecificConfig.getMaxResults())
+          .build();
     }
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()

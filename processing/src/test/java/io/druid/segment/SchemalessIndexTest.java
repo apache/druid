@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
@@ -39,6 +40,7 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
@@ -141,7 +143,18 @@ public class SchemalessIndexTest
         final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
 
         if (theIndex == null) {
-          theIndex = new OnheapIncrementalIndex(timestamp, Granularities.MINUTE, METRIC_AGGS, 1000);
+          theIndex = new OnheapIncrementalIndex.Builder()
+              .setIncrementalIndexSchema(
+                  new IncrementalIndexSchema.Builder()
+                      .withMinTimestamp(timestamp)
+                      .withQueryGranularity(Granularities.MINUTE)
+                      .withDimensionsSpec(DimensionsSpec.ofEmpty())
+                      .withMetrics(METRIC_AGGS)
+                      .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                      .build()
+              )
+              .setMaxRowCount(1000)
+              .build();
         }
 
         final List<String> dims = Lists.newArrayList();
@@ -350,9 +363,18 @@ public class SchemalessIndexTest
             }
           }
 
-          final IncrementalIndex rowIndex = new OnheapIncrementalIndex(
-              timestamp, Granularities.MINUTE, METRIC_AGGS, 1000
-          );
+          final IncrementalIndex rowIndex = new OnheapIncrementalIndex.Builder()
+              .setIncrementalIndexSchema(
+                  new IncrementalIndexSchema.Builder()
+                      .withMinTimestamp(timestamp)
+                      .withQueryGranularity(Granularities.MINUTE)
+                      .withDimensionsSpec(DimensionsSpec.ofEmpty())
+                      .withMetrics(METRIC_AGGS)
+                      .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                      .build()
+              )
+              .setMaxRowCount(1000)
+              .build();
 
           rowIndex.add(
               new MapBasedInputRow(timestamp, dims, event)
@@ -380,9 +402,18 @@ public class SchemalessIndexTest
     String filename = resource.getFile();
     log.info("Realtime loading index file[%s]", filename);
 
-    final IncrementalIndex retVal = new OnheapIncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), Granularities.MINUTE, aggs, 1000
-    );
+    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
+        .setIncrementalIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+                .withQueryGranularity(Granularities.MINUTE)
+                .withDimensionsSpec(DimensionsSpec.ofEmpty())
+                .withMetrics(aggs)
+                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .build()
+        )
+        .setMaxRowCount(1000)
+        .build();
 
     try {
       final List<Object> events = jsonMapper.readValue(new File(filename), List.class);

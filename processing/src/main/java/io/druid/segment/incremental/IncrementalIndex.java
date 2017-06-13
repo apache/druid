@@ -210,11 +210,15 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
    *
+   * Set concurrentEventAdd to true to indicate that adding of input row should be thread-safe (for example, groupBy
+   * where the multiple threads can add concurrently to the IncrementalIndex).
+   *
    * @param incrementalIndexSchema    the schema to use for incremental index
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
    * @param reportParseExceptions     flag whether or not to report ParseExceptions that occur while extracting values
    *                                  from input rows
+   * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
    */
   public IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,

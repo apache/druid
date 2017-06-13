@@ -29,6 +29,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -97,9 +98,18 @@ public class IncrementalIndexStorageAdapterTest
                   @Override
                   public IncrementalIndex createIndex()
                   {
-                    return new OnheapIncrementalIndex(
-                        0, Granularities.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
-                    );
+                    return new OnheapIncrementalIndex.Builder()
+                        .setIncrementalIndexSchema(
+                            new IncrementalIndexSchema.Builder()
+                                .withMinTimestamp(0)
+                                .withQueryGranularity(Granularities.NONE)
+                                .withDimensionsSpec(DimensionsSpec.ofEmpty())
+                                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
+                                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                                .build()
+                        )
+                        .setMaxRowCount(1000)
+                        .build();
                   }
                 }
             }
