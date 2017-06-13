@@ -26,7 +26,7 @@ while not done:
   else:
     page_counter += 1
 
-  issues = json.loads(resp.content)
+  issues = json.loads(resp.text)
   for issue in issues:
     contributor_name = issue["user"]["login"]
     contributors.add(contributor_name)
