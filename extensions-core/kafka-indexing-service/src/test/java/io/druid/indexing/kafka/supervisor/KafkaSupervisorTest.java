@@ -1557,6 +1557,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(null).anyTimes();
     replayAll();
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
@@ -1582,6 +1583,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(null).anyTimes();
     replayAll();
 
     supervisor.start();
@@ -1629,6 +1631,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(null).anyTimes();
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
     replayAll();
 
@@ -1733,7 +1736,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResetStateTopicChange() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
+    supervisor = getSupervisor(1, 2, true, "PT1H", null, false);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
     addSomeEvents(1);
@@ -1743,13 +1746,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
     expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new KafkaPartitions("staleTopic", ImmutableMap.of(0, 10L))
-        )
+            new KafkaPartitions("staleTopic", ImmutableMap.of(0, 10L, 1, 20L, 3, 30L)))
     ).anyTimes();
-    expect(taskQueue.add(capture(captured))).andReturn(true);
-    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
+    expect(taskQueue.add(capture(captured))).andReturn(true).anyTimes();
+    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true).once();
     taskClient.close();
-    EasyMock.expectLastCall().once();
+    EasyMock.expectLastCall().anyTimes();
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
     taskRunner.unregisterListener("KafkaSupervisor-testDS");
     replayAll();

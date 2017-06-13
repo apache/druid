@@ -497,6 +497,24 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
+  public void possiblyResetDataSourceState() {
+    // check that the dataSourceState match the current config, optionally reset it if resetOffsetAutomatically is set
+    DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+    if (dataSourceMetadata != null && dataSourceMetadata instanceof KafkaDataSourceMetadata) {
+      KafkaPartitions partitions = ((KafkaDataSourceMetadata) dataSourceMetadata).getKafkaPartitions();
+      if (partitions != null &&
+          !ioConfig.getTopic().equals(partitions.getTopic()) &&
+          tuningConfig.isResetOffsetAutomatically()) {
+        log.makeAlert(
+            "Topic in metadata storage [%s] doesn't match spec topic [%s], resetting dataSourceState",
+            partitions.getTopic(),
+            ioConfig.getTopic()
+        );
+        resetInternal(null);
+      }
+    }
+  }
+
   private interface Notice
   {
     void handle() throws ExecutionException, InterruptedException, TimeoutException;
@@ -675,6 +693,7 @@ public class KafkaSupervisor implements Supervisor
   void runInternal() throws ExecutionException, InterruptedException, TimeoutException
   {
     possiblyRegisterListener();
+    possiblyResetDataSourceState();
     updatePartitionDataFromKafka();
     discoverTasks();
     updateTaskStatus();
@@ -1499,10 +1518,6 @@ public class KafkaSupervisor implements Supervisor
               partitions.getTopic(),
               ioConfig.getTopic()
           );
-          if (tuningConfig.isResetOffsetAutomatically()) {
-            // reset the dataSourceMetadata to a clean state
-            reset(null);
-          }
           return ImmutableMap.of();
         } else if (partitions.getPartitionOffsetMap() != null) {
           return partitions.getPartitionOffsetMap();
