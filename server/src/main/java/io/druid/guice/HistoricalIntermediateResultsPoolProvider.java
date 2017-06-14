@@ -19,31 +19,16 @@
 
 package io.druid.guice;
 
-import com.google.inject.ProvisionException;
 import io.druid.query.DruidProcessingConfig;
-import org.junit.Test;
 
-public class DruidProcessingModuleTest
+import javax.inject.Inject;
+
+@LazySingleton
+public class HistoricalIntermediateResultsPoolProvider extends IntermediateResultsPoolProvider
 {
-
-  @Test(expected=ProvisionException.class)
-  public void testMemoryCheckThrowsException() {
-    DruidProcessingModule module = new DruidProcessingModule();
-    DruidProcessingConfig config = new DruidProcessingConfig()
-    {
-      @Override
-      public String getFormatString()
-      {
-        return "test";
-      }
-
-      @Override
-      public int intermediateComputeSizeBytes()
-      {
-        return Integer.MAX_VALUE;
-      }
-    };
-    module.getIntermediateResultsPool(config, new HistoricalIntermediateResultsPoolProvider(config));
+  @Inject
+  public HistoricalIntermediateResultsPoolProvider(DruidProcessingConfig config)
+  {
+    super(config.getNumThreads(), config);
   }
-
 }
