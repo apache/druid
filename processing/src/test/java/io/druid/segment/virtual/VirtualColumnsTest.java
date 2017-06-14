@@ -127,6 +127,7 @@ public class VirtualColumnsTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "__time",
         "x + y",
+        ValueType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -142,12 +143,14 @@ public class VirtualColumnsTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "x + y",
+        ValueType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn(
         "expr",
         "x * 2",
+        ValueType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -163,12 +166,14 @@ public class VirtualColumnsTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "x + expr2",
+        ValueType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn(
         "expr2",
         "expr * 2",
+        ValueType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -183,13 +188,13 @@ public class VirtualColumnsTest
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.<VirtualColumn>of(
-            new ExpressionVirtualColumn("expr", "x + y", TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
         ImmutableList.<VirtualColumn>of(
-            new ExpressionVirtualColumn("expr", "x + y", TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -202,13 +207,13 @@ public class VirtualColumnsTest
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.<VirtualColumn>of(
-            new ExpressionVirtualColumn("expr", "x + y", TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
         ImmutableList.<VirtualColumn>of(
-            new ExpressionVirtualColumn("expr", "x + y", TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -227,8 +232,8 @@ public class VirtualColumnsTest
   {
     final ObjectMapper mapper = TestHelper.getJsonMapper();
     final ImmutableList<VirtualColumn> theColumns = ImmutableList.<VirtualColumn>of(
-        new ExpressionVirtualColumn("expr", "x + y", TestExprMacroTable.INSTANCE),
-        new ExpressionVirtualColumn("expr2", "x + z", TestExprMacroTable.INSTANCE)
+        new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("expr2", "x + z", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
     );
     final VirtualColumns virtualColumns = VirtualColumns.create(theColumns);
 
@@ -254,6 +259,7 @@ public class VirtualColumnsTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "1",
+        ValueType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
     final DottyVirtualColumn dotty = new DottyVirtualColumn("foo");
