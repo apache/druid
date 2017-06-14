@@ -33,7 +33,7 @@ public class ExtensionsConfigTest
   public void testSerdeWithDefaults() throws Exception
   {
     String json = "{}";
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
 
     ExtensionsConfig config = mapper.readValue(
         mapper.writeValueAsString(
@@ -59,7 +59,7 @@ public class ExtensionsConfigTest
                   + "  \"hadoopContainerDruidClasspath\": \"testHadoopContainerClasspath\",\n"
                   + "  \"loadList\": [\"a\",\"b\"]\n"
                   + "}";
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
 
     ExtensionsConfig config = mapper.readValue(
         mapper.writeValueAsString(

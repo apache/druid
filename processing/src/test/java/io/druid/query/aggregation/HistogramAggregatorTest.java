@@ -19,9 +19,10 @@
 
 package io.druid.query.aggregation;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,7 +41,7 @@ public class HistogramAggregatorTest
   @Test
   public void testSerde() throws Exception
   {
-    final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
+    final ObjectMapper objectMapper = TestHelper.getJsonMapper();
     String json0 = "{\"type\": \"histogram\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
     HistogramAggregatorFactory agg0 = objectMapper.readValue(json0, HistogramAggregatorFactory.class);
     Assert.assertEquals(ImmutableList.of(), agg0.getBreaks());

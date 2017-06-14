@@ -20,7 +20,6 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -35,7 +34,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.DurationGranularity;
@@ -83,6 +81,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.dimension.RegexFilteredDimensionSpec;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.CascadeExtractionFn;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
@@ -152,7 +151,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
 {
-  public static final ObjectMapper DEFAULT_MAPPER = new DefaultObjectMapper(new SmileFactory());
+  public static final ObjectMapper DEFAULT_MAPPER = TestHelper.getSmileMapper();
   public static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {
     @Override
@@ -2506,7 +2505,11 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setVirtualColumns(
-            new ExpressionVirtualColumn("expr", "index * 2 + indexMin / 10")
+            new ExpressionVirtualColumn(
+                "expr",
+                "index * 2 + indexMin / 10",
+                TestExprMacroTable.INSTANCE
+            )
         )
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
         .setAggregatorSpecs(
@@ -2719,7 +2722,7 @@ public class GroupByQueryRunnerTest
            .setAggregatorSpecs(
                Arrays.asList(
                    QueryRunnerTestHelper.rowsCount,
-                   new DoubleSumAggregatorFactory("idx", null, "index / 2 + indexMin")
+                   new DoubleSumAggregatorFactory("idx", null, "index / 2 + indexMin", TestExprMacroTable.INSTANCE)
                )
            );
 
@@ -2744,7 +2747,7 @@ public class GroupByQueryRunnerTest
     // Now try it with an expression virtual column.
     builder.setLimit(Integer.MAX_VALUE)
            .setVirtualColumns(
-               new ExpressionVirtualColumn("expr", "index / 2 + indexMin")
+               new ExpressionVirtualColumn("expr", "index / 2 + indexMin", TestExprMacroTable.INSTANCE)
            )
            .setAggregatorSpecs(
                Arrays.asList(
@@ -3914,7 +3917,7 @@ public class GroupByQueryRunnerTest
 
     fullQuery = fullQuery.withPostAggregatorSpecs(
         Arrays.<PostAggregator>asList(
-            new ExpressionPostAggregator("rows_times_10", "rows * 10.0")
+            new ExpressionPostAggregator("rows_times_10", "rows * 10.0", null, TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -4334,7 +4337,7 @@ public class GroupByQueryRunnerTest
 
     subquery = new GroupByQuery.Builder(subquery)
         .setVirtualColumns(
-            new ExpressionVirtualColumn("expr", "-index + 100")
+            new ExpressionVirtualColumn("expr", "-index + 100", TestExprMacroTable.INSTANCE)
         )
         .setAggregatorSpecs(
             Arrays.asList(
@@ -5436,7 +5439,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setVirtualColumns(new ExpressionVirtualColumn("expr", "1"))
+        .setVirtualColumns(new ExpressionVirtualColumn("expr", "1", TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.<DimensionSpec>newArrayList())
         .setAggregatorSpecs(ImmutableList.<AggregatorFactory>of(new LongSumAggregatorFactory("count", "expr")))
         .setGranularity(QueryRunnerTestHelper.allGran)

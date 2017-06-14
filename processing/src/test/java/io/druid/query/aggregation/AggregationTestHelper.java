@@ -40,7 +40,6 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -75,6 +74,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.TestHelper;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -137,7 +137,7 @@ public class AggregationTestHelper
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
     GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(mapper, config);
 
     IndexIO indexIO = new IndexIO(
@@ -168,7 +168,7 @@ public class AggregationTestHelper
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             SelectQueryConfig.class,
@@ -179,14 +179,14 @@ public class AggregationTestHelper
     Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
-        new DefaultObjectMapper(),
+        TestHelper.getJsonMapper(),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
         configSupplier
     );
 
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
-            new DefaultObjectMapper(),
+            TestHelper.getJsonMapper(),
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
             configSupplier
         ),
@@ -224,7 +224,7 @@ public class AggregationTestHelper
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
 
     TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest(
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
@@ -264,7 +264,7 @@ public class AggregationTestHelper
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
 
     TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),

@@ -23,10 +23,11 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
-
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
@@ -70,6 +71,7 @@ public class TestUtils
 
     jsonMapper.setInjectableValues(
         new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
             .addValue(IndexMerger.class, indexMerger)
             .addValue(ObjectMapper.class, jsonMapper)
@@ -87,7 +89,8 @@ public class TestUtils
     return indexMerger;
   }
 
-  public IndexMergerV9 getTestIndexMergerV9() {
+  public IndexMergerV9 getTestIndexMergerV9()
+  {
     return indexMergerV9;
   }
 

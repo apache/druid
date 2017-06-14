@@ -53,7 +53,7 @@ public class RealtimeTuningConfigTest
   {
     String jsonStr = "{\"type\":\"realtime\"}";
 
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
     RealtimeTuningConfig config = (RealtimeTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
@@ -97,7 +97,7 @@ public class RealtimeTuningConfigTest
                      + "  \"alertTimeout\": 70\n"
                      + "}";
 
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
     RealtimeTuningConfig config = (RealtimeTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(

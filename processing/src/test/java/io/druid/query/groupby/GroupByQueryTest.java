@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
@@ -39,6 +38,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -48,7 +48,7 @@ import java.util.Arrays;
 
 public class GroupByQueryTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
   @Test
   public void testQuerySerialization() throws IOException

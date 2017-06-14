@@ -101,7 +101,8 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
               log.info("Pushing %s.", segmentData.getPath());
               objectApi.put(segmentData);
 
-              // Avoid using Guava in DataSegmentPushers because of Hadoop incompatibilities
+              // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+              // runtime, and because Guava deletes methods over time, that causes incompatibilities.
               Files.write(descFile.toPath(), jsonMapper.writeValueAsBytes(inSegment));
               CloudFilesObject descriptorData = new CloudFilesObject(
                   segmentPath, descFile,

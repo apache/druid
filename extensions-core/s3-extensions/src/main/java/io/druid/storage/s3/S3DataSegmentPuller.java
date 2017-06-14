@@ -202,7 +202,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
             byteSource,
             outDir,
             S3Utils.S3RETRY,
-            true
+            false
         );
         log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outDir.getAbsolutePath());
         return result;

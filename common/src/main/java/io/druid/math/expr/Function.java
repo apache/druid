@@ -24,7 +24,6 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
-import com.google.common.base.Supplier;
 
 import java.util.List;
 
@@ -35,10 +34,6 @@ interface Function
   String name();
 
   ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
-
-  // optional interface to be used when function should be created per reference in expression
-  interface FunctionFactory extends Supplier<Function>, Function {
-  }
 
   abstract class SingleParam implements Function
   {

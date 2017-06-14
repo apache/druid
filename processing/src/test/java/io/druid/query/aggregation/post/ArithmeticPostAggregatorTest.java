@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.query.aggregation.CountAggregator;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.expression.TestExprMacroTable;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -64,22 +65,22 @@ public class ArithmeticPostAggregatorTest
     }
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggregatorList);
-    expressionPostAggregator = new ExpressionPostAggregator("add", "roku + rows");
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku + rows", null, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
     Assert.assertEquals(9.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("subtract", "-", postAggregatorList);
-    expressionPostAggregator = new ExpressionPostAggregator("add", "roku - rows");
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku - rows", null, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(3.0, arithmeticPostAggregator.compute(metricValues));
     Assert.assertEquals(3.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("multiply", "*", postAggregatorList);
-    expressionPostAggregator = new ExpressionPostAggregator("add", "roku * rows");
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku * rows", null, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(18.0, arithmeticPostAggregator.compute(metricValues));
     Assert.assertEquals(18.0, expressionPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("divide", "/", postAggregatorList);
-    expressionPostAggregator = new ExpressionPostAggregator("add", "roku / rows");
+    expressionPostAggregator = new ExpressionPostAggregator("add", "roku / rows", null, TestExprMacroTable.INSTANCE);
     Assert.assertEquals(2.0, arithmeticPostAggregator.compute(metricValues));
     Assert.assertEquals(2.0, expressionPostAggregator.compute(metricValues));
   }

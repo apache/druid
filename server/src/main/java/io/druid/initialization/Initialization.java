@@ -37,6 +37,7 @@ import io.druid.guice.AnnouncerModule;
 import io.druid.guice.CoordinatorDiscoveryModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
+import io.druid.guice.ExpressionModule;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
@@ -339,6 +340,7 @@ public class Initialization
         new JettyServerModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new ExpressionModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
         new MetadataConfigModule(),

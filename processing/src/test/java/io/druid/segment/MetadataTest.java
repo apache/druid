@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -41,7 +40,7 @@ public class MetadataTest
   @Test
   public void testSerde() throws Exception
   {
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
     Metadata metadata = new Metadata();
     metadata.put("k", "v");

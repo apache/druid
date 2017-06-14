@@ -195,7 +195,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         coordinator.moveSegment(
             fromServer,
             toServer,
-            segmentToMove.getIdentifier(),
+            segmentToMove,
             callback
         );
         return true;
