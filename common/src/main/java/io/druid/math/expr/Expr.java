@@ -19,6 +19,7 @@
 
 package io.druid.math.expr;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
@@ -93,10 +94,10 @@ class LongExpr extends ConstantExpr
 
   public LongExpr(Long value)
   {
-    this.value = value;
+    this.value = Preconditions.checkNotNull(value, "value");
   }
 
-  @Nullable
+  @Nonnull
   @Override
   public Object getLiteralValue()
   {
@@ -153,10 +154,10 @@ class DoubleExpr extends ConstantExpr
 
   public DoubleExpr(Double value)
   {
-    this.value = value;
+    this.value = Preconditions.checkNotNull(value, "value");
   }
 
-  @Nullable
+  @Nonnull
   @Override
   public Object getLiteralValue()
   {
