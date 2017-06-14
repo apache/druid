@@ -158,16 +158,6 @@ public class DruidCoordinatorBalancerTest
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
 
-    // Mock stuff that the coordinator needs
-    coordinator.moveSegment(
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<DataSegment>anyObject(),
-        EasyMock.<LoadPeonCallback>anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator);
-
     LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
     LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
 
@@ -229,16 +219,6 @@ public class DruidCoordinatorBalancerTest
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
 
-    // Mock stuff that the coordinator needs
-    coordinator.moveSegment(
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<DataSegment>anyObject(),
-        EasyMock.<LoadPeonCallback>anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator);
-
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("balancer-strategy-exec"));
     BalancerStrategy balancerStrategy =
@@ -291,46 +271,10 @@ public class DruidCoordinatorBalancerTest
   public void testRun2() throws IOException
   {
     // Mock some servers of different usages
-    EasyMock.expect(druidServer1.getName()).andReturn("1").atLeastOnce();
-    EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
-    EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
-    EasyMock.expect(druidServer1.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
-    EasyMock.replay(druidServer1);
-
-    EasyMock.expect(druidServer2.getName()).andReturn("2").atLeastOnce();
-    EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
-    EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
-    EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-    EasyMock.expect(druidServer2.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
-    EasyMock.replay(druidServer2);
-
-    EasyMock.expect(druidServer3.getName()).andReturn("3").atLeastOnce();
-    EasyMock.expect(druidServer3.getTier()).andReturn("normal").anyTimes();
-    EasyMock.expect(druidServer3.getCurrSize()).andReturn(0L).atLeastOnce();
-    EasyMock.expect(druidServer3.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer3.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-    EasyMock.expect(druidServer3.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
-    EasyMock.replay(druidServer3);
-
-    EasyMock.expect(druidServer4.getName()).andReturn("4").atLeastOnce();
-    EasyMock.expect(druidServer4.getTier()).andReturn("normal").anyTimes();
-    EasyMock.expect(druidServer4.getCurrSize()).andReturn(0L).atLeastOnce();
-    EasyMock.expect(druidServer4.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer4.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-    EasyMock.expect(druidServer4.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
-    EasyMock.replay(druidServer4);
-
-    // Mock stuff that the coordinator needs
-    coordinator.moveSegment(
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<DataSegment>anyObject(),
-        EasyMock.<LoadPeonCallback>anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator);
+    mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
+    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, new HashMap<>());
+    mockDruidServer(druidServer3, "3", "normal", 0L, 100L, new HashMap<>());
+    mockDruidServer(druidServer4, "4", "normal", 0L, 100L, new HashMap<>());
 
     LoadQueuePeonTester peon1 = new LoadQueuePeonTester();
     LoadQueuePeonTester peon2 = new LoadQueuePeonTester();
