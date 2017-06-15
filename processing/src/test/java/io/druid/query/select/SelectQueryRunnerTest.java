@@ -510,7 +510,7 @@ public class SelectQueryRunnerTest
         .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
         .pagingSpec(new PagingSpec(null, 10, true))
         .virtualColumns(
-            new ExpressionVirtualColumn("expr", "index / 10.0", TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "index / 10.0", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
         .build();
 
