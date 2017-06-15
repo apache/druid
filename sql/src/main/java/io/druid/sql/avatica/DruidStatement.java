@@ -22,6 +22,7 @@ package io.druid.sql.avatica;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import io.druid.concurrent.Execs;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -42,10 +43,7 @@ import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 /**
  * Statement handle for {@link DruidMeta}. Thread-safe.
@@ -68,6 +66,24 @@ public class DruidStatement implements Closeable
   private final Runnable onClose;
   private final Object lock = new Object();
 
+  /**
+   * Query metrics can only be used within a single thread. Because results can be paginated into multiple
+   * JDBC frames (each frame being processed by a potentially different thread), the thread that closes the yielder
+   * (resulting in a QueryMetrics emit() call) may not be the same thread that created the yielder (which initializes
+   * DefaultQueryMetrics with the current thread as the owner). Create and close the yielder with this
+   * single-thread executor to prevent this from happening.
+   *
+   * The thread owner check in DefaultQueryMetrics is more aggressive than needed for this specific JDBC case, since
+   * the JDBC frames are processed sequentially, so this single-thread executor is not ideal: if creating or closing
+   * the yielder is an expensive operation, then the single-thread executor could become a bottleneck.
+   *
+   * We could address the bottleneck potential by assigning a separate yielder open/close thread for each query, or by
+   * removing the executor if the thread owner check in DefaultQueryMetrics is loosened.
+   *
+   * See discussion at: https://github.com/druid-io/druid/pull/4288, https://github.com/druid-io/druid/pull/4415
+   */
+  private final ExecutorService yielderOpenCloseExecutor;
+
   private State state = State.NEW;
   private String query;
   private long maxRowCount;
@@ -75,13 +91,6 @@ public class DruidStatement implements Closeable
   private Meta.Signature signature;
   private Yielder<Object[]> yielder;
   private int offset = 0;
-
-  // Query metrics should only be used within a single thread. Because results can be paginated into multiple
-  // JDBC frames (each frame being processed by a potentially different thread), the thread that closes the yielder
-  // (resulting in a QueryMetrics emit() call) may not be the same thread that created the yielder (which initializes
-  // DefaultQueryMetrics with the current thread as the owner). Create and close the yielder with this
-  // single-thread executor to prevent this from happening.
-  private ExecutorService yielderOpenCloseExecutor;
 
   public DruidStatement(
       final String connectionId,
@@ -94,7 +103,7 @@ public class DruidStatement implements Closeable
     this.statementId = statementId;
     this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
-    this.yielderOpenCloseExecutor = Executors.newSingleThreadExecutor();
+    this.yielderOpenCloseExecutor = Execs.singleThreaded("JDBCYielderOpenCloseExecutor");
   }
 
   public static List<ColumnMetaData> createColumnMetaData(final RelDataType rowType)
@@ -178,9 +187,9 @@ public class DruidStatement implements Closeable
       ensure(State.PREPARED);
 
       try {
-        Callable<Sequence<Object[]>> opener = () -> plannerResult.run();
-        Future<Sequence<Object[]>> future = yielderOpenCloseExecutor.submit(opener);
-        final Sequence<Object[]> baseSequence = future.get();
+        final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(
+            () -> plannerResult.run()
+        ).get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
         final Sequence<Object[]> retSequence =
@@ -198,7 +207,7 @@ public class DruidStatement implements Closeable
         catch (Throwable t1) {
           t.addSuppressed(t1);
         }
-        Throwables.propagate(t);
+        throw Throwables.propagate(t);
       }
 
       return this;
@@ -300,16 +309,16 @@ public class DruidStatement implements Closeable
           this.yielder = null;
 
           // Put the close last, so any exceptions it throws are after we did the other cleanup above.
-          Runnable closer = () -> {
-            try {
-              theYielder.close();
-            }
-            catch (Throwable t) {
-              throw Throwables.propagate(t);
-            }
-          };
-          Future future = yielderOpenCloseExecutor.submit(closer);
-          future.get();
+          yielderOpenCloseExecutor.submit(
+              () -> {
+                try {
+                  theYielder.close();
+                }
+                catch (Throwable t) {
+                  throw Throwables.propagate(t);
+                }
+              }
+          ).get();
         }
       }
       catch (Throwable t) {
