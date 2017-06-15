@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -149,6 +150,7 @@ public class DruidCoordinatorBalancerTest
   }
 
 
+  @Ignore
   @Test
   public void testMoveToEmptyServerBalancer() throws IOException
   {
