@@ -31,6 +31,7 @@ public class NoopProvisioningStrategy<T extends TaskRunner> implements Provision
       @Override
       public void close()
       {
+        // nothing to close
       }
 
       @Override

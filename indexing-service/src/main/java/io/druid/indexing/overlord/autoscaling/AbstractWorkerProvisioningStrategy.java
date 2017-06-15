@@ -127,5 +127,5 @@ public abstract class AbstractWorkerProvisioningStrategy implements Provisioning
     }
   }
 
-  abstract Provisioner makeProvisioner(WorkerTaskRunner runner);
+  protected abstract Provisioner makeProvisioner(WorkerTaskRunner runner);
 }

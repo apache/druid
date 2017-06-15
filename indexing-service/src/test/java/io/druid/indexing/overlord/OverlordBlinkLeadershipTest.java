@@ -26,6 +26,7 @@ import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.joda.time.Period;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -67,12 +68,17 @@ public class OverlordBlinkLeadershipTest
    * org.apache.curator.framework.recipes.leader.LeaderSelectorListener#takeLeadership} implementation in
    * {@link TaskMaster} and start it again.
    */
-  @Test
+  @Test(timeout = 10_000)
   public void testOverlordBlinkLeadership()
   {
-    RemoteTaskRunner remoteTaskRunner1 = rtrUtils.makeRemoteTaskRunner(remoteTaskRunnerConfig, resourceManagement);
-    remoteTaskRunner1.stop();
-    RemoteTaskRunner remoteTaskRunner2 = rtrUtils.makeRemoteTaskRunner(remoteTaskRunnerConfig, resourceManagement);
-    remoteTaskRunner2.stop();
+    try {
+      RemoteTaskRunner remoteTaskRunner1 = rtrUtils.makeRemoteTaskRunner(remoteTaskRunnerConfig, resourceManagement);
+      remoteTaskRunner1.stop();
+      RemoteTaskRunner remoteTaskRunner2 = rtrUtils.makeRemoteTaskRunner(remoteTaskRunnerConfig, resourceManagement);
+      remoteTaskRunner2.stop();
+    }
+    catch (Exception e) {
+      Assert.fail("Should have not thrown any exceptions, thrown: " + e);
+    }
   }
 }
