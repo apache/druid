@@ -104,7 +104,7 @@ public class IngestSegmentFirehoseTest
     try (
         final QueryableIndex qi = indexIO.loadIndex(segmentDir);
         final IncrementalIndex index = new IncrementalIndex.Builder()
-            .setIncrementalIndexSchema(
+            .setIndexSchema(
                 new IncrementalIndexSchema.Builder()
                     .withDimensionsSpec(DIMENSIONS_SPEC_REINDEX)
                     .withMetrics(AGGREGATORS_REINDEX.toArray(new AggregatorFactory[]{}))
@@ -192,7 +192,7 @@ public class IngestSegmentFirehoseTest
 
     try (
         final IncrementalIndex index = new IncrementalIndex.Builder()
-            .setIncrementalIndexSchema(
+            .setIndexSchema(
                 new IncrementalIndexSchema.Builder()
                     .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
                     .withMetrics(AGGREGATORS.toArray(new AggregatorFactory[]{}))

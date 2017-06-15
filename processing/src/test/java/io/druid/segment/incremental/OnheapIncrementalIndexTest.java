@@ -42,7 +42,7 @@ public class OnheapIncrementalIndexTest
   public void testMultithreadAddFacts() throws Exception
   {
     final IncrementalIndex index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.MINUTE)
                 .withMetrics(new LongMaxAggregatorFactory("max", "max"))
@@ -111,7 +111,7 @@ public class OnheapIncrementalIndexTest
     EasyMock.expectLastCall().times(1);
 
     final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.MINUTE)
                 .withMetrics(new LongMaxAggregatorFactory("max", "max"))

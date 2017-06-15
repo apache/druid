@@ -214,7 +214,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         .withMetrics(new LongSumAggregatorFactory(METRICS[0], METRICS[0]))
         .build();
     final IncrementalIndex index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(schema)
+        .setIndexSchema(schema)
         .setMaxRowCount(rows.length)
         .buildOnheap();
 

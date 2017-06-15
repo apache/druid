@@ -475,7 +475,7 @@ public class GroupByBenchmark
   private IncrementalIndex makeIncIndex(boolean withRollup)
   {
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
             .withMetrics(schemaInfo.getAggsArray())
             .withRollup(withRollup)

@@ -78,7 +78,7 @@ public class IncrementalIndexMultiValueSpecTest
       }
     };
     IncrementalIndex<?> index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(schema)
+        .setIndexSchema(schema)
         .setMaxRowCount(10000)
         .buildOnheap();
     index.add(

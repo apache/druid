@@ -237,7 +237,7 @@ public class IndexGeneratorJob implements Jobby
         .build();
 
     IncrementalIndex newIndex = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(indexSchema)
+        .setIndexSchema(indexSchema)
         .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows())
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())
         .buildOnheap();

@@ -188,7 +188,7 @@ public class MultiSegmentSelectQueryTest
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(schema)
+        .setIndexSchema(schema)
         .setMaxRowCount(maxRowCount)
         .buildOnheap();
   }

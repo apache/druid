@@ -72,7 +72,6 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -238,11 +237,7 @@ public class FilteredAggregatorBenchmark
   private IncrementalIndex makeIncIndex(AggregatorFactory[] metrics)
   {
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(metrics)
-                .build()
-        )
+        .setSimpleTestingIndexSchema(metrics)
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();

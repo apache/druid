@@ -142,7 +142,7 @@ public class SchemalessIndexTest
 
         if (theIndex == null) {
           theIndex = new IncrementalIndex.Builder()
-              .setIncrementalIndexSchema(
+              .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(timestamp)
                       .withQueryGranularity(Granularities.MINUTE)
@@ -360,7 +360,7 @@ public class SchemalessIndexTest
           }
 
           final IncrementalIndex rowIndex = new IncrementalIndex.Builder()
-              .setIncrementalIndexSchema(
+              .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(timestamp)
                       .withQueryGranularity(Granularities.MINUTE)
@@ -397,7 +397,7 @@ public class SchemalessIndexTest
     log.info("Realtime loading index file[%s]", filename);
 
     final IncrementalIndex retVal = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
                 .withQueryGranularity(Granularities.MINUTE)

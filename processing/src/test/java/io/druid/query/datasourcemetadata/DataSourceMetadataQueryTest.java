@@ -40,7 +40,6 @@ import io.druid.query.Result;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -113,11 +112,7 @@ public class DataSourceMetadataQueryTest
   public void testMaxIngestedEventTime() throws Exception
   {
     final IncrementalIndex rtIndex = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(new CountAggregatorFactory("count"))
-                .build()
-        )
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setMaxRowCount(1000)
         .buildOnheap();
 

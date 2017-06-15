@@ -46,7 +46,6 @@ import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -130,11 +129,7 @@ public class GroupByQueryRunnerFactoryTest
   private Segment createSegment() throws Exception
   {
     IncrementalIndex incrementalIndex = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(new CountAggregatorFactory("count"))
-                .build()
-        )
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
         .setConcurrentEventAdd(true)
         .setMaxRowCount(5000)
         .buildOnheap();

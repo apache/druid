@@ -50,7 +50,7 @@ public class DistinctCountTimeseriesQueryTest
     TimeseriesQueryEngine engine =  new TimeseriesQueryEngine();
 
     IncrementalIndex index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))

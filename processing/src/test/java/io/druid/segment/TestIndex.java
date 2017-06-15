@@ -265,7 +265,7 @@ public class TestIndex
         .withRollup(rollup)
         .build();
     final IncrementalIndex retVal = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(schema)
+        .setIndexSchema(schema)
         .setMaxRowCount(10000)
         .buildOnheap();
 

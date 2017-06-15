@@ -139,7 +139,7 @@ public class IngestSegmentFirehoseFactoryTest
         )
         .build();
     final IncrementalIndex index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(schema)
+        .setIndexSchema(schema)
         .setMaxRowCount(MAX_ROWS * MAX_SHARD_NUMBER)
         .buildOnheap();
 

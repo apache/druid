@@ -116,7 +116,7 @@ public class SpatialFilterBonusTest
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
     IncrementalIndex theIndex = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                 .withQueryGranularity(Granularities.DAY)
@@ -259,7 +259,7 @@ public class SpatialFilterBonusTest
   {
     try {
       IncrementalIndex first = new IncrementalIndex.Builder()
-          .setIncrementalIndexSchema(
+          .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)
@@ -283,7 +283,7 @@ public class SpatialFilterBonusTest
           .buildOnheap();
 
       IncrementalIndex second = new IncrementalIndex.Builder()
-          .setIncrementalIndexSchema(
+          .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)
@@ -306,7 +306,7 @@ public class SpatialFilterBonusTest
           .buildOnheap();
 
       IncrementalIndex third = new IncrementalIndex.Builder()
-          .setIncrementalIndexSchema(
+          .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
                   .withQueryGranularity(Granularities.DAY)

@@ -62,7 +62,7 @@ public class StringDimensionHandlerTest
       Map<String, Object> event2
   ) throws Exception {
     IncrementalIndex incrementalIndex1 = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(TEST_INTERVAL.getStartMillis())
                 .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
@@ -73,7 +73,7 @@ public class StringDimensionHandlerTest
         .buildOnheap();
 
     IncrementalIndex incrementalIndex2 = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(TEST_INTERVAL.getStartMillis())
                 .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))

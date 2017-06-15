@@ -102,7 +102,7 @@ public class IncrementalIndexTest
                 public IncrementalIndex createIndex()
                 {
                   return new IncrementalIndex.Builder()
-                      .setIncrementalIndexSchema(schema)
+                      .setIndexSchema(schema)
                       .setDeserializeComplexMetrics(false)
                       .setSortFacts(sortFacts)
                       .setMaxRowCount(1000)
@@ -119,7 +119,7 @@ public class IncrementalIndexTest
                 public IncrementalIndex createIndex()
                 {
                   return new IncrementalIndex.Builder()
-                      .setIncrementalIndexSchema(schema)
+                      .setIndexSchema(schema)
                       .setSortFacts(sortFacts)
                       .setMaxRowCount(1000000)
                       .buildOffheap(

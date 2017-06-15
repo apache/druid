@@ -26,7 +26,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
-import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -49,7 +48,7 @@ public class EmptyIndexTest
 
     try {
       IncrementalIndex emptyIndex = new IncrementalIndex.Builder()
-          .setIncrementalIndexSchema(new IncrementalIndexSchema.Builder().build())
+          .setSimpleTestingIndexSchema(/* empty */)
           .setMaxRowCount(1000)
           .buildOnheap();
 

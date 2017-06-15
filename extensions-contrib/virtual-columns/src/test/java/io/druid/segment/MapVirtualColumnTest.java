@@ -87,7 +87,7 @@ public class MapVirtualColumnTest
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
         .build();
     final IncrementalIndex index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(schema)
+        .setIndexSchema(schema)
         .setMaxRowCount(10000)
         .buildOnheap();
 

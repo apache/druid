@@ -98,11 +98,7 @@ public class IncrementalIndexStorageAdapterTest
                   public IncrementalIndex createIndex()
                   {
                     return new IncrementalIndex.Builder()
-                        .setIncrementalIndexSchema(
-                            new IncrementalIndexSchema.Builder()
-                                .withMetrics(new CountAggregatorFactory("cnt"))
-                                .build()
-                        )
+                        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
                         .setMaxRowCount(1000)
                         .buildOnheap();
                   }

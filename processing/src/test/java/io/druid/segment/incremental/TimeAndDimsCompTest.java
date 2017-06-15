@@ -40,11 +40,7 @@ public class TimeAndDimsCompTest
   public void testBasic() throws IndexSizeExceededException
   {
     IncrementalIndex index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(new CountAggregatorFactory("cnt"))
-                .build()
-        )
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(1000)
         .buildOnheap();
 

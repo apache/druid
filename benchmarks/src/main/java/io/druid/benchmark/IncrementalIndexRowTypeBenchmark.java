@@ -27,7 +27,6 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -120,11 +119,7 @@ public class IncrementalIndexRowTypeBenchmark
   private IncrementalIndex makeIncIndex()
   {
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(aggs)
-                .build()
-        )
+        .setSimpleTestingIndexSchema(aggs)
         .setDeserializeComplexMetrics(false)
         .setReportParseExceptions(false)
         .setMaxRowCount(maxRows)

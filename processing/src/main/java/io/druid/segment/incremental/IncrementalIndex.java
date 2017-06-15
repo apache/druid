@@ -307,9 +307,29 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       maxRowCount = 0;
     }
 
-    public Builder setIncrementalIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
+    public Builder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
     {
       this.incrementalIndexSchema = incrementalIndexSchema;
+      return this;
+    }
+
+    // A helper method to set a simple index schema with only metrics and default values for the other parameters. Note
+    // that this method is normally used for testing and benchmarking; it is unlikely that you would use it in
+    // production settings.
+
+    /** A helper method to set a simple index schema with only metrics and default values for the other parameters. Note
+     * that this method is normally used for testing and benchmarking; it is unlikely that you would use it in
+     * production settings.
+     *
+     * @param metrics variable array of {@link AggregatorFactory} metrics
+     * @return this
+     */
+    @VisibleForTesting
+    public Builder setSimpleTestingIndexSchema(final AggregatorFactory... metrics)
+    {
+      this.incrementalIndexSchema = new IncrementalIndexSchema.Builder()
+          .withMetrics(metrics)
+          .build();
       return this;
     }
 

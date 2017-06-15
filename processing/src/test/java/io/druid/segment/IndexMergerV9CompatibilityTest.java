@@ -166,7 +166,7 @@ public class IndexMergerV9CompatibilityTest
   public void setUp() throws IOException
   {
     toPersist = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(JodaUtils.MIN_INSTANT)
                 .withMetrics(DEFAULT_AGG_FACTORIES)

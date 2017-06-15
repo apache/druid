@@ -119,7 +119,7 @@ public class GroupByQueryHelper
 
     if (query.getContextValue("useOffheap", false)) {
       index = new IncrementalIndex.Builder()
-          .setIncrementalIndexSchema(indexSchema)
+          .setIndexSchema(indexSchema)
           .setDeserializeComplexMetrics(false)
           .setConcurrentEventAdd(true)
           .setSortFacts(sortResults)
@@ -127,7 +127,7 @@ public class GroupByQueryHelper
           .buildOffheap(bufferPool);
     } else {
       index = new IncrementalIndex.Builder()
-          .setIncrementalIndexSchema(indexSchema)
+          .setIndexSchema(indexSchema)
           .setDeserializeComplexMetrics(false)
           .setConcurrentEventAdd(true)
           .setSortFacts(sortResults)

@@ -261,7 +261,7 @@ public class IndexIOTest
   }
 
   final IncrementalIndex<Aggregator> incrementalIndex1 = new IncrementalIndex.Builder()
-      .setIncrementalIndexSchema(
+      .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
@@ -278,7 +278,7 @@ public class IndexIOTest
       .buildOnheap();
 
   final IncrementalIndex<Aggregator> incrementalIndex2 = new IncrementalIndex.Builder()
-      .setIncrementalIndexSchema(
+      .setIndexSchema(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))

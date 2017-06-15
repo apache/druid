@@ -70,7 +70,7 @@ public class TimeseriesQueryRunnerBonusTest
   public void testOneRowAtATime() throws Exception
   {
     final IncrementalIndex oneRowIndex = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(new DateTime("2012-01-01T00:00:00Z").getMillis())
                 .build()

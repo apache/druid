@@ -744,7 +744,7 @@ public class SearchQueryRunnerTest
   public void testSearchWithNullValueInDimension() throws Exception
   {
     IncrementalIndex<Aggregator> index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
                 .build()

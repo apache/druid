@@ -71,7 +71,6 @@ import io.druid.segment.filter.Filters;
 import io.druid.segment.filter.OrFilter;
 import io.druid.segment.filter.SelectorFilter;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
@@ -227,11 +226,7 @@ public class FilterPartitionBenchmark
   private IncrementalIndex makeIncIndex()
   {
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(schemaInfo.getAggsArray())
-                .build()
-        )
+        .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();

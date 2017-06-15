@@ -132,11 +132,7 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
                     return new IncrementalIndex.Builder()
-                        .setIncrementalIndexSchema(
-                            new IncrementalIndexSchema.Builder()
-                                .withMetrics(factories)
-                                .build()
-                        )
+                        .setSimpleTestingIndexSchema(factories)
                         .setMaxRowCount(1000000)
                         .buildOffheap(
                             new StupidPool<ByteBuffer>(
@@ -171,7 +167,7 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
                     return new IncrementalIndex.Builder()
-                        .setIncrementalIndexSchema(
+                        .setIndexSchema(
                             new IncrementalIndexSchema.Builder()
                                 .withMetrics(factories)
                                 .withRollup(false)
@@ -219,7 +215,7 @@ public class IncrementalIndexTest
     }
 
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withDimensionsSpec(dimensionsSpec)
                 .withMetrics(aggregatorFactories)
@@ -236,11 +232,7 @@ public class IncrementalIndexTest
     }
 
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(aggregatorFactories)
-                .build()
-        )
+        .setSimpleTestingIndexSchema(aggregatorFactories)
         .setMaxRowCount(1000000)
         .buildOnheap();
   }
@@ -252,11 +244,7 @@ public class IncrementalIndexTest
     }
 
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(aggregatorFactories)
-                .build()
-        )
+        .setSimpleTestingIndexSchema(aggregatorFactories)
         .setMaxRowCount(1000000)
         .buildOnheap();
   }
@@ -786,7 +774,7 @@ public class IncrementalIndexTest
   public void testgetDimensions()
   {
     final IncrementalIndex<Aggregator> incrementalIndex = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMetrics(new CountAggregatorFactory("count"))
                 .withDimensionsSpec(
@@ -809,7 +797,7 @@ public class IncrementalIndexTest
   public void testDynamicSchemaRollup() throws IndexSizeExceededException
   {
     IncrementalIndex<Aggregator> index = new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(new IncrementalIndexSchema.Builder().build())
+        .setSimpleTestingIndexSchema(/* empty */)
         .setMaxRowCount(10)
         .buildOnheap();
     closer.closeLater(index);

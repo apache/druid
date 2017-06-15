@@ -414,7 +414,7 @@ public class AggregationTestHelper
 
     try {
       index = new IncrementalIndex.Builder()
-          .setIncrementalIndexSchema(
+          .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(minTimestamp)
                   .withQueryGranularity(gran)
@@ -433,7 +433,7 @@ public class AggregationTestHelper
           indexMerger.persist(index, tmp, new IndexSpec());
           index.close();
           index = new IncrementalIndex.Builder()
-              .setIncrementalIndexSchema(
+              .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(minTimestamp)
                       .withQueryGranularity(gran)

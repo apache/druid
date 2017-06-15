@@ -153,7 +153,7 @@ public class IndexPersistBenchmark
   private IncrementalIndex makeIncIndex()
   {
     return new IncrementalIndex.Builder()
-        .setIncrementalIndexSchema(
+        .setIndexSchema(
             new IncrementalIndexSchema.Builder()
             .withMetrics(schemaInfo.getAggsArray())
             .withRollup(rollup)
