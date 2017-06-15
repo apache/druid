@@ -26,9 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Druids;
@@ -39,12 +37,10 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -116,18 +112,14 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testMaxIngestedEventTime() throws Exception
   {
-    final IncrementalIndex rtIndex = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex rtIndex = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(0L)
-                .withQueryGranularity(Granularities.NONE)
-                .withDimensionsSpec(DimensionsSpec.ofEmpty())
-                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .withMetrics(new CountAggregatorFactory("count"))
                 .build()
         )
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new DataSourceMetadataQueryRunnerFactory(

@@ -87,11 +87,9 @@ public class IncrementalIndexTest
         )
     };
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0)
         .withQueryGranularity(Granularities.MINUTE)
         .withDimensionsSpec(dimensions)
         .withMetrics(metrics)
-        .withRollup(true)
         .build();
 
     final List<Object[]> constructors = Lists.newArrayList();
@@ -103,12 +101,12 @@ public class IncrementalIndexTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new OnheapIncrementalIndex.Builder()
+                  return new IncrementalIndex.Builder()
                       .setIncrementalIndexSchema(schema)
                       .setDeserializeComplexMetrics(false)
                       .setSortFacts(sortFacts)
                       .setMaxRowCount(1000)
-                      .build();
+                      .buildOnheap();
                 }
               }
           }
@@ -120,11 +118,11 @@ public class IncrementalIndexTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new OffheapIncrementalIndex.Builder()
+                  return new IncrementalIndex.Builder()
                       .setIncrementalIndexSchema(schema)
                       .setSortFacts(sortFacts)
                       .setMaxRowCount(1000000)
-                      .setBufferPool(
+                      .buildOffheap(
                           new StupidPool<ByteBuffer>(
                               "OffheapIncrementalIndex-bufferPool",
                               new Supplier<ByteBuffer>()
@@ -136,8 +134,7 @@ public class IncrementalIndexTest
                                 }
                               }
                           )
-                      )
-                      .build();
+                      );
                 }
               }
           }

@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -67,6 +68,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.lang.reflect.Array;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -75,6 +77,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -220,7 +223,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    *                                  from input rows
    * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
    */
-  public IncrementalIndex(
+  protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
       final boolean reportParseExceptions,
@@ -282,6 +285,95 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
+    }
+  }
+
+  public static class Builder
+  {
+    private IncrementalIndexSchema incrementalIndexSchema;
+    private boolean deserializeComplexMetrics;
+    private boolean reportParseExceptions;
+    private boolean concurrentEventAdd;
+    private boolean sortFacts;
+    private int maxRowCount;
+
+    public Builder()
+    {
+      incrementalIndexSchema = null;
+      deserializeComplexMetrics = true;
+      reportParseExceptions = true;
+      concurrentEventAdd = false;
+      sortFacts = true;
+      maxRowCount = 0;
+    }
+
+    public Builder setIncrementalIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
+    {
+      this.incrementalIndexSchema = incrementalIndexSchema;
+      return this;
+    }
+
+    public Builder setDeserializeComplexMetrics(final boolean deserializeComplexMetrics)
+    {
+      this.deserializeComplexMetrics = deserializeComplexMetrics;
+      return this;
+    }
+
+    public Builder setReportParseExceptions(final boolean reportParseExceptions)
+    {
+      this.reportParseExceptions = reportParseExceptions;
+      return this;
+    }
+
+    public Builder setConcurrentEventAdd(final boolean concurrentEventAdd)
+    {
+      this.concurrentEventAdd = concurrentEventAdd;
+      return this;
+    }
+
+    public Builder setSortFacts(final boolean sortFacts)
+    {
+      this.sortFacts = sortFacts;
+      return this;
+    }
+
+    public Builder setMaxRowCount(final int maxRowCount)
+    {
+      this.maxRowCount = maxRowCount;
+      return this;
+    }
+
+    public IncrementalIndex buildOnheap()
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OnheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount
+      );
+    }
+
+    public IncrementalIndex buildOffheap(final StupidPool<ByteBuffer> bufferPool)
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OffheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount,
+          Objects.requireNonNull(bufferPool, "bufferPool is null")
+      );
     }
   }
 

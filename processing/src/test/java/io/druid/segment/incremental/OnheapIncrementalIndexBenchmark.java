@@ -33,7 +33,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
@@ -112,6 +111,25 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     ConcurrentHashMap<Integer, Aggregator[]> indexedMap = new ConcurrentHashMap<Integer, Aggregator[]>();
 
     public MapIncrementalIndex(
+        IncrementalIndexSchema incrementalIndexSchema,
+        boolean deserializeComplexMetrics,
+        boolean reportParseExceptions,
+        boolean concurrentEventAdd,
+        boolean sortFacts,
+        int maxRowCount
+    )
+    {
+      super(
+          incrementalIndexSchema,
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount
+      );
+    }
+
+    public MapIncrementalIndex(
         long minTimestamp,
         Granularity gran,
         AggregatorFactory[] metrics,
@@ -122,9 +140,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
             .withQueryGranularity(gran)
-            .withDimensionsSpec(DimensionsSpec.ofEmpty())
             .withMetrics(metrics)
-            .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
             .build(),
         true,
         true,
@@ -268,12 +284,21 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     final int concurrentThreads = 3;
     final int elementsPerThread = 1 << 15;
 
-    final OnheapIncrementalIndex incrementalIndex = this.incrementalIndex.getConstructor(
-        Long.TYPE,
-        Granularity.class,
-        AggregatorFactory[].class,
+    final IncrementalIndex incrementalIndex = this.incrementalIndex.getConstructor(
+        IncrementalIndexSchema.class,
+        Boolean.TYPE,
+        Boolean.TYPE,
+        Boolean.TYPE,
+        Boolean.TYPE,
         Integer.TYPE
-    ).newInstance(0, Granularities.NONE, factories, elementsPerThread * taskCount);
+    ).newInstance(
+        new IncrementalIndexSchema.Builder().withMetrics(factories).build(),
+        true,
+        true,
+        false,
+        true,
+        elementsPerThread * taskCount
+    );
     final ArrayList<AggregatorFactory> queryAggregatorFactories = new ArrayList<>(dimensionCount + 1);
     queryAggregatorFactories.add(new CountAggregatorFactory("rows"));
     for (int i = 0; i < dimensionCount; ++i) {

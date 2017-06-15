@@ -93,11 +93,9 @@ public class DruidSchemaTest
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(
-                                                          new AggregatorFactory[]{
-                                                              new CountAggregatorFactory("cnt"),
-                                                              new DoubleSumAggregatorFactory("m1", "m1"),
-                                                              new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                          }
+                                                          new CountAggregatorFactory("cnt"),
+                                                          new DoubleSumAggregatorFactory("m1", "m1"),
+                                                          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
                                                       )
                                                       .withRollup(false)
                                                       .build()
@@ -111,10 +109,7 @@ public class DruidSchemaTest
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(
-                                                          new AggregatorFactory[]{
-                                                              new LongSumAggregatorFactory("m1", "m1")
-                                                          }
-                                                      )
+                                                          new LongSumAggregatorFactory("m1", "m1"))
                                                       .withRollup(false)
                                                       .build()
                                               )

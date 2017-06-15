@@ -54,10 +54,8 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
@@ -65,8 +63,8 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -133,20 +131,17 @@ public class IngestSegmentFirehoseFactoryTest
         }
     );
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withQueryGranularity(Granularities.NONE)
         .withMinTimestamp(JodaUtils.MIN_INSTANT)
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory(METRIC_LONG_NAME, DIM_LONG_NAME),
-                new DoubleSumAggregatorFactory(METRIC_FLOAT_NAME, DIM_FLOAT_NAME)
-            }
+            new LongSumAggregatorFactory(METRIC_LONG_NAME, DIM_LONG_NAME),
+            new DoubleSumAggregatorFactory(METRIC_FLOAT_NAME, DIM_FLOAT_NAME)
         )
         .build();
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex index = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(schema)
         .setMaxRowCount(MAX_ROWS * MAX_SHARD_NUMBER)
-        .build();
+        .buildOnheap();
 
     for (Integer i = 0; i < MAX_ROWS; ++i) {
       index.add(ROW_PARSER.parse(buildRow(i.longValue())));

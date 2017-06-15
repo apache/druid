@@ -95,11 +95,12 @@ public class InvalidFilteringTest extends BaseFilterTest
 
   private static IndexBuilder overrideIndexBuilderSchema(IndexBuilder indexBuilder)
   {
-    IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder().withMetrics(new AggregatorFactory[]{
-        new CountAggregatorFactory("count"),
-        new HyperUniquesAggregatorFactory("hyperion", "dim1"),
-        new DoubleMaxAggregatorFactory("dmax", "dim0")
-    }).build();
+    IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withMetrics(
+            new CountAggregatorFactory("count"),
+            new HyperUniquesAggregatorFactory("hyperion", "dim1"),
+            new DoubleMaxAggregatorFactory("dmax", "dim0")
+        ).build();
 
     return indexBuilder.schema(schema);
   }

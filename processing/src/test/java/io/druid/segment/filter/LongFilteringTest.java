@@ -112,11 +112,8 @@ public class LongFilteringTest extends BaseFilterTest
         ROWS,
         indexBuilder.schema(
             new IncrementalIndexSchema.Builder()
-                .withMetrics(
-                    new AggregatorFactory[]{
-                        new LongSumAggregatorFactory(LONG_COLUMN, LONG_COLUMN)
-                    }
-                ).build()
+                .withMetrics(new LongSumAggregatorFactory(LONG_COLUMN, LONG_COLUMN))
+                .build()
         ),
         finisher,
         cnf,

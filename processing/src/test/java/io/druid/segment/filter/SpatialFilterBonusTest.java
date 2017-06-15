@@ -54,7 +54,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -116,7 +115,7 @@ public class SpatialFilterBonusTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex theIndex = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -137,7 +136,7 @@ public class SpatialFilterBonusTest
         )
         .setReportParseExceptions(false)
         .setMaxRowCount(NUM_POINTS)
-        .build();
+        .buildOnheap();
 
     theIndex.add(
         new MapBasedInputRow(
@@ -259,7 +258,7 @@ public class SpatialFilterBonusTest
   private static QueryableIndex makeMergedQueryableIndex(final IndexSpec indexSpec)
   {
     try {
-      IncrementalIndex first = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex first = new IncrementalIndex.Builder()
           .setIncrementalIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -281,9 +280,9 @@ public class SpatialFilterBonusTest
           )
           .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
-          .build();
+          .buildOnheap();
 
-      IncrementalIndex second = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex second = new IncrementalIndex.Builder()
           .setIncrementalIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -304,9 +303,9 @@ public class SpatialFilterBonusTest
           )
           .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
-          .build();
+          .buildOnheap();
 
-      IncrementalIndex third = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex third = new IncrementalIndex.Builder()
           .setIncrementalIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -328,7 +327,7 @@ public class SpatialFilterBonusTest
           )
           .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
-          .build();
+          .buildOnheap();
 
       first.add(
           new MapBasedInputRow(

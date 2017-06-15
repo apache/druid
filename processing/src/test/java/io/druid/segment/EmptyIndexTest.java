@@ -22,14 +22,11 @@ package io.druid.segment;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
-import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -51,18 +48,10 @@ public class EmptyIndexTest
     }
 
     try {
-      IncrementalIndex emptyIndex = new OnheapIncrementalIndex.Builder()
-          .setIncrementalIndexSchema(
-              new IncrementalIndexSchema.Builder()
-                  .withMinTimestamp(0)
-                  .withQueryGranularity(Granularities.NONE)
-                  .withDimensionsSpec(DimensionsSpec.ofEmpty())
-                  .withMetrics(new AggregatorFactory[0])
-                  .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
-                  .build()
-          )
+      IncrementalIndex emptyIndex = new IncrementalIndex.Builder()
+          .setIncrementalIndexSchema(new IncrementalIndexSchema.Builder().build())
           .setMaxRowCount(1000)
-          .build();
+          .buildOnheap();
 
       IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
           new Interval("2012-08-01/P3D"),

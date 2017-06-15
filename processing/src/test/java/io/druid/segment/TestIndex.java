@@ -33,7 +33,6 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogHash;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -44,7 +43,6 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -261,16 +259,15 @@ public class TestIndex
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
         .withTimestampSpec(new TimestampSpec("ds", "auto", null))
-        .withQueryGranularity(Granularities.NONE)
         .withDimensionsSpec(DIMENSIONS_SPEC)
         .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)
         .build();
-    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex retVal = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(schema)
         .setMaxRowCount(10000)
-        .build();
+        .buildOnheap();
 
     try {
       return loadIncrementalIndex(retVal, source);

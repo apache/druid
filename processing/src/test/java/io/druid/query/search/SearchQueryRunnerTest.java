@@ -23,7 +23,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -61,7 +60,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -745,16 +743,14 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithNullValueInDimension() throws Exception
   {
-    IncrementalIndex<Aggregator> index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex<Aggregator> index = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withQueryGranularity(Granularities.NONE)
                 .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
                 .build()
         )
-        .setReportParseExceptions(true)
         .setMaxRowCount(10)
-        .build();
+        .buildOnheap();
 
     index.add(
         new MapBasedInputRow(

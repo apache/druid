@@ -28,8 +28,6 @@ import com.google.common.io.Files;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -37,7 +35,6 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -168,18 +165,15 @@ public class IndexMergerV9CompatibilityTest
   @Before
   public void setUp() throws IOException
   {
-    toPersist = new OnheapIncrementalIndex.Builder()
+    toPersist = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(JodaUtils.MIN_INSTANT)
-                .withQueryGranularity(Granularities.NONE)
-                .withDimensionsSpec(DimensionsSpec.ofEmpty())
                 .withMetrics(DEFAULT_AGG_FACTORIES)
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
                 .build()
         )
     .setMaxRowCount(1000000)
-    .build();
+    .buildOnheap();
 
     toPersist.getMetadata().put("key", "value");
     for (InputRow event : events) {

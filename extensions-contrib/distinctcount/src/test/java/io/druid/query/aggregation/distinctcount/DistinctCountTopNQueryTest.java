@@ -25,12 +25,10 @@ import com.google.common.collect.Lists;
 
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
@@ -40,7 +38,6 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
@@ -70,18 +67,15 @@ public class DistinctCountTopNQueryTest
         )
     );
 
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex index = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(0)
                 .withQueryGranularity(Granularities.SECOND)
-                .withDimensionsSpec(DimensionsSpec.ofEmpty())
-                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .withMetrics(new CountAggregatorFactory("cnt"))
                 .build()
         )
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
     String visitor_id = "visitor_id";
     String client_type = "client_type";

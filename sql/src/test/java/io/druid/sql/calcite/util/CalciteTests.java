@@ -281,11 +281,9 @@ public class CalciteTests
 
   private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
-          new AggregatorFactory[]{
-              new CountAggregatorFactory("cnt"),
-              new DoubleSumAggregatorFactory("m1", "m1"),
-              new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-          }
+          new CountAggregatorFactory("cnt"),
+          new DoubleSumAggregatorFactory("m1", "m1"),
+          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
       )
       .withRollup(false)
       .build();

@@ -23,8 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.granularity.Granularities;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
@@ -33,7 +31,6 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
 import org.junit.Rule;
 import org.junit.Test;
@@ -64,31 +61,27 @@ public class StringDimensionHandlerTest
       Map<String, Object> event1,
       Map<String, Object> event2
   ) throws Exception {
-    IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex incrementalIndex1 = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(TEST_INTERVAL.getStartMillis())
-                .withQueryGranularity(Granularities.NONE)
                 .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
-                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
-                .withRollup(true)
+                .withMetrics(new CountAggregatorFactory("count"))
                 .build()
         )
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
-    IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex incrementalIndex2 = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(TEST_INTERVAL.getStartMillis())
-                .withQueryGranularity(Granularities.NONE)
                 .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
-                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
-                .withRollup(true)
+                .withMetrics(new CountAggregatorFactory("count"))
                 .build()
         )
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
     incrementalIndex1.add(new MapBasedInputRow(TEST_INTERVAL.getStartMillis(), dims, event1));
     incrementalIndex2.add(new MapBasedInputRow(TEST_INTERVAL.getStartMillis() + 3, dims, event2));

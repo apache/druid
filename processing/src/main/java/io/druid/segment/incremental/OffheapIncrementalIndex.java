@@ -36,7 +36,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -66,7 +65,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   private String outOfRowsReason = null;
 
-  public OffheapIncrementalIndex(
+  OffheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -90,87 +89,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       throw new IAE("bufferPool buffers capacity must be >= [%s]", aggsTotalSize);
     }
     aggBuffers.add(bb);
-  }
-
-  public static class Builder
-  {
-    private IncrementalIndexSchema incrementalIndexSchema;
-    private boolean deserializeComplexMetrics;
-    private boolean reportParseExceptions;
-    private boolean concurrentEventAdd;
-    private boolean sortFacts;
-    private int maxRowCount;
-    private StupidPool<ByteBuffer> bufferPool;
-
-    public Builder()
-    {
-      incrementalIndexSchema = null;
-      deserializeComplexMetrics = true;
-      reportParseExceptions = true;
-      concurrentEventAdd = false;
-      sortFacts = true;
-      maxRowCount = 0;
-      bufferPool = null;
-    }
-
-    public Builder setIncrementalIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
-    {
-      this.incrementalIndexSchema = incrementalIndexSchema;
-      return this;
-    }
-
-    public Builder setDeserializeComplexMetrics(final boolean deserializeComplexMetrics)
-    {
-      this.deserializeComplexMetrics = deserializeComplexMetrics;
-      return this;
-    }
-
-    public Builder setReportParseExceptions(final boolean reportParseExceptions)
-    {
-      this.reportParseExceptions = reportParseExceptions;
-      return this;
-    }
-
-    public Builder setConcurrentEventAdd(final boolean concurrentEventAdd)
-    {
-      this.concurrentEventAdd = concurrentEventAdd;
-      return this;
-    }
-
-    public Builder setSortFacts(final boolean sortFacts)
-    {
-      this.sortFacts = sortFacts;
-      return this;
-    }
-
-    public Builder setMaxRowCount(final int maxRowCount)
-    {
-      this.maxRowCount = maxRowCount;
-      return this;
-    }
-
-    public Builder setBufferPool(final StupidPool<ByteBuffer> bufferPool)
-    {
-      this.bufferPool = bufferPool;
-      return this;
-    }
-
-    public OffheapIncrementalIndex build()
-    {
-      if (maxRowCount <= 0) {
-        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
-      }
-
-      return new OffheapIncrementalIndex(
-          Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
-          deserializeComplexMetrics,
-          reportParseExceptions,
-          concurrentEventAdd,
-          sortFacts,
-          maxRowCount,
-          Objects.requireNonNull(bufferPool, "bufferPool is null")
-      );
-    }
   }
 
   @Override

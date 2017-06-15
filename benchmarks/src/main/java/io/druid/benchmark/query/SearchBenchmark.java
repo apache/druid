@@ -32,7 +32,6 @@ import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
@@ -77,7 +76,6 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -388,17 +386,15 @@ public class SearchBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex.Builder()
+    return new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(DimensionsSpec.ofEmpty())
             .build()
         )
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .build();
+        .buildOnheap();
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)

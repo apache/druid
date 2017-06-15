@@ -22,14 +22,12 @@ package io.druid.benchmark;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -121,19 +119,16 @@ public class IncrementalIndexRowTypeBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex.Builder()
+    return new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(0)
-                .withQueryGranularity(Granularities.NONE)
                 .withMetrics(aggs)
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
                 .build()
         )
         .setDeserializeComplexMetrics(false)
         .setReportParseExceptions(false)
         .setMaxRowCount(maxRows)
-        .build();
+        .buildOnheap();
   }
 
   @Setup

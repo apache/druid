@@ -47,7 +47,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -130,18 +129,15 @@ public class GroupByQueryRunnerFactoryTest
 
   private Segment createSegment() throws Exception
   {
-    IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex incrementalIndex = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(0)
-                .withQueryGranularity(Granularities.NONE)
-                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .withMetrics(new CountAggregatorFactory("count"))
                 .build()
         )
         .setConcurrentEventAdd(true)
         .setMaxRowCount(5000)
-        .build();
+        .buildOnheap();
 
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(

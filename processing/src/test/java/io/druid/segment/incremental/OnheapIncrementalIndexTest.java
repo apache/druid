@@ -22,10 +22,8 @@ package io.druid.segment.incremental;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregator;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.easymock.EasyMock;
@@ -43,18 +41,15 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testMultithreadAddFacts() throws Exception
   {
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex index = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(0)
                 .withQueryGranularity(Granularities.MINUTE)
-                .withDimensionsSpec(DimensionsSpec.ofEmpty())
-                .withMetrics(new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")})
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .withMetrics(new LongMaxAggregatorFactory("max", "max"))
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .build();
+        .buildOnheap();
 
     final Random random = new Random();
     final int addThreadCount = 2;
@@ -115,18 +110,15 @@ public class OnheapIncrementalIndexTest
     mockedAggregator.close();
     EasyMock.expectLastCall().times(1);
 
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(0)
                 .withQueryGranularity(Granularities.MINUTE)
-                .withDimensionsSpec(DimensionsSpec.ofEmpty())
-                .withMetrics(new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")})
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .withMetrics(new LongMaxAggregatorFactory("max", "max"))
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .build();
+        .buildOnheap();
 
     index.add(new MapBasedInputRow(
             0,

@@ -188,10 +188,10 @@ public class MultiSegmentSelectQueryTest
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
-    return new OnheapIncrementalIndex.Builder()
+    return new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(schema)
         .setMaxRowCount(maxRowCount)
-        .build();
+        .buildOnheap();
   }
 
   @AfterClass

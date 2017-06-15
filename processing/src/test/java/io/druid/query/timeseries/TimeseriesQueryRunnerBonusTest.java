@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
@@ -39,7 +38,6 @@ import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -71,18 +69,14 @@ public class TimeseriesQueryRunnerBonusTest
   @Test
   public void testOneRowAtATime() throws Exception
   {
-    final IncrementalIndex oneRowIndex = new OnheapIncrementalIndex.Builder()
+    final IncrementalIndex oneRowIndex = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(new DateTime("2012-01-01T00:00:00Z").getMillis())
-                .withQueryGranularity(Granularities.NONE)
-                .withDimensionsSpec(DimensionsSpec.ofEmpty())
-                .withMetrics(new AggregatorFactory[]{})
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
                 .build()
         )
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
     List<Result<TimeseriesResultValue>> results;
 

@@ -25,10 +25,8 @@ import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
@@ -39,7 +37,6 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -161,18 +158,16 @@ public class IndexMergeBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex.Builder()
+    return new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(DimensionsSpec.ofEmpty())
             .withRollup(rollup)
             .build()
         )
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .build();
+        .buildOnheap();
   }
 
   @Benchmark

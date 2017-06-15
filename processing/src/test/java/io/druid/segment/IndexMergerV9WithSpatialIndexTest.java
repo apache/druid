@@ -45,7 +45,6 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -102,7 +101,7 @@ public class IndexMergerV9WithSpatialIndexTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex theIndex = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -126,8 +125,9 @@ public class IndexMergerV9WithSpatialIndexTest
                     )
                 ).build()
         )
+        .setReportParseExceptions(false)
         .setMaxRowCount(NUM_POINTS)
-        .build();
+        .buildOnheap();
 
     theIndex.add(
         new MapBasedInputRow(
@@ -272,7 +272,7 @@ public class IndexMergerV9WithSpatialIndexTest
   private static QueryableIndex makeMergedQueryableIndex(IndexSpec indexSpec)
   {
     try {
-      IncrementalIndex first = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex first = new IncrementalIndex.Builder()
           .setIncrementalIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -298,9 +298,9 @@ public class IndexMergerV9WithSpatialIndexTest
           )
           .setReportParseExceptions(false)
           .setMaxRowCount(1000)
-          .build();
+          .buildOnheap();
 
-      IncrementalIndex second = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex second = new IncrementalIndex.Builder()
           .setIncrementalIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -326,9 +326,9 @@ public class IndexMergerV9WithSpatialIndexTest
           )
           .setReportParseExceptions(false)
           .setMaxRowCount(1000)
-          .build();
+          .buildOnheap();
 
-      IncrementalIndex third = new OnheapIncrementalIndex.Builder()
+      IncrementalIndex third = new IncrementalIndex.Builder()
           .setIncrementalIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -354,7 +354,7 @@ public class IndexMergerV9WithSpatialIndexTest
           )
           .setReportParseExceptions(false)
           .setMaxRowCount(NUM_POINTS)
-          .build();
+          .buildOnheap();
 
       first.add(
           new MapBasedInputRow(

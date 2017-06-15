@@ -108,11 +108,8 @@ public class FloatFilteringTest extends BaseFilterTest
         ROWS,
         indexBuilder.schema(
             new IncrementalIndexSchema.Builder()
-                .withMetrics(
-                    new AggregatorFactory[]{
-                        new DoubleSumAggregatorFactory(FLOAT_COLUMN, FLOAT_COLUMN)
-                    }
-                ).build()
+                .withMetrics(new DoubleSumAggregatorFactory(FLOAT_COLUMN, FLOAT_COLUMN))
+                .build()
         ),
         finisher,
         cnf,

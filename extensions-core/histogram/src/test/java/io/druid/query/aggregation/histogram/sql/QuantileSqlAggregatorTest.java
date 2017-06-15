@@ -96,18 +96,16 @@ public class QuantileSqlAggregatorTest
                                              .schema(
                                                  new IncrementalIndexSchema.Builder()
                                                      .withMetrics(
-                                                         new AggregatorFactory[]{
-                                                             new CountAggregatorFactory("cnt"),
-                                                             new DoubleSumAggregatorFactory("m1", "m1"),
-                                                             new ApproximateHistogramAggregatorFactory(
-                                                                 "hist_m1",
-                                                                 "m1",
-                                                                 null,
-                                                                 null,
-                                                                 null,
-                                                                 null
-                                                             )
-                                                         }
+                                                         new CountAggregatorFactory("cnt"),
+                                                         new DoubleSumAggregatorFactory("m1", "m1"),
+                                                         new ApproximateHistogramAggregatorFactory(
+                                                             "hist_m1",
+                                                             "m1",
+                                                             null,
+                                                             null,
+                                                             null,
+                                                             null
+                                                         )
                                                      )
                                                      .withRollup(false)
                                                      .build()

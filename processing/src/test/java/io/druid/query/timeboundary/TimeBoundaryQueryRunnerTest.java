@@ -38,7 +38,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -119,10 +118,10 @@ public class TimeBoundaryQueryRunnerTest
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
-    return new OnheapIncrementalIndex.Builder()
+    return new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(schema)
         .setMaxRowCount(maxRowCount)
-        .build();
+        .buildOnheap();
   }
 
   private static String makeIdentifier(IncrementalIndex index, String version)

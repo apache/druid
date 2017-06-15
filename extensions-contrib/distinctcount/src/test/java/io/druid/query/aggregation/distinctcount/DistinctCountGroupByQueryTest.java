@@ -23,10 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -42,7 +40,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -58,18 +55,16 @@ public class DistinctCountGroupByQueryTest
     config.setMaxIntermediateRows(10000);
     final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
 
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex index = new IncrementalIndex.Builder()
         .setIncrementalIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(0)
                 .withQueryGranularity(Granularities.SECOND)
-                .withDimensionsSpec(DimensionsSpec.ofEmpty())
-                .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
-                .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
+                .withMetrics(new CountAggregatorFactory("cnt"))
                 .build()
         )
+        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
-        .build();
+        .buildOnheap();
 
     String visitor_id = "visitor_id";
     String client_type = "client_type";

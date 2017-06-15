@@ -31,7 +31,6 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogCollector;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -46,7 +45,6 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -105,16 +103,15 @@ public class IngestSegmentFirehoseTest
 
     try (
         final QueryableIndex qi = indexIO.loadIndex(segmentDir);
-        final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        final IncrementalIndex index = new IncrementalIndex.Builder()
             .setIncrementalIndexSchema(
                 new IncrementalIndexSchema.Builder()
                     .withDimensionsSpec(DIMENSIONS_SPEC_REINDEX)
-                    .withQueryGranularity(Granularities.NONE)
                     .withMetrics(AGGREGATORS_REINDEX.toArray(new AggregatorFactory[]{}))
                     .build()
             )
         .setMaxRowCount(5000)
-        .build();
+        .buildOnheap();
     ) {
       final StorageAdapter sa = new QueryableIndexStorageAdapter(qi);
       final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
@@ -194,16 +191,15 @@ public class IngestSegmentFirehoseTest
     );
 
     try (
-        final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        final IncrementalIndex index = new IncrementalIndex.Builder()
             .setIncrementalIndexSchema(
                 new IncrementalIndexSchema.Builder()
                     .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
-                    .withQueryGranularity(Granularities.NONE)
                     .withMetrics(AGGREGATORS.toArray(new AggregatorFactory[]{}))
                     .build()
             )
         .setMaxRowCount(5000)
-        .build();
+        .buildOnheap();
     ) {
       for (String line : rows) {
         index.add(parser.parse(line));
