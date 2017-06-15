@@ -313,15 +313,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       return this;
     }
 
-    // A helper method to set a simple index schema with only metrics and default values for the other parameters. Note
-    // that this method is normally used for testing and benchmarking; it is unlikely that you would use it in
-    // production settings.
-
-    /** A helper method to set a simple index schema with only metrics and default values for the other parameters. Note
+    /**
+     * A helper method to set a simple index schema with only metrics and default values for the other parameters. Note
      * that this method is normally used for testing and benchmarking; it is unlikely that you would use it in
      * production settings.
      *
      * @param metrics variable array of {@link AggregatorFactory} metrics
+     *
      * @return this
      */
     @VisibleForTesting
