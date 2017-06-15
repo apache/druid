@@ -34,7 +34,6 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.BoundDimFilter;

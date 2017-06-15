@@ -29,7 +29,6 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.Pair;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;

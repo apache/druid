@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;

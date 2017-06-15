@@ -46,7 +46,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
