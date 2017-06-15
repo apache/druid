@@ -540,7 +540,8 @@ public class GroupByRules
             postAggregatorName,
             rowOrder,
             finalizingPostAggregatorFactories,
-            projectExpression
+            projectExpression,
+            druidRel.getPlannerContext()
         );
         if (postAggregator != null) {
           newAggregations.add(Aggregation.create(postAggregator));
