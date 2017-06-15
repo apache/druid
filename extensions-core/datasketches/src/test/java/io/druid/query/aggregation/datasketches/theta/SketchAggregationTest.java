@@ -98,7 +98,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_aggregators.json"),
         0,
         Granularities.NONE,
-        5,
+        1000,
         readFileFromClasspathAsString("sketch_test_data_group_by_query.json")
     );
 
@@ -139,7 +139,7 @@ public class SketchAggregationTest
         + "]",
         0,
         Granularities.NONE,
-        5,
+        1000,
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
 
