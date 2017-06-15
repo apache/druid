@@ -33,6 +33,9 @@ public class AvaticaServerConfig
   @JsonProperty
   public Period connectionIdleTimeout = new Period("PT5M");
 
+  @JsonProperty
+  public int maxRowsPerFrame = 100_000;
+
   public int getMaxConnections()
   {
     return maxConnections;
@@ -46,5 +49,10 @@ public class AvaticaServerConfig
   public Period getConnectionIdleTimeout()
   {
     return connectionIdleTimeout;
+  }
+
+  public int getMaxRowsPerFrame()
+  {
+    return maxRowsPerFrame;
   }
 }

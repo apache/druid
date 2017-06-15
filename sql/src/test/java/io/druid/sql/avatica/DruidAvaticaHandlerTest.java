@@ -42,6 +42,9 @@ import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
+import org.apache.calcite.avatica.Meta;
+import org.apache.calcite.avatica.MissingResultsException;
+import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.schema.SchemaPlus;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
@@ -513,6 +516,94 @@ public class DruidAvaticaHandlerTest
 
     final Connection connection3 = DriverManager.getConnection(url);
     Assert.assertTrue(true);
+  }
+
+  @Test
+  public void testMaxRowsPerFrame() throws Exception
+  {
+    final AvaticaServerConfig smallFrameConfig = new AvaticaServerConfig()
+    {
+      @Override
+      public int getMaxConnections()
+      {
+        return 2;
+      }
+
+      @Override
+      public int getMaxStatementsPerConnection()
+      {
+        return 4;
+      }
+
+      @Override
+      public int getMaxRowsPerFrame()
+      {
+        return 2;
+      }
+    };
+
+    final PlannerConfig plannerConfig = new PlannerConfig();
+    final SchemaPlus rootSchema = Calcites.createRootSchema(
+        CalciteTests.createMockSchema(
+            walker,
+            plannerConfig
+        )
+    );
+    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+
+    final List<Meta.Frame> frames = new ArrayList<>();
+    DruidMeta smallFrameDruidMeta = new DruidMeta(
+        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
+        smallFrameConfig
+    )
+    {
+      @Override
+      public Frame fetch(
+          final StatementHandle statement,
+          final long offset,
+          final int fetchMaxRowCount
+      ) throws NoSuchStatementException, MissingResultsException
+      {
+        // overriding fetch allows us to track how many frames are processed after the first frame
+        Frame frame = super.fetch(statement, offset, fetchMaxRowCount);
+        frames.add(frame);
+        return frame;
+      };
+    };
+
+    final DruidAvaticaHandler handler = new DruidAvaticaHandler(
+        smallFrameDruidMeta,
+        new DruidNode("dummy", "dummy", 1),
+        new AvaticaMonitor()
+    );
+    final int port = new Random().nextInt(9999) + 20000;
+    Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
+    smallFrameServer.setHandler(handler);
+    smallFrameServer.start();
+    String smallFrameUrl = String.format(
+        "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
+        port,
+        DruidAvaticaHandler.AVATICA_PATH
+    );
+    Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl);
+
+    final ResultSet resultSet = smallFrameClient.createStatement().executeQuery(
+        "SELECT dim1 FROM druid.foo"
+    );
+    List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(2, frames.size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("dim1", ""),
+            ImmutableMap.of("dim1", "10.1"),
+            ImmutableMap.of("dim1", "2"),
+            ImmutableMap.of("dim1", "1"),
+            ImmutableMap.of("dim1", "def"),
+            ImmutableMap.of("dim1", "abc")
+        ),
+        rows
+    );
   }
 
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException
