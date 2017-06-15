@@ -72,7 +72,7 @@ public class AppenderatorDriverTest
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
-  private static final long PUBLISH_TIMEOUT = 1000;
+  private static final long PUBLISH_TIMEOUT = 5000;
   private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
 
   private static final List<InputRow> ROWS = Arrays.<InputRow>asList(
