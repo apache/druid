@@ -85,7 +85,7 @@ public abstract class BaseFilterTest
 {
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.<VirtualColumn>of(
-          new ExpressionVirtualColumn("expr", "1.0 + 0.1", TestExprMacroTable.INSTANCE)
+          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
       )
   );
 

@@ -56,6 +56,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -422,6 +423,7 @@ public class TimeseriesQueryRunnerTest
                                       new ExpressionVirtualColumn(
                                           "expr",
                                           "index",
+                                          ValueType.FLOAT,
                                           TestExprMacroTable.INSTANCE
                                       )
                                   )

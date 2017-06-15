@@ -42,6 +42,7 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.expression.TestExprMacroTable;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -113,7 +114,7 @@ public class TestIndex
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       Collections.<VirtualColumn>singletonList(
-          new ExpressionVirtualColumn("expr", "index + 10", TestExprMacroTable.INSTANCE)
+          new ExpressionVirtualColumn("expr", "index + 10", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
       )
   );
   public static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{

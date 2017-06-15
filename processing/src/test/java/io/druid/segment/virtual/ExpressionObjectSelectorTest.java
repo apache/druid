@@ -32,10 +32,28 @@ import java.util.List;
 public class ExpressionObjectSelectorTest
 {
   @Test
+  public void testSupplierFromDimensionSelector()
+  {
+    final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromDimensionSelector(
+        dimensionSelectorFromSupplier(settableSupplier)
+    );
+
+    Assert.assertNotNull(supplier);
+    Assert.assertEquals(null, supplier.get());
+
+    settableSupplier.set(null);
+    Assert.assertEquals(null, supplier.get());
+
+    settableSupplier.set("1234");
+    Assert.assertEquals("1234", supplier.get());
+  }
+
+  @Test
   public void testSupplierFromObjectSelectorObject()
   {
     final SettableSupplier<Object> settableSupplier = new SettableSupplier<>();
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, Object.class)
     );
 
@@ -49,17 +67,17 @@ public class ExpressionObjectSelectorTest
     Assert.assertEquals(1L, supplier.get());
 
     settableSupplier.set("1234");
-    Assert.assertEquals(1234L, supplier.get());
+    Assert.assertEquals("1234", supplier.get());
 
     settableSupplier.set("1.234");
-    Assert.assertEquals(1.234d, supplier.get());
+    Assert.assertEquals("1.234", supplier.get());
   }
 
   @Test
   public void testSupplierFromObjectSelectorNumber()
   {
     final SettableSupplier<Number> settableSupplier = new SettableSupplier<>();
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, Number.class)
     );
 
@@ -78,7 +96,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorString()
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, String.class)
     );
 
@@ -86,17 +104,17 @@ public class ExpressionObjectSelectorTest
     Assert.assertEquals(null, supplier.get());
 
     settableSupplier.set("1.1");
-    Assert.assertEquals(1.1d, supplier.get());
+    Assert.assertEquals("1.1", supplier.get());
 
     settableSupplier.set("1");
-    Assert.assertEquals(1L, supplier.get());
+    Assert.assertEquals("1", supplier.get());
   }
 
   @Test
   public void testSupplierFromObjectSelectorList()
   {
     final SettableSupplier<List> settableSupplier = new SettableSupplier<>();
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, List.class)
     );
 
