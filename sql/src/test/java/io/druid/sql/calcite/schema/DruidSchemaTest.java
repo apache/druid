@@ -107,8 +107,7 @@ public class DruidSchemaTest
                                               .indexMerger(TestHelper.getTestIndexMergerV9())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
-                                                      .withMetrics(
-                                                          new LongSumAggregatorFactory("m1", "m1"))
+                                                      .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
                                                       .withRollup(false)
                                                       .build()
                                               )
