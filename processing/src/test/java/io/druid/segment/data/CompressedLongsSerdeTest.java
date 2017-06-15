@@ -37,8 +37,8 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -190,7 +190,7 @@ public class CompressedLongsSerdeTest
     }
 
     // random access, limited to 1000 elements for large lists (every element would take too long)
-    IntArrays.shuffle(indices, new Random());
+    IntArrays.shuffle(indices, ThreadLocalRandom.current());
     final int limit = Math.min(indexed.size(), 1000);
     for (int i = 0; i < limit; ++i) {
       int k = indices[i];
