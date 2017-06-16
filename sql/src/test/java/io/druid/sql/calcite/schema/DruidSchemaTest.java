@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -93,11 +92,9 @@ public class DruidSchemaTest
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(
-                                                          new AggregatorFactory[]{
-                                                              new CountAggregatorFactory("cnt"),
-                                                              new DoubleSumAggregatorFactory("m1", "m1"),
-                                                              new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                          }
+                                                          new CountAggregatorFactory("cnt"),
+                                                          new DoubleSumAggregatorFactory("m1", "m1"),
+                                                          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
                                                       )
                                                       .withRollup(false)
                                                       .build()
@@ -110,11 +107,7 @@ public class DruidSchemaTest
                                               .indexMerger(TestHelper.getTestIndexMergerV9())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
-                                                      .withMetrics(
-                                                          new AggregatorFactory[]{
-                                                              new LongSumAggregatorFactory("m1", "m1")
-                                                          }
-                                                      )
+                                                      .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
                                                       .withRollup(false)
                                                       .build()
                                               )

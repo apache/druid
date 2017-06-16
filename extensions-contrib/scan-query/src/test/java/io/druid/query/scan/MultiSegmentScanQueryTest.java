@@ -39,7 +39,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.commons.io.IOUtils;
@@ -150,7 +149,10 @@ public class MultiSegmentScanQueryTest
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
-    return new OnheapIncrementalIndex(schema, true, maxRowCount);
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(maxRowCount)
+        .buildOnheap();
   }
 
   @AfterClass

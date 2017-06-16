@@ -34,7 +34,6 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.BoundDimFilter;
@@ -112,11 +111,8 @@ public class LongFilteringTest extends BaseFilterTest
         ROWS,
         indexBuilder.schema(
             new IncrementalIndexSchema.Builder()
-                .withMetrics(
-                    new AggregatorFactory[]{
-                        new LongSumAggregatorFactory(LONG_COLUMN, LONG_COLUMN)
-                    }
-                ).build()
+                .withMetrics(new LongSumAggregatorFactory(LONG_COLUMN, LONG_COLUMN))
+                .build()
         ),
         finisher,
         cnf,

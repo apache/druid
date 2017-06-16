@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregator;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.easymock.EasyMock;
@@ -42,12 +41,15 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testMultithreadAddFacts() throws Exception
   {
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
-        0,
-        Granularities.MINUTE,
-        new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")},
-        MAX_ROWS
-    );
+    final IncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(new LongMaxAggregatorFactory("max", "max"))
+                .build()
+        )
+        .setMaxRowCount(MAX_ROWS)
+        .buildOnheap();
 
     final Random random = new Random();
     final int addThreadCount = 2;
@@ -108,12 +110,15 @@ public class OnheapIncrementalIndexTest
     mockedAggregator.close();
     EasyMock.expectLastCall().times(1);
 
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
-            0,
-            Granularities.MINUTE,
-            new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")},
-            MAX_ROWS
-    );
+    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(new LongMaxAggregatorFactory("max", "max"))
+                .build()
+        )
+        .setMaxRowCount(MAX_ROWS)
+        .buildOnheap();
 
     index.add(new MapBasedInputRow(
             0,

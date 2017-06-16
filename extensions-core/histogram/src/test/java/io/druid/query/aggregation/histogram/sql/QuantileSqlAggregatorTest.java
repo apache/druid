@@ -27,7 +27,6 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryContexts;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
@@ -96,18 +95,16 @@ public class QuantileSqlAggregatorTest
                                              .schema(
                                                  new IncrementalIndexSchema.Builder()
                                                      .withMetrics(
-                                                         new AggregatorFactory[]{
-                                                             new CountAggregatorFactory("cnt"),
-                                                             new DoubleSumAggregatorFactory("m1", "m1"),
-                                                             new ApproximateHistogramAggregatorFactory(
-                                                                 "hist_m1",
-                                                                 "m1",
-                                                                 null,
-                                                                 null,
-                                                                 null,
-                                                                 null
-                                                             )
-                                                         }
+                                                         new CountAggregatorFactory("cnt"),
+                                                         new DoubleSumAggregatorFactory("m1", "m1"),
+                                                         new ApproximateHistogramAggregatorFactory(
+                                                             "hist_m1",
+                                                             "m1",
+                                                             null,
+                                                             null,
+                                                             null,
+                                                             null
+                                                         )
                                                      )
                                                      .withRollup(false)
                                                      .build()
