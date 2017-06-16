@@ -97,7 +97,7 @@ public class ExpressionPostAggregator implements PostAggregator
     this.ordering = ordering;
     this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
     this.macroTable = macroTable;
-    this.finalizers = ImmutableMap.copyOf(finalizers);
+    this.finalizers = finalizers;
 
     this.parsed = Parser.parse(expression, macroTable);
     this.dependentFields = ImmutableSet.copyOf(Parser.findRequiredBindings(parsed));
