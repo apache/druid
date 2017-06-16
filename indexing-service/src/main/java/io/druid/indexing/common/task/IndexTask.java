@@ -241,10 +241,9 @@ public class IndexTask extends AbstractTask
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
 
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-    final Granularity queryGranularity = granularitySpec.getQueryGranularity();
 
     final boolean determineIntervals = !granularitySpec.bucketIntervals().isPresent();
-    // Guarenteed rollup means that this index task guarantees the 'perfect rollup' across the entire data set.
+    // Guaranteed rollup means that this index task guarantees the 'perfect rollup' across the entire data set.
     final boolean guaranteedRollup = tuningConfig.isForceGuaranteedRollup() &&
                                      !tuningConfig.isForceExtendableShardSpecs() &&
                                      !ioConfig.isAppendToExisting();
@@ -254,39 +253,133 @@ public class IndexTask extends AbstractTask
     // if we were given number of shards per interval and the intervals, we don't need to scan the data
     if (!determineNumPartitions && !determineIntervals) {
       log.info("Skipping determine partition scan");
+      return createShardSpecsWithoutDataScan(jsonMapper, granularitySpec, tuningConfig, useExtendableShardSpec);
+    }
 
-      final int numShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
+    // determine intervals containing data and prime HLL collectors
+    return createShardSpecsFromData(
+        jsonMapper,
+        ingestionSchema,
+        firehoseFactory,
+        firehoseTempDir,
+        granularitySpec,
+        tuningConfig,
+        determineIntervals,
+        determineNumPartitions,
+        useExtendableShardSpec
+    );
+  }
+
+  private static ShardSpecs createShardSpecsWithoutDataScan(
+      ObjectMapper jsonMapper,
+      GranularitySpec granularitySpec,
+      IndexTuningConfig tuningConfig,
+      boolean useExtendableShardSpec
+  )
+  {
+    final int numShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
+    final BiFunction<Integer, Integer, ShardSpec> shardSpecCreateFn = getShardSpecCreateFunction(
+        useExtendableShardSpec,
+        numShards,
+        jsonMapper
+    );
+
+    final Map<Interval, List<ShardSpec>> intervalToShardSpecs = new HashMap<>();
+    for (Interval interval : granularitySpec.bucketIntervals().get()) {
+      final List<ShardSpec> intervalShardSpecs = IntStream.range(0, numShards)
+                                                          .mapToObj(
+                                                              shardId -> shardSpecCreateFn.apply(shardId, numShards)
+                                                          )
+                                                          .collect(Collectors.toList());
+      intervalToShardSpecs.put(interval, intervalShardSpecs);
+    }
+
+    if (useExtendableShardSpec) {
+      return createExtendableShardSpecs(intervalToShardSpecs);
+    } else {
+      return createNonExtendableShardSpecs(intervalToShardSpecs);
+    }
+  }
+
+  private static ShardSpecs createShardSpecsFromData(
+      ObjectMapper jsonMapper,
+      IndexIngestionSpec ingestionSchema,
+      FirehoseFactory firehoseFactory,
+      File firehoseTempDir,
+      GranularitySpec granularitySpec,
+      IndexTuningConfig tuningConfig,
+      boolean determineIntervals,
+      boolean determineNumPartitions,
+      boolean useExtendableShardSpec
+  ) throws IOException
+  {
+    log.info("Determining intervals and shardSpecs");
+    long determineShardSpecsStartMillis = System.currentTimeMillis();
+
+    final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = collectIntervalsAndShardSpecs(
+        jsonMapper,
+        ingestionSchema,
+        firehoseFactory,
+        firehoseTempDir,
+        granularitySpec,
+        determineIntervals,
+        determineNumPartitions
+    );
+
+    final Map<Interval, List<ShardSpec>> intervalToShardSpecs = new HashMap<>();
+    final int defaultNumShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
+    for (final Map.Entry<Interval, Optional<HyperLogLogCollector>> entry : hllCollectors.entrySet()) {
+      final Interval interval = entry.getKey();
+      final Optional<HyperLogLogCollector> collector = entry.getValue();
+
+      final int numShards;
+      if (determineNumPartitions) {
+        final long numRows = new Double(collector.get().estimateCardinality()).longValue();
+        numShards = (int) Math.ceil((double) numRows / tuningConfig.getTargetPartitionSize());
+        log.info("Estimated [%,d] rows of data for interval [%s], creating [%,d] shards", numRows, interval, numShards);
+      } else {
+        numShards = defaultNumShards;
+        log.info("Creating [%,d] shards for interval [%s]", numShards, interval);
+      }
+
       final BiFunction<Integer, Integer, ShardSpec> shardSpecCreateFn = getShardSpecCreateFunction(
           useExtendableShardSpec,
           numShards,
           jsonMapper
       );
 
-      final Map<Interval, List<ShardSpec>> intervalToShardSpecs = new HashMap<>();
-      for (Interval interval : granularitySpec.bucketIntervals().get()) {
-        final List<ShardSpec> intervalShardSpecs = IntStream.range(0, numShards)
-                                                            .mapToObj(
-                                                                shardId -> shardSpecCreateFn.apply(shardId, numShards)
-                                                            )
-                                                            .collect(Collectors.toList());
-        intervalToShardSpecs.put(interval, intervalShardSpecs);
-      }
+      final List<ShardSpec> intervalShardSpecs = IntStream.range(0, numShards)
+                                                          .mapToObj(
+                                                              shardId -> shardSpecCreateFn.apply(shardId, numShards)
+                                                          ).collect(Collectors.toList());
 
-      if (useExtendableShardSpec) {
-        return createExtendableShardSpecs(intervalToShardSpecs);
-      } else {
-        return createNonExtendableShardSpecs(intervalToShardSpecs);
-      }
+      intervalToShardSpecs.put(interval, intervalShardSpecs);
     }
+    log.info("Found intervals and shardSpecs in %,dms", System.currentTimeMillis() - determineShardSpecsStartMillis);
 
-    // determine intervals containing data and prime HLL collectors
+    if (useExtendableShardSpec) {
+      return createExtendableShardSpecs(intervalToShardSpecs);
+    } else {
+      return createNonExtendableShardSpecs(intervalToShardSpecs);
+    }
+  }
+
+  private static Map<Interval, Optional<HyperLogLogCollector>> collectIntervalsAndShardSpecs(
+      ObjectMapper jsonMapper,
+      IndexIngestionSpec ingestionSchema,
+      FirehoseFactory firehoseFactory,
+      File firehoseTempDir,
+      GranularitySpec granularitySpec,
+      boolean determineIntervals,
+      boolean determineNumPartitions
+  ) throws IOException
+  {
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = new TreeMap<>(
         Comparators.intervalsByStartThenEnd()
     );
     int thrownAway = 0;
+    final Granularity queryGranularity = granularitySpec.getQueryGranularity();
 
-    log.info("Determining intervals and shardSpecs");
-    long determineShardSpecsStartMillis = System.currentTimeMillis();
     try (
         final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser(), firehoseTempDir)
     ) {
@@ -334,43 +427,7 @@ public class IndexTask extends AbstractTask
     if (thrownAway > 0) {
       log.warn("Unable to to find a matching interval for [%,d] events", thrownAway);
     }
-
-    final Map<Interval, List<ShardSpec>> intervalToShardSpecs = new HashMap<>();
-    final int defaultNumShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
-    for (final Map.Entry<Interval, Optional<HyperLogLogCollector>> entry : hllCollectors.entrySet()) {
-      final Interval interval = entry.getKey();
-      final Optional<HyperLogLogCollector> collector = entry.getValue();
-
-      final int numShards;
-      if (determineNumPartitions) {
-        final long numRows = new Double(collector.get().estimateCardinality()).longValue();
-        numShards = (int) Math.ceil((double) numRows / tuningConfig.getTargetPartitionSize());
-        log.info("Estimated [%,d] rows of data for interval [%s], creating [%,d] shards", numRows, interval, numShards);
-      } else {
-        numShards = defaultNumShards;
-        log.info("Creating [%,d] shards for interval [%s]", numShards, interval);
-      }
-
-      final BiFunction<Integer, Integer, ShardSpec> shardSpecCreateFn = getShardSpecCreateFunction(
-          useExtendableShardSpec,
-          numShards,
-          jsonMapper
-      );
-
-      final List<ShardSpec> intervalShardSpecs = IntStream.range(0, numShards)
-                                                          .mapToObj(
-                                                              shardId -> shardSpecCreateFn.apply(shardId, numShards)
-                                                          ).collect(Collectors.toList());
-
-      intervalToShardSpecs.put(interval, intervalShardSpecs);
-    }
-    log.info("Found intervals and shardSpecs in %,dms", System.currentTimeMillis() - determineShardSpecsStartMillis);
-
-    if (useExtendableShardSpec) {
-      return createExtendableShardSpecs(intervalToShardSpecs);
-    } else {
-      return createNonExtendableShardSpecs(intervalToShardSpecs);
-    }
+    return hllCollectors;
   }
 
   private static ShardSpecs createNonExtendableShardSpecs(Map<Interval, List<ShardSpec>> intervalToShardSpecs)
@@ -403,17 +460,15 @@ public class IndexTask extends AbstractTask
 
   private static ShardSpecs createExtendableShardSpecs(Map<Interval, List<ShardSpec>> intervalToShardSpec)
   {
+    final Map<Interval, ShardSpec> shardSpecMap = new HashMap<>(intervalToShardSpec.size());
+
+    intervalToShardSpec.forEach((interval, shardSpecs) -> {
+      Preconditions.checkState(shardSpecs.size() == 1);
+      shardSpecMap.put(interval, shardSpecs.get(0));
+    });
+
     return new ShardSpecs()
     {
-      private final Map<Interval, ShardSpec> shardSpecMap = new HashMap<>(intervalToShardSpec.size());
-
-      {
-        intervalToShardSpec.forEach((interval, shardSpecs) -> {
-          Preconditions.checkState(shardSpecs.size() == 1);
-          shardSpecMap.put(interval, shardSpecs.get(0));
-        });
-      }
-
       @Override
       public Collection<Interval> getIntervals()
       {

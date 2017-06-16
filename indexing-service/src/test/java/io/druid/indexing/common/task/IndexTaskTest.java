@@ -37,6 +37,7 @@ import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -96,7 +97,7 @@ public class IndexTaskTest
       0
   );
 
-  private final IndexSpec indexSpec;
+  private static final IndexSpec indexSpec = new IndexSpec();
   private final ObjectMapper jsonMapper;
   private IndexMerger indexMerger;
   private IndexMergerV9 indexMergerV9;
@@ -105,7 +106,6 @@ public class IndexTaskTest
 
   public IndexTaskTest()
   {
-    indexSpec = new IndexSpec();
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     indexMerger = testUtils.getTestIndexMerger();
@@ -129,7 +129,13 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, null, 2, null, null, false, false, true),
+        createIngestionSpec(
+            tmpDir,
+            null,
+            null,
+            createTuningConfig(2, null, false, true),
+            false
+        ),
         null,
         jsonMapper
     );
@@ -167,7 +173,13 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, null, 2, null, null, true, false, false),
+        createIngestionSpec(
+            tmpDir,
+            null,
+            null,
+            createTuningConfig(2, null, true, false),
+            false
+        ),
         null,
         jsonMapper
     );
@@ -210,12 +222,8 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 Collections.singletonList(new Interval("2014/2015"))
             ),
-            10,
-            null,
-            null,
-            false,
-            false,
-            true
+            createTuningConfig(10, null, false, true),
+            false
         ),
         null,
         jsonMapper
@@ -249,12 +257,8 @@ public class IndexTaskTest
                 Granularities.HOUR,
                 Collections.singletonList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
             ),
-            50,
-            null,
-            null,
-            false,
-            false,
-            true
+            createTuningConfig(50, null, false, true),
+            false
         ),
         null,
         jsonMapper
@@ -280,7 +284,13 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, null, null, 1, null, false, false, true),
+        createIngestionSpec(
+            tmpDir,
+            null,
+            null,
+            createTuningConfig(null, 1, false, true),
+            false
+        ),
         null,
         jsonMapper
     );
@@ -311,7 +321,13 @@ public class IndexTaskTest
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(tmpDir, null, null, 2, null, null, false, true, false),
+        createIngestionSpec(
+            tmpDir,
+            null,
+            null,
+            createTuningConfig(2, null, false, false),
+            true
+        ),
         null,
         jsonMapper
     );
@@ -355,12 +371,8 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            2,
-            null,
-            null,
-            false,
-            false,
-            true
+            createTuningConfig(2, null, false, true),
+            false
         ),
         null,
         jsonMapper
@@ -420,12 +432,8 @@ public class IndexTaskTest
                 0
             ),
             null,
-            2,
-            null,
-            null,
-            false,
-            false,
-            true
+            createTuningConfig(2, null, false, true),
+            false
         ),
         null,
         jsonMapper
@@ -474,12 +482,8 @@ public class IndexTaskTest
                 0
             ),
             null,
-            2,
-            null,
-            null,
-            false,
-            false,
-            true
+            createTuningConfig(2, null, false, true),
+            false
         ),
         null,
         jsonMapper
@@ -523,12 +527,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            2,
-            null,
-            2,
-            2,
-            false,
-            false,
+            createTuningConfig(2, 2, 2, null, false, false),
             false
         ),
         null,
@@ -636,39 +635,8 @@ public class IndexTaskTest
       File baseDir,
       ParseSpec parseSpec,
       GranularitySpec granularitySpec,
-      Integer targetPartitionSize,
-      Integer numShards,
-      Integer maxTotalRows,
-      boolean forceExtendableShardSpecs,
-      boolean appendToExisting,
-      boolean forceGuaranteedRollup
-  )
-  {
-    return createIngestionSpec(
-        baseDir,
-        parseSpec,
-        granularitySpec,
-        targetPartitionSize,
-        numShards,
-        1,
-        maxTotalRows,
-        forceExtendableShardSpecs,
-        appendToExisting,
-        forceGuaranteedRollup
-    );
-  }
-
-  private IndexTask.IndexIngestionSpec createIngestionSpec(
-      File baseDir,
-      ParseSpec parseSpec,
-      GranularitySpec granularitySpec,
-      Integer targetPartitionSize,
-      Integer numShards,
-      Integer maxRowsInMemory,
-      Integer maxTotalRows,
-      boolean forceExtendableShardSpecs,
-      boolean appendToExisting,
-      boolean forceGuaranteedRollup
+      IndexTuningConfig tuningConfig,
+      boolean appendToExisting
   )
   {
     return new IndexTask.IndexIngestionSpec(
@@ -696,22 +664,52 @@ public class IndexTaskTest
                 baseDir,
                 "druid*",
                 null
-            ), appendToExisting
+            ),
+            appendToExisting
         ),
-        new IndexTask.IndexTuningConfig(
-            targetPartitionSize,
-            maxRowsInMemory,
-            maxTotalRows,
-            null,
-            numShards,
-            indexSpec,
-            null,
-            true,
-            forceExtendableShardSpecs,
-            forceGuaranteedRollup,
-            null,
-            null
-        )
+        tuningConfig
+    );
+  }
+
+  private static IndexTuningConfig createTuningConfig(
+      Integer targetPartitionSize,
+      Integer numShards,
+      boolean forceExtendableShardSpecs,
+      boolean forceGuaranteedRollup
+  )
+  {
+    return createTuningConfig(
+        targetPartitionSize,
+        1,
+        null,
+        numShards,
+        forceExtendableShardSpecs,
+        forceGuaranteedRollup
+    );
+  }
+
+  private static IndexTuningConfig createTuningConfig(
+      Integer targetPartitionSize,
+      Integer maxRowsInMemory,
+      Integer maxTotalRows,
+      Integer numShards,
+      boolean forceExtendableShardSpecs,
+      boolean forceGuaranteedRollup
+  )
+  {
+    return new IndexTask.IndexTuningConfig(
+        targetPartitionSize,
+        maxRowsInMemory,
+        maxTotalRows,
+        null,
+        numShards,
+        indexSpec,
+        null,
+        true,
+        forceExtendableShardSpecs,
+        forceGuaranteedRollup,
+        null,
+        null
     );
   }
 }
