@@ -71,6 +71,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
+        ImmutableList.of(),
         this.aggregatorSpecs,
         postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );

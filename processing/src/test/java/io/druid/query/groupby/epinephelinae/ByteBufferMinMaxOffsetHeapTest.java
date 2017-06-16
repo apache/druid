@@ -85,7 +85,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     Random rng = new Random(999);
 
     ArrayList<Integer> values = Lists.newArrayList();
-    for (int i = 0; i < 100000; i++) {
+    for (int i = 0; i < 10000; i++) {
       values.add(rng.nextInt(1000000));
     }
     ArrayList<Integer> deletedValues = Lists.newArrayList();
@@ -137,12 +137,12 @@ public class ByteBufferMinMaxOffsetHeapTest
   @Test
   public void testRandom2()
   {
-    int limit = 20000;
+    int limit = 5000;
 
     Random rng = new Random(9999);
 
     ArrayList<Integer> values = Lists.newArrayList();
-    for (int i = 0; i < 100000; i++) {
+    for (int i = 0; i < 20000; i++) {
       values.add(rng.nextInt(1000000));
     }
     ArrayList<Integer> deletedValues = Lists.newArrayList();

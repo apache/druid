@@ -44,10 +44,7 @@ public class DimensionsSpec
   private final Set<String> dimensionExclusions;
   private final Map<String, DimensionSchema> dimensionSchemaMap;
 
-  public static DimensionsSpec ofEmpty()
-  {
-    return new DimensionsSpec(null, null, null);
-  }
+  public static final DimensionsSpec EMPTY = new DimensionsSpec(null, null, null);
 
   public static List<DimensionSchema> getDefaultSchemas(List<String> dimNames)
   {

@@ -75,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -182,6 +183,7 @@ public class GroupByQuery extends BaseQuery<Row>
     }
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
+        this.dimensions.stream().map(DimensionSpec::getOutputName).collect(Collectors.toList()),
         this.aggregatorSpecs,
         postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs
     );

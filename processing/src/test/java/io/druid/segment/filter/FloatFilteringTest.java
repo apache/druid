@@ -34,7 +34,6 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.BoundDimFilter;
@@ -108,11 +107,8 @@ public class FloatFilteringTest extends BaseFilterTest
         ROWS,
         indexBuilder.schema(
             new IncrementalIndexSchema.Builder()
-                .withMetrics(
-                    new AggregatorFactory[]{
-                        new DoubleSumAggregatorFactory(FLOAT_COLUMN, FLOAT_COLUMN)
-                    }
-                ).build()
+                .withMetrics(new DoubleSumAggregatorFactory(FLOAT_COLUMN, FLOAT_COLUMN))
+                .build()
         ),
         finisher,
         cnf,

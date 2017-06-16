@@ -37,7 +37,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -69,9 +69,14 @@ public class TimeseriesQueryRunnerBonusTest
   @Test
   public void testOneRowAtATime() throws Exception
   {
-    final IncrementalIndex oneRowIndex = new OnheapIncrementalIndex(
-        new DateTime("2012-01-01T00:00:00Z").getMillis(), Granularities.NONE, new AggregatorFactory[]{}, 1000
-    );
+    final IncrementalIndex oneRowIndex = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(new DateTime("2012-01-01T00:00:00Z").getMillis())
+                .build()
+        )
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     List<Result<TimeseriesResultValue>> results;
 

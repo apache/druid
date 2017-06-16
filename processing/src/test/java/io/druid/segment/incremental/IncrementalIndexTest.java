@@ -87,11 +87,9 @@ public class IncrementalIndexTest
         )
     };
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0)
         .withQueryGranularity(Granularities.MINUTE)
         .withDimensionsSpec(dimensions)
         .withMetrics(metrics)
-        .withRollup(true)
         .build();
 
     final List<Object[]> constructors = Lists.newArrayList();
@@ -103,7 +101,12 @@ public class IncrementalIndexTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new OnheapIncrementalIndex(schema, false, true, sortFacts, 1000);
+                  return new IncrementalIndex.Builder()
+                      .setIndexSchema(schema)
+                      .setDeserializeComplexMetrics(false)
+                      .setSortFacts(sortFacts)
+                      .setMaxRowCount(1000)
+                      .buildOnheap();
                 }
               }
           }
@@ -115,24 +118,23 @@ public class IncrementalIndexTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new OffheapIncrementalIndex(
-                      schema,
-                      true,
-                      true,
-                      sortFacts,
-                      1000000,
-                      new StupidPool<ByteBuffer>(
-                          "OffheapIncrementalIndex-bufferPool",
-                          new Supplier<ByteBuffer>()
-                          {
-                            @Override
-                            public ByteBuffer get()
-                            {
-                              return ByteBuffer.allocate(256 * 1024);
-                            }
-                          }
-                      )
-                  );
+                  return new IncrementalIndex.Builder()
+                      .setIndexSchema(schema)
+                      .setSortFacts(sortFacts)
+                      .setMaxRowCount(1000000)
+                      .buildOffheap(
+                          new StupidPool<ByteBuffer>(
+                              "OffheapIncrementalIndex-bufferPool",
+                              new Supplier<ByteBuffer>()
+                              {
+                                @Override
+                                public ByteBuffer get()
+                                {
+                                  return ByteBuffer.allocate(256 * 1024);
+                                }
+                              }
+                          )
+                      );
                 }
               }
           }

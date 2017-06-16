@@ -20,9 +20,9 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,9 +34,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -181,9 +181,10 @@ public class CompressedLongsSerdeTest
       indices[i] = i;
     }
 
-    Collections.shuffle(Ints.asList(indices));
-    // random access
-    for (int i = 0; i < indexed.size(); ++i) {
+    // random access, limited to 1000 elements for large lists (every element would take too long)
+    IntArrays.shuffle(indices, ThreadLocalRandom.current());
+    final int limit = Math.min(indexed.size(), 1000);
+    for (int i = 0; i < limit; ++i) {
       int k = indices[i];
       Assert.assertEquals(vals[k], indexed.get(k));
     }

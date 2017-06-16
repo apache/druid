@@ -27,6 +27,7 @@ import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,11 +40,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -352,7 +353,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   {
     Assert.assertEquals(vals.length, indexed.size());
 
-    // sequential access
+    // sequential access of every element
     int[] indices = new int[vals.length];
     for (int i = 0; i < indexed.size(); ++i) {
       final int expected = vals[i];
@@ -361,9 +362,10 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
       indices[i] = i;
     }
 
-    Collections.shuffle(Ints.asList(indices));
-    // random access
-    for (int i = 0; i < indexed.size(); ++i) {
+    // random access, limited to 1000 elements for large lists (every element would take too long)
+    IntArrays.shuffle(indices, ThreadLocalRandom.current());
+    final int limit = Math.min(indexed.size(), 1000);
+    for (int i = 0; i < limit; ++i) {
       int k = indices[i];
       Assert.assertEquals(vals[k], indexed.get(k));
     }

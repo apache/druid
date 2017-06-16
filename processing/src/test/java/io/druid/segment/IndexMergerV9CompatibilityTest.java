@@ -28,14 +28,13 @@ import com.google.common.io.Files;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -166,12 +165,16 @@ public class IndexMergerV9CompatibilityTest
   @Before
   public void setUp() throws IOException
   {
-    toPersist = new OnheapIncrementalIndex(
-        JodaUtils.MIN_INSTANT,
-        Granularities.NONE,
-        DEFAULT_AGG_FACTORIES,
-        1000000
-    );
+    toPersist = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(JodaUtils.MIN_INSTANT)
+                .withMetrics(DEFAULT_AGG_FACTORIES)
+                .build()
+        )
+    .setMaxRowCount(1000000)
+    .buildOnheap();
+
     toPersist.getMetadata().put("key", "value");
     for (InputRow event : events) {
       toPersist.add(event);
