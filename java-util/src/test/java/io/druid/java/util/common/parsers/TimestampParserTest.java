@@ -39,6 +39,10 @@ public class TimestampParserTest
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("1234567890000"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("2009-02-13T23:31:30Z"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply(1234567890000L));
+    Assert.assertEquals(new DateTime("2016-09-13T07:33:02Z"), parser.apply("2016-09-13 07:33:02"));
+    Assert.assertEquals(new DateTime("2016-09-13T07:33:02.123Z"), parser.apply("2016-09-13 07:33:02.123"));
+    Assert.assertEquals(new DateTime("2016-09-13T07:33:02.123Z"), parser.apply("2016-09-13 07:33:02.123Z"));
+    Assert.assertEquals(new DateTime("2016-09-13T07:33:02.123-08:00"), parser.apply("2016-09-13 07:33:02.123-08:00"));
   }
 
   @Test

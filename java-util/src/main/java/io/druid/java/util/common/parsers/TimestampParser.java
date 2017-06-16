@@ -43,7 +43,7 @@ public class TimestampParser
 
           for (int i = 0; i < input.length(); i++) {
             if (input.charAt(i) < '0' || input.charAt(i) > '9') {
-              return new DateTime(ParserUtils.stripQuotes(input));
+              return new DateTime(ParserUtils.replace(ParserUtils.stripQuotes(input), " ", "T"));
             }
           }
 

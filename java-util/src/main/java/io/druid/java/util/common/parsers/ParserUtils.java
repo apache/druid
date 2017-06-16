@@ -94,4 +94,25 @@ public class ParserUtils
     }
     return input;
   }
+
+  public static String replace(String text, String searchString, String  replacement)
+  {
+    if (null == text || text.isEmpty() || null == searchString || searchString.isEmpty() || replacement == null) {
+      return text;
+    }
+    int start = 0;
+    int end = text.indexOf(searchString, start);
+    if (end == -1) {
+      return text;
+    }
+    int replLength = searchString.length();
+    StringBuilder buf = new StringBuilder();
+    while (end != -1) {
+      buf.append(text.substring(start, end)).append(replacement);
+      start = end + replLength;
+      end = text.indexOf(searchString, start);
+    }
+    buf.append(text.substring(start));
+    return buf.toString();
+  }
 }
