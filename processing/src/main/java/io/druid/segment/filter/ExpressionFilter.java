@@ -104,7 +104,11 @@ public class ExpressionFilter implements Filter
           column,
           selector,
           bitmapResultFactory,
-          str -> expr.eval(name -> str).asBoolean() // Don't look at "name", it will always be the single column name.
+          value -> expr.eval(identifierName -> {
+            // There's only one binding, and it must be the single column, so it can safely be ignored in production.
+            assert column.equals(identifierName);
+            return value;
+          }).asBoolean()
       );
     }
   }
