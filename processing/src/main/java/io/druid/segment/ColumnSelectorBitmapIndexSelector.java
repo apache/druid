@@ -27,7 +27,6 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.ValueType;
@@ -117,11 +116,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     final Column column = index.getColumn(dimension);
-    if (column == null || !columnSupportsFiltering(column)) {
-      return false;
-    } else {
-      return column.getCapabilities().hasMultipleValues();
-    }
+    return column != null && column.getCapabilities().hasMultipleValues();
   }
 
   @Override
