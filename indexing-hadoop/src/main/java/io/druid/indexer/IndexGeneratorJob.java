@@ -50,7 +50,6 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -238,11 +237,11 @@ public class IndexGeneratorJob implements Jobby
         .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
         .build();
 
-    OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
-        indexSchema,
-        !tuningConfig.isIgnoreInvalidRows(),
-        tuningConfig.getRowFlushBoundary()
-    );
+    IncrementalIndex newIndex = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows())
+        .setMaxRowCount(tuningConfig.getRowFlushBoundary())
+        .buildOnheap();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
       newIndex.loadDimensionIterable(oldDimOrder, oldCapabilities);

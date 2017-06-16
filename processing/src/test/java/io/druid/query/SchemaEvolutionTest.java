@@ -150,7 +150,7 @@ public class SchemaEvolutionTest
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
                              new IncrementalIndexSchema.Builder()
-                                 .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
+                                 .withMetrics(new CountAggregatorFactory("cnt"))
                                  .withRollup(false)
                                  .build()
                          )
@@ -162,11 +162,11 @@ public class SchemaEvolutionTest
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
                              new IncrementalIndexSchema.Builder()
-                                 .withMetrics(new AggregatorFactory[]{
+                                 .withMetrics(
                                      new CountAggregatorFactory("cnt"),
                                      new LongSumAggregatorFactory("c1", "c1"),
                                      new HyperUniquesAggregatorFactory("uniques", "c2")
-                                 })
+                                 )
                                  .withRollup(false)
                                  .build()
                          )
@@ -178,11 +178,11 @@ public class SchemaEvolutionTest
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
                              new IncrementalIndexSchema.Builder()
-                                 .withMetrics(new AggregatorFactory[]{
+                                 .withMetrics(
                                      new CountAggregatorFactory("cnt"),
                                      new DoubleSumAggregatorFactory("c1", "c1"),
                                      new HyperUniquesAggregatorFactory("uniques", "c2")
-                                 })
+                                 )
                                  .withRollup(false)
                                  .build()
                          )
@@ -194,9 +194,7 @@ public class SchemaEvolutionTest
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
                              new IncrementalIndexSchema.Builder()
-                                 .withMetrics(new AggregatorFactory[]{
-                                     new HyperUniquesAggregatorFactory("c2", "c2")
-                                 })
+                                 .withMetrics(new HyperUniquesAggregatorFactory("c2", "c2"))
                                  .withRollup(false)
                                  .build()
                          )

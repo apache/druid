@@ -65,8 +65,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -134,20 +132,22 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
-                    return new OffheapIncrementalIndex(
-                        0L, Granularities.NONE, factories, 1000000,
-                        new StupidPool<ByteBuffer>(
-                            "OffheapIncrementalIndex-bufferPool",
-                            new Supplier<ByteBuffer>()
-                            {
-                              @Override
-                              public ByteBuffer get()
-                              {
-                                return ByteBuffer.allocate(256 * 1024);
-                              }
-                            }
-                        )
-                    );
+                    return new IncrementalIndex.Builder()
+                        .setSimpleTestingIndexSchema(factories)
+                        .setMaxRowCount(1000000)
+                        .buildOffheap(
+                            new StupidPool<ByteBuffer>(
+                                "OffheapIncrementalIndex-bufferPool",
+                                new Supplier<ByteBuffer>()
+                                {
+                                  @Override
+                                  public ByteBuffer get()
+                                  {
+                                    return ByteBuffer.allocate(256 * 1024);
+                                  }
+                                }
+                            )
+                        );
                   }
                 }
             },
@@ -167,20 +167,27 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
-                    return new OffheapIncrementalIndex(
-                        0L, Granularities.NONE, false, factories, 1000000,
-                        new StupidPool<ByteBuffer>(
-                            "OffheapIncrementalIndex-bufferPool",
-                            new Supplier<ByteBuffer>()
-                            {
-                              @Override
-                              public ByteBuffer get()
-                              {
-                                return ByteBuffer.allocate(256 * 1024);
-                              }
-                            }
+                    return new IncrementalIndex.Builder()
+                        .setIndexSchema(
+                            new IncrementalIndexSchema.Builder()
+                                .withMetrics(factories)
+                                .withRollup(false)
+                                .build()
                         )
-                    );
+                        .setMaxRowCount(1000000)
+                        .buildOffheap(
+                            new StupidPool<ByteBuffer>(
+                                "OffheapIncrementalIndex-bufferPool",
+                                new Supplier<ByteBuffer>()
+                                {
+                                  @Override
+                                  public ByteBuffer get()
+                                  {
+                                    return ByteBuffer.allocate(256 * 1024);
+                                  }
+                                }
+                            )
+                        );
                   }
                 }
             }
@@ -201,15 +208,22 @@ public class IncrementalIndexTest
 
   public static IncrementalIndex createIndex(
       AggregatorFactory[] aggregatorFactories,
-      DimensionsSpec dimensionsSpec)
+      DimensionsSpec dimensionsSpec
+  )
   {
     if (null == aggregatorFactories) {
       aggregatorFactories = defaultAggregatorFactories;
     }
 
-    return new OnheapIncrementalIndex(
-        0L, Granularities.NONE, true, dimensionsSpec, aggregatorFactories, 1000000
-    );
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withDimensionsSpec(dimensionsSpec)
+                .withMetrics(aggregatorFactories)
+                .build()
+        )
+        .setMaxRowCount(1000000)
+        .buildOnheap();
   }
 
   public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
@@ -218,9 +232,10 @@ public class IncrementalIndexTest
       aggregatorFactories = defaultAggregatorFactories;
     }
 
-    return new OnheapIncrementalIndex(
-        0L, Granularities.NONE, true, null, aggregatorFactories, 1000000
-    );
+    return new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(aggregatorFactories)
+        .setMaxRowCount(1000000)
+        .buildOnheap();
   }
 
   public static IncrementalIndex createNoRollupIndex(AggregatorFactory[] aggregatorFactories)
@@ -229,9 +244,10 @@ public class IncrementalIndexTest
       aggregatorFactories = defaultAggregatorFactories;
     }
 
-    return new OnheapIncrementalIndex(
-        0L, Granularities.NONE, false, null, aggregatorFactories, 1000000
-    );
+    return new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(aggregatorFactories)
+        .setMaxRowCount(1000000)
+        .buildOnheap();
   }
 
   public static void populateIndex(long timestamp, IncrementalIndex index) throws IndexSizeExceededException
@@ -476,14 +492,14 @@ public class IncrementalIndexTest
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
     for (int i = 0; i < dimensionCount; ++i) {
       Assert.assertEquals(
-          StringUtils.safeFormat("Failed long sum on dimension %d", i),
-          2*rows,
-          result.getValue().getLongMetric(StringUtils.safeFormat("sumResult%s", i)).intValue()
+          "Failed long sum on dimension " + i,
+          2 * rows,
+          result.getValue().getLongMetric("sumResult" + i).intValue()
       );
       Assert.assertEquals(
-          StringUtils.safeFormat("Failed double sum on dimension %d", i),
-          2*rows,
-          result.getValue().getDoubleMetric(StringUtils.safeFormat("doubleSumResult%s", i)).intValue()
+          "Failed double sum on dimension " + i,
+          2 * rows,
+          result.getValue().getDoubleMetric("doubleSumResult" + i).intValue()
       );
     }
   }
@@ -758,26 +774,21 @@ public class IncrementalIndexTest
   @Test
   public void testgetDimensions()
   {
-    final IncrementalIndex<Aggregator> incrementalIndex = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder().withQueryGranularity(Granularities.NONE)
-                                            .withMetrics(
-                                                new AggregatorFactory[]{
-                                                    new CountAggregatorFactory(
-                                                        "count"
-                                                    )
-                                                }
-                                            )
-                                            .withDimensionsSpec(
-                                                new DimensionsSpec(
-                                                    DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                                                    null,
-                                                    null
-                                                )
-                                            )
-                                            .build(),
-        true,
-        1000000
-    );
+    final IncrementalIndex<Aggregator> incrementalIndex = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMetrics(new CountAggregatorFactory("count"))
+                .withDimensionsSpec(
+                    new DimensionsSpec(
+                        DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
+                        null,
+                        null
+                    )
+                )
+                .build()
+        )
+        .setMaxRowCount(1000000)
+        .buildOnheap();
     closer.closeLater(incrementalIndex);
 
     Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
@@ -786,11 +797,10 @@ public class IncrementalIndexTest
   @Test
   public void testDynamicSchemaRollup() throws IndexSizeExceededException
   {
-    IncrementalIndex<Aggregator> index = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder().withQueryGranularity(Granularities.NONE).build(),
-        true,
-        10
-    );
+    IncrementalIndex<Aggregator> index = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(/* empty */)
+        .setMaxRowCount(10)
+        .buildOnheap();
     closer.closeLater(index);
     index.add(
         new MapBasedInputRow(

@@ -27,7 +27,6 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -67,16 +66,17 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   private String outOfRowsReason = null;
 
-  public OffheapIncrementalIndex(
+  OffheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
 
@@ -92,47 +92,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     aggBuffers.add(bb);
   }
 
-  public OffheapIncrementalIndex(
-      long minTimestamp,
-      Granularity gran,
-      boolean rollup,
-      final AggregatorFactory[] metrics,
-      int maxRowCount,
-      StupidPool<ByteBuffer> bufferPool
-  )
-  {
-    this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withMetrics(metrics)
-                                            .withRollup(rollup)
-                                            .build(),
-        true,
-        true,
-        true,
-        maxRowCount,
-        bufferPool
-    );
-  }
-
-  public OffheapIncrementalIndex(
-      long minTimestamp,
-      Granularity gran,
-      final AggregatorFactory[] metrics,
-      int maxRowCount,
-      StupidPool<ByteBuffer> bufferPool
-  )
-  {
-    this(
-        minTimestamp,
-        gran,
-        IncrementalIndexSchema.DEFAULT_ROLLUP,
-        metrics,
-        maxRowCount,
-        bufferPool
-    );
-  }
-
   @Override
   public FactsHolder getFacts()
   {
@@ -141,7 +100,10 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   @Override
   protected BufferAggregator[] initAggs(
-      AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics
+      final AggregatorFactory[] metrics,
+      final Supplier<InputRow> rowSupplier,
+      final boolean deserializeComplexMetrics,
+      final boolean concurrentEventAdd
   )
   {
     selectors = Maps.newHashMap();
@@ -158,7 +120,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
       selectors.put(
           agg.getName(),
-          new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(columnSelectorFactory)
+          new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
       );
 
       if (i == 0) {

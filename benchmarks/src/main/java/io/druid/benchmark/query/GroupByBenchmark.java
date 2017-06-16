@@ -36,7 +36,6 @@ import io.druid.collections.StupidPool;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
@@ -76,7 +75,6 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -476,18 +474,17 @@ public class GroupByBenchmark
 
   private IncrementalIndex makeIncIndex(boolean withRollup)
   {
-    return new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
             .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(withRollup)
-            .build(),
-        true,
-        false,
-        true,
-        rowsPerSegment
-    );
+            .build()
+        )
+        .setReportParseExceptions(false)
+        .setConcurrentEventAdd(true)
+        .setMaxRowCount(rowsPerSegment)
+        .buildOnheap();
   }
 
   @TearDown(Level.Trial)

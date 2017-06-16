@@ -371,7 +371,7 @@ public class DruidAvaticaHandlerTest
     );
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 90000)
   public void testConcurrentQueries() throws Exception
   {
     final List<ListenableFuture<Integer>> futures = new ArrayList<>();

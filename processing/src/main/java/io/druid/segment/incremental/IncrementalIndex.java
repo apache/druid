@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -68,6 +69,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.lang.reflect.Array;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -76,6 +78,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -211,16 +214,21 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
    *
+   * Set concurrentEventAdd to true to indicate that adding of input row should be thread-safe (for example, groupBy
+   * where the multiple threads can add concurrently to the IncrementalIndex).
+   *
    * @param incrementalIndexSchema    the schema to use for incremental index
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
    * @param reportParseExceptions     flag whether or not to report ParseExceptions that occur while extracting values
    *                                  from input rows
+   * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
    */
-  public IncrementalIndex(
+  protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean reportParseExceptions
+      final boolean reportParseExceptions,
+      final boolean concurrentEventAdd
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -239,7 +247,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         .setQueryGranularity(this.gran)
         .setRollup(this.rollup);
 
-    this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics);
+    this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
     this.metricDescs = Maps.newLinkedHashMap();
     for (AggregatorFactory metric : metrics) {
@@ -281,6 +289,113 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   }
 
+  public static class Builder
+  {
+    private IncrementalIndexSchema incrementalIndexSchema;
+    private boolean deserializeComplexMetrics;
+    private boolean reportParseExceptions;
+    private boolean concurrentEventAdd;
+    private boolean sortFacts;
+    private int maxRowCount;
+
+    public Builder()
+    {
+      incrementalIndexSchema = null;
+      deserializeComplexMetrics = true;
+      reportParseExceptions = true;
+      concurrentEventAdd = false;
+      sortFacts = true;
+      maxRowCount = 0;
+    }
+
+    public Builder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
+    {
+      this.incrementalIndexSchema = incrementalIndexSchema;
+      return this;
+    }
+
+    /**
+     * A helper method to set a simple index schema with only metrics and default values for the other parameters. Note
+     * that this method is normally used for testing and benchmarking; it is unlikely that you would use it in
+     * production settings.
+     *
+     * @param metrics variable array of {@link AggregatorFactory} metrics
+     *
+     * @return this
+     */
+    @VisibleForTesting
+    public Builder setSimpleTestingIndexSchema(final AggregatorFactory... metrics)
+    {
+      this.incrementalIndexSchema = new IncrementalIndexSchema.Builder()
+          .withMetrics(metrics)
+          .build();
+      return this;
+    }
+
+    public Builder setDeserializeComplexMetrics(final boolean deserializeComplexMetrics)
+    {
+      this.deserializeComplexMetrics = deserializeComplexMetrics;
+      return this;
+    }
+
+    public Builder setReportParseExceptions(final boolean reportParseExceptions)
+    {
+      this.reportParseExceptions = reportParseExceptions;
+      return this;
+    }
+
+    public Builder setConcurrentEventAdd(final boolean concurrentEventAdd)
+    {
+      this.concurrentEventAdd = concurrentEventAdd;
+      return this;
+    }
+
+    public Builder setSortFacts(final boolean sortFacts)
+    {
+      this.sortFacts = sortFacts;
+      return this;
+    }
+
+    public Builder setMaxRowCount(final int maxRowCount)
+    {
+      this.maxRowCount = maxRowCount;
+      return this;
+    }
+
+    public IncrementalIndex buildOnheap()
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OnheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount
+      );
+    }
+
+    public IncrementalIndex buildOffheap(final StupidPool<ByteBuffer> bufferPool)
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OffheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount,
+          Objects.requireNonNull(bufferPool, "bufferPool is null")
+      );
+    }
+  }
+
   public boolean isRollup()
   {
     return rollup;
@@ -295,7 +410,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   protected abstract AggregatorType[] initAggs(
       AggregatorFactory[] metrics,
       Supplier<InputRow> rowSupplier,
-      boolean deserializeComplexMetrics
+      boolean deserializeComplexMetrics,
+      boolean concurrentEventAdd
   );
 
   // Note: This method needs to be thread safe.
