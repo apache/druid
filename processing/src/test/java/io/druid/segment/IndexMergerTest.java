@@ -90,7 +90,7 @@ public class IndexMergerTest
   protected IndexMerger INDEX_MERGER;
   private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
-  @Parameterized.Parameters(name = "{index}: useV9={0}, bitmap={1}, metric compression={2}, dimension compression={3}, long encoding={4}")
+  @Parameterized.Parameters(name = "{index}: bitmap={0}, metric compression={1}, dimension compression={2}, long encoding={3}")
   public static Collection<Object[]> data()
   {
     return Collections2.transform(
