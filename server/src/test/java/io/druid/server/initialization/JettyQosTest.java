@@ -98,7 +98,7 @@ public class JettyQosTest extends BaseJettyTest
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testQoS() throws Exception
   {
     final int fastThreads = 20;
