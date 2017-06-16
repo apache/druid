@@ -58,7 +58,6 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -284,12 +283,10 @@ public class IndexMergerTest
     IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
-    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersist2 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     toPersist2.add(
         new MapBasedInputRow(
@@ -370,18 +367,16 @@ public class IndexMergerTest
   @Test
   public void testPersistEmptyColumn() throws Exception
   {
-    final IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{},
-        10
-    );
-    final IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{},
-        10
-    );
+    final IncrementalIndex toPersist1 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(/* empty */)
+        .setMaxRowCount(10)
+        .buildOnheap();
+
+    final IncrementalIndex toPersist2 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(/* empty */)
+        .setMaxRowCount(10)
+        .buildOnheap();
+
     final File tmpDir1 = temporaryFolder.newFolder();
     final File tmpDir2 = temporaryFolder.newFolder();
     final File tmpDir3 = temporaryFolder.newFolder();
@@ -915,15 +910,22 @@ public class IndexMergerTest
             null,
             null
         ))
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+        .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
 
-    IncrementalIndex toPersist1 = new OnheapIncrementalIndex(schema, true, 1000);
-    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(schema, true, 1000);
-    IncrementalIndex toPersist3 = new OnheapIncrementalIndex(schema, true, 1000);
+    IncrementalIndex toPersist1 = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+    IncrementalIndex toPersist2 = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+    IncrementalIndex toPersist3 = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     addDimValuesToIndex(toPersist1, "dimA", Arrays.asList("1", "2"));
     addDimValuesToIndex(toPersist2, "dimA", Arrays.asList("1", "2"));
@@ -1133,12 +1135,11 @@ public class IndexMergerTest
     // d8: 'has null' join 'no null'
     // d9: 'no null' join 'no null'
 
-    IncrementalIndex toPersistA = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistA.add(
         new MapBasedInputRow(
             1,
@@ -1158,12 +1159,11 @@ public class IndexMergerTest
         )
     );
 
-    IncrementalIndex toPersistB = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistB.add(
         new MapBasedInputRow(
             3,
@@ -1274,12 +1274,14 @@ public class IndexMergerTest
     // d9: 'no null' join 'no null'
 
     IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+        .withMetrics(new CountAggregatorFactory("count"))
         .withRollup(false)
         .build();
-    IncrementalIndex toPersistA = new OnheapIncrementalIndex(indexSchema, true, 1000);
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistA.add(
         new MapBasedInputRow(
             1,
@@ -1299,7 +1301,11 @@ public class IndexMergerTest
         )
     );
 
-    IncrementalIndex toPersistB = new OnheapIncrementalIndex(indexSchema, true, 1000);
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistB.add(
         new MapBasedInputRow(
             3,
@@ -1409,12 +1415,14 @@ public class IndexMergerTest
     // 3. merge 2 indexes with duplicate rows
 
     IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+        .withMetrics(new CountAggregatorFactory("count"))
         .withRollup(false)
         .build();
-    IncrementalIndex toPersistA = new OnheapIncrementalIndex(indexSchema, true, 1000);
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistA.add(
         new MapBasedInputRow(
             1,
@@ -1434,7 +1442,11 @@ public class IndexMergerTest
         )
     );
 
-    IncrementalIndex toPersistB = new OnheapIncrementalIndex(indexSchema, true, 1000);
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistB.add(
         new MapBasedInputRow(
             1,
@@ -1534,12 +1546,10 @@ public class IndexMergerTest
     IncrementalIndex toPersistBA = getSingleDimIndex("dimB", Arrays.asList("1", "2", "3"));
     addDimValuesToIndex(toPersistBA, "dimA", Arrays.asList("1", "2"));
 
-    IncrementalIndex toPersistBA2 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersistBA2 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     toPersistBA2.add(
         new MapBasedInputRow(
@@ -2108,14 +2118,14 @@ public class IndexMergerTest
   private IncrementalIndex getIndexWithDimsFromSchemata(List<DimensionSchema> dims)
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
         .withDimensionsSpec(new DimensionsSpec(dims, null, null))
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
-        .withRollup(true)
+        .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
-    return new OnheapIncrementalIndex(schema, true, 1000);
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
   }
 
 
@@ -2165,12 +2175,10 @@ public class IndexMergerTest
 
   private IncrementalIndex getIndexD3() throws Exception
   {
-    IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersist1 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     toPersist1.add(
         new MapBasedInputRow(
@@ -2201,12 +2209,10 @@ public class IndexMergerTest
 
   private IncrementalIndex getSingleDimIndex(String dimName, List<String> values) throws Exception
   {
-    IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersist1 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     addDimValuesToIndex(toPersist1, dimName, values);
     return toPersist1;
@@ -2228,14 +2234,14 @@ public class IndexMergerTest
   private IncrementalIndex getIndexWithDims(List<String> dims)
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
         .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
-        .withRollup(true)
+        .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
-    return new OnheapIncrementalIndex(schema, true, 1000);
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
   }
 
   private AggregatorFactory[] getCombiningAggregators(AggregatorFactory[] aggregators)

@@ -78,7 +78,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.junit.rules.TemporaryFolder;
@@ -414,7 +414,18 @@ public class AggregationTestHelper
     List<File> toMerge = new ArrayList<>();
 
     try {
-      index = new OnheapIncrementalIndex(minTimestamp, gran, metrics, deserializeComplexMetrics, true, true, maxRowCount);
+      index = new IncrementalIndex.Builder()
+          .setIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(minTimestamp)
+                  .withQueryGranularity(gran)
+                  .withMetrics(metrics)
+                  .build()
+          )
+          .setDeserializeComplexMetrics(deserializeComplexMetrics)
+          .setMaxRowCount(maxRowCount)
+          .buildOnheap();
+
       while (rows.hasNext()) {
         Object row = rows.next();
         if (!index.canAppendRow()) {
@@ -422,7 +433,17 @@ public class AggregationTestHelper
           toMerge.add(tmp);
           indexMerger.persist(index, tmp, new IndexSpec());
           index.close();
-          index = new OnheapIncrementalIndex(minTimestamp, gran, metrics, deserializeComplexMetrics, true, true, maxRowCount);
+          index = new IncrementalIndex.Builder()
+              .setIndexSchema(
+                  new IncrementalIndexSchema.Builder()
+                      .withMinTimestamp(minTimestamp)
+                      .withQueryGranularity(gran)
+                      .withMetrics(metrics)
+                      .build()
+              )
+              .setDeserializeComplexMetrics(deserializeComplexMetrics)
+              .setMaxRowCount(maxRowCount)
+              .buildOnheap();
         }
         if (row instanceof String && parser instanceof StringInputRowParser) {
           //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to

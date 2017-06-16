@@ -30,7 +30,6 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
@@ -46,7 +45,6 @@ import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.select.SelectResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -87,9 +85,11 @@ public class MapVirtualColumnTest
 
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
-        .withQueryGranularity(Granularities.NONE)
         .build();
-    final IncrementalIndex index = new OnheapIncrementalIndex(schema, true, 10000);
+    final IncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(10000)
+        .buildOnheap();
 
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(

@@ -49,16 +49,14 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
-import io.druid.java.util.common.granularity.Granularities;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.NoopDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
@@ -208,16 +206,14 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   {
     final File persistDir = new File(tmpDir, UUID.randomUUID().toString());
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withQueryGranularity(Granularities.NONE)
         .withMinTimestamp(JodaUtils.MIN_INSTANT)
         .withDimensionsSpec(ROW_PARSER)
-        .withMetrics(
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory(METRICS[0], METRICS[0])
-            }
-        )
+        .withMetrics(new LongSumAggregatorFactory(METRICS[0], METRICS[0]))
         .build();
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(schema, true, rows.length);
+    final IncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(rows.length)
+        .buildOnheap();
 
     for (InputRow row : rows) {
       try {
