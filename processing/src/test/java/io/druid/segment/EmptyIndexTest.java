@@ -60,7 +60,7 @@ public class EmptyIndexTest
           emptyIndex,
           new ConciseBitmapFactory()
       );
-      TestHelper.getTestIndexMerger().merge(
+      TestHelper.getTestIndexMergerV9().merge(
           Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
           true,
           new AggregatorFactory[0],

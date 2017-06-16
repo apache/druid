@@ -43,6 +43,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout, // for backward compatibility
@@ -62,7 +63,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         basePersistDirectory,
         maxPendingPersists,
         indexSpec,
-        buildV9Directly,
+        true,
         reportParseExceptions,
         // Supervised kafka tasks should respect KafkaSupervisorIOConfig.completionTimeout instead of
         // handoffConditionTimeout
@@ -124,7 +125,6 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
-           ", buildV9Directly=" + getBuildV9Directly() +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +

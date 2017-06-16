@@ -62,7 +62,6 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -110,14 +109,12 @@ import java.util.Set;
 public class IngestSegmentFirehoseFactoryTest
 {
   private static final ObjectMapper MAPPER;
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
-    INDEX_MERGER = testUtils.getTestIndexMerger();
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
   }
@@ -156,7 +153,7 @@ public class IngestSegmentFirehoseFactoryTest
     if (!persistDir.mkdirs() && !persistDir.exists()) {
       throw new IOException(String.format("Could not create directory at [%s]", persistDir.getAbsolutePath()));
     }
-    INDEX_MERGER.persist(index, persistDir, indexSpec);
+    INDEX_MERGER_V9.persist(index, persistDir, indexSpec);
 
     final TaskLockbox tl = new TaskLockbox(ts);
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
@@ -296,7 +293,6 @@ public class IngestSegmentFirehoseFactoryTest
             )
         ),
         MAPPER,
-        INDEX_MERGER,
         INDEX_IO,
         null,
         null,

@@ -98,10 +98,6 @@ public class IndexMergerTest
         Sets.cartesianProduct(
             ImmutableList.of(
                 ImmutableSet.of(
-                    true,
-                    false
-                ),
-                ImmutableSet.of(
                     new RoaringBitmapSerdeFactory(null),
                     new ConciseBitmapSerdeFactory()
                 ),
@@ -145,7 +141,6 @@ public class IndexMergerTest
   public final CloserRule closer = new CloserRule(false);
 
   public IndexMergerTest(
-      boolean useV9,
       BitmapSerdeFactory bitmapSerdeFactory,
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
       CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy,
@@ -153,11 +148,7 @@ public class IndexMergerTest
   )
   {
     this.indexSpec = makeIndexSpec(bitmapSerdeFactory, compressionStrategy, dimCompressionStrategy, longEncodingStrategy);
-    if (useV9) {
-      INDEX_MERGER = TestHelper.getTestIndexMergerV9();
-    } else {
-      INDEX_MERGER = TestHelper.getTestIndexMerger();
-    }
+    INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   }
 
   @Test

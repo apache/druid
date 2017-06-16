@@ -70,6 +70,7 @@ import io.druid.query.topn.TopNQueryRunnerFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
@@ -154,7 +155,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO),
         indexIO,
         factory.getToolchest(),
         factory,
@@ -210,7 +211,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO),
         indexIO,
         toolchest,
         factory,
@@ -250,7 +251,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO),
         indexIO,
         toolchest,
         factory,
@@ -301,7 +302,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO),
         indexIO,
         toolchest,
         factory,

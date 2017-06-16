@@ -50,7 +50,7 @@ public class IndexBuilder
   private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder().withMetrics(new AggregatorFactory[]{
       new CountAggregatorFactory("count")
   }).build();
-  private IndexMerger indexMerger = TestHelper.getTestIndexMerger();
+  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9();
   private File tmpDir;
   private IndexSpec indexSpec = new IndexSpec();
   private int maxRows = DEFAULT_MAX_ROWS;

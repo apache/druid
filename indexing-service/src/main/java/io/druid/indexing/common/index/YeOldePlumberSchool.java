@@ -69,7 +69,6 @@ public class YeOldePlumberSchool implements PlumberSchool
   private final String version;
   private final DataSegmentPusher dataSegmentPusher;
   private final File tmpSegmentDir;
-  private final IndexMerger indexMerger;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
 
@@ -81,7 +80,6 @@ public class YeOldePlumberSchool implements PlumberSchool
       @JsonProperty("version") String version,
       @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
       @JacksonInject("tmpSegmentDir") File tmpSegmentDir,
-      @JacksonInject IndexMerger indexMerger,
       @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO
   )
@@ -90,7 +88,6 @@ public class YeOldePlumberSchool implements PlumberSchool
     this.version = version;
     this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
-    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
@@ -119,7 +116,7 @@ public class YeOldePlumberSchool implements PlumberSchool
     final Set<File> spilled = Sets.newHashSet();
 
     // IndexMerger implementation.
-    final IndexMerger theIndexMerger = config.getBuildV9Directly() ? indexMergerV9 : indexMerger;
+    final IndexMerger theIndexMerger = indexMergerV9;
 
     return new Plumber()
     {

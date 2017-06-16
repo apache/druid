@@ -93,7 +93,7 @@ public class IngestSegmentFirehoseTest
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private IndexIO indexIO = TestHelper.getTestIndexIO();
-  private IndexMerger indexMerger = TestHelper.getTestIndexMerger();
+  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9();
 
   @Test
   public void testReadFromIndexAndWriteAnotherIndex() throws Exception

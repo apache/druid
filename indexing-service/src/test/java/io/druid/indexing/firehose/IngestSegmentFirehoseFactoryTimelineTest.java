@@ -54,7 +54,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.NoopDimFilter;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -112,14 +111,12 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private final long expectedSum;
 
   private static final ObjectMapper MAPPER;
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexIO INDEX_IO;
   private static final IndexMergerV9 INDEX_MERGER_V9;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = IngestSegmentFirehoseFactoryTest.setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
-    INDEX_MERGER = testUtils.getTestIndexMerger();
     INDEX_IO = testUtils.getTestIndexIO();
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
   }
@@ -232,7 +229,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     }
 
     try {
-      INDEX_MERGER.persist(index, persistDir, new IndexSpec());
+      INDEX_MERGER_V9.persist(index, persistDir, new IndexSpec());
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -337,7 +334,6 @@ public class IngestSegmentFirehoseFactoryTimelineTest
               )
           ),
           MAPPER,
-          INDEX_MERGER,
           INDEX_IO,
           null,
           null,

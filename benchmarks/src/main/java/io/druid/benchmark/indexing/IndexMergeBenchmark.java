@@ -32,7 +32,6 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
@@ -82,7 +81,6 @@ public class IndexMergeBenchmark
 
   private static final Logger log = new Logger(IndexMergeBenchmark.class);
   private static final int RNG_SEED = 9999;
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
@@ -104,7 +102,6 @@ public class IndexMergeBenchmark
           }
         }
     );
-    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
   }
 
@@ -173,33 +170,6 @@ public class IndexMergeBenchmark
         true,
         rowsPerSegment
     );
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void merge(Blackhole blackhole) throws Exception
-  {
-    File tmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-" + System.currentTimeMillis(), ".TEMPFILE");
-    tmpFile.delete();
-    tmpFile.mkdirs();
-    try {
-      log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
-
-      File mergedFile = INDEX_MERGER.mergeQueryableIndex(
-          indexesToMerge,
-          rollup,
-          schemaInfo.getAggsArray(),
-          tmpFile,
-          new IndexSpec()
-      );
-
-      blackhole.consume(mergedFile);
-    }
-    finally {
-      tmpFile.delete();
-    }
-
   }
 
   @Benchmark
