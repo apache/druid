@@ -35,6 +35,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
@@ -75,7 +76,7 @@ public class ExpressionPostAggregator implements PostAggregator
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    this(name, expression, ordering, macroTable, null);
+    this(name, expression, ordering, macroTable, ImmutableMap.of());
   }
 
   /**
@@ -84,7 +85,7 @@ public class ExpressionPostAggregator implements PostAggregator
   private ExpressionPostAggregator(
       final String name,
       final String expression,
-      final String ordering,
+      @Nullable final String ordering,
       final ExprMacroTable macroTable,
       final Map<String, Function<Object, Object>> finalizers
   )
@@ -96,7 +97,7 @@ public class ExpressionPostAggregator implements PostAggregator
     this.ordering = ordering;
     this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
     this.macroTable = macroTable;
-    this.finalizers = finalizers != null ? ImmutableMap.copyOf(finalizers) : ImmutableMap.of();
+    this.finalizers = ImmutableMap.copyOf(finalizers);
 
     this.parsed = Parser.parse(expression, macroTable);
     this.dependentFields = ImmutableSet.copyOf(Parser.findRequiredBindings(parsed));
@@ -140,7 +141,10 @@ public class ExpressionPostAggregator implements PostAggregator
   public ExpressionPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
   {
     return new ExpressionPostAggregator(
-        name, expression, ordering, macroTable,
+        name,
+        expression,
+        ordering,
+        macroTable,
         aggregators.entrySet().stream().collect(
             Collectors.toMap(
                 entry -> entry.getKey(),
