@@ -1751,7 +1751,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskQueue.add(capture(captured))).andReturn(true).anyTimes();
     expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true).once();
     taskClient.close();
-    EasyMock.expectLastCall().anyTimes();
+    expectLastCall().anyTimes();
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
     taskRunner.unregisterListener("KafkaSupervisor-testDS");
     replayAll();
