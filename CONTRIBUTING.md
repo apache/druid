@@ -26,7 +26,7 @@ When submitting a pull request (PR), please use the following guidelines:
 
     https://github.com/druid-io/druid/fork
 
-2. Clone your fork of the GitHub repository
+1. Clone your fork of the GitHub repository
 
     ```sh
     git clone git@github.com:<username>/druid.git
