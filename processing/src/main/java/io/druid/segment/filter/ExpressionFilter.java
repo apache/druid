@@ -71,13 +71,19 @@ public class ExpressionFilter implements Filter
   @Override
   public boolean supportsBitmapIndex(final BitmapIndexSelector selector)
   {
-    // We can operate on bitmap indexes if this is a constant expression, or if it reads one column that has
-    // an index and does not have multiple values. The lack of multiple values is important because expression
-    // filters treat multi-value arrays as nulls, which doesn't permit index based filtering.
-    return requiredBindings.isEmpty()
-           || (requiredBindings.size() == 1
-               && selector.getBitmapIndex(Iterables.getOnlyElement(requiredBindings)) != null
-               && !selector.hasMultipleValues(Iterables.getOnlyElement(requiredBindings)));
+    if (requiredBindings.isEmpty()) {
+      // Constant expression.
+      return true;
+    } else if (requiredBindings.size() == 1) {
+      // Single-column expression. We can use bitmap indexes if this column has an index and does not have
+      // multiple values. The lack of multiple values is important because expression filters treat multi-value
+      // arrays as nulls, which doesn't permit index based filtering.
+      final String column = Iterables.getOnlyElement(requiredBindings);
+      return selector.getBitmapIndex(column) != null && !selector.hasMultipleValues(column);
+    } else {
+      // Multi-column expression.
+      return false;
+    }
   }
 
   @Override
@@ -91,7 +97,8 @@ public class ExpressionFilter implements Filter
         return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
       }
     } else {
-      // Can assume there's only one binding and it has a bitmap index, otherwise the caller should not have called us.
+      // Can assume there's only one binding and it has a bitmap index, otherwise supportsBitmapIndex would have
+      // returned false and the caller should not have called us.
       final String column = Iterables.getOnlyElement(requiredBindings);
       return Filters.matchPredicate(
           column,

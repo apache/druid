@@ -21,6 +21,7 @@ package io.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -196,7 +197,7 @@ public class ParserTest
   {
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(expression, expected, parsed.toString());
-    Assert.assertEquals(expression, identifiers, Parser.findRequiredBindings(parsed));
+    Assert.assertEquals(expression, ImmutableSet.copyOf(identifiers), Parser.findRequiredBindings(parsed));
   }
 
   private void validateConstantExpression(String expression, Object expected)
