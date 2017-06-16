@@ -74,13 +74,12 @@ public class DruidStatement implements Closeable
    * single-thread executor to prevent this from happening.
    *
    * The thread owner check in DefaultQueryMetrics is more aggressive than needed for this specific JDBC case, since
-   * the JDBC frames are processed sequentially, so this single-thread executor is not ideal: if creating or closing
-   * the yielder is an expensive operation, then the single-thread executor could become a bottleneck.
+   * the JDBC frames are processed sequentially. If the thread owner check is changed/loosened to permit this use case,
+   * we would not need to use this executor.
    *
-   * We could address the bottleneck potential by assigning a separate yielder open/close thread for each query, or by
-   * removing the executor if the thread owner check in DefaultQueryMetrics is loosened.
-   *
-   * See discussion at: https://github.com/druid-io/druid/pull/4288, https://github.com/druid-io/druid/pull/4415
+   * See discussion at:
+   * https://github.com/druid-io/druid/pull/4288
+   * https://github.com/druid-io/druid/pull/4415
    */
   private final ExecutorService yielderOpenCloseExecutor;
 
@@ -103,7 +102,7 @@ public class DruidStatement implements Closeable
     this.statementId = statementId;
     this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
-    this.yielderOpenCloseExecutor = Execs.singleThreaded("JDBCYielderOpenCloseExecutor");
+    this.yielderOpenCloseExecutor = Execs.singleThreaded(String.format("JDBCYielderOpenCloseExecutor-statement-%d", statementId));
   }
 
   public static List<ColumnMetaData> createColumnMetaData(final RelDataType rowType)
@@ -311,14 +310,13 @@ public class DruidStatement implements Closeable
           // Put the close last, so any exceptions it throws are after we did the other cleanup above.
           yielderOpenCloseExecutor.submit(
               () -> {
-                try {
-                  theYielder.close();
-                }
-                catch (Throwable t) {
-                  throw Throwables.propagate(t);
-                }
+                theYielder.close();
+                // makes this a Callable instead of Runnable so we don't need to catch exceptions inside the lambda
+                return null;
               }
           ).get();
+
+          yielderOpenCloseExecutor.shutdownNow();
         }
       }
       catch (Throwable t) {
