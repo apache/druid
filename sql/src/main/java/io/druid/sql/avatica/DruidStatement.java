@@ -102,7 +102,9 @@ public class DruidStatement implements Closeable
     this.statementId = statementId;
     this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
-    this.yielderOpenCloseExecutor = Execs.singleThreaded(String.format("JDBCYielderOpenCloseExecutor-statement-%d", statementId));
+    this.yielderOpenCloseExecutor = Execs.singleThreaded(
+        String.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
+    );
   }
 
   public static List<ColumnMetaData> createColumnMetaData(final RelDataType rowType)
