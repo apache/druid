@@ -160,7 +160,11 @@ public class DruidMeta extends MetaImpl
     // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
     final DruidStatement druidStatement = getDruidStatement(statement);
     final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount).getSignature();
-    final Frame firstFrame = druidStatement.execute().nextFrame(DruidStatement.START_OFFSET, maxRowsInFirstFrame);
+    final Frame firstFrame = druidStatement.execute()
+                                           .nextFrame(
+                                               DruidStatement.START_OFFSET,
+                                               getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
+                                           );
 
     return new ExecuteResult(
         ImmutableList.of(
@@ -202,7 +206,7 @@ public class DruidMeta extends MetaImpl
       final int fetchMaxRowCount
   ) throws NoSuchStatementException, MissingResultsException
   {
-    return getDruidStatement(statement).nextFrame(offset, fetchMaxRowCount);
+    return getDruidStatement(statement).nextFrame(offset, getEffectiveMaxRowsPerFrame(fetchMaxRowCount));
   }
 
   @Deprecated
@@ -228,7 +232,11 @@ public class DruidMeta extends MetaImpl
 
     final DruidStatement druidStatement = getDruidStatement(statement);
     final Signature signature = druidStatement.getSignature();
-    final Frame firstFrame = druidStatement.execute().nextFrame(DruidStatement.START_OFFSET, maxRowsInFirstFrame);
+    final Frame firstFrame = druidStatement.execute()
+                                           .nextFrame(
+                                               DruidStatement.START_OFFSET,
+                                               getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
+                                           );
 
     return new ExecuteResult(
         ImmutableList.of(
@@ -575,5 +583,18 @@ public class DruidMeta extends MetaImpl
     finally {
       closeStatement(statement);
     }
+  }
+
+  private int getEffectiveMaxRowsPerFrame(int clientMaxRowsPerFrame)
+  {
+    // no configured row limit, use the client provided limit
+    if (config.getMaxRowsPerFrame() < 0) {
+      return clientMaxRowsPerFrame;
+    }
+    // client provided no row limit, use the configured row limit
+    if (clientMaxRowsPerFrame < 0) {
+      return config.getMaxRowsPerFrame();
+    }
+    return Math.min(clientMaxRowsPerFrame, config.getMaxRowsPerFrame());
   }
 }
