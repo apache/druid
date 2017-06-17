@@ -19,6 +19,7 @@
 package io.druid.data.input.parquet;
 
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.path.StaticPathSpec;
 import org.apache.avro.generic.GenericRecord;
@@ -36,14 +37,19 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
 public class DruidParquetInputTest
 {
   @Test
-  public void test() throws IOException, InterruptedException {
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File("example/wikipedia_hadoop_parquet_job.json"));
+  public void test() throws IOException, InterruptedException
+  {
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
+        "example/wikipedia_hadoop_parquet_job.json")
+    );
     Job job = Job.getInstance(new Configuration());
     config.intoConfiguration(job);
     GenericRecord data = getFirstRecord(job, "example/wikipedia_list.parquet");
@@ -57,7 +63,9 @@ public class DruidParquetInputTest
   @Test
   public void testBinaryAsString() throws IOException, InterruptedException
   {
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File("example/impala_hadoop_parquet_job.json"));
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
+        "example/impala_hadoop_parquet_job.json")
+    );
     Job job = Job.getInstance(new Configuration());
     config.intoConfiguration(job);
     GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
@@ -68,12 +76,34 @@ public class DruidParquetInputTest
     assertEquals(row.getTimestampFromEpoch(), 1471800234);
   }
 
-  private GenericRecord getFirstRecord(Job job, String parquetPath) throws IOException, InterruptedException {
+  @Test
+  public void testDateHandling() throws IOException, InterruptedException
+  {
+    List<InputRow> rowsWithString = getAllRecords(
+        "example/date_test_data_job_string.json",
+        "example/test_date_data.snappy.parquet"
+    );
+    List<InputRow> rowsWithDate = getAllRecords(
+        "example/date_test_data_job_date.json",
+        "example/test_date_data.snappy.parquet"
+    );
+    assertEquals(rowsWithDate.size(), rowsWithString.size());
+
+    for (int i = 0; i < rowsWithDate.size(); i++) {
+      assertEquals(rowsWithString.get(i).getTimestamp(), rowsWithDate.get(i).getTimestamp());
+    }
+  }
+
+  private GenericRecord getFirstRecord(Job job, String parquetPath) throws IOException, InterruptedException
+  {
     File testFile = new File(parquetPath);
     Path path = new Path(testFile.getAbsoluteFile().toURI());
     FileSplit split = new FileSplit(path, 0, testFile.length(), null);
 
-    DruidParquetInputFormat inputFormat = ReflectionUtils.newInstance(DruidParquetInputFormat.class, job.getConfiguration());
+    DruidParquetInputFormat inputFormat = ReflectionUtils.newInstance(
+        DruidParquetInputFormat.class,
+        job.getConfiguration()
+    );
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
     RecordReader reader = inputFormat.createRecordReader(split, context);
 
@@ -84,4 +114,35 @@ public class DruidParquetInputTest
     return data;
   }
 
+  private List<InputRow> getAllRecords(String configPath, String parquetPath) throws IOException, InterruptedException
+  {
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(configPath));
+    Job job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+
+    File testFile = new File(parquetPath);
+    Path path = new Path(testFile.getAbsoluteFile().toURI());
+    FileSplit split = new FileSplit(path, 0, testFile.length(), null);
+
+    DruidParquetInputFormat inputFormat = ReflectionUtils.newInstance(
+        DruidParquetInputFormat.class,
+        job.getConfiguration()
+    );
+    TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
+    RecordReader reader = inputFormat.createRecordReader(split, context);
+
+    List<InputRow> records = new LinkedList<>();
+
+    InputRowParser parser = config.getParser();
+
+    reader.initialize(split, context);
+    while (reader.nextKeyValue()) {
+      reader.nextKeyValue();
+      GenericRecord data = (GenericRecord) reader.getCurrentValue();
+      records.add(parser.parse(data));
+    }
+    reader.close();
+
+    return records;
+  }
 }
