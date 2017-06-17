@@ -21,7 +21,6 @@ package io.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 
