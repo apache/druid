@@ -167,7 +167,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 |forceExtendableShardSpecs|Boolean|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|no (default = false)|
 |useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|
-
+|allowedHadoopPrefix|Array|List of properties prefixes to inject as JVM runtime properties used by HadoopIndexTask.|no (default = ["druid.storage.", "druid.javascript."])|
 #### jobProperties field of TuningConfig
 
 ```json

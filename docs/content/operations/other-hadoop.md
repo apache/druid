@@ -1,6 +1,13 @@
 ---
 layout: doc_page
 ---
+# Supported Hadoop versions
+Starting from druid 0.10.1 the default druid distributed package will no longer support Hadoop version prior to `2.6.0`.
+In case you want to use older version of Hadoop, as a workaround you will need to do the following steps then rebuild the druid package:
+- First exclude the aws dependency `hadoop-aws` from the `druid-hdfs-storage` pom file
+- Change the version of compile Hadoop at main pom file to your version. `<hadoop.compile.version>2.7.3</hadoop.compile.version>`.
+- Modify default Hadoop coordinates in `TaskConfig.java` to your version.
+
 # Working with different versions of Hadoop
 
 Druid can interact with Hadoop in two ways:
