@@ -21,10 +21,12 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.guice.annotations.PublicApi;
 import org.joda.time.DateTime;
 
 /**
  */
+@PublicApi
 public class Result<T> implements Comparable<Result<T>>
 {
   public static String MISSING_SEGMENTS_KEY = "missingSegments";

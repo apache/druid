@@ -20,6 +20,7 @@
 package io.druid.segment.loading;
 
 import com.google.common.base.Joiner;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -27,6 +28,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
+@ExtensionPoint
 public interface DataSegmentPusher
 {
   Joiner JOINER = Joiner.on("/").skipNulls();

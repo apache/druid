@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.guava.Sequence;
 
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.Map;
  * is the new one. Their default implementations delegate to each other. Every implementation of QueryRunner should
  * override only one of those methods. New implementations should override the new method: {@link #run(QueryPlus, Map)}.
  */
+@ExtensionPoint
 public interface QueryRunner<T>
 {
   /**

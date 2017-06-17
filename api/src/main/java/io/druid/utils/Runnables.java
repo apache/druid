@@ -19,14 +19,15 @@
 
 package io.druid.utils;
 
+import io.druid.guice.annotations.PublicApi;
+
 /**
  */
+@PublicApi
 public class Runnables
 {
-  public static Runnable getNoopRunnable(){
-    return new Runnable(){
-      @Override
-      public void run(){}
-    };
+  public static Runnable getNoopRunnable()
+  {
+    return () -> {};
   }
 }

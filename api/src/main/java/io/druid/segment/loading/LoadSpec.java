@@ -20,12 +20,14 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
 
 import java.io.File;
 
 /**
  * A means of pulling segment files into a destination directory
  */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface LoadSpec
 {

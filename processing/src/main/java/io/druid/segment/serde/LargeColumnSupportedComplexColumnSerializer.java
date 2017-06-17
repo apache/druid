@@ -19,6 +19,7 @@
 
 package io.druid.segment.serde;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
@@ -57,6 +58,7 @@ public class LargeColumnSupportedComplexColumnSerializer implements GenericColum
     this.columnSize = columnSize;
   }
 
+  @PublicApi
   public static LargeColumnSupportedComplexColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,

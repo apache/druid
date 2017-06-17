@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -33,6 +34,7 @@ import java.nio.ByteBuffer;
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(...).
  */
+@ExtensionPoint
 public interface BufferAggregator extends HotLoopCallee
 {
   /**

@@ -23,10 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -36,6 +35,7 @@ import java.util.regex.Pattern;
 
 /**
  */
+@PublicApi
 public class MapBasedRow implements Row
 {
   private static final Logger log = new Logger(MapBasedRow.class);

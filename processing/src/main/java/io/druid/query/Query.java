@@ -22,6 +22,7 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Ordering;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.filter.DimFilter;
@@ -39,6 +40,7 @@ import org.joda.time.Interval;
 import java.util.List;
 import java.util.Map;
 
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = Query.TIMESERIES, value = TimeseriesQuery.class),

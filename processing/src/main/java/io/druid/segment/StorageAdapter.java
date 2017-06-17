@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import org.joda.time.DateTime;
@@ -29,6 +30,7 @@ import java.util.Map;
 
 /**
  */
+@PublicApi
 public interface StorageAdapter extends CursorFactory
 {
   public String getSegmentIdentifier();
@@ -62,8 +64,6 @@ public interface StorageAdapter extends CursorFactory
    */
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String column);
-
-  public Map<String, DimensionHandler> getDimensionHandlers();
 
   /**
    * Like {@link ColumnCapabilities#getType()}, but may return a more descriptive string for complex columns.

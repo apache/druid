@@ -171,12 +171,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Map<String, DimensionHandler> getDimensionHandlers()
-  {
-    return index.getDimensionHandlers();
-  }
-
-  @Override
   public String getColumnTypeName(String column)
   {
     final String metricType = index.getMetricType(column);

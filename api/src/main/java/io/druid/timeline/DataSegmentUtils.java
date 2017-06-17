@@ -20,10 +20,9 @@
 package io.druid.timeline;
 
 import com.google.common.base.Function;
-
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
@@ -34,6 +33,7 @@ import java.util.Objects;
 /**
  * identifier to DataSegment.
  */
+@PublicApi
 public class DataSegmentUtils
 {
   private static final Logger LOGGER = new Logger(DataSegmentUtils.class);

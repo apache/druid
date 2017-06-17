@@ -19,6 +19,8 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import java.io.Closeable;
 
 /**
@@ -34,6 +36,7 @@ import java.io.Closeable;
  *
  * This interface is old and going away.  It is being replaced by BufferAggregator
  */
+@ExtensionPoint
 public interface Aggregator extends Closeable
 {
   void aggregate();
