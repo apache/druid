@@ -197,7 +197,7 @@ public class ParserTest
   {
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(expression, expected, parsed.toString());
-    Assert.assertEquals(expression, ImmutableSet.copyOf(identifiers), Parser.findRequiredBindings(parsed));
+    Assert.assertEquals(expression, identifiers, Parser.findRequiredBindings(parsed));
   }
 
   private void validateConstantExpression(String expression, Object expected)
