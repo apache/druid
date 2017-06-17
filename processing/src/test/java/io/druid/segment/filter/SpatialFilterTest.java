@@ -71,7 +71,7 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class SpatialFilterTest
 {
-  private static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   private static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   public static final int NUM_POINTS = 5000;

@@ -90,16 +90,12 @@ public class IndexMergerTest
   protected IndexMerger INDEX_MERGER;
   private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
-  @Parameterized.Parameters(name = "{index}: useV9={0}, bitmap={1}, metric compression={2}, dimension compression={3}, long encoding={4}")
+  @Parameterized.Parameters(name = "{index}: bitmap={0}, metric compression={1}, dimension compression={2}, long encoding={3}")
   public static Collection<Object[]> data()
   {
     return Collections2.transform(
         Sets.cartesianProduct(
             ImmutableList.of(
-                ImmutableSet.of(
-                    true,
-                    false
-                ),
                 ImmutableSet.of(
                     new RoaringBitmapSerdeFactory(null),
                     new ConciseBitmapSerdeFactory()
@@ -144,7 +140,6 @@ public class IndexMergerTest
   public final CloserRule closer = new CloserRule(false);
 
   public IndexMergerTest(
-      boolean useV9,
       BitmapSerdeFactory bitmapSerdeFactory,
       CompressionStrategy compressionStrategy,
       CompressionStrategy dimCompressionStrategy,
@@ -152,11 +147,7 @@ public class IndexMergerTest
   )
   {
     this.indexSpec = makeIndexSpec(bitmapSerdeFactory, compressionStrategy, dimCompressionStrategy, longEncodingStrategy);
-    if (useV9) {
-      INDEX_MERGER = TestHelper.getTestIndexMergerV9();
-    } else {
-      INDEX_MERGER = TestHelper.getTestIndexMerger();
-    }
+    INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   }
 
   @Test

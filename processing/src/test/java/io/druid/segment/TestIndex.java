@@ -123,7 +123,7 @@ public class TestIndex
   };
   private static final IndexSpec indexSpec = new IndexSpec();
 
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {

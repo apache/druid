@@ -504,15 +504,9 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      if (config.isBuildV9Directly()) {
-        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
-            index, interval, file, config.getIndexSpec(), progressIndicator
-        );
-      } else {
-        return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
-            index, interval, file, config.getIndexSpec(), progressIndicator
-        );
-      }
+      return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
+          index, interval, file, config.getIndexSpec(), progressIndicator
+      );
     }
 
     protected File mergeQueryableIndex(
@@ -523,15 +517,9 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
-      if (config.isBuildV9Directly()) {
-        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
-            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
-        );
-      } else {
-        return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
-            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
-        );
-      }
+      return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
+          indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
+      );
     }
 
     @Override

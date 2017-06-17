@@ -183,8 +183,7 @@ public abstract class BaseFilterTest
         "roaring", new RoaringBitmapSerdeFactory(true)
     );
 
-    final Map<String, IndexMerger> indexMergers = ImmutableMap.<String, IndexMerger>of(
-        "IndexMerger", TestHelper.getTestIndexMerger(),
+    final Map<String, IndexMerger> indexMergers = ImmutableMap.of(
         "IndexMergerV9", TestHelper.getTestIndexMergerV9()
     );
 

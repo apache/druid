@@ -41,7 +41,6 @@ import java.util.Map;
  */
 public class TestHelper
 {
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
 
@@ -58,13 +57,7 @@ public class TestHelper
           }
         }
     );
-    INDEX_MERGER = new IndexMerger(jsonMapper, INDEX_IO);
     INDEX_MERGER_V9 = new IndexMergerV9(jsonMapper, INDEX_IO);
-  }
-
-  public static IndexMerger getTestIndexMerger()
-  {
-    return INDEX_MERGER;
   }
 
   public static IndexMergerV9 getTestIndexMergerV9()
