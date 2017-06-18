@@ -18,6 +18,7 @@
  */
 package io.druid.data.input.parquet;
 
+import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -37,7 +38,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -45,14 +45,14 @@ import static org.junit.Assert.assertEquals;
 public class DruidParquetInputTest
 {
   @Test
-  public void test() throws IOException, InterruptedException
+  public void testReadParquetFile() throws IOException, InterruptedException
   {
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
         "example/wikipedia_hadoop_parquet_job.json")
     );
     Job job = Job.getInstance(new Configuration());
     config.intoConfiguration(job);
-    GenericRecord data = getFirstRecord(job, "example/wikipedia_list.parquet");
+    GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     // field not read, should return null
     assertEquals(data.get("added"), null);
@@ -71,6 +71,7 @@ public class DruidParquetInputTest
     GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
     InputRow row = config.getParser().parse(data);
+
     // without binaryAsString: true, the value would something like "[104, 101, 121, 32, 116, 104, 105, 115, 32, 105, 115, 3.... ]"
     assertEquals(row.getDimension("field").get(0), "hey this is &é(-è_çà)=^$ù*! Ω^^");
     assertEquals(row.getTimestampFromEpoch(), 1471800234);
@@ -79,14 +80,8 @@ public class DruidParquetInputTest
   @Test
   public void testDateHandling() throws IOException, InterruptedException
   {
-    List<InputRow> rowsWithString = getAllRecords(
-        "example/date_test_data_job_string.json",
-        "example/test_date_data.snappy.parquet"
-    );
-    List<InputRow> rowsWithDate = getAllRecords(
-        "example/date_test_data_job_date.json",
-        "example/test_date_data.snappy.parquet"
-    );
+    List<InputRow> rowsWithString = getAllRows("example/date_test_data_job_string.json");
+    List<InputRow> rowsWithDate = getAllRows("example/date_test_data_job_date.json");
     assertEquals(rowsWithDate.size(), rowsWithString.size());
 
     for (int i = 0; i < rowsWithDate.size(); i++) {
@@ -105,22 +100,22 @@ public class DruidParquetInputTest
         job.getConfiguration()
     );
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
-    RecordReader reader = inputFormat.createRecordReader(split, context);
 
-    reader.initialize(split, context);
-    reader.nextKeyValue();
-    GenericRecord data = (GenericRecord) reader.getCurrentValue();
-    reader.close();
-    return data;
+    try (RecordReader reader = inputFormat.createRecordReader(split, context)) {
+
+      reader.initialize(split, context);
+      reader.nextKeyValue();
+      return (GenericRecord) reader.getCurrentValue();
+    }
   }
 
-  private List<InputRow> getAllRecords(String configPath, String parquetPath) throws IOException, InterruptedException
+  private List<InputRow> getAllRows(String configPath) throws IOException, InterruptedException
   {
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(configPath));
     Job job = Job.getInstance(new Configuration());
     config.intoConfiguration(job);
 
-    File testFile = new File(parquetPath);
+    File testFile = new File(((StaticPathSpec) config.getPathSpec()).getPaths());
     Path path = new Path(testFile.getAbsoluteFile().toURI());
     FileSplit split = new FileSplit(path, 0, testFile.length(), null);
 
@@ -129,20 +124,19 @@ public class DruidParquetInputTest
         job.getConfiguration()
     );
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
-    RecordReader reader = inputFormat.createRecordReader(split, context);
 
-    List<InputRow> records = new LinkedList<>();
+    try (RecordReader reader = inputFormat.createRecordReader(split, context)) {
+      List<InputRow> records = Lists.newArrayList();
+      InputRowParser parser = config.getParser();
 
-    InputRowParser parser = config.getParser();
+      reader.initialize(split, context);
+      while (reader.nextKeyValue()) {
+        reader.nextKeyValue();
+        GenericRecord data = (GenericRecord) reader.getCurrentValue();
+        records.add(parser.parse(data));
+      }
 
-    reader.initialize(split, context);
-    while (reader.nextKeyValue()) {
-      reader.nextKeyValue();
-      GenericRecord data = (GenericRecord) reader.getCurrentValue();
-      records.add(parser.parse(data));
+      return records;
     }
-    reader.close();
-
-    return records;
   }
 }

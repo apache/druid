@@ -35,7 +35,9 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord>
 {
@@ -43,6 +45,9 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   private final boolean binaryAsString;
   private final List<String> dimensions;
   private final TimestampSpec timestampSpec;
+
+  @Nullable
+  private LogicalType timestampSpecLogicalType = null;
 
   @JsonCreator
   public ParquetHadoopInputRowParser(
@@ -61,16 +66,16 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
     }
   }
 
-  private static LogicalType _timestampSpecLogicalType = null;
 
-  private LogicalType determineTimestampSpecLogicalType(Schema schema, String timestampSpecFields)
+  private LogicalType determineTimestampSpecLogicalType(Schema schema, String timestampSpecField)
   {
     for (Schema.Field field : schema.getFields()) {
-      if (field.name().equals(timestampSpecFields)) {
-        return field.schema().getLogicalType();
+      if (field.name().equals(timestampSpecField)) {
+        this.timestampSpecLogicalType = field.schema().getLogicalType();
+        return this.timestampSpecLogicalType;
       }
     }
-    // The timestamp field does not exists in the provided schema
+    // The timestamp field does not exist in the provided schema
     return null;
   }
 
@@ -80,14 +85,12 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   @Override
   public InputRow parse(GenericRecord record)
   {
-    LogicalType logicalType;
-
     // We don't want to determine the type every time if we already done so
-    if (null != _timestampSpecLogicalType) {
-      logicalType = _timestampSpecLogicalType;
-    } else {
+    LogicalType logicalType = this.timestampSpecLogicalType;
+    if (null == logicalType) {
       logicalType = determineTimestampSpecLogicalType(record.getSchema(), timestampSpec.getTimestampColumn());
     }
+    System.out.println(logicalType);
 
     GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, false, binaryAsString);
 
@@ -97,9 +100,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
     if (logicalType instanceof LogicalTypes.Date) {
       int daysSinceEpoch = (Integer) genericRecordAsMap.get(timestampSpec.getTimestampColumn());
 
-      // days since epoch
-      long DAY_IN_MILISECONDS = 1000L * 60L * 60L * 24L;
-      dateTime = new DateTime(daysSinceEpoch * DAY_IN_MILISECONDS);
+      dateTime = new DateTime(TimeUnit.DAYS.toMillis(daysSinceEpoch));
     } else {
       // Fall back to a binary format that will be parsed using joda-time
       dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);

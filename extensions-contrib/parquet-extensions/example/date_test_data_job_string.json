@@ -6,7 +6,7 @@
       "inputSpec": {
         "type": "static",
         "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
-        "paths": "artificial_date_dataset.parquet"
+        "paths": "example/test_date_data.snappy.parquet"
       },
       "metadataUpdateSpec": {
         "type": "postgresql",
