@@ -29,7 +29,7 @@ public class DruidProcessingModuleTest
   @Test(expected=ProvisionException.class)
   public void testMemoryCheckThrowsException() {
     DruidProcessingModule module = new DruidProcessingModule();
-    DruidProcessingConfig config = new DruidProcessingConfig()
+    module.getIntermediateResultsPool(new DruidProcessingConfig()
     {
       @Override
       public String getFormatString()
@@ -42,8 +42,7 @@ public class DruidProcessingModuleTest
       {
         return Integer.MAX_VALUE;
       }
-    };
-    module.getIntermediateResultsPool(config, new HistoricalIntermediateResultsPoolProvider(config));
+    });
   }
 
 }

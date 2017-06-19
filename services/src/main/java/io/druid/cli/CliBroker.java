@@ -33,9 +33,7 @@ import io.druid.client.cache.CacheMonitor;
 import io.druid.client.selector.CustomTierSelectorStrategyConfig;
 import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.client.selector.TierSelectorStrategy;
-import io.druid.guice.BrokerIntermediateResultsPoolProvider;
 import io.druid.guice.CacheModule;
-import io.druid.guice.IntermediateResultsPoolProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -85,8 +83,6 @@ public class CliBroker extends ServerRunnable
                 TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
             );
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
-
-            binder.bind(IntermediateResultsPoolProvider.class).to(BrokerIntermediateResultsPoolProvider.class);
 
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(BrokerServerView.class).in(LazySingleton.class);

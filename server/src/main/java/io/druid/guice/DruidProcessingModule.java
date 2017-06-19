@@ -105,49 +105,46 @@ public class DruidProcessingModule implements Module
   @Provides
   @LazySingleton
   @Global
-  public StupidPool<ByteBuffer> getIntermediateResultsPool(
-      DruidProcessingConfig config,
-      IntermediateResultsPoolProvider provider
-  )
+  public StupidPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
-    verifyDirectMemory(config, provider.getPoolSize());
-    return provider.getIntermediateResultsPool();
+    verifyDirectMemory(config);
+    return new StupidPool<>(
+        "intermediate processing pool",
+        new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
+        config.getNumThreads(),
+        config.poolCacheMaxCount()
+    );
   }
 
   @Provides
   @LazySingleton
   @Merging
-  public BlockingPool<ByteBuffer> getMergeBufferPool(
-      DruidProcessingConfig config,
-      IntermediateResultsPoolProvider intermediateResultsPoolProvider
-  )
+  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
   {
-    verifyDirectMemory(config, intermediateResultsPoolProvider.getPoolSize());
+    verifyDirectMemory(config);
     return new BlockingPool<>(
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
         config.getNumMergeBuffers()
     );
   }
 
-  private static void verifyDirectMemory(DruidProcessingConfig config, int intermediateResultsPoolSize)
+  private void verifyDirectMemory(DruidProcessingConfig config)
   {
     try {
       final long maxDirectMemory = VMUtils.getMaxDirectMemory();
-      int numBuffers = config.getNumMergeBuffers() + intermediateResultsPoolSize + 1;
-      final long memoryNeeded = (long) config.intermediateComputeSizeBytes() * numBuffers;
+      final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
+                                (config.getNumMergeBuffers() + config.getNumThreads() + 1);
 
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(
             String.format(
-                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, "
-                + "druid.processing.numThreads, or druid.processing.numMergeBuffers: "
-                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * "
-                + "(druid.processing.numMergeBuffers[%,d] + intermediateResultsPoolSize[%,d] + 1)",
+                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, druid.processing.numThreads, or druid.processing.numMergeBuffers: "
+                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1)",
                 maxDirectMemory,
                 memoryNeeded,
                 config.intermediateComputeSizeBytes(),
                 config.getNumMergeBuffers(),
-                intermediateResultsPoolSize
+                config.getNumThreads()
             )
         );
       }
