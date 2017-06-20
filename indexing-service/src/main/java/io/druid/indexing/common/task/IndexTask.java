@@ -215,6 +215,16 @@ public class IndexTask extends AbstractTask
     }
   }
 
+  private static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
+  {
+    Preconditions.checkState(
+        !(tuningConfig.isForceGuaranteedRollup() &&
+          (tuningConfig.isForceExtendableShardSpecs() || ioConfig.isAppendToExisting())),
+        "Perfect rollup cannot be guaranteed with extendable shardSpecs"
+    );
+    return tuningConfig.isForceGuaranteedRollup();
+  }
+
   /**
    * Determines intervals and shardSpecs for input data.  This method first checks that it must determine intervals and
    * shardSpecs by itself.  Intervals must be determined if they are not specified in {@link GranularitySpec}.
@@ -244,33 +254,31 @@ public class IndexTask extends AbstractTask
 
     final boolean determineIntervals = !granularitySpec.bucketIntervals().isPresent();
     // Guaranteed rollup means that this index task guarantees the 'perfect rollup' across the entire data set.
-    final boolean guaranteedRollup = tuningConfig.isForceGuaranteedRollup() &&
-                                     !tuningConfig.isForceExtendableShardSpecs() &&
-                                     !ioConfig.isAppendToExisting();
+    final boolean guaranteedRollup = isGuaranteedRollup(ioConfig, tuningConfig);
     final boolean determineNumPartitions = tuningConfig.getNumShards() == null && guaranteedRollup;
     final boolean useExtendableShardSpec = !guaranteedRollup;
 
     // if we were given number of shards per interval and the intervals, we don't need to scan the data
     if (!determineNumPartitions && !determineIntervals) {
       log.info("Skipping determine partition scan");
-      return createShardSpecsWithoutDataScan(jsonMapper, granularitySpec, tuningConfig, useExtendableShardSpec);
+      return createShardSpecWithoutInputScan(jsonMapper, granularitySpec, tuningConfig, useExtendableShardSpec);
+    } else {
+      // determine intervals containing data and prime HLL collectors
+      return createShardSpecsFromInput(
+          jsonMapper,
+          ingestionSchema,
+          firehoseFactory,
+          firehoseTempDir,
+          granularitySpec,
+          tuningConfig,
+          determineIntervals,
+          determineNumPartitions,
+          useExtendableShardSpec
+      );
     }
-
-    // determine intervals containing data and prime HLL collectors
-    return createShardSpecsFromData(
-        jsonMapper,
-        ingestionSchema,
-        firehoseFactory,
-        firehoseTempDir,
-        granularitySpec,
-        tuningConfig,
-        determineIntervals,
-        determineNumPartitions,
-        useExtendableShardSpec
-    );
   }
 
-  private static ShardSpecs createShardSpecsWithoutDataScan(
+  private static ShardSpecs createShardSpecWithoutInputScan(
       ObjectMapper jsonMapper,
       GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
@@ -301,7 +309,7 @@ public class IndexTask extends AbstractTask
     }
   }
 
-  private static ShardSpecs createShardSpecsFromData(
+  private static ShardSpecs createShardSpecsFromInput(
       ObjectMapper jsonMapper,
       IndexIngestionSpec ingestionSchema,
       FirehoseFactory firehoseFactory,
@@ -570,6 +578,7 @@ public class IndexTask extends AbstractTask
     final int maxRowsInSegment = tuningConfig.getTargetPartitionSize() == null
                                   ? Integer.MAX_VALUE
                                   : tuningConfig.getTargetPartitionSize();
+    final boolean isGuaranteedRollup = isGuaranteedRollup(ioConfig, tuningConfig);
 
     final SegmentAllocator segmentAllocator;
     if (ioConfig.isAppendToExisting()) {
@@ -634,8 +643,10 @@ public class IndexTask extends AbstractTask
             final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {
-              if (addResult.getNumRowsInSegment() >= maxRowsInSegment ||
-                  addResult.getTotalNumRowsInAppenderator() >= maxRowsInAppenderator) {
+              // incremental segment publishment is allowed only when rollup don't have to be perfect.
+              if (!isGuaranteedRollup &&
+                  (addResult.getNumRowsInSegment() >= maxRowsInSegment ||
+                   addResult.getTotalNumRowsInAppenderator() >= maxRowsInAppenderator)) {
                 // There can be some segments waiting for being published even though any rows won't be added to them.
                 // If those segments are not published here, the available space in appenderator will be kept to be small
                 // which makes the size of segments smaller.
@@ -973,9 +984,10 @@ public class IndexTask extends AbstractTask
       this.publishTimeout = publishTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : publishTimeout;
       this.basePersistDirectory = basePersistDirectory;
 
-      if (this.forceGuaranteedRollup && this.forceExtendableShardSpecs) {
-        log.warn("Perfect rollup is not guaranteed with extendable shardSpecs. forceGuaranteedRollup flag is ignored.");
-      }
+      Preconditions.checkArgument(
+          !(this.forceExtendableShardSpecs && this.forceGuaranteedRollup),
+          "Perfect rollup cannot be guaranteed with extendable shardSpecs"
+      );
     }
 
     public IndexTuningConfig withBasePersistDirectory(File dir)

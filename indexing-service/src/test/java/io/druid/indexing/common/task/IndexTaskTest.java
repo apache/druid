@@ -550,6 +550,105 @@ public class IndexTaskTest
     }
   }
 
+  @Test
+  public void testPerfectRollup() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    populateRollupTestData(tmpFile);
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            null,
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.DAY,
+                true,
+                null
+            ),
+            createTuningConfig(3, 2, 2, null, false, true),
+            false
+        ),
+        null,
+        jsonMapper
+    );
+
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      final DataSegment segment = segments.get(i);
+      final Interval expectedInterval = new Interval("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
+
+      Assert.assertEquals("test", segment.getDataSource());
+      Assert.assertEquals(expectedInterval, segment.getInterval());
+      Assert.assertTrue(segment.getShardSpec().getClass().equals(HashBasedNumberedShardSpec.class));
+      Assert.assertEquals(i, segment.getShardSpec().getPartitionNum());
+    }
+  }
+
+  @Test
+  public void testBestEffortRollup() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+   populateRollupTestData(tmpFile);
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            null,
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.DAY,
+                true,
+                null
+            ),
+            createTuningConfig(3, 2, 2, null, false, false),
+            false
+        ),
+        null,
+        jsonMapper
+    );
+
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(5, segments.size());
+
+    for (int i = 0; i < 5; i++) {
+      final DataSegment segment = segments.get(i);
+      final Interval expectedInterval = new Interval("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
+
+      Assert.assertEquals("test", segment.getDataSource());
+      Assert.assertEquals(expectedInterval, segment.getInterval());
+      Assert.assertTrue(segment.getShardSpec().getClass().equals(NumberedShardSpec.class));
+      Assert.assertEquals(i, segment.getShardSpec().getPartitionNum());
+    }
+  }
+
+  private static void populateRollupTestData(File tmpFile) throws IOException
+  {
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,a,1\n");
+      writer.write("2014-01-01T00:00:10Z,b,2\n");
+      writer.write("2014-01-01T00:00:10Z,c,3\n");
+      writer.write("2014-01-01T01:00:20Z,b,2\n");
+      writer.write("2014-01-01T02:00:30Z,a,1\n");
+      writer.write("2014-01-01T02:00:30Z,b,2\n");
+      writer.write("2014-01-01T01:00:20Z,c,3\n");
+      writer.write("2014-01-01T02:00:30Z,c,3\n");
+    }
+  }
+
   private final List<DataSegment> runTask(final IndexTask indexTask) throws Exception
   {
     final List<DataSegment> segments = Lists.newArrayList();
