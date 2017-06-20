@@ -72,7 +72,7 @@ public class IndexMergerV9CompatibilityTest
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
   private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
 
-  private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
+  private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,
       CompressedObjectStrategy.CompressionStrategy.LZ4,
