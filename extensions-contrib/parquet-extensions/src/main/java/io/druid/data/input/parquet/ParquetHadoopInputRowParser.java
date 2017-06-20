@@ -46,9 +46,6 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   private final List<String> dimensions;
   private final TimestampSpec timestampSpec;
 
-  @Nullable
-  private LogicalType timestampSpecLogicalType = null;
-
   @JsonCreator
   public ParquetHadoopInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
@@ -66,16 +63,14 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
     }
   }
 
-
+  @Nullable
   private LogicalType determineTimestampSpecLogicalType(Schema schema, String timestampSpecField)
   {
     for (Schema.Field field : schema.getFields()) {
       if (field.name().equals(timestampSpecField)) {
-        this.timestampSpecLogicalType = field.schema().getLogicalType();
-        return this.timestampSpecLogicalType;
+        return field.schema().getLogicalType();
       }
     }
-    // The timestamp field does not exist in the provided schema
     return null;
   }
 
@@ -85,17 +80,14 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   @Override
   public InputRow parse(GenericRecord record)
   {
-    // We don't want to determine the type every time if we already done so
-    LogicalType logicalType = this.timestampSpecLogicalType;
-    if (null == logicalType) {
-      logicalType = determineTimestampSpecLogicalType(record.getSchema(), timestampSpec.getTimestampColumn());
-    }
-    System.out.println(logicalType);
-
+    // Map the record to a map
     GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, false, binaryAsString);
 
+    // Determine logical type of the timestamp column
+    LogicalType logicalType = determineTimestampSpecLogicalType(record.getSchema(), timestampSpec.getTimestampColumn());
+
     // Parse time timestamp based on the parquet schema.
-    // https://github.com/Parquet/parquet-format/blob/master/LogicalTypes.md#date
+    // https://github.com/Parquet/parquet-format/blob/1afe8d9ae7e38acfc4ea273338a3c0c35feca115/LogicalTypes.md#date
     DateTime dateTime;
     if (logicalType instanceof LogicalTypes.Date) {
       int daysSinceEpoch = (Integer) genericRecordAsMap.get(timestampSpec.getTimestampColumn());
