@@ -35,7 +35,7 @@ import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
 import io.druid.guice.CoordinatorDiscoveryModule;
-import io.druid.guice.DruidProcessingModule;
+import io.druid.guice.DruidProcessingConfigModule;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.ExpressionModule;
 import io.druid.guice.ExtensionsConfig;
@@ -47,8 +47,6 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.MetadataConfigModule;
 import io.druid.guice.ParsersModule;
-import io.druid.guice.QueryRunnerFactoryModule;
-import io.druid.guice.QueryableModule;
 import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
 import io.druid.guice.StartupLoggingModule;
@@ -332,14 +330,12 @@ public class Initialization
         new HttpClientModule("druid.broker.http", Client.class),
         new CuratorModule(),
         new AnnouncerModule(),
-        new DruidProcessingModule(),
         new AWSModule(),
         new MetricsModule(),
         new ServerModule(),
+        new DruidProcessingConfigModule(),
         new StorageNodeModule(),
         new JettyServerModule(),
-        new QueryableModule(),
-        new QueryRunnerFactoryModule(),
         new ExpressionModule(),
         new DiscoveryModule(),
         new ServerViewModule(),

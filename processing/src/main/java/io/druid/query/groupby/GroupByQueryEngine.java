@@ -27,8 +27,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
@@ -71,12 +71,12 @@ public class GroupByQueryEngine
   private static final int MISSING_VALUE = -1;
 
   private final Supplier<GroupByQueryConfig> config;
-  private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
+  private final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool;
 
   @Inject
   public GroupByQueryEngine(
       Supplier<GroupByQueryConfig> config,
-      @Global StupidPool<ByteBuffer> intermediateResultsBufferPool
+      @Global NonBlockingPool<ByteBuffer> intermediateResultsBufferPool
   )
   {
     this.config = config;

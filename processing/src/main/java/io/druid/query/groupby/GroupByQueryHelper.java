@@ -23,7 +23,7 @@ import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -59,7 +59,7 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
-      StupidPool<ByteBuffer> bufferPool,
+      NonBlockingPool<ByteBuffer> bufferPool,
       final boolean combine
   )
   {
@@ -188,7 +188,7 @@ public class GroupByQueryHelper
   public static IncrementalIndex makeIncrementalIndex(
       GroupByQuery query,
       GroupByQueryConfig config,
-      StupidPool<ByteBuffer> bufferPool,
+      NonBlockingPool<ByteBuffer> bufferPool,
       Sequence<Row> rows,
       boolean combine
   )

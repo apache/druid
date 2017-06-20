@@ -24,10 +24,12 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnector;
@@ -66,6 +68,9 @@ public class CreateTables extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.<Module>of(
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new Module()
         {
           @Override
