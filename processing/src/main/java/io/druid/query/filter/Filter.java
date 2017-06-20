@@ -34,7 +34,9 @@ import io.druid.segment.ColumnSelectorFactory;
 public interface Filter
 {
   /**
-   * Get a bitmap index, indicating rows that match this filter.
+   * Get a bitmap index, indicating rows that match this filter. Do not call this method unless
+   * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns true. Behavior in the case that
+   * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns false is undefined.
    *
    * @param selector Object used to retrieve bitmap indexes
    *
@@ -47,6 +49,17 @@ public interface Filter
     return getBitmapResult(selector, new DefaultBitmapResultFactory(selector.getBitmapFactory()));
   }
 
+  /**
+   * Get a (possibly wrapped) bitmap index, indicating rows that match this filter. Do not call this method unless
+   * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns true. Behavior in the case that
+   * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns false is undefined.
+   *
+   * @param selector Object used to retrieve bitmap indexes
+   *
+   * @return A bitmap indicating rows that match this filter.
+   *
+   * @see Filter#estimateSelectivity(BitmapIndexSelector)
+   */
   default <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     return bitmapResultFactory.wrapUnknown(getBitmapIndex(selector));
