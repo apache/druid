@@ -33,6 +33,9 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.RouterProcessingModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.java.util.common.logger.Logger;
@@ -70,6 +73,9 @@ public class CliRouter extends ServerRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new RouterProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new JettyHttpClientModule("druid.router.http", Router.class),
         new Module()
         {

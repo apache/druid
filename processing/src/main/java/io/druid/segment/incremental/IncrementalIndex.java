@@ -30,7 +30,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -377,7 +377,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       );
     }
 
-    public IncrementalIndex buildOffheap(final StupidPool<ByteBuffer> bufferPool)
+    public IncrementalIndex buildOffheap(final NonBlockingPool<ByteBuffer> bufferPool)
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);

@@ -36,11 +36,14 @@ import io.airlift.airline.Option;
 import io.druid.cli.GuiceRunnable;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.ParsersModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.indexing.common.task.Task;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
@@ -91,6 +94,9 @@ public class DruidJsonValidator extends GuiceRunnable
   protected List<? extends com.google.inject.Module> getModules()
   {
     return ImmutableList.<com.google.inject.Module>of(
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new com.google.inject.Module()
         {
           @Override

@@ -27,6 +27,9 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
+import io.druid.guice.DruidProcessingModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidProcessingConfig;
@@ -72,6 +75,9 @@ public class ValidateSegments extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new Module()
         {
           @Override
