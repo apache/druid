@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
-import com.oracle.jrockit.jfr.UseConstantPool;
 
 import java.io.Closeable;
 import java.util.Arrays;
