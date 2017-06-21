@@ -74,6 +74,7 @@
         <hadoop.compile.version>2.7.3</hadoop.compile.version>
         <hive.version>2.0.0</hive.version>
         <powermock.version>1.6.6</powermock.version>
+        <aws.sdk.version>1.10.77</aws.sdk.version>
     </properties>
 
     <modules>
@@ -188,7 +189,7 @@
                 <artifactId>aws-java-sdk-ec2</artifactId>
                 <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
                      Need to update Druid to use Jackson 2.6+ -->
-                <version>1.10.77</version>
+                <version>${aws.sdk.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>javax.mail</groupId>
@@ -207,6 +208,11 @@
                         <artifactId>commons-codec</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-s3</artifactId>
+                <version>${aws.sdk.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
