@@ -31,6 +31,8 @@ import java.lang.annotation.Target;
  *
  * Note that interfaces annotated with {@code PublicApi} but not with {@link ExtensionPoint} are not meant to be
  * subclassed in extensions. In this case, the annotation simply signifies that the interface is stable for callers.
+ * In particular, since it is not meant to be subclassed, new non-default methods may be added to an interface and
+ * new abstract methods may be added to a class.
  *
  * If a class or interface is annotated, then all public and protected fields, methods, and constructors that class
  * or interface are considered stable in this sense. If a class is not annotated, but an individual field, method, or

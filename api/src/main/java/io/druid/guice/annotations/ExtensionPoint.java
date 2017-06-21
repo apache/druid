@@ -28,15 +28,14 @@ import java.lang.annotation.Target;
  * Signifies that the annotated entity is an extension point. Extension points are interfaces or non-final classes that
  * may be subclassed in extensions in order to add functionality to Druid. Extension points may change in breaking ways
  * only between major Druid release lines (e.g. 0.10.x -> 0.11.0), but otherwise must remain stable. Extension points
- * may change at any time in non-breaking ways, however, such as by adding new fields, methods, or constructors.
+ * may change at any time in non-breaking ways, however, such as by adding new default methods to an interface.
  *
  * All public and protected fields, methods, and constructors of annotated classes and interfaces are considered
  * stable in this sense. If a class is not annotated, but an individual field, method, or constructor is
  * annotated, then only that particular field, method, or constructor is considered an extension API.
  *
- * Interfaces and classes not annotated with {@code @ExtensionPoint} or {@link PublicApi} may be modified or removed
- * in any Druid release. Extension points are all considered public APIs in the sense of {@link PublicApi}, even if
- * not explicitly annotated as such.
+ * Extension points are all considered public APIs in the sense of {@link PublicApi}, even if not explicitly annotated
+ * as such.
  *
  * Note that there are number of injectable interfaces that are not annotated with {@code ExtensionPoint}. You may
  * still extend these interfaces in extensions, but your extension may need to be recompiled even for a minor
