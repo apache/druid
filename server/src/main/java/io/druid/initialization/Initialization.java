@@ -163,6 +163,8 @@ public class Initialization
                 "Extension module [%s] was ignored because it doesn't have a canonical name, is it a local or anonymous class?",
                 module.getClass().getName()
             );
+          } else if (config.getExcludeModules().contains(moduleName)) {
+            log.info("Not loading module [%s] because it is present in excludeModules config", moduleName);
           } else if (!loadedExtensionNames.contains(moduleName)) {
             log.info("Adding local file system extension module [%s] for class [%s]", moduleName, clazz.getName());
             loadedExtensionNames.add(moduleName);
