@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -48,13 +49,34 @@ public class Queries
   }
 
   /**
+   * Like {@link #prepareAggregations(List, List, List)} but with otherOutputNames as an empty list. Deprecated
+   * because it makes it easy to forget to include dimensions, etc. in "otherOutputNames".
+   *
+   * @param aggFactories aggregator factories for this query
+   * @param postAggs     post-aggregators for this query
+   *
+   * @return decorated post-aggregators
+   *
+   * @throws NullPointerException     if aggFactories is null
+   * @throws IllegalArgumentException if there are any output name collisions or missing post-aggregator inputs
+   */
+  @Deprecated
+  public static List<PostAggregator> prepareAggregations(
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
+  )
+  {
+    return prepareAggregations(Collections.emptyList(), aggFactories, postAggs);
+  }
+
+  /**
    * Returns decorated post-aggregators, based on original un-decorated post-aggregators. In addition, this method
    * also verifies that there are no output name collisions, and that all of the post-aggregators' required input
    * fields are present.
    *
    * @param otherOutputNames names of fields that will appear in the same output namespace as aggregators and
-   *                         post-aggregators. For most built-in query types, this is either empty, or the list of
-   *                         dimension output names.
+   *                         post-aggregators, and are also assumed to be valid inputs to post-aggregators. For most
+   *                         built-in query types, this is either empty, or the list of dimension output names.
    * @param aggFactories     aggregator factories for this query
    * @param postAggs         post-aggregators for this query
    *
