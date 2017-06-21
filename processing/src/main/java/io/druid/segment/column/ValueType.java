@@ -27,6 +27,7 @@ import io.druid.java.util.common.StringUtils;
 public enum ValueType
 {
   FLOAT,
+  DOUBLE,
   LONG,
   STRING,
   COMPLEX;

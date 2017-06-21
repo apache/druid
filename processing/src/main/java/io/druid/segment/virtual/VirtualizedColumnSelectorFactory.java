@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -94,6 +95,16 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
       return virtualColumns.getColumnCapabilities(columnName);
     } else {
       return baseFactory.getColumnCapabilities(columnName);
+    }
+  }
+
+  @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+  {
+    if (virtualColumns.exists(columnName)) {
+      return virtualColumns.makeDoubleColumnSelector(columnName, baseFactory);
+    } else {
+      return baseFactory.makeDoubleColumnSelector(columnName);
     }
   }
 }

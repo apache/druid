@@ -260,6 +260,10 @@ public interface DimensionIndexer
       IncrementalIndex.DimensionDesc desc
   );
 
+  DoubleColumnSelector makeDoubleColumnSelector(
+      IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  );
 
   /**
    * Compares the row values for this DimensionIndexer's dimension from a TimeAndDims key.

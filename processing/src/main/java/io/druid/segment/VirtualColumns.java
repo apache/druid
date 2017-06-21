@@ -283,4 +283,18 @@ public class VirtualColumns implements Cacheable
   {
     return virtualColumns.toString();
   }
+
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      String columnName,
+      ColumnSelectorFactory factory
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      return ZeroDoubleColumnSelector.instance();
+    } else {
+      final DoubleColumnSelector selector = virtualColumn.makeDoubleColumnSelector(columnName, factory);
+      return selector == null ? ZeroDoubleColumnSelector.instance() : selector;
+    }
+  }
 }

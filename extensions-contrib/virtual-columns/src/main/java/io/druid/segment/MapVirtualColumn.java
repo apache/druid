@@ -200,6 +200,12 @@ public class MapVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory)
+  {
+    return null;
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     byte[] key = StringUtils.toUtf8(keyDimension);

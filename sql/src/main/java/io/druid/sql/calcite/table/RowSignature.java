@@ -142,6 +142,9 @@ public class RowSignature
           case FLOAT:
             type = typeFactory.createSqlType(SqlTypeName.FLOAT);
             break;
+          case DOUBLE:
+            type = typeFactory.createSqlType(SqlTypeName.DOUBLE);
+            break;
           case COMPLEX:
             // Loses information about exactly what kind of complex column this is.
             type = typeFactory.createSqlType(SqlTypeName.OTHER);

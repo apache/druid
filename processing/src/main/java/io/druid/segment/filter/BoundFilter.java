@@ -27,6 +27,7 @@ import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -268,6 +269,19 @@ public class BoundFilter implements Filter
             }
           };
         }
+      }
+
+      @Override
+      public DruidDoublePredicate makeDoublePredicate()
+      {
+        if (extractionFn != null) {
+          return input -> doesMatch(extractionFn.apply(input));
+        }
+        if(boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          //TODO @bslim fix this hack
+          return input -> floatPredicateSupplier.get().applyFloat((float) input);
+        }
+        return input -> doesMatch(String.valueOf(input));
       }
     };
   }

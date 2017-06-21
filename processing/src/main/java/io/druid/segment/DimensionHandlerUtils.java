@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
@@ -72,6 +73,10 @@ public final class DimensionHandlerUtils
 
     if (capabilities.getType() == ValueType.FLOAT) {
       return new FloatDimensionHandler(dimensionName);
+    }
+
+    if (capabilities.getType() == ValueType.DOUBLE) {
+      return new DoubleDimensionHandler(dimensionName);
     }
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
@@ -172,6 +177,8 @@ public final class DimensionHandlerUtils
         return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
       case FLOAT:
         return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
+      case DOUBLE:
+        return columnSelectorFactory.makeDoubleColumnSelector(dimSpec.getDimension());
       default:
         return null;
     }
@@ -202,7 +209,9 @@ public final class DimensionHandlerUtils
 
     // DimensionSpec's decorate only operates on DimensionSelectors, so if a spec mustDecorate(),
     // we need to wrap selectors on numeric columns with a string casting DimensionSelector.
-    if (capabilities.getType() == ValueType.LONG || capabilities.getType() == ValueType.FLOAT) {
+    if (capabilities.getType() == ValueType.LONG
+        || capabilities.getType() == ValueType.FLOAT
+        || capabilities.getType() == ValueType.DOUBLE) {
       if (dimSpec.mustDecorate()) {
         capabilities = DEFAULT_STRING_CAPABILITIES;
       }
@@ -289,6 +298,23 @@ public final class DimensionHandlerUtils
     catch (ArithmeticException ae) {
       // indicates there was a non-integral part, or the BigDecimal was too big for a long
       return null;
+    }
+  }
+
+  public static Double convertObjectToDouble(Object valObj)
+  {
+    if (valObj == null) {
+      return 0.0d;
+    }
+
+    if (valObj instanceof Double) {
+      return (Double) valObj;
+    } else if (valObj instanceof Number) {
+      return ((Number) valObj).doubleValue();
+    } else if (valObj instanceof String) {
+      return Doubles.tryParse((String) valObj);
+    } else {
+      throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
   }
 }

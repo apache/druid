@@ -28,7 +28,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.DoubleColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -75,18 +75,18 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxAggregator(getFloatColumnSelector(metricFactory));
+    return new DoubleMaxAggregator(getDoubleColumnSelector(metricFactory));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxBufferAggregator(getFloatColumnSelector(metricFactory));
+    return new DoubleMaxBufferAggregator(getDoubleColumnSelector(metricFactory));
   }
 
-  private FloatColumnSelector getFloatColumnSelector(ColumnSelectorFactory metricFactory)
+  private DoubleColumnSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getFloatColumnSelector(metricFactory, macroTable, fieldName, expression, Float.MIN_VALUE);
+    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, Float.MIN_VALUE);
   }
 
   @Override
@@ -183,7 +183,7 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "double";
   }
 
   @Override

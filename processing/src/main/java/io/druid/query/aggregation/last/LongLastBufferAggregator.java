@@ -69,6 +69,12 @@ public class LongLastBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getLong(position + Longs.BYTES);
+  }
+
+  @Override
   public long getLong(ByteBuffer buf, int position)
   {
     return buf.getLong(position + Longs.BYTES);

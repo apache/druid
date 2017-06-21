@@ -24,6 +24,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.virtual.ExpressionSelectors;
@@ -125,6 +126,27 @@ public class AggregatorUtil
     }
     if (fieldName == null && fieldExpression != null) {
       return ExpressionSelectors.makeLongColumnSelector(
+          metricFactory,
+          Parser.parse(fieldExpression, macroTable),
+          nullValue
+      );
+    }
+    throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
+  }
+
+  public static DoubleColumnSelector getDoubleColumnSelector(
+      final ColumnSelectorFactory metricFactory,
+      final ExprMacroTable macroTable,
+      final String fieldName,
+      final String fieldExpression,
+      final double nullValue
+  )
+  {
+    if (fieldName != null && fieldExpression == null) {
+      return metricFactory.makeDoubleColumnSelector(fieldName);
+    }
+    if (fieldName == null && fieldExpression != null) {
+      return ExpressionSelectors.makeDoubleColumnSelector(
           metricFactory,
           Parser.parse(fieldExpression, macroTable),
           nullValue

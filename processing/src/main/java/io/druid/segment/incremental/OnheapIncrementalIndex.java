@@ -32,6 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -279,6 +280,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     return concurrentGet(rowOffset)[aggOffset].get();
   }
 
+  @Override
+  protected double getMetricDoubleValue(int rowOffset, int aggOffset)
+  {
+    return concurrentGet(rowOffset)[aggOffset].getDouble();
+  }
+
   /**
    * Clear out maps to allow GC
    * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
@@ -304,6 +311,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     private final Map<String, LongColumnSelector> longColumnSelectorMap;
     private final Map<String, FloatColumnSelector> floatColumnSelectorMap;
     private final Map<String, ObjectColumnSelector> objectColumnSelectorMap;
+    private final Map<String, DoubleColumnSelector> doubleColumnSelectorMap;
     private final ColumnSelectorFactory delegate;
 
     public ObjectCachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
@@ -314,11 +322,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         longColumnSelectorMap = new ConcurrentHashMap<>();
         floatColumnSelectorMap = new ConcurrentHashMap<>();
         objectColumnSelectorMap = new ConcurrentHashMap<>();
+        doubleColumnSelectorMap = new ConcurrentHashMap<>();
       } else {
         longColumnSelectorMap = new HashMap<>();
         floatColumnSelectorMap = new HashMap<>();
         objectColumnSelectorMap = new HashMap<>();
+        doubleColumnSelectorMap = new HashMap<>();
       }
+
     }
 
     @Override
@@ -362,6 +373,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     public ColumnCapabilities getColumnCapabilities(String columnName)
     {
       return delegate.getColumnCapabilities(columnName);
+    }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+    {
+      DoubleColumnSelector existing = doubleColumnSelectorMap.get(columnName);
+      if (existing != null) {
+        return existing;
+      } else {
+        DoubleColumnSelector newSelector = delegate.makeDoubleColumnSelector(columnName);
+        DoubleColumnSelector prev = doubleColumnSelectorMap.putIfAbsent(
+            columnName,
+            newSelector
+        );
+        return prev != null ? prev : newSelector;
+      }
     }
   }
 

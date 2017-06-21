@@ -142,7 +142,7 @@ public class RowExtraction
       return extractionFn == null
              ? new DefaultDimensionSpec(column, outputName, outputType)
              : new ExtractionDimensionSpec(column, outputName, outputType, extractionFn);
-    } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
+    } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT || columnType == ValueType.DOUBLE) {
       if (extractionFn == null) {
         return new DefaultDimensionSpec(column, outputName, outputType);
       } else {

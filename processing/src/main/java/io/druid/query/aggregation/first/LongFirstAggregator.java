@@ -76,6 +76,12 @@ public class LongFirstAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) firstValue;
+  }
+
+  @Override
   public void close()
   {
 

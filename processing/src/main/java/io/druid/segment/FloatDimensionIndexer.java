@@ -191,6 +191,36 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+  )
+  {
+    final int dimIndex = desc.getIndex();
+    class IndexerDoubleColumnSelector implements DoubleColumnSelector
+    {
+      @Override
+      public double get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return 0L;
+        }
+        float floatVal = (Float) dims[dimIndex];
+        return (double) floatVal;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
+    }
+
+    return new IndexerDoubleColumnSelector();
+  }
+
+  @Override
   public int compareUnsortedEncodedKeyComponents(Float lhs, Float rhs)
   {
     return lhs.compareTo(rhs);

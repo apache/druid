@@ -191,6 +191,37 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+  )
+  {
+    final int dimIndex = desc.getIndex();
+    class IndexerDoubleColumnSelector implements DoubleColumnSelector
+    {
+      @Override
+      public double get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return 0.0f;
+        }
+
+        long longVal = (Long) dims[dimIndex];
+        return (double) longVal;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
+    }
+    return new IndexerDoubleColumnSelector();
+  }
+
+
+  @Override
   public int compareUnsortedEncodedKeyComponents(Long lhs, Long rhs)
   {
     return lhs.compareTo(rhs);

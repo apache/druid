@@ -77,6 +77,12 @@ public class DoubleFirstAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return firstValue;
+  }
+
+  @Override
   public void close()
   {
 

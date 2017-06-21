@@ -143,6 +143,17 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       }
 
       @Override
+      public double getDoubleMetric(String metric)
+      {
+        try {
+          return row.getDoubleMetric(metric);
+        }
+        catch (ParseException e) {
+          throw Throwables.propagate(e);
+        }
+      }
+
+      @Override
       public float getFloatMetric(String metric)
       {
         try {

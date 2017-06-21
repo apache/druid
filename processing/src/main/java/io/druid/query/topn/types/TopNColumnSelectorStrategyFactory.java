@@ -40,6 +40,8 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
         return new LongTopNColumnSelectorStrategy();
       case FLOAT:
         return new FloatTopNColumnSelectorStrategy();
+      case DOUBLE:
+        return new DoubleTopNColumnSelectorStrategy();
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }

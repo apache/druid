@@ -87,4 +87,10 @@ public class DoubleLastAggregator implements Aggregator
   {
     return (long) lastValue;
   }
+
+  @Override
+  public double getDouble()
+  {
+    return lastValue;
+  }
 }

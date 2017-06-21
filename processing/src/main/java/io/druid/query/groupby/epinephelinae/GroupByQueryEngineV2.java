@@ -39,6 +39,7 @@ import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
+import io.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
 import io.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
 import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
@@ -194,6 +195,8 @@ public class GroupByQueryEngineV2
           return new LongGroupByColumnSelectorStrategy();
         case FLOAT:
           return new FloatGroupByColumnSelectorStrategy();
+        case DOUBLE:
+          return new DoubleGroupByColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }

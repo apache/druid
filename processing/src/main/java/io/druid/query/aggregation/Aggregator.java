@@ -45,4 +45,8 @@ public interface Aggregator extends Closeable
   void close();
 
   long getLong();
+
+  default double getDouble() {
+    throw new UnsupportedOperationException();
+  }
 }

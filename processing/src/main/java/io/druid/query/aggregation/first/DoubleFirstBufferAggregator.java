@@ -76,6 +76,12 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position + Longs.BYTES);
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

@@ -85,4 +85,10 @@ public class JavaScriptAggregator implements Aggregator
   {
     script.close();
   }
+
+  @Override
+  public double getDouble()
+  {
+    return current;
+  }
 }

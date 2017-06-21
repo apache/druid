@@ -131,4 +131,6 @@ public interface VirtualColumn extends Cacheable
    * @return whether to use dot notation
    */
   boolean usesDotNotation();
+
+  DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory);
 }

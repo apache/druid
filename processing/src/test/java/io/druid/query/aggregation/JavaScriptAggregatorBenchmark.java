@@ -37,7 +37,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     scriptDoubleSum.put("fnCombine", "function combine(a,b) { return a + b }");
   }
 
-  private static void aggregate(TestFloatColumnSelector selector, Aggregator agg)
+  private static void aggregate(TestDoubleColumnSelectorImpl selector, Aggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -45,7 +45,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
 
   private JavaScriptAggregator jsAggregator;
   private DoubleSumAggregator doubleAgg;
-  final LoopingFloatColumnSelector selector = new LoopingFloatColumnSelector(new float[]{42.12f, 9f});
+  final LoopingDoubleColumnSelector selector = new LoopingDoubleColumnSelector(new double[]{42.12d, 9d});
 
   @Override
   protected void setUp() throws Exception
@@ -102,6 +102,33 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     public float get()
     {
       return floats[(int) (index % floats.length)];
+    }
+
+    @Override
+    public void increment()
+    {
+      ++index;
+      if (index < 0) {
+        index = 0;
+      }
+    }
+  }
+
+  protected static class LoopingDoubleColumnSelector extends TestDoubleColumnSelectorImpl
+  {
+    private final double[] doubles;
+    private long index = 0;
+
+    public LoopingDoubleColumnSelector(double[] doubles)
+    {
+      super(doubles);
+      this.doubles = doubles;
+    }
+
+    @Override
+    public double get()
+    {
+      return doubles[(int) (index % doubles.length)];
     }
 
     @Override

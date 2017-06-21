@@ -57,6 +57,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
@@ -480,14 +481,7 @@ public class RowBasedGrouperHelper
     @Override
     public Supplier<Comparable> makeInputRawSupplier(LongColumnSelector selector)
     {
-      return new Supplier<Comparable>()
-      {
-        @Override
-        public Comparable get()
-        {
-          return selector.get();
-        }
-      };
+      return () -> selector.get();
     }
   }
 
@@ -497,14 +491,14 @@ public class RowBasedGrouperHelper
     @Override
     public Supplier<Comparable> makeInputRawSupplier(FloatColumnSelector selector)
     {
-      return new Supplier<Comparable>()
-      {
-        @Override
-        public Comparable get()
-        {
-          return selector.get();
-        }
-      };
+      return () -> selector.get();
+    }
+  }
+  private static class DoubleInputRawSupplierColumnSelectorStrategy implements InputRawSupplierColumnSelectorStrategy<DoubleColumnSelector> {
+    @Override
+    public Supplier<Comparable> makeInputRawSupplier(DoubleColumnSelector selector)
+    {
+      return ()-> selector.get();
     }
   }
 
@@ -524,6 +518,8 @@ public class RowBasedGrouperHelper
           return new LongInputRawSupplierColumnSelectorStrategy();
         case FLOAT:
           return new FloatInputRawSupplierColumnSelectorStrategy();
+        case DOUBLE:
+          return new DoubleInputRawSupplierColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -722,7 +718,7 @@ public class RowBasedGrouperHelper
           needsReverses.add(needsReverse);
           aggFlags.add(false);
           final ValueType type = dimensions.get(dimIndex).getOutputType();
-          isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT);
+          isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE);
           comparators.add(orderSpec.getDimensionComparator());
         } else {
           int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
@@ -731,7 +727,7 @@ public class RowBasedGrouperHelper
             needsReverses.add(needsReverse);
             aggFlags.add(true);
             final String typeName = aggregatorFactories[aggIndex].getTypeName();
-            isNumericField.add(typeName.equals("long") || typeName.equals("float"));
+            isNumericField.add(typeName.equals("long") || typeName.equals("float") || typeName.equals("double"));
             comparators.add(orderSpec.getDimensionComparator());
           }
         }
@@ -743,7 +739,7 @@ public class RowBasedGrouperHelper
           aggFlags.add(false);
           needsReverses.add(false);
           final ValueType type = dimensions.get(i).getOutputType();
-          isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT);
+          isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE);
           comparators.add(StringComparators.LEXICOGRAPHIC);
         }
       }
@@ -1115,7 +1111,7 @@ public class RowBasedGrouperHelper
               } else {
                 serdeHelper = new LimitPushDownLongRowBasedKeySerdeHelper(aggOffset, cmp);
               }
-            } else if (typeName.equals("float")) {
+            } else if (typeName.equals("float") || typeName.equals("double")) {
               // called "float", but the aggs really return doubles
               if (cmpIsNumeric) {
                 serdeHelper = new DoubleRowBasedKeySerdeHelper(aggOffset);

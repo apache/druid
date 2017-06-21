@@ -34,10 +34,12 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.TestDoubleColumnSelector;
 import io.druid.segment.TestFloatColumnSelector;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestLongColumnSelector;
@@ -415,6 +417,22 @@ public class VirtualColumnsTest
     public boolean usesDotNotation()
     {
       return true;
+    }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(
+        String columnName, ColumnSelectorFactory factory
+    )
+    {
+      final DoubleColumnSelector selector = makeDoubleColumnSelector(columnName, factory);
+      return new TestDoubleColumnSelector() {
+
+        @Override
+        public double get()
+        {
+          return selector.get();
+        }
+      };
     }
 
     @Override

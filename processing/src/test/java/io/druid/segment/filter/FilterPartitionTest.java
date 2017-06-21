@@ -37,6 +37,7 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -121,40 +122,25 @@ public class FilterPartitionTest extends BaseFilterTest
           @Override
           public Predicate<String> makeStringPredicate()
           {
-            return new Predicate<String>()
-            {
-              @Override
-              public boolean apply(String input)
-              {
-                return Objects.equals(valueOrNull, input);
-              }
-            };
+            return input -> Objects.equals(valueOrNull, input);
           }
 
           @Override
           public DruidLongPredicate makeLongPredicate()
           {
-            return new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return Objects.equals(valueOrNull, String.valueOf(input));
-              }
-            };
+            return input -> Objects.equals(valueOrNull, String.valueOf(input));
           }
 
           @Override
           public DruidFloatPredicate makeFloatPredicate()
           {
-            return new DruidFloatPredicate()
-            {
-              @Override
-              public boolean applyFloat(float input)
-              {
-                return Objects.equals(valueOrNull, String.valueOf(input));
-              }
-            };
+            return input -> Objects.equals(valueOrNull, String.valueOf(input));
+          }
+
+          @Override
+          public DruidDoublePredicate makeDoublePredicate()
+          {
+            return input -> Objects.equals(valueOrNull, String.valueOf(input));
           }
 
         };

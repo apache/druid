@@ -86,6 +86,12 @@ public class TimestampAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) most;
+  }
+
+  @Override
   public void close()
   {
     // no resource to cleanup

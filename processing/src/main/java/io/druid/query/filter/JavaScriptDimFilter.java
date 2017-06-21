@@ -231,6 +231,12 @@ public class JavaScriptDimFilter implements DimFilter
       };
     }
 
+    @Override
+    public DruidDoublePredicate makeDoublePredicate()
+    {
+      return input -> applyObject(input);
+    }
+
     public boolean applyObject(final Object input)
     {
       // one and only one context per thread

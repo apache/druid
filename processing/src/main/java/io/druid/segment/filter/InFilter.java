@@ -26,6 +26,7 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -214,6 +215,16 @@ public class InFilter implements Filter
         } else {
           return floatPredicateSupplier.get();
         }
+      }
+
+      @Override
+      public DruidDoublePredicate makeDoublePredicate()
+      {
+        if (extractionFn != null) {
+          return input -> values.contains(extractionFn.apply(input));
+        }
+        //@TODO @bslim fix this
+        return input -> floatPredicateSupplier.get().applyFloat((float) input);
       }
     };
   }

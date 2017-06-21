@@ -248,6 +248,17 @@ public class LikeDimFilter implements DimFilter
             };
           }
         }
+
+        @Override
+        public DruidDoublePredicate makeDoublePredicate()
+        {
+          return input -> {
+            if (extractionFn != null) {
+              return matches(extractionFn.apply(input));
+            }
+            return matches(String.valueOf(input));
+          };
+        }
       };
     }
 

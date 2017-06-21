@@ -145,7 +145,7 @@ public class DefaultLimitSpec implements LimitSpec
         final StringComparator naturalComparator;
         if (columnType == ValueType.STRING) {
           naturalComparator = StringComparators.LEXICOGRAPHIC;
-        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
+        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT || columnType == ValueType.DOUBLE) {
           naturalComparator = StringComparators.NUMERIC;
         } else {
           sortingNeeded = true;

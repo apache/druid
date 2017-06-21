@@ -118,6 +118,14 @@ public class SelectorDimFilter implements DimFilter
           initFloatPredicate();
           return floatPredicate;
         }
+
+        @Override
+        public DruidDoublePredicate makeDoublePredicate()
+        {
+          //@TODO @bslim fix this hack
+          initFloatPredicate();
+          return input -> floatPredicate.applyFloat((float) input);
+        }
       };
       return new DimensionPredicateFilter(dimension, predicateFactory, extractionFn);
     }
