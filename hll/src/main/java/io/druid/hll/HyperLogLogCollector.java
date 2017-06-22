@@ -315,8 +315,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
           positionOf1 += (byte) 8;
           continue;
         default:
-          positionOf1 += lookupVal;
-          i = 8;
+          positionOf1 += (8-lookupVal);
           break;
       }
     }
