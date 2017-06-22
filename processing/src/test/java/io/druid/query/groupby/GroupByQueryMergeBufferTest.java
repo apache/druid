@@ -59,6 +59,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class GroupByQueryMergeBufferTest
 {
+  private static final long TIMEOUT = 5000;
   private static class TestBlockingPool extends BlockingPool<ByteBuffer>
   {
     private int minRemainBufferNum;
@@ -230,7 +231,7 @@ public class GroupByQueryMergeBufferTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -258,7 +259,7 @@ public class GroupByQueryMergeBufferTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -297,7 +298,7 @@ public class GroupByQueryMergeBufferTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -349,7 +350,7 @@ public class GroupByQueryMergeBufferTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
         .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
