@@ -17,23 +17,24 @@
  * under the License.
  */
 
-package io.druid.query.filter;
+package io.druid.segment;
 
-import io.druid.collections.bitmap.BitmapFactory;
-import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.collections.spatial.ImmutableRTree;
-import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.data.CompressedObjectStrategy.CompressionStrategy;
+import io.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-/**
- */
-public interface BitmapIndexSelector
+@RunWith(Parameterized.class)
+public class ConciseBitmapIndexMergerTest extends IndexMergerTestBase
 {
-  public Indexed<String> getDimensionValues(String dimension);
-  public boolean hasMultipleValues(String dimension);
-  public int getNumRows();
-  public BitmapFactory getBitmapFactory();
-  public BitmapIndex getBitmapIndex(String dimension);
-  public ImmutableBitmap getBitmapIndex(String dimension, String value);
-  public ImmutableRTree getSpatialIndex(String dimension);
+  public ConciseBitmapIndexMergerTest(
+      CompressionStrategy compressionStrategy,
+      CompressionStrategy dimCompressionStrategy,
+      LongEncodingStrategy longEncodingStrategy
+  )
+  {
+    super(new ConciseBitmapSerdeFactory(), compressionStrategy, dimCompressionStrategy, longEncodingStrategy);
+    indexMerger = TestHelper.getTestIndexMergerV9();
+  }
 }
