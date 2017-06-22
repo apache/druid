@@ -78,7 +78,7 @@ public class RouterProcessingModule implements Module
   public ExecutorService getProcessingExecutorService(DruidProcessingConfig config)
   {
     if (config.getNumThreadsConfigured() != ExecutorServiceConfig.DEFAULT_NUM_THREADS) {
-      log.error("numThreads[%d] configured, that is ingnored on Router", config.getNumThreadsConfigured());
+      log.error("numThreads[%d] configured, that is ignored on Router", config.getNumThreadsConfigured());
     }
     return Execs.dummy();
   }

@@ -40,19 +40,6 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   }
 
   @Override
-  public int getNumThreads()
-  {
-    int numThreadsConfigured = getNumThreadsConfigured();
-    if (numThreadsConfigured != DEFAULT_NUM_THREADS) {
-      return numThreadsConfigured;
-    } else {
-      // default to leaving one core for background tasks
-      final int processors = Runtime.getRuntime().availableProcessors();
-      return processors > 1 ? processors - 1 : processors;
-    }
-  }
-
-  @Override
   @Config(value = "${base_path}.numThreads")
   public int getNumThreadsConfigured()
   {

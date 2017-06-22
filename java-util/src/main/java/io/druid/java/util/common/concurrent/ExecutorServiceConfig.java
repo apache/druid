@@ -38,7 +38,7 @@ public abstract class ExecutorServiceConfig
     if (numThreadsConfigured != DEFAULT_NUM_THREADS) {
       return numThreadsConfigured;
     } else {
-      return Runtime.getRuntime().availableProcessors() - 1;
+      return Math.max(Runtime.getRuntime().availableProcessors() - 1, 1);
     }
   }
 
