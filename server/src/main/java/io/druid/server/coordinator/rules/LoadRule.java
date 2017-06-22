@@ -36,6 +36,7 @@ import io.druid.timeline.DataSegment;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * LoadRules indicate the number of replicants a segment should have in a given tier.
@@ -64,12 +65,16 @@ public abstract class LoadRule implements Rule
                                          .getLoadedReplicants(segment.getIdentifier(), tier);
 
       final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getHistoricalsByTier(tier);
+      final int maxSegmentsInQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInQueue();
       if (serverQueue == null) {
         log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
         continue;
       }
 
-      final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
+      final List<ServerHolder> serverHolderList = serverQueue.stream()
+                                                             .filter(s -> s.getNumberOfSegmentsInQueue() < maxSegmentsInQueue)
+                                                             .collect(Collectors.toList());
+
       final BalancerStrategy strategy = params.getBalancerStrategy();
       if (availableSegments.contains(segment)) {
         CoordinatorStats assignStats = assign(

@@ -43,6 +43,7 @@ public class CoordinatorDynamicConfig
   private final boolean emitBalancingStats;
   private final boolean killAllDataSources;
   private final Set<String> killDataSourceWhitelist;
+  private final int maxSegmentsInQueue;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -60,7 +61,8 @@ public class CoordinatorDynamicConfig
       // coordinator console can not send array of strings in the update request.
       // See https://github.com/druid-io/druid/issues/3055
       @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
-      @JsonProperty("killAllDataSources") Boolean killAllDataSources
+      @JsonProperty("killAllDataSources") Boolean killAllDataSources,
+      @JsonProperty("maxSegmentsInQueue") Integer maxSegmentsInQueue
   )
   {
     CoordinatorDynamicConfig current = configManager.watch(
@@ -94,6 +96,8 @@ public class CoordinatorDynamicConfig
                                    ? current.getKillDataSourceWhitelist()
                                    : parseKillDataSourceWhitelist(killDataSourceWhitelist);
 
+    this.maxSegmentsInQueue = maxSegmentsInQueue == null ? current.getMaxSegmentsInQueue() : maxSegmentsInQueue;
+
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
     }
@@ -109,7 +113,8 @@ public class CoordinatorDynamicConfig
       int balancerComputeThreads,
       boolean emitBalancingStats,
       Object killDataSourceWhitelist,
-      boolean killAllDataSources
+      boolean killAllDataSources,
+      int maxSegmentsInQueue
   )
   {
     this.maxSegmentsToMove = maxSegmentsToMove;
@@ -122,6 +127,7 @@ public class CoordinatorDynamicConfig
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.killAllDataSources = killAllDataSources;
     this.killDataSourceWhitelist = parseKillDataSourceWhitelist(killDataSourceWhitelist);
+    this.maxSegmentsInQueue = maxSegmentsInQueue;
 
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -207,6 +213,12 @@ public class CoordinatorDynamicConfig
     return killAllDataSources;
   }
 
+  @JsonProperty
+  public int getMaxSegmentsInQueue()
+  {
+    return maxSegmentsInQueue;
+  }
+
   @Override
   public String toString()
   {
@@ -221,6 +233,7 @@ public class CoordinatorDynamicConfig
            ", emitBalancingStats=" + emitBalancingStats +
            ", killDataSourceWhitelist=" + killDataSourceWhitelist +
            ", killAllDataSources=" + killAllDataSources +
+           ", maxSegmentsInQueue=" + maxSegmentsInQueue +
            '}';
   }
 
@@ -263,6 +276,9 @@ public class CoordinatorDynamicConfig
     if (killAllDataSources != that.killAllDataSources) {
       return false;
     }
+    if (maxSegmentsInQueue != that.maxSegmentsInQueue) {
+      return false;
+    }
     return !(killDataSourceWhitelist != null
              ? !killDataSourceWhitelist.equals(that.killDataSourceWhitelist)
              : that.killDataSourceWhitelist != null);
@@ -282,6 +298,7 @@ public class CoordinatorDynamicConfig
     result = 31 * result + (emitBalancingStats ? 1 : 0);
     result = 31 * result + (killAllDataSources ? 1 : 0);
     result = 31 * result + (killDataSourceWhitelist != null ? killDataSourceWhitelist.hashCode() : 0);
+    result = 31 * result + maxSegmentsInQueue;
     return result;
   }
 
@@ -297,10 +314,11 @@ public class CoordinatorDynamicConfig
     private int balancerComputeThreads;
     private Set<String> killDataSourceWhitelist;
     private boolean killAllDataSources;
+    private int maxSegmentsInQueue = Integer.MAX_VALUE;
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, false);
+      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, false, Integer.MAX_VALUE);
     }
 
     private Builder(
@@ -313,7 +331,8 @@ public class CoordinatorDynamicConfig
         int balancerComputeThreads,
         boolean emitBalancingStats,
         Set<String> killDataSourceWhitelist,
-        boolean killAllDataSources
+        boolean killAllDataSources,
+        int maxSegmentsInQueue
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -326,6 +345,7 @@ public class CoordinatorDynamicConfig
       this.balancerComputeThreads = balancerComputeThreads;
       this.killDataSourceWhitelist = killDataSourceWhitelist;
       this.killAllDataSources = killAllDataSources;
+      this.maxSegmentsInQueue = maxSegmentsInQueue;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -376,6 +396,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withMaxSegmentsInQueue(int maxSegmentsInQueue)
+    {
+      this.maxSegmentsInQueue = maxSegmentsInQueue;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -388,7 +414,8 @@ public class CoordinatorDynamicConfig
           balancerComputeThreads,
           emitBalancingStats,
           killDataSourceWhitelist,
-          killAllDataSources
+          killAllDataSources,
+          maxSegmentsInQueue
       );
     }
   }

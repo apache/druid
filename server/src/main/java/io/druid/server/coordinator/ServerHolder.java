@@ -106,6 +106,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     return peon.getSegmentsToLoad().contains(segment);
   }
 
+  public int getNumberOfSegmentsInQueue()
+  {
+    return peon.getNumberOfSegmentsInQueue();
+  }
+
   @Override
   public int compareTo(ServerHolder serverHolder)
   {

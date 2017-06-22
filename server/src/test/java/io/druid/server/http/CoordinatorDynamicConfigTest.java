@@ -69,7 +69,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
-                     + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"]\n"
+                     + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
+                     + "  \"maxSegmentsInQueue\": 1\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -83,7 +84,7 @@ public class CoordinatorDynamicConfigTest
     );
 
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false),
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false, 1),
         actual
     );
   }
@@ -100,7 +101,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
-                     + "  \"killDataSourceWhitelist\": \" test1 ,test2 \"\n"
+                     + "  \"killDataSourceWhitelist\": \" test1 ,test2 \", \n"
+                     + "  \"maxSegmentsInQueue\": 1\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -114,7 +116,7 @@ public class CoordinatorDynamicConfigTest
     );
 
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false),
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false, 1),
         actual
     );
   }
@@ -131,7 +133,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
-                     + "  \"killAllDataSources\": true\n"
+                     + "  \"killAllDataSources\": true,\n"
+                     + "  \"maxSegmentsInQueue\": 1\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -145,7 +148,7 @@ public class CoordinatorDynamicConfigTest
     );
 
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true),
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true, 1),
         actual
     );
 
@@ -172,7 +175,7 @@ public class CoordinatorDynamicConfigTest
   public void testBuilderDefaults()
   {
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false),
+        new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false, Integer.MAX_VALUE),
         new CoordinatorDynamicConfig.Builder().build()
     );
   }
@@ -180,7 +183,7 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testUpdate()
   {
-    CoordinatorDynamicConfig current = new CoordinatorDynamicConfig(99, 99, 99, 99, 99, 99, 99, true, ImmutableSet.of("x"), false);
+    CoordinatorDynamicConfig current = new CoordinatorDynamicConfig(99, 99, 99, 99, 99, 99, 99, true, ImmutableSet.of("x"), false, 99);
     JacksonConfigManager mock = EasyMock.mock(JacksonConfigManager.class);
     EasyMock.expect(mock.watch(CoordinatorDynamicConfig.CONFIG_KEY, CoordinatorDynamicConfig.class)).andReturn(
         new AtomicReference<>(current)
@@ -188,15 +191,15 @@ public class CoordinatorDynamicConfigTest
     EasyMock.replay(mock);
     Assert.assertEquals(
         current,
-        new CoordinatorDynamicConfig(mock, null, null, null, null, null, null, null, null, null, null)
+        new CoordinatorDynamicConfig(mock, null, null, null, null, null, null, null, null, null, null, null)
     );
   }
 
   @Test
   public void testEqualsAndHashCodeSanity()
   {
-    CoordinatorDynamicConfig config1 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false);
-    CoordinatorDynamicConfig config2 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false);
+    CoordinatorDynamicConfig config1 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false, 10000);
+    CoordinatorDynamicConfig config2 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false, 10000);
 
     Assert.assertEquals(config1, config2);
     Assert.assertEquals(config1.hashCode(), config2.hashCode());
