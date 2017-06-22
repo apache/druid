@@ -20,60 +20,64 @@
 package io.druid.query.expression;
 
 import com.google.common.base.Strings;
+import com.google.inject.Inject;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.math.expr.ExprType;
-import io.druid.query.filter.LikeDimFilter;
+import io.druid.query.lookup.LookupReferencesManager;
+import io.druid.query.lookup.RegisteredLookupExtractionFn;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public class LikeExprMacro implements ExprMacroTable.ExprMacro
+public class LookupExprMacro implements ExprMacroTable.ExprMacro
 {
+  private final LookupReferencesManager lookupReferencesManager;
+
+  @Inject
+  public LookupExprMacro(final LookupReferencesManager lookupReferencesManager)
+  {
+    this.lookupReferencesManager = lookupReferencesManager;
+  }
+
   @Override
   public String name()
   {
-    return "like";
+    return "lookup";
   }
 
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 3) {
-      throw new IAE("Function[%s] must have 2 or 3 arguments", name());
+    if (args.size() != 2) {
+      throw new IAE("'%s' must have 2 arguments", name());
     }
 
     final Expr arg = args.get(0);
-    final Expr patternExpr = args.get(1);
-    final Expr escapeExpr = args.size() > 2 ? args.get(2) : null;
+    final Expr lookupExpr = args.get(1);
 
-    if (!patternExpr.isLiteral() || (escapeExpr != null && !escapeExpr.isLiteral())) {
-      throw new IAE("pattern and escape must be literals");
+    if (!lookupExpr.isLiteral() || lookupExpr.getLiteralValue() == null) {
+      throw new IAE("'%s' second argument must be a registered lookup name", name());
     }
 
-    final String escape = escapeExpr == null ? null : (String) escapeExpr.getLiteralValue();
-    final Character escapeChar;
-
-    if (escape != null && escape.length() != 1) {
-      throw new IllegalArgumentException("Escape must be null or a single character");
-    } else {
-      escapeChar = escape == null ? null : escape.charAt(0);
-    }
-
-    final LikeDimFilter.LikeMatcher likeMatcher = LikeDimFilter.LikeMatcher.from(
-        Strings.nullToEmpty((String) patternExpr.getLiteralValue()),
-        escapeChar
+    final String lookupName = lookupExpr.getLiteralValue().toString();
+    final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
+        lookupReferencesManager,
+        lookupName,
+        false,
+        null,
+        false,
+        null
     );
 
-    class LikeExtractExpr implements Expr
+    class LookupExpr implements Expr
     {
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(likeMatcher.matches(arg.eval(bindings).asString()), ExprType.LONG);
+        return ExprEval.of(extractionFn.apply(Strings.emptyToNull(arg.eval(bindings).asString())));
       }
 
       @Override
@@ -83,7 +87,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
         visitor.visit(this);
       }
     }
-    return new LikeExtractExpr();
+
+    return new LookupExpr();
   }
 }
-
