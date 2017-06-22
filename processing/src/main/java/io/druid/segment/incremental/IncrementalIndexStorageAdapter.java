@@ -35,7 +35,6 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -61,7 +60,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
-import java.util.Map;
 
 /**
  */
