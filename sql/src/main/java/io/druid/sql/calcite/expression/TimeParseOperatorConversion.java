@@ -19,43 +19,38 @@
 
 package io.druid.sql.calcite.expression;
 
-import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.sql.calcite.planner.PlannerContext;
-import org.apache.calcite.rex.RexCall;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 
-import java.util.List;
-
-public class CharacterLengthExtractionOperator implements SqlExtractionOperator
+public class TimeParseOperatorConversion implements SqlOperatorConversion
 {
+  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+      .operatorBuilder("TIME_PARSE")
+      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
+      .requiredOperands(1)
+      .nullableReturnType(SqlTypeName.TIMESTAMP)
+      .functionCategory(SqlFunctionCategory.TIMEDATE)
+      .build();
+
   @Override
-  public SqlFunction calciteFunction()
+  public SqlOperator calciteOperator()
   {
-    return SqlStdOperatorTable.CHAR_LENGTH;
+    return SQL_FUNCTION;
   }
 
   @Override
-  public RowExtraction convert(
+  public DruidExpression toDruidExpression(
       final PlannerContext plannerContext,
-      final List<String> rowOrder,
-      final RexNode expression
+      final RowSignature rowSignature,
+      final RexNode rexNode
   )
   {
-    final RexCall call = (RexCall) expression;
-    final RowExtraction arg = Expressions.toRowExtraction(
-        plannerContext,
-        rowOrder,
-        call.getOperands().get(0)
-    );
-    if (arg == null) {
-      return null;
-    }
-
-    return RowExtraction.of(
-        arg.getColumn(),
-        ExtractionFns.compose(StrlenExtractionFn.instance(), arg.getExtractionFn())
-    );
+    return OperatorConversions.functionCall(plannerContext, rowSignature, rexNode, "timestamp_parse");
   }
 }
