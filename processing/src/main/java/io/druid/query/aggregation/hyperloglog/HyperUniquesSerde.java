@@ -102,7 +102,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       ByteBuffer byteBuffer, ColumnBuilder columnBuilder
   )
   {
-    final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy());
+    final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
     columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
