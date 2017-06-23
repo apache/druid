@@ -236,7 +236,7 @@ public class GenericIndexed<T> implements Indexed<T>
       throw new IAE("Index[%s] < 0", index);
     }
     if (index >= size) {
-      throw new IAE(StringUtils.safeFormat("Index[%s] >= size[%s]", index, size));
+      throw new IAE("Index[%d] >= size[%d]", index, size);
     }
   }
 
