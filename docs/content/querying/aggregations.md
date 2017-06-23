@@ -17,7 +17,7 @@ Available aggregations are:
 ```
 
 Please note the count aggregator counts the number of Druid rows, which does not always reflect the number of raw events ingested. 
-This is because Druid rolls up data at ingestion time. To 
+This is because Druid can be configured to roll up data at ingestion time. To 
 count the number of ingested rows of data, include a count aggregator at ingestion time, and a longSum aggregator at 
 query time.
 
