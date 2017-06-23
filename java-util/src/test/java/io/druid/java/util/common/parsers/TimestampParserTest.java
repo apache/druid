@@ -34,6 +34,12 @@ public class TimestampParserTest
   }
 
   @Test
+  public void testReplace() throws Exception {
+    Assert.assertEquals("2016-09-13T07:33:02.123", ParserUtils.replace("2016-09-13 07:33:02.123", " ", "T"));
+    Assert.assertEquals("2016-09-13T07:33:02.123Z", ParserUtils.replace("2016-09-13 07:33:02.123Z", " ", "T"));
+  }
+
+  @Test
   public void testAuto() throws Exception {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("1234567890000"));
