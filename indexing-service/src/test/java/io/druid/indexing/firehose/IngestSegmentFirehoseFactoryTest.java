@@ -339,7 +339,7 @@ public class IngestSegmentFirehoseFactoryTest
                       ),
                       INDEX_IO
                   ),
-                  StringUtils.safeFormat(
+                  StringUtils.format(
                       "DimNames[%s]MetricNames[%s]ParserDimNames[%s]",
                       dim_names == null ? "null" : "dims",
                       metric_names == null ? "null" : "metrics",

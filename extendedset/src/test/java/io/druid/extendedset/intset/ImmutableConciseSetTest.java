@@ -1902,7 +1902,7 @@ public class ImmutableConciseSetTest
       for (int i = 0; i < length; i++) {
         final int n = intIterator.next();
         if (i != n) {
-          Assert.assertEquals(StringUtils.safeFormat("Failure at bit [%d] on length [%d]", i, length), i, n);
+          Assert.assertEquals(StringUtils.format("Failure at bit [%d] on length [%d]", i, length), i, n);
         }
       }
       NoSuchElementException ex = null;

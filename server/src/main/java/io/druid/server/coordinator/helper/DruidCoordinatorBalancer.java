@@ -194,7 +194,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         );
       }
       catch (Exception e) {
-        log.makeAlert(e, StringUtils.safeFormat("[%s] : Moving exception", segmentName)).emit();
+        log.makeAlert(e, StringUtils.format("[%s] : Moving exception", segmentName)).emit();
         if (callback != null) {
           callback.execute();
         }

@@ -113,7 +113,7 @@ public class KafkaIndexTaskClient
     this.executorService = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(
             numThreads,
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "KafkaIndexTaskClient-%s-%%d",
                 dataSource
             )
@@ -176,7 +176,7 @@ public class KafkaIndexTaskClient
           id,
           HttpMethod.POST,
           "pause",
-          timeout > 0 ? StringUtils.safeFormat("timeout=%d", timeout) : null,
+          timeout > 0 ? StringUtils.format("timeout=%d", timeout) : null,
           true
       );
 
@@ -473,17 +473,17 @@ public class KafkaIndexTaskClient
       FullResponseHolder response = null;
       Request request = null;
       TaskLocation location = TaskLocation.unknown();
-      String path = StringUtils.safeFormat("%s/%s/%s", BASE_PATH, id, pathSuffix);
+      String path = StringUtils.format("%s/%s/%s", BASE_PATH, id, pathSuffix);
 
       Optional<TaskStatus> status = taskInfoProvider.getTaskStatus(id);
       if (!status.isPresent() || !status.get().isRunnable()) {
-        throw new TaskNotRunnableException(StringUtils.safeFormat("Aborting request because task [%s] is not runnable", id));
+        throw new TaskNotRunnableException(StringUtils.format("Aborting request because task [%s] is not runnable", id));
       }
 
       try {
         location = taskInfoProvider.getTaskLocation(id);
         if (location.equals(TaskLocation.unknown())) {
-          throw new NoTaskLocationException(StringUtils.safeFormat("No TaskLocation available for task [%s]", id));
+          throw new NoTaskLocationException(StringUtils.format("No TaskLocation available for task [%s]", id));
         }
 
         // Netty throws some annoying exceptions if a connection can't be opened, which happens relatively frequently
@@ -546,7 +546,7 @@ public class KafkaIndexTaskClient
 
         String urlForLog = (request != null
                             ? request.getUrl().toString()
-                            : StringUtils.safeFormat("http://%s:%d%s", location.getHost(), location.getPort(), path));
+                            : StringUtils.format("http://%s:%d%s", location.getHost(), location.getPort(), path));
         if (!retry) {
           // if retry=false, we probably aren't too concerned if the operation doesn't succeed (i.e. the request was
           // for informational purposes only) so don't log a scary stack trace

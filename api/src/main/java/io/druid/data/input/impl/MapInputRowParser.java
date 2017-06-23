@@ -63,7 +63,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       if (timestamp == null) {
         final String input = theMap.toString();
         throw new NullPointerException(
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "Null timestamp in input: %s",
                 input.length() < 100 ? input : input.substring(0, 100) + "..."
             )

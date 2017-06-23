@@ -63,7 +63,7 @@ public class QueryResourceTestClient
 
   private String getBrokerURL()
   {
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "%s/druid/v2/",
         routerUrl
     );

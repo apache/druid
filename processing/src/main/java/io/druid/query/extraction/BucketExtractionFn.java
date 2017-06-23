@@ -145,6 +145,6 @@ public class BucketExtractionFn implements ExtractionFn
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("bucket(%f, %f)", size, offset);
+    return StringUtils.format("bucket(%f, %f)", size, offset);
   }
 }

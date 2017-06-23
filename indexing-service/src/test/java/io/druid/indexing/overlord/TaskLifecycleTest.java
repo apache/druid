@@ -1174,7 +1174,7 @@ public class TaskLifecycleTest
 
   private RealtimeIndexTask newRealtimeIndexTask()
   {
-    String taskId = StringUtils.safeFormat("rt_task_%s", System.currentTimeMillis());
+    String taskId = StringUtils.format("rt_task_%s", System.currentTimeMillis());
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,

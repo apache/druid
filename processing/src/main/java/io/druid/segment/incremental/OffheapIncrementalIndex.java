@@ -248,7 +248,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   {
     final boolean canAdd = size() < maxRowCount;
     if (!canAdd) {
-      outOfRowsReason = StringUtils.safeFormat("Maximum number of rows [%d] reached", maxRowCount);
+      outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
     }
     return canAdd;
   }

@@ -59,7 +59,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
           public Void withHandle(Handle handle) throws Exception
           {
             final PreparedBatch batch = handle.prepareBatch(
-                StringUtils.safeFormat(
+                StringUtils.format(
                     "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                     tableName, connector.getQuoteString()

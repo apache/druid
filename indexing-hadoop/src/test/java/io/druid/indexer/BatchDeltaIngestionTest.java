@@ -281,7 +281,7 @@ public class BatchDeltaIngestionTest
     JobHelper.runJobs(ImmutableList.<Jobby>of(job), config);
 
     File segmentFolder = new File(
-        StringUtils.safeFormat(
+        StringUtils.format(
             "%s/%s/%s_%s/%s/0",
             config.getSchema().getIOConfig().getSegmentOutputPath(),
             config.getSchema().getDataSchema().getDataSource(),

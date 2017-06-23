@@ -164,7 +164,7 @@ public class OverlordResource
             }
             catch (EntryExistsException e) {
               return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(ImmutableMap.of("error", StringUtils.safeFormat("Task[%s] already exists!", task.getId())))
+                             .entity(ImmutableMap.of("error", StringUtils.format("Task[%s] already exists!", task.getId())))
                              .build();
             }
           }
@@ -507,7 +507,7 @@ public class OverlordResource
                   if (!optionalTask.isPresent()) {
                     throw new WebApplicationException(
                         Response.serverError().entity(
-                            StringUtils.safeFormat("No task information found for task with id: [%s]", taskId)
+                            StringUtils.format("No task information found for task with id: [%s]", taskId)
                         ).build()
                     );
                   }
@@ -698,7 +698,7 @@ public class OverlordResource
             if (!optionalTask.isPresent()) {
               throw new WebApplicationException(
                   Response.serverError().entity(
-                      StringUtils.safeFormat("No task information found for task with id: [%s]", taskId)
+                      StringUtils.format("No task information found for task with id: [%s]", taskId)
                   ).build()
               );
             }

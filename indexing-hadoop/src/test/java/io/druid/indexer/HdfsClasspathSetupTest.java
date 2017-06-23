@@ -85,8 +85,8 @@ public class HdfsClasspathSetupTest
   public void setUp() throws IOException
   {
     // intermedatePath and finalClasspath are relative to hdfsTmpDir directory.
-    intermediatePath = new Path(StringUtils.safeFormat("/tmp/classpath/%s", UUIDUtils.generateUuid()));
-    finalClasspath = new Path(StringUtils.safeFormat("/tmp/intermediate/%s", UUIDUtils.generateUuid()));
+    intermediatePath = new Path(StringUtils.format("/tmp/classpath/%s", UUIDUtils.generateUuid()));
+    finalClasspath = new Path(StringUtils.format("/tmp/intermediate/%s", UUIDUtils.generateUuid()));
     dummyJarFile = tempFolder.newFile("dummy-test.jar");
     Files.copy(
         new ByteArrayInputStream(StringUtils.toUtf8(dummyJarString)),

@@ -59,7 +59,7 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
   public void open() throws IOException
   {
     writer = new GenericIndexedWriter(
-        ioPeon, StringUtils.safeFormat("%s_%s", metricName, outDir.getName()), serde.getObjectStrategy()
+        ioPeon, StringUtils.format("%s_%s", metricName, outDir.getName()), serde.getObjectStrategy()
     );
 
     writer.open();

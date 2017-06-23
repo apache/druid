@@ -65,7 +65,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   {
     writer = CompressionFactory.getFloatSerializer(
         ioPeon,
-        StringUtils.safeFormat("%s.float_column", filenameBase),
+        StringUtils.format("%s.float_column", filenameBase),
         byteOrder,
         compression
     );

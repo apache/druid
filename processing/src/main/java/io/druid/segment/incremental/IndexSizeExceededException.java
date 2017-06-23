@@ -31,12 +31,12 @@ public class IndexSizeExceededException extends IOException
 
   public IndexSizeExceededException(String formatText, Object... arguments)
   {
-    super(StringUtils.safeFormat(formatText, arguments));
+    super(StringUtils.unimportantSafeFormat(formatText, arguments));
   }
 
   public IndexSizeExceededException(Throwable cause, String formatText, Object... arguments)
   {
-    super(StringUtils.safeFormat(formatText, arguments), cause);
+    super(StringUtils.unimportantSafeFormat(formatText, arguments), cause);
   }
 
   public IndexSizeExceededException(Throwable cause)

@@ -140,7 +140,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
     if (desc == null) {
       throw new ParseException(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
               protoMessageType,
               messageTypes

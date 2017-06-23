@@ -105,7 +105,7 @@ public class StringFormatExtractionFn extends DimExtractionFn
         value = "";
       }
     }
-    return Strings.emptyToNull(StringUtils.safeFormat(format, value));
+    return Strings.emptyToNull(StringUtils.format(format, value));
   }
 
   @Override

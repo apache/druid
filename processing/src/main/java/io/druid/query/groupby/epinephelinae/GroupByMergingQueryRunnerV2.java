@@ -140,7 +140,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
 
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
-        StringUtils.safeFormat("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
+        StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
     final int priority = QueryContexts.getPriority(query);

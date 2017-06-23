@@ -247,7 +247,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             if (containers.containsKey(containerKey)) {
               log.error("New node[%s] but there was already one.  That's not good, ignoring new one.", child.getPath());
             } else {
-              final String inventoryPath = StringUtils.safeFormat("%s/%s", config.getInventoryPath(), containerKey);
+              final String inventoryPath = StringUtils.format("%s/%s", config.getInventoryPath(), containerKey);
               PathChildrenCache inventoryCache = cacheFactory.make(curatorFramework, inventoryPath);
               inventoryCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
 

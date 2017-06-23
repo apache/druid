@@ -152,7 +152,7 @@ public final class CacheScheduler
     {
       try {
         this.namespace = namespace;
-        this.asString = StringUtils.safeFormat("namespace [%s] : %s", namespace, super.toString());
+        this.asString = StringUtils.format("namespace [%s] : %s", namespace, super.toString());
         this.updaterFuture = schedule(namespace);
         this.entryCleaner = createCleaner(entry);
         this.cacheGenerator = cacheGenerator;

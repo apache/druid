@@ -74,7 +74,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   {
     super(
         // _not_ the version, just something uniqueish
-        id != null ? id : StringUtils.safeFormat(
+        id != null ? id : StringUtils.format(
             "merge_%s_%s", computeProcessingID(dataSource, segments), new DateTime().toString()
         ),
         dataSource,
@@ -266,7 +266,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
               @Override
               public String apply(DataSegment x)
               {
-                return StringUtils.safeFormat(
+                return StringUtils.format(
                     "%s_%s_%s_%s",
                     x.getInterval().getStart(),
                     x.getInterval().getEnd(),
@@ -278,7 +278,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
         )
     );
 
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "%s_%s",
         dataSource,
         Hashing.sha1().hashString(segmentIDs, Charsets.UTF_8).toString()

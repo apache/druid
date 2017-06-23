@@ -210,7 +210,7 @@ public class QueryResource implements QueryCountStatsProvider
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
-            .setName(StringUtils.safeFormat("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource().getNames(), queryId));
+            .setName(StringUtils.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource().getNames(), queryId));
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }

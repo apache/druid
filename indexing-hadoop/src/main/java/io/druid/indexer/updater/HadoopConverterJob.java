@@ -86,7 +86,7 @@ public class HadoopConverterJob
     if (segments.size() == 1) {
       final DataSegment segment = segments.get(0);
       jobConf.setJobName(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "druid-convert-%s-%s-%s",
               segment.getDataSource(),
               segment.getInterval(),
@@ -121,7 +121,7 @@ public class HadoopConverterJob
           )
       );
       jobConf.setJobName(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "druid-convert-%s-%s",
               Arrays.toString(dataSources.toArray()),
               Arrays.toString(versions.toArray())

@@ -27,6 +27,6 @@ public class TemporaryStorageFullException extends IOException
 {
   public TemporaryStorageFullException(final long maxBytesUsed)
   {
-    super(StringUtils.safeFormat("Cannot write to disk, hit limit of %,d bytes.", maxBytesUsed));
+    super(StringUtils.format("Cannot write to disk, hit limit of %,d bytes.", maxBytesUsed));
   }
 }

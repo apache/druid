@@ -255,7 +255,7 @@ public class ApproximateHistogramTest
       tFold += System.nanoTime() - t0;
     }
 
-    System.out.println(StringUtils.safeFormat("Average folds per second : %f", (double) count / (double) tFold * 1e9));
+    System.out.println(StringUtils.format("Average folds per second : %f", (double) count / (double) tFold * 1e9));
   }
 
   @Test

@@ -58,7 +58,7 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   public void open() throws IOException
   {
     writer = CompressionFactory.getFloatSerializer(
-        ioPeon, StringUtils.safeFormat("%s_little", metricName), IndexIO.BYTE_ORDER, compression
+        ioPeon, StringUtils.format("%s_little", metricName), IndexIO.BYTE_ORDER, compression
     );
 
     writer.open();

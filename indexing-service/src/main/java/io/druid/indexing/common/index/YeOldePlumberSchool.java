@@ -257,7 +257,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 
       private File getSpillDir(final int n)
       {
-        return new File(persistDir, StringUtils.safeFormat("spill%d", n));
+        return new File(persistDir, StringUtils.format("spill%d", n));
       }
     };
   }

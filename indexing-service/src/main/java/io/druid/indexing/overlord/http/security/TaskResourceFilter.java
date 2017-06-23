@@ -84,7 +84,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
       if (!taskOptional.isPresent()) {
         throw new WebApplicationException(
             Response.status(Response.Status.BAD_REQUEST)
-                    .entity(StringUtils.safeFormat("Cannot find any task with id: [%s]", taskId))
+                    .entity(StringUtils.format("Cannot find any task with id: [%s]", taskId))
                     .build()
         );
       }
@@ -102,7 +102,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
       if (!authResult.isAllowed()) {
         throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
                                                   .entity(
-                                                      StringUtils.safeFormat("Access-Check-Result: %s", authResult.toString())
+                                                      StringUtils.format("Access-Check-Result: %s", authResult.toString())
                                                   )
                                                   .build());
       }

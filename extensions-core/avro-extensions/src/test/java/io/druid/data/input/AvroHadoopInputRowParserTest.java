@@ -106,7 +106,7 @@ public class AvroHadoopInputRowParserTest
       // 1. read avro files into Pig
       pigServer = new PigServer(ExecType.LOCAL);
       pigServer.registerQuery(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "A = LOAD '%s' USING %s;",
               someAvroDatumFile,
               inputStorage

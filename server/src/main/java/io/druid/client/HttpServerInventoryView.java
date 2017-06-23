@@ -508,14 +508,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       try {
         final String req;
         if (counter != null) {
-          req = StringUtils.safeFormat(
+          req = StringUtils.format(
               "/druid-internal/v1/segments?counter=%s&hash=%s&timeout=%s",
               counter.getCounter(),
               counter.getHash(),
               config.getServerTimeout()
           );
         } else {
-          req = StringUtils.safeFormat(
+          req = StringUtils.format(
               "/druid-internal/v1/segments?counter=-1&timeout=%s",
               config.getServerTimeout()
           );

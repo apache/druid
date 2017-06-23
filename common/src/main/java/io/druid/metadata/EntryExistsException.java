@@ -27,7 +27,7 @@ public class EntryExistsException extends Exception
 
   public EntryExistsException(String entryId, Throwable t)
   {
-    super(StringUtils.safeFormat("Entry already exists: %s", entryId), t);
+    super(StringUtils.format("Entry already exists: %s", entryId), t);
     this.entryId = entryId;
   }
 

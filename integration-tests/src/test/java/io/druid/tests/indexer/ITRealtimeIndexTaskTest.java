@@ -259,7 +259,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
 
   private String getRouterURL()
   {
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "%s/druid/v2?pretty",
         config.getRouterUrl()
     );

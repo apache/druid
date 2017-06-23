@@ -179,7 +179,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
     try {
       org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
-      final URI uri = URI.create(StringUtils.safeFormat("s3://%s/%s", s3Coords.bucket, s3Coords.path));
+      final URI uri = URI.create(StringUtils.format("s3://%s/%s", s3Coords.bucket, s3Coords.path));
       final ByteSource byteSource = new ByteSource()
       {
         @Override
@@ -293,7 +293,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   {
     try {
       final FileObject object = buildFileObject(uri, s3Client);
-      return StringUtils.safeFormat("%d", object.getLastModified());
+      return StringUtils.format("%d", object.getLastModified());
     }
     catch (ServiceException e) {
       if (S3Utils.isServiceExceptionRecoverable(e)) {
@@ -364,7 +364,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
     @Override
     public String toString()
     {
-      return StringUtils.safeFormat("s3://%s/%s", bucket, path);
+      return StringUtils.format("s3://%s/%s", bucket, path);
     }
   }
 }

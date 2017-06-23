@@ -56,7 +56,7 @@ class IOPeonForTesting implements IOPeon
     ByteArrayOutputStream outStream = outStreams.get(filename);
 
     if (outStream == null) {
-      throw new FileNotFoundException(StringUtils.safeFormat("unknown file[%s]", filename));
+      throw new FileNotFoundException(StringUtils.format("unknown file[%s]", filename));
     }
 
     return new ByteArrayInputStream(outStream.toByteArray());

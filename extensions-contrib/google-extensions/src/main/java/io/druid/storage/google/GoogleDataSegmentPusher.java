@@ -72,7 +72,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return StringUtils.safeFormat("gs://%s/%s", config.getBucket(), config.getPrefix());
+    return StringUtils.format("gs://%s/%s", config.getBucket(), config.getPrefix());
   }
 
   public File createDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment)

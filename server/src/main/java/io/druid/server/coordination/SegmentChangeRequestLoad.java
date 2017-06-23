@@ -55,7 +55,7 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   @Override
   public String asString()
   {
-    return StringUtils.safeFormat("LOAD: %s", segment.getIdentifier());
+    return StringUtils.format("LOAD: %s", segment.getIdentifier());
   }
 
   @Override

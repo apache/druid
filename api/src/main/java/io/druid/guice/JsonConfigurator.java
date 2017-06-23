@@ -103,7 +103,7 @@ public class JsonConfigurator
     }
     catch (IllegalArgumentException e) {
       throw new ProvisionException(
-          StringUtils.safeFormat("Problem parsing object at prefix[%s]: %s.", propertyPrefix, e.getMessage()), e
+          StringUtils.format("Problem parsing object at prefix[%s]: %s.", propertyPrefix, e.getMessage()), e
       );
     }
 
@@ -123,7 +123,7 @@ public class JsonConfigurator
               final Field theField = beanClazz.getDeclaredField(fieldName);
 
               if (theField.getAnnotation(JacksonInject.class) != null) {
-                path = StringUtils.safeFormat(" -- Injected field[%s] not bound!?", fieldName);
+                path = StringUtils.format(" -- Injected field[%s] not bound!?", fieldName);
                 break;
               }
 
@@ -143,7 +143,7 @@ public class JsonConfigurator
           throw Throwables.propagate(e);
         }
 
-        messages.add(StringUtils.safeFormat("%s - %s", path, violation.getMessage()));
+        messages.add(StringUtils.format("%s - %s", path, violation.getMessage()));
       }
 
       throw new ProvisionException(
@@ -154,7 +154,7 @@ public class JsonConfigurator
                 @Override
                 public Message apply(String input)
                 {
-                  return new Message(StringUtils.safeFormat("%s%s", propertyBase, input));
+                  return new Message(StringUtils.format("%s%s", propertyBase, input));
                 }
               }
           )
@@ -176,7 +176,7 @@ public class JsonConfigurator
       final AnnotatedField field = beanDef.getField();
       if (field == null || !field.hasAnnotation(JsonProperty.class)) {
         throw new ProvisionException(
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "JsonConfigurator requires Jackson-annotated Config objects to have field annotations. %s doesn't",
                 clazz
             )

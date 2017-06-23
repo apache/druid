@@ -106,7 +106,7 @@ public class SQLAuditManager implements AuditManager
     );
 
     handle.createStatement(
-        StringUtils.safeFormat(
+        StringUtils.format(
             "INSERT INTO %s ( audit_key, type, author, comment, created_date, payload) VALUES (:audit_key, :type, :author, :comment, :created_date, :payload)",
             getAuditTable()
         )
@@ -131,7 +131,7 @@ public class SQLAuditManager implements AuditManager
           public List<AuditEntry> withHandle(Handle handle) throws Exception
           {
             return handle.createQuery(
-                StringUtils.safeFormat(
+                StringUtils.format(
                     "SELECT payload FROM %s WHERE audit_key = :audit_key and type = :type and created_date between :start_date and :end_date ORDER BY created_date",
                     getAuditTable()
                 )
@@ -192,7 +192,7 @@ public class SQLAuditManager implements AuditManager
           public List<AuditEntry> withHandle(Handle handle) throws Exception
           {
             return handle.createQuery(
-                StringUtils.safeFormat(
+                StringUtils.format(
                     "SELECT payload FROM %s WHERE type = :type and created_date between :start_date and :end_date ORDER BY created_date",
                     getAuditTable()
                 )
@@ -240,7 +240,7 @@ public class SQLAuditManager implements AuditManager
       throws IllegalArgumentException
   {
     final int theLimit = getLimit(limit);
-    String queryString = StringUtils.safeFormat("SELECT payload FROM %s WHERE type = :type", getAuditTable());
+    String queryString = StringUtils.format("SELECT payload FROM %s WHERE type = :type", getAuditTable());
     if (key != null) {
       queryString += " and audit_key = :audit_key";
     }

@@ -174,7 +174,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       num_events++;
       added += num_events;
       // construct the event to send
-      String event = StringUtils.safeFormat(event_template, event_fmt.print(dt), num_events, 0, num_events);
+      String event = StringUtils.format(event_template, event_fmt.print(dt), num_events, 0, num_events);
       LOG.info("sending event: [%s]", event);
       try {
         producer.send(new ProducerRecord<String, String>(TOPIC_NAME, event)).get();

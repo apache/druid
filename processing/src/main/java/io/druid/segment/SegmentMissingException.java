@@ -25,7 +25,7 @@ import io.druid.java.util.common.StringUtils;
 public class SegmentMissingException extends ISE
 {
   public SegmentMissingException(String formatText, Object... arguments) {
-    super(StringUtils.safeFormat(formatText, arguments));
+    super(StringUtils.unimportantSafeFormat(formatText, arguments));
   }
 
   public SegmentMissingException(Throwable cause, String formatText, Object... arguments){

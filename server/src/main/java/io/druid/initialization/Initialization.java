@@ -214,7 +214,7 @@ public class Initialization
 
         if (!extensionDir.isDirectory()) {
           throw new ISE(
-              StringUtils.safeFormat(
+              StringUtils.format(
                   "Extension [%s] specified in \"druid.extensions.loadList\" didn't exist!?",
                   extensionDir.getAbsolutePath()
               )
@@ -252,7 +252,7 @@ public class Initialization
       // find the hadoop dependency with the version specified in coordinate
       if (!hadoopDependencyDir.isDirectory() || !versionDir.isDirectory()) {
         throw new ISE(
-            StringUtils.safeFormat("Hadoop dependency [%s] didn't exist!?", versionDir.getAbsolutePath())
+            StringUtils.format("Hadoop dependency [%s] didn't exist!?", versionDir.getAbsolutePath())
         );
       }
       hadoopDependenciesToLoad[i++] = versionDir;

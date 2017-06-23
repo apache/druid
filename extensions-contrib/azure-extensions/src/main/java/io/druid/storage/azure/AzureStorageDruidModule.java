@@ -104,7 +104,7 @@ public class AzureStorageDruidModule implements DruidModule
       throws URISyntaxException, InvalidKeyException
   {
     CloudStorageAccount account = CloudStorageAccount.parse(
-        StringUtils.safeFormat(
+        StringUtils.format(
             STORAGE_CONNECTION_STRING,
             config.getProtocol(),
             config.getAccount(),

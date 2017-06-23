@@ -50,8 +50,8 @@ public class OffHeapPollingCache<K, V> implements PollingCache<K, V>
   public OffHeapPollingCache(final Iterable<Map.Entry<K, V>> entries)
   {
     synchronized (started) {
-      this.cacheName = StringUtils.safeFormat("cache-%s", UUID.randomUUID());
-      this.reverseCacheName = StringUtils.safeFormat("reverseCache-%s", UUID.randomUUID());
+      this.cacheName = StringUtils.format("cache-%s", UUID.randomUUID());
+      this.reverseCacheName = StringUtils.format("reverseCache-%s", UUID.randomUUID());
       mapCache = DB.createHashMap(cacheName).make();
       reverseCache = DB.createHashMap(reverseCacheName).make();
       ImmutableSet.Builder<V> setOfValuesBuilder = ImmutableSet.builder();

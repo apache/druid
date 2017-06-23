@@ -76,12 +76,12 @@ public class IndexerZkConfigTest
   {
     for (Field field : IndexerZkConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        clobberableProperties.add(StringUtils.safeFormat("%s.%s", indexerPropertyString, field.getName()));
+        clobberableProperties.add(StringUtils.format("%s.%s", indexerPropertyString, field.getName()));
       }
     }
     for (Field field : ZkPathsConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        clobberableProperties.add(StringUtils.safeFormat("%s.%s", zkServiceConfigString, field.getName()));
+        clobberableProperties.add(StringUtils.format("%s.%s", zkServiceConfigString, field.getName()));
       }
     }
   }
@@ -104,8 +104,8 @@ public class IndexerZkConfigTest
   {
     for (Field field : ZkPathsConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        String property = StringUtils.safeFormat("%s.%s", zkServiceConfigString, field.getName());
-        String getter = StringUtils.safeFormat(
+        String property = StringUtils.format("%s.%s", zkServiceConfigString, field.getName());
+        String getter = StringUtils.format(
             "get%s%s",
             StringUtils.toUpperCase(field.getName().substring(0, 1)),
             field.getName().substring(1)
@@ -122,8 +122,8 @@ public class IndexerZkConfigTest
   {
     for (Field field : IndexerZkConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        String property = StringUtils.safeFormat("%s.%s", indexerPropertyString, field.getName());
-        String getter = StringUtils.safeFormat(
+        String property = StringUtils.format("%s.%s", indexerPropertyString, field.getName());
+        String getter = StringUtils.format(
             "get%s%s",
             StringUtils.toUpperCase(field.getName().substring(0, 1)),
             field.getName().substring(1)

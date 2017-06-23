@@ -52,7 +52,7 @@ public class ByteBufferIntList
   public void add(int val)
   {
     if (numElements == maxElements) {
-      throw new IndexOutOfBoundsException(StringUtils.safeFormat("List is full with %s elements.", maxElements));
+      throw new IndexOutOfBoundsException(StringUtils.format("List is full with %s elements.", maxElements));
     }
     buffer.putInt(numElements * Ints.BYTES, val);
     numElements++;

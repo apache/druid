@@ -60,7 +60,7 @@ public class Calcites
     final String charset = ConversionUtil.NATIVE_UTF16_CHARSET_NAME;
     System.setProperty("saffron.default.charset", Calcites.defaultCharset().name());
     System.setProperty("saffron.default.nationalcharset", Calcites.defaultCharset().name());
-    System.setProperty("saffron.default.collation.name", StringUtils.safeFormat("%s$en_US", charset));
+    System.setProperty("saffron.default.collation.name", StringUtils.format("%s$en_US", charset));
   }
 
   public static Charset defaultCharset()

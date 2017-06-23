@@ -50,7 +50,7 @@ public class FilteredSequenceTest
       }
 
       SequenceTestHelper.testAll(
-          StringUtils.safeFormat("Run %,d: ", i),
+          StringUtils.format("Run %,d: ", i),
           new FilteredSequence<>(Sequences.simple(vals), pred),
           Lists.newArrayList(Iterables.filter(vals, pred))
       );

@@ -166,7 +166,7 @@ public class AppenderatorDriverTest
           ImmutableList.of("dim2"),
           ImmutableMap.of(
               "dim2",
-              StringUtils.safeFormat("bar-%d", i),
+              StringUtils.format("bar-%d", i),
               "met1",
               2.0
           )

@@ -181,7 +181,7 @@ public class CompressedIntsIndexedWriterTest
 
   private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
   {
-    File tmpDirectory = Files.createTempDirectory(StringUtils.safeFormat(
+    File tmpDirectory = Files.createTempDirectory(StringUtils.format(
         "CompressedIntsIndexedWriterTest_%d",
         chunkFactor
     )).toFile();

@@ -88,7 +88,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
             {
               List<Map<String, Object>> existing = handle
                   .createQuery(
-                      StringUtils.safeFormat(
+                      StringUtils.format(
                           "SELECT id from %s where datasource=:dataSource",
                           ruleTable
                       )
@@ -110,12 +110,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
               );
               final String version = new DateTime().toString();
               handle.createStatement(
-                  StringUtils.safeFormat(
+                  StringUtils.format(
                       "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
                       ruleTable
                   )
               )
-                    .bind("id", StringUtils.safeFormat("%s_%s", defaultDatasourceName, version))
+                    .bind("id", StringUtils.format("%s_%s", defaultDatasourceName, version))
                     .bind("dataSource", defaultDatasourceName)
                     .bind("version", version)
                     .bind("payload", jsonMapper.writeValueAsBytes(defaultRules))
@@ -240,7 +240,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 {
                   return handle.createQuery(
                       // Return latest version rule by dataSource
-                      StringUtils.safeFormat(
+                      StringUtils.format(
                           "SELECT r.dataSource, r.payload "
                           + "FROM %1$s r "
                           + "INNER JOIN(SELECT dataSource, max(version) as version FROM %1$s GROUP BY dataSource) ds "
@@ -378,12 +378,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 );
                 String version = auditTime.toString();
                 handle.createStatement(
-                    StringUtils.safeFormat(
+                    StringUtils.format(
                         "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
                         getRulesTable()
                     )
                 )
-                      .bind("id", StringUtils.safeFormat("%s_%s", dataSource, version))
+                      .bind("id", StringUtils.format("%s_%s", dataSource, version))
                       .bind("dataSource", dataSource)
                       .bind("version", version)
                       .bind("payload", jsonMapper.writeValueAsBytes(newRules))
@@ -395,7 +395,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         );
       }
       catch (Exception e) {
-        log.error(e, StringUtils.safeFormat("Exception while overriding rule for %s", dataSource));
+        log.error(e, StringUtils.format("Exception while overriding rule for %s", dataSource));
         return false;
       }
     }
@@ -403,7 +403,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       poll();
     }
     catch (Exception e) {
-      log.error(e, StringUtils.safeFormat("Exception while polling for rules after overriding the rule for %s", dataSource));
+      log.error(e, StringUtils.format("Exception while polling for rules after overriding the rule for %s", dataSource));
     }
     return true;
   }

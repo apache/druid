@@ -122,7 +122,7 @@ public class HyperLogLogCollectorTest
     System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
     System.out.println("Simple  buffer cardinality " + simple.estimateCardinality());
     System.out.println(
-        StringUtils.safeFormat(
+        StringUtils.format(
             "Rolling cardinality estimate off by %4.1f%%",
             100 * (1 - rolling.estimateCardinality() / n)
         )
@@ -156,7 +156,7 @@ public class HyperLogLogCollectorTest
     System.out.println("True cardinality " + n);
     System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
     System.out.println(
-        StringUtils.safeFormat(
+        StringUtils.format(
             "Rolling cardinality estimate off by %4.1f%%",
             100 * (1 - rolling.estimateCardinality() / n)
         )

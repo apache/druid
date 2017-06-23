@@ -218,7 +218,7 @@ public class SpatialFilterBonusTest
     for (int i = 6; i < NUM_POINTS; i++) {
       String coord = null;
       while (coord == null) {
-        coord = StringUtils.safeFormat(
+        coord = StringUtils.format(
             "%s,%s",
             (float) (rand.nextFloat() * 10 + 10.0),
             (float) (rand.nextFloat() * 10 + 10.0)
@@ -413,7 +413,7 @@ public class SpatialFilterBonusTest
                 ImmutableMap.<String, Object>of(
                     "timestamp", new DateTime("2013-01-01").toString(),
                     "dim", "boo",
-                    "dim.geo", StringUtils.safeFormat(
+                    "dim.geo", StringUtils.format(
                         "%s,%s",
                         (float) (rand.nextFloat() * 10 + 10.0),
                         (float) (rand.nextFloat() * 10 + 10.0)

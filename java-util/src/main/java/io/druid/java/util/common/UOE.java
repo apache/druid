@@ -25,11 +25,11 @@ public class UOE extends UnsupportedOperationException
 {
   public UOE(String formatText, Object... arguments)
   {
-    super(StringUtils.safeFormat(formatText, arguments));
+    super(StringUtils.unimportantSafeFormat(formatText, arguments));
   }
 
   public UOE(Throwable cause, String formatText, Object... arguments)
   {
-    super(StringUtils.safeFormat(formatText, arguments), cause);
+    super(StringUtils.unimportantSafeFormat(formatText, arguments), cause);
   }
 }

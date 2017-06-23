@@ -57,7 +57,7 @@ public abstract class JsonConfigTesterBase<T>
   protected Properties testProperties = new Properties();
 
   protected static String getPropertyKey(String fieldName){
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "%s.%s",
         configPrefix, fieldName
     );
@@ -94,7 +94,7 @@ public abstract class JsonConfigTesterBase<T>
       final String propertyKey = getPropertyKey(field);
       if (null != propertyKey) {
         field.setAccessible(true);
-        String getter = StringUtils.safeFormat(
+        String getter = StringUtils.format(
             "get%s%s",
             StringUtils.toUpperCase(field.getName().substring(0, 1)),
             field.getName().substring(1)

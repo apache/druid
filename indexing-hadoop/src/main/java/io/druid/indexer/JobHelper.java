@@ -314,8 +314,8 @@ public class JobHelper
     for (String propName : System.getProperties().stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {
         if (propName.startsWith(prefix)) {
-          mapJavaOpts = StringUtils.safeFormat("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
-          reduceJavaOpts = StringUtils.safeFormat("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+          mapJavaOpts = StringUtils.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
+          reduceJavaOpts = StringUtils.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
           break;
         }
       }
@@ -346,7 +346,7 @@ public class JobHelper
     try {
       Job job = Job.getInstance(
           new Configuration(),
-          StringUtils.safeFormat("%s-determine_partitions-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-determine_partitions-%s", config.getDataSource(), config.getIntervals())
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.19");
@@ -366,7 +366,7 @@ public class JobHelper
     for (Jobby job : jobs) {
       if (failedMessage == null) {
         if (!job.run()) {
-          failedMessage = StringUtils.safeFormat("Job[%s] failed!", job.getClass());
+          failedMessage = StringUtils.format("Job[%s] failed!", job.getClass());
         }
       }
     }
@@ -580,9 +580,9 @@ public class JobHelper
   {
     return new Path(
         prependFSIfNullScheme(fs, basePath),
-        StringUtils.safeFormat("./%s.%d",
-                      dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
-                      taskAttemptID.getId()
+        StringUtils.format("./%s.%d",
+                           dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+                           taskAttemptID.getId()
         )
     );
   }
@@ -733,10 +733,10 @@ public class JobHelper
     final URI segmentLocURI;
     if ("s3_zip".equals(type)) {
       if ("s3a".equals(loadSpec.get("S3Schema"))) {
-        segmentLocURI = URI.create(StringUtils.safeFormat("s3a://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+        segmentLocURI = URI.create(StringUtils.format("s3a://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
 
       } else {
-        segmentLocURI = URI.create(StringUtils.safeFormat("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+        segmentLocURI = URI.create(StringUtils.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
       }
     } else if ("hdfs".equals(type)) {
       segmentLocURI = URI.create(loadSpec.get("path").toString());
@@ -749,7 +749,7 @@ public class JobHelper
       // getHdfsStorageDir. But that wouldn't fix this issue for people who already have segments with ":".
       // Because of this we just URL encode the : making everything work as it should.
       segmentLocURI = URI.create(
-          StringUtils.safeFormat("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
+          StringUtils.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
       );
     } else if ("local".equals(type)) {
       try {
@@ -803,7 +803,7 @@ public class JobHelper
       public void startSection(String section)
       {
         context.progress();
-        context.setStatus(StringUtils.safeFormat("STARTED [%s]", section));
+        context.setStatus(StringUtils.format("STARTED [%s]", section));
       }
 
       @Override
@@ -811,14 +811,14 @@ public class JobHelper
       {
         log.info("Progress message for section [%s] : [%s]", section, message);
         context.progress();
-        context.setStatus(StringUtils.safeFormat("PROGRESS [%s]", section));
+        context.setStatus(StringUtils.format("PROGRESS [%s]", section));
       }
 
       @Override
       public void stopSection(String section)
       {
         context.progress();
-        context.setStatus(StringUtils.safeFormat("STOPPED [%s]", section));
+        context.setStatus(StringUtils.format("STOPPED [%s]", section));
       }
     };
   }

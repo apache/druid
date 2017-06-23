@@ -226,7 +226,7 @@ public class CompressedFloatsSerdeTest
               final float indexedVal = indexed.get(j);
               if (Floats.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(StringUtils.safeFormat("Thread1[%d]: %f != %f", j, val, indexedVal));
+                reason.set(StringUtils.format("Thread1[%d]: %f != %f", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -265,7 +265,7 @@ public class CompressedFloatsSerdeTest
                 final float indexedVal = indexed2.get(j);
                 if (Floats.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(StringUtils.safeFormat("Thread2[%d]: %f != %f", j, val, indexedVal));
+                  reason.set(StringUtils.format("Thread2[%d]: %f != %f", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }

@@ -109,12 +109,12 @@ public class FileSmoosher implements Closeable
 
   static File metaFile(File baseDir)
   {
-    return new File(baseDir, StringUtils.safeFormat("meta.%s", FILE_EXTENSION));
+    return new File(baseDir, StringUtils.format("meta.%s", FILE_EXTENSION));
   }
 
   static File makeChunkFile(File baseDir, int i)
   {
-    return new File(baseDir, StringUtils.safeFormat("%05d.%s", i, FILE_EXTENSION));
+    return new File(baseDir, StringUtils.format("%05d.%s", i, FILE_EXTENSION));
   }
 
   public Set<String> getInternalFilenames()
@@ -391,7 +391,7 @@ public class FileSmoosher implements Closeable
     File metaFile = metaFile(baseDir);
 
     try (Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), Charsets.UTF_8))) {
-      out.write(StringUtils.safeFormat("v1,%d,%d", maxChunkSize, outFiles.size()));
+      out.write(StringUtils.format("v1,%d,%d", maxChunkSize, outFiles.size()));
       out.write("\n");
 
       for (Map.Entry<String, Metadata> entry : internalFiles.entrySet()) {

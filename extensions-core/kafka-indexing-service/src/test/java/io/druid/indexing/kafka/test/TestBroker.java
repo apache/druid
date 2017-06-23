@@ -81,7 +81,7 @@ public class TestBroker implements Closeable
 
     final KafkaConfig config = new KafkaConfig(props);
 
-    server = new KafkaServer(config, SystemTime.SYSTEM, Some.apply(StringUtils.safeFormat("TestingBroker[%d]-", id)), List$.MODULE$.empty());
+    server = new KafkaServer(config, SystemTime.SYSTEM, Some.apply(StringUtils.format("TestingBroker[%d]-", id)), List$.MODULE$.empty());
     server.startup();
   }
 
@@ -103,7 +103,7 @@ public class TestBroker implements Closeable
   public Map<String, String> producerProperties()
   {
     final Map<String, String> props = Maps.newHashMap();
-    props.put("bootstrap.servers", StringUtils.safeFormat("localhost:%d", getPort()));
+    props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
     props.put("key.serializer", ByteArraySerializer.class.getName());
     props.put("value.serializer", ByteArraySerializer.class.getName());
     props.put("acks", "all");
@@ -113,7 +113,7 @@ public class TestBroker implements Closeable
   public Map<String, String> consumerProperties()
   {
     final Map<String, String> props = Maps.newHashMap();
-    props.put("bootstrap.servers", StringUtils.safeFormat("localhost:%d", getPort()));
+    props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
     props.put("key.deserializer", ByteArrayDeserializer.class.getName());
     props.put("value.deserializer", ByteArrayDeserializer.class.getName());
     props.put("group.id", String.valueOf(RANDOM.nextInt()));

@@ -127,7 +127,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
           {
             if (canUpsert(handle)) {
               handle.createStatement(
-                  StringUtils.safeFormat(
+                  StringUtils.format(
                       "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON CONFLICT (%2$s) DO UPDATE SET %3$s = EXCLUDED.%3$s",
                       tableName,
                       keyColumn,
@@ -139,7 +139,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
                     .execute();
             } else {
               handle.createStatement(
-                  StringUtils.safeFormat(
+                  StringUtils.format(
                       "BEGIN;\n" +
                       "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
                       "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +

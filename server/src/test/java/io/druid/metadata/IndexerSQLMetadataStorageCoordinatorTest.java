@@ -208,7 +208,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 public Integer withHandle(Handle handle) throws Exception
                 {
                   return handle.createStatement(
-                      StringUtils.safeFormat(
+                      StringUtils.format(
                           "UPDATE %s SET used = false WHERE id = :id",
                           derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
                       )

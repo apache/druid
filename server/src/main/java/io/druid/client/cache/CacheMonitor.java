@@ -78,15 +78,15 @@ public class CacheMonitor extends AbstractMonitor
   )
   {
     if (cache != null) {
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/hits", metricPrefix), cacheStats.getNumHits()));
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/misses", metricPrefix), cacheStats.getNumMisses()));
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/evictions", metricPrefix), cacheStats.getNumEvictions()));
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/hitRate", metricPrefix), cacheStats.hitRate()));
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
-      emitter.emit(builder.build(StringUtils.safeFormat("%s/errors", metricPrefix), cacheStats.getNumErrors()));
+      emitter.emit(builder.build(StringUtils.format("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
+      emitter.emit(builder.build(StringUtils.format("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
+      emitter.emit(builder.build(StringUtils.format("%s/hits", metricPrefix), cacheStats.getNumHits()));
+      emitter.emit(builder.build(StringUtils.format("%s/misses", metricPrefix), cacheStats.getNumMisses()));
+      emitter.emit(builder.build(StringUtils.format("%s/evictions", metricPrefix), cacheStats.getNumEvictions()));
+      emitter.emit(builder.build(StringUtils.format("%s/hitRate", metricPrefix), cacheStats.hitRate()));
+      emitter.emit(builder.build(StringUtils.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
+      emitter.emit(builder.build(StringUtils.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
+      emitter.emit(builder.build(StringUtils.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
     }
   }
 }

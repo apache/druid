@@ -63,8 +63,8 @@ import java.util.Iterator;
  * bytes 11-14 =>; columnNameLength
  * bytes 15-columnNameLength =>; columnName
  * <p>
- * Header file name is identified as: StringUtils.safeFormat("%s_header", columnName)
- * value files are identified as: StringUtils.safeFormat("%s_value_%d", columnName, fileNumber)
+ * Header file name is identified as: StringUtils.format("%s_header", columnName)
+ * value files are identified as: StringUtils.format("%s_value_%d", columnName, fileNumber)
  * number of value files == numElements/numberOfElementsPerValueFile
  */
 public class GenericIndexed<T> implements Indexed<T>

@@ -307,7 +307,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         long[] lcontrobutors = status.getContributors();
         List<String> contributors = new ArrayList<>();
         for (long contrib : lcontrobutors) {
-          contributors.add(StringUtils.safeFormat("%d", contrib));
+          contributors.add(StringUtils.format("%d", contrib));
         }
         theMap.put("contributors", contributors);
 
@@ -347,7 +347,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         theMap.put("lang", hasUser ? user.getLang() : "");
         theMap.put("utc_offset", hasUser ? user.getUtcOffset() : -1);  // resolution in seconds, -1 if not available?
         theMap.put("statuses_count", hasUser ? user.getStatusesCount() : 0);
-        theMap.put("user_id", hasUser ? StringUtils.safeFormat("%d", user.getId()) : "");
+        theMap.put("user_id", hasUser ? StringUtils.format("%d", user.getId()) : "");
         theMap.put("screen_name", hasUser ? user.getScreenName() : "");
         theMap.put("location", hasUser ? user.getLocation() : "");
         theMap.put("verified", hasUser ? user.isVerified() : "");

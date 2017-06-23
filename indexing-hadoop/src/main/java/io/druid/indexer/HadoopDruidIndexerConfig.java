@@ -514,7 +514,7 @@ public class HadoopDruidIndexerConfig
   public Path makeIntermediatePath()
   {
     return new Path(
-        StringUtils.safeFormat(
+        StringUtils.format(
             "%s/%s/%s_%s",
             getWorkingPath(),
             schema.getDataSchema().getDataSource(),
@@ -527,7 +527,7 @@ public class HadoopDruidIndexerConfig
   public Path makeSegmentPartitionInfoPath(Interval bucketInterval)
   {
     return new Path(
-        StringUtils.safeFormat(
+        StringUtils.format(
             "%s/%s_%s/partitions.json",
             makeIntermediatePath(),
             ISODateTimeFormat.basicDateTime().print(bucketInterval.getStart()),
@@ -539,7 +539,7 @@ public class HadoopDruidIndexerConfig
   public Path makeIntervalInfoPath()
   {
     return new Path(
-        StringUtils.safeFormat(
+        StringUtils.format(
             "%s/intervals.json",
             makeIntermediatePath()
         )
@@ -558,7 +558,7 @@ public class HadoopDruidIndexerConfig
 
   public Path makeDescriptorInfoPath(DataSegment segment)
   {
-    return new Path(makeDescriptorInfoDir(), StringUtils.safeFormat("%s.json", segment.getIdentifier().replace(":", "")));
+    return new Path(makeDescriptorInfoDir(), StringUtils.format("%s.json", segment.getIdentifier().replace(":", "")));
   }
 
   public void addJobProperties(Job job)

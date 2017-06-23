@@ -324,7 +324,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
         }
       };
       thread.setDaemon(true);
-      thread.setName(StringUtils.safeFormat("kafka-%s-%s", topic, partitionId));
+      thread.setName(StringUtils.format("kafka-%s-%s", topic, partitionId));
       thread.start();
     }
 

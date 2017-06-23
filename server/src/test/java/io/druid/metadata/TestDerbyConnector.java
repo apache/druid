@@ -61,7 +61,7 @@ public class TestDerbyConnector extends DerbyConnector
     catch (UnableToObtainConnectionException e) {
       SQLException cause = (SQLException) e.getCause();
       // error code "08006" indicates proper shutdown
-      Assert.assertEquals(StringUtils.safeFormat("Derby not shutdown: [%s]", cause.toString()), "08006", cause.getSQLState());
+      Assert.assertEquals(StringUtils.format("Derby not shutdown: [%s]", cause.toString()), "08006", cause.getSQLState());
     }
   }
 

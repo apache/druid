@@ -311,7 +311,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                       && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
                                       ) {
                                     command.add(
-                                        StringUtils.safeFormat(
+                                        StringUtils.format(
                                             "-D%s=%s",
                                             propName,
                                             props.getProperty(propName)
@@ -325,7 +325,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               for (String propName : props.stringPropertyNames()) {
                                 if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
                                   command.add(
-                                      StringUtils.safeFormat(
+                                      StringUtils.format(
                                           "-D%s=%s",
                                           propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                           props.getProperty(propName)
@@ -340,7 +340,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 for (String propName : context.keySet()) {
                                   if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
                                     command.add(
-                                        StringUtils.safeFormat(
+                                        StringUtils.format(
                                             "-D%s=%s",
                                             propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                             task.getContextValue(propName)
@@ -352,7 +352,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                               // Add dataSource and taskId for metrics or logging
                               command.add(
-                                  StringUtils.safeFormat(
+                                  StringUtils.format(
                                       "-D%s%s=%s",
                                       MonitorsConfig.METRIC_DIMENSION_PREFIX,
                                       DruidMetrics.DATASOURCE,
@@ -360,7 +360,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   )
                               );
                               command.add(
-                                  StringUtils.safeFormat(
+                                  StringUtils.format(
                                       "-D%s%s=%s",
                                       MonitorsConfig.METRIC_DIMENSION_PREFIX,
                                       DruidMetrics.TASK_ID,
@@ -368,8 +368,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   )
                               );
 
-                              command.add(StringUtils.safeFormat("-Ddruid.host=%s", childHost));
-                              command.add(StringUtils.safeFormat("-Ddruid.port=%d", childPort));
+                              command.add(StringUtils.format("-Ddruid.host=%s", childHost));
+                              command.add(StringUtils.format("-Ddruid.port=%d", childPort));
                               /**
                                * These are not enabled per default to allow the user to either set or not set them
                                * Users are highly suggested to be set in druid.indexer.runner.javaOpts
@@ -380,14 +380,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                */
 
                               if (config.isSeparateIngestionEndpoint()) {
-                                command.add(StringUtils.safeFormat(
+                                command.add(StringUtils.format(
                                     "-Ddruid.indexer.task.chathandler.service=%s",
                                     "placeholder/serviceName"
                                 ));
                                 // Actual serviceName will be passed by the EventReceiverFirehose when it registers itself with ChatHandlerProvider
                                 // Thus, "placeholder/serviceName" will be ignored
-                                command.add(StringUtils.safeFormat("-Ddruid.indexer.task.chathandler.host=%s", childHost));
-                                command.add(StringUtils.safeFormat(
+                                command.add(StringUtils.format("-Ddruid.indexer.task.chathandler.host=%s", childHost));
+                                command.add(StringUtils.format(
                                     "-Ddruid.indexer.task.chathandler.port=%d",
                                     childChatHandlerPort
                                 ));
@@ -434,7 +434,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                             // This will block for a while. So we append the thread information with more details
                             final String priorThreadName = Thread.currentThread().getName();
-                            Thread.currentThread().setName(StringUtils.safeFormat("%s-[%s]", priorThreadName, task.getId()));
+                            Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
 
                             try (final OutputStream toLogfile = logSink.openStream()) {
                               ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);

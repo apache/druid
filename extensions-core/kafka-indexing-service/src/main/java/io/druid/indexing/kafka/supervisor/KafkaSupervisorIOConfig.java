@@ -64,7 +64,7 @@ public class KafkaSupervisorIOConfig
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     Preconditions.checkNotNull(
         consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
-        StringUtils.safeFormat("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
+        StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
 
     this.replicas = replicas != null ? replicas : 1;

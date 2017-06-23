@@ -168,7 +168,7 @@ public class ReplicationThrottler
       List<String> retVal = Lists.newArrayList();
       for (Map.Entry<String, String> entry : segments.entrySet()) {
         retVal.add(
-            StringUtils.safeFormat("%s ON %s", entry.getKey(), entry.getValue())
+            StringUtils.format("%s ON %s", entry.getKey(), entry.getValue())
         );
       }
       return retVal;

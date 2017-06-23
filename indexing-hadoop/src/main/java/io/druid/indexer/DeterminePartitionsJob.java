@@ -124,7 +124,7 @@ public class DeterminePartitionsJob implements Jobby
       if (!config.getPartitionsSpec().isAssumeGrouped()) {
         final Job groupByJob = Job.getInstance(
             new Configuration(),
-            StringUtils.safeFormat("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
+            StringUtils.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
         );
 
         JobHelper.injectSystemProperties(groupByJob);
@@ -164,7 +164,7 @@ public class DeterminePartitionsJob implements Jobby
        */
       final Job dimSelectionJob = Job.getInstance(
           new Configuration(),
-          StringUtils.safeFormat("%s-determine_partitions_dimselection-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-determine_partitions_dimselection-%s", config.getDataSource(), config.getIntervals())
       );
 
       dimSelectionJob.getConfiguration().set("io.sort.record.percent", "0.19");

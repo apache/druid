@@ -61,11 +61,11 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.safeFormat("s3://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(StringUtils.safeFormat("s3://%s/%s", bucket, object1.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object1.getKey()));
 
     Assert.assertEquals(expected, latest);
   }
@@ -97,7 +97,7 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.safeFormat("s3://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
@@ -127,11 +127,11 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.safeFormat("s3://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(StringUtils.safeFormat("s3://%s/%s", bucket, object0.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey()));
 
     Assert.assertEquals(expected, latest);
   }
@@ -158,11 +158,11 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.safeFormat("s3://%s/%s", bucket, object0.getKey())), null);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey())), null);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(StringUtils.safeFormat("s3://%s/%s", bucket, object0.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey()));
 
     Assert.assertEquals(expected, latest);
   }

@@ -42,7 +42,7 @@ public class UniformBitmapBenchmarkTest extends BitmapBenchmark
   @BeforeClass
   public static void prepareMostlyUniform() throws Exception
   {
-    System.setProperty("jub.customkey", StringUtils.safeFormat("%05.4f", DENSITY));
+    System.setProperty("jub.customkey", StringUtils.format("%05.4f", DENSITY));
     reset();
 
     final BitSet expectedUnion = new BitSet();

@@ -89,7 +89,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
           public Void withHandle(Handle handle) throws Exception
           {
             handle.createStatement(
-                StringUtils.safeFormat(
+                StringUtils.format(
                     "INSERT INTO %s (spec_id, created_date, payload) VALUES (:spec_id, :created_date, :payload)",
                     getSupervisorsTable()
                 )
@@ -116,7 +116,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
               public Map<String, List<VersionedSupervisorSpec>> withHandle(Handle handle) throws Exception
               {
                 return handle.createQuery(
-                    StringUtils.safeFormat(
+                    StringUtils.format(
                         "SELECT id, spec_id, created_date, payload FROM %1$s ORDER BY id DESC",
                         getSupervisorsTable()
                     )
@@ -188,7 +188,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
               public Map<String, SupervisorSpec> withHandle(Handle handle) throws Exception
               {
                 return handle.createQuery(
-                    StringUtils.safeFormat(
+                    StringUtils.format(
                         "SELECT r.spec_id, r.payload "
                         + "FROM %1$s r "
                         + "INNER JOIN(SELECT spec_id, max(id) as id FROM %1$s GROUP BY spec_id) latest "

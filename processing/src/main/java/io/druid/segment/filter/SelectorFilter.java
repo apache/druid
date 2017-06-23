@@ -78,6 +78,6 @@ public class SelectorFilter implements Filter
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("%s = %s", dimension, value);
+    return StringUtils.format("%s = %s", dimension, value);
   }
 }

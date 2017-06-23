@@ -174,8 +174,8 @@ public class HdfsDataSegmentKillerTest
     Assert.assertTrue(fs.mkdirs(path));
     try (FSDataOutputStream os = fs.create(new Path(
         path,
-        StringUtils.safeFormat("%s_index.zip", partitionNumber)
-    )); FSDataOutputStream oos = fs.create(new Path(path, StringUtils.safeFormat("%s_descriptor.json", partitionNumber)))) {
+        StringUtils.format("%s_index.zip", partitionNumber)
+    )); FSDataOutputStream oos = fs.create(new Path(path, StringUtils.format("%s_descriptor.json", partitionNumber)))) {
     }
   }
 

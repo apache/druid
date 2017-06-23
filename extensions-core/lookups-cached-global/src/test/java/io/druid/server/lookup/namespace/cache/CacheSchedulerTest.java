@@ -208,7 +208,7 @@ public class CacheSchedulerTest
         long minEnd = start + ((repeatCount - 1) * delay);
         long end = System.currentTimeMillis();
         Assert.assertTrue(
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "Didn't wait long enough between runs. Expected more than %d was %d",
                 minEnd - start,
                 end - start

@@ -82,7 +82,7 @@ public class LimitedTemporaryStorage implements Closeable
 
       FileUtils.forceMkdir(storageDirectory);
 
-      final File theFile = new File(storageDirectory, StringUtils.safeFormat("%08d.tmp", files.size()));
+      final File theFile = new File(storageDirectory, StringUtils.format("%08d.tmp", files.size()));
       final EnumSet<StandardOpenOption> openOptions = EnumSet.of(
           StandardOpenOption.CREATE_NEW,
           StandardOpenOption.WRITE

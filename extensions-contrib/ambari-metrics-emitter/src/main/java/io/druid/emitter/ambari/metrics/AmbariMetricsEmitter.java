@@ -71,7 +71,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
     this.emitterList = emitterList;
     this.timelineMetricConverter = config.getDruidToTimelineEventConverter();
     this.eventsQueue = new LinkedBlockingQueue<>(config.getMaxQueueSize());
-    this.collectorURI = StringUtils.safeFormat(
+    this.collectorURI = StringUtils.format(
       "%s://%s:%s%s",
       config.getProtocol(),
       config.getHostname(),

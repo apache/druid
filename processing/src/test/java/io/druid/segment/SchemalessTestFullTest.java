@@ -1359,19 +1359,19 @@ public class SchemalessTestFullTest
     return Arrays.asList(
         new Pair<>(
             SchemalessIndexTest.getIncrementalIndex(index1, index2),
-            StringUtils.safeFormat("Failed: II[%,d, %,d]", index1, index2)
+            StringUtils.format("Failed: II[%,d, %,d]", index1, index2)
         ),
         new Pair<>(
             SchemalessIndexTest.getIncrementalIndex(index2, index1),
-            StringUtils.safeFormat("Failed: II[%,d, %,d]", index2, index1)
+            StringUtils.format("Failed: II[%,d, %,d]", index2, index1)
         ),
         new Pair<>(
             SchemalessIndexTest.getMergedIncrementalIndex(index1, index2),
-            StringUtils.safeFormat("Failed: MII[%,d, %,d]", index1, index2)
+            StringUtils.format("Failed: MII[%,d, %,d]", index1, index2)
         ),
         new Pair<>(
             SchemalessIndexTest.getMergedIncrementalIndex(index2, index1),
-            StringUtils.safeFormat("Failed: MII[%,d, %,d]", index2, index1)
+            StringUtils.format("Failed: MII[%,d, %,d]", index2, index1)
         )
     );
   }

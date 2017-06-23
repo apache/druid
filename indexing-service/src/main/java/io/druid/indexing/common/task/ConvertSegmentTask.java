@@ -391,7 +391,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
 
       // Appending to the version makes a new version that inherits most comparability parameters of the original
       // version, but is "newer" than said original version.
-      DataSegment updatedSegment = segment.withVersion(StringUtils.safeFormat("%s_v%s", segment.getVersion(), outVersion));
+      DataSegment updatedSegment = segment.withVersion(StringUtils.format("%s_v%s", segment.getVersion(), outVersion));
       updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
 
       actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));

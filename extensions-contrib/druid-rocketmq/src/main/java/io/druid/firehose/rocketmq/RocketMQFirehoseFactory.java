@@ -557,7 +557,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         }
 
         if (LOGGER.isDebugEnabled() && stringBuilder.length() > 2) {
-          LOGGER.debug(StringUtils.safeFormat(
+          LOGGER.debug(StringUtils.format(
               "%s@%s is consuming the following message queues: %s",
               defaultMQPullConsumer.getClientIP(),
               defaultMQPullConsumer.getInstanceName(),

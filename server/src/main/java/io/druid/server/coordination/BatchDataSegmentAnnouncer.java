@@ -320,7 +320,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   private String makeServedSegmentPath(String zNode)
   {
-    return ZKPaths.makePath(liveSegmentLocation, StringUtils.safeFormat("%s%s", zNode, counter.getAndIncrement()));
+    return ZKPaths.makePath(liveSegmentLocation, StringUtils.format("%s%s", zNode, counter.getAndIncrement()));
   }
 
   private class SegmentZNode implements Comparable<SegmentZNode>

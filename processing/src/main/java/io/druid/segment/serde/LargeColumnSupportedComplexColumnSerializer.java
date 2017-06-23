@@ -82,7 +82,7 @@ public class LargeColumnSupportedComplexColumnSerializer implements GenericColum
   public void open() throws IOException
   {
     writer = new GenericIndexedWriter(
-        ioPeon, StringUtils.safeFormat("%s.complex_column", filenameBase), strategy, columnSize);
+        ioPeon, StringUtils.format("%s.complex_column", filenameBase), strategy, columnSize);
     writer.open();
   }
 

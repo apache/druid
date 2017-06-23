@@ -256,20 +256,20 @@ public class SearchQueryRunnerWithCaseTest
         String dimension = resultValue.getDimension();
         String theValue = resultValue.getValue();
         Assert.assertTrue(
-            StringUtils.safeFormat("Result had unknown dimension[%s]", dimension),
+            StringUtils.format("Result had unknown dimension[%s]", dimension),
             expectedResults.containsKey(dimension)
         );
 
         Set<String> expectedSet = expectedResults.get(dimension);
         Assert.assertTrue(
-            StringUtils.safeFormat("Couldn't remove dim[%s], value[%s]", dimension, theValue), expectedSet.remove(theValue)
+            StringUtils.format("Couldn't remove dim[%s], value[%s]", dimension, theValue), expectedSet.remove(theValue)
         );
       }
     }
 
     for (Map.Entry<String, Set<String>> entry : expectedResults.entrySet()) {
       Assert.assertTrue(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "Dimension[%s] should have had everything removed, still has[%s]", entry.getKey(), entry.getValue()
           ),
           entry.getValue().isEmpty()

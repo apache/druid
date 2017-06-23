@@ -217,7 +217,7 @@ public class ResourceFilterTestHelper
                           {
                             if (method.getAnnotation(Path.class) != null) {
                               return new Object[]{
-                                  StringUtils.safeFormat("%s%s", basepath, method.getAnnotation(Path.class).value()),
+                                  StringUtils.format("%s%s", basepath, method.getAnnotation(Path.class).value()),
                                   input.getAnnotation(GET.class) == null ? (method.getAnnotation(DELETE.class) == null
                                                                             ? "POST"
                                                                             : "DELETE") : "GET",

@@ -105,7 +105,7 @@ public class MetricManipulatorFnsTest
 
     for (Object[] argList : constructorArrays) {
       Assert.assertEquals(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "Arglist %s is too short. Expected 6 found %d",
               Arrays.toString(argList),
               argList.length

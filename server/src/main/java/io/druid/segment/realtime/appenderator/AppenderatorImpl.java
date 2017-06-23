@@ -373,7 +373,7 @@ public class AppenderatorImpl implements Appenderator
 
     log.info("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
-    final String threadName = StringUtils.safeFormat("%s-incremental-persist", schema.getDataSource());
+    final String threadName = StringUtils.format("%s-incremental-persist", schema.getDataSource());
     final Object commitMetadata = committer.getMetadata();
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
@@ -397,7 +397,7 @@ public class AppenderatorImpl implements Appenderator
                             @Override
                             public String apply(Map.Entry<SegmentIdentifier, Integer> entry)
                             {
-                              return StringUtils.safeFormat("%s:%d", entry.getKey().getIdentifierAsString(), entry.getValue());
+                              return StringUtils.format("%s:%d", entry.getKey().getIdentifierAsString(), entry.getValue());
                             }
                           }
                       )

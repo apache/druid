@@ -77,7 +77,7 @@ public class ByteBufferWriter<T> implements Closeable
 
   private String makeFilename(String suffix)
   {
-    return StringUtils.safeFormat("%s.%s", filenameBase, suffix);
+    return StringUtils.format("%s.%s", filenameBase, suffix);
   }
 
   @Override

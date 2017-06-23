@@ -79,7 +79,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
           public List<Pair<String, String>> withHandle(Handle handle) throws Exception
           {
             final String query;
-            query = StringUtils.safeFormat(
+            query = StringUtils.format(
                 "SELECT %s, %s FROM %s",
                 keyColumn,
                 valueColumn,
@@ -110,7 +110,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     if (lastDBUpdate != null) {
       newVersion = lastDBUpdate.toString();
     } else {
-      newVersion = StringUtils.safeFormat("%d", dbQueryStart);
+      newVersion = StringUtils.format("%d", dbQueryStart);
     }
     final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
     try {
@@ -166,7 +166,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
           @Override
           public Timestamp withHandle(Handle handle) throws Exception
           {
-            final String query = StringUtils.safeFormat(
+            final String query = StringUtils.format(
                 "SELECT MAX(%s) FROM %s",
                 tsColumn, table
             );

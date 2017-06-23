@@ -177,7 +177,7 @@ public class SupervisorResource
             Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
             if (!spec.isPresent()) {
               return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.safeFormat("[%s] does not exist", id)))
+                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
                              .build();
             }
 
@@ -202,7 +202,7 @@ public class SupervisorResource
             Optional<SupervisorReport> spec = manager.getSupervisorStatus(id);
             if (!spec.isPresent()) {
               return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.safeFormat("[%s] does not exist", id)))
+                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
                              .build();
             }
 
@@ -228,7 +228,7 @@ public class SupervisorResource
               return Response.ok(ImmutableMap.of("id", id)).build();
             } else {
               return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.safeFormat("[%s] does not exist", id)))
+                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
                              .build();
             }
           }
@@ -298,7 +298,7 @@ public class SupervisorResource
                              .entity(
                                  ImmutableMap.of(
                                      "error",
-                                     StringUtils.safeFormat(
+                                     StringUtils.format(
                                          "No history for [%s] (history available for %s)",
                                          id,
                                          history.keySet()
@@ -328,7 +328,7 @@ public class SupervisorResource
               return Response.ok(ImmutableMap.of("id", id)).build();
             } else {
               return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.safeFormat("[%s] does not exist", id)))
+                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
                              .build();
             }
           }

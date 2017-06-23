@@ -55,7 +55,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.connector = connector;
-    this.statement = StringUtils.safeFormat(
+    this.statement = StringUtils.format(
         "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
         + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
         config.getSegmentsTable(), connector.getQuoteString()
@@ -100,7 +100,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
             public List<Map<String, Object>> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
-                  StringUtils.safeFormat("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
+                  StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
               )
                            .bind("id", identifier)
                            .list();

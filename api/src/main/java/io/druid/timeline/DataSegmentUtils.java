@@ -72,7 +72,7 @@ public class DataSegmentUtils
    */
   public static SegmentIdentifierParts valueOf(String dataSource, String identifier)
   {
-    if (!identifier.startsWith(StringUtils.safeFormat("%s_", dataSource))) {
+    if (!identifier.startsWith(StringUtils.format("%s_", dataSource))) {
       return null;
     }
 

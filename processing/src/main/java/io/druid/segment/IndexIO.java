@@ -546,7 +546,7 @@ public class IndexIO
 
             ByteBuffer dimBuffer = v8SmooshedFiles.mapFile(filename);
             String dimension = serializerUtils.readString(dimBuffer);
-            if (!filename.equals(StringUtils.safeFormat("dim_%s.drd", dimension))) {
+            if (!filename.equals(StringUtils.format("dim_%s.drd", dimension))) {
               throw new ISE("loaded dimension[%s] from file[%s]", dimension, filename);
             }
 
@@ -695,7 +695,7 @@ public class IndexIO
             // NOTE: identifying numeric dimensions by using a different filename pattern is meant to allow the
             // legacy merger (which will be deprecated) to support long/float dims. Going forward, the V9 merger
             // should be used instead if any dimension types beyond String are needed.
-            if (!filename.endsWith(StringUtils.safeFormat("%s.drd", BYTE_ORDER))) {
+            if (!filename.endsWith(StringUtils.format("%s.drd", BYTE_ORDER))) {
               skippedFiles.add(filename);
               continue;
             }
@@ -743,7 +743,7 @@ public class IndexIO
 
             final ColumnDescriptor serdeficator = builder.build();
             makeColumn(v9Smoosher, metric, serdeficator);
-          } else if (StringUtils.safeFormat("time_%s.drd", BYTE_ORDER).equals(filename)) {
+          } else if (StringUtils.format("time_%s.drd", BYTE_ORDER).equals(filename)) {
             CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
                 v8SmooshedFiles.mapFile(filename),
                 BYTE_ORDER,
@@ -1049,21 +1049,21 @@ public class IndexIO
 
   public static File makeDimFile(File dir, String dimension)
   {
-    return new File(dir, StringUtils.safeFormat("dim_%s.drd", dimension));
+    return new File(dir, StringUtils.format("dim_%s.drd", dimension));
   }
 
   public static File makeNumericDimFile(File dir, String dimension, ByteOrder order)
   {
-    return new File(dir, StringUtils.safeFormat("numeric_dim_%s_%s.drd", dimension, order));
+    return new File(dir, StringUtils.format("numeric_dim_%s_%s.drd", dimension, order));
   }
 
   public static File makeTimeFile(File dir, ByteOrder order)
   {
-    return new File(dir, StringUtils.safeFormat("time_%s.drd", order));
+    return new File(dir, StringUtils.format("time_%s.drd", order));
   }
 
   public static File makeMetricFile(File dir, String metricName, ByteOrder order)
   {
-    return new File(dir, StringUtils.safeFormat("met_%s_%s.drd", metricName, order));
+    return new File(dir, StringUtils.format("met_%s_%s.drd", metricName, order));
   }
 }

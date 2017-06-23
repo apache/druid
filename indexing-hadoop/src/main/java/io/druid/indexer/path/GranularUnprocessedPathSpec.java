@@ -65,7 +65,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
     // This PathSpec breaks so many abstractions that we might as break some more
     Preconditions.checkState(
         config.getGranularitySpec() instanceof UniformGranularitySpec,
-        StringUtils.safeFormat(
+        StringUtils.format(
             "Cannot use %s without %s",
             GranularUnprocessedPathSpec.class.getSimpleName(),
             UniformGranularitySpec.class.getSimpleName()
@@ -91,7 +91,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
       DateTime timeBucket = new DateTime(entry.getKey());
       long mTime = entry.getValue();
 
-      String bucketOutput = StringUtils.safeFormat(
+      String bucketOutput = StringUtils.format(
           "%s/%s",
           config.getSchema().getIOConfig().getSegmentOutputPath(),
           segmentGranularity.toPath(timeBucket)

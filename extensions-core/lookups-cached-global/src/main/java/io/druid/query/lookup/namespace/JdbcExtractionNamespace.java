@@ -109,7 +109,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "JdbcExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
         connectorConfig.toString(),
         table,

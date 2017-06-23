@@ -89,7 +89,7 @@ public class StatusResource
     {
       final String NL = System.getProperty("line.separator");
       StringBuilder output = new StringBuilder();
-      output.append(StringUtils.safeFormat("Druid version - %s", version)).append(NL).append(NL);
+      output.append(StringUtils.format("Druid version - %s", version)).append(NL).append(NL);
 
       if (modules.size() > 0) {
         output.append("Registered Druid Modules").append(NL);
@@ -157,9 +157,9 @@ public class StatusResource
     public String toString()
     {
       if (artifact == null || artifact.isEmpty()) {
-        return StringUtils.safeFormat("  - %s ", name);
+        return StringUtils.format("  - %s ", name);
       } else {
-        return StringUtils.safeFormat("  - %s (%s-%s)", name, artifact, version);
+        return StringUtils.format("  - %s (%s-%s)", name, artifact, version);
       }
     }
   }

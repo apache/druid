@@ -99,6 +99,6 @@ public class HadoopTaskTest
     Assert.assertTrue(classLoader instanceof URLClassLoader);
 
     final ClassLoader appLoader = HadoopDruidConverterConfig.class.getClassLoader();
-    Assert.assertNotEquals(StringUtils.safeFormat("ClassLoader [%s] is not isolated!", classLoader), appLoader, classLoader);
+    Assert.assertNotEquals(StringUtils.format("ClassLoader [%s] is not isolated!", classLoader), appLoader, classLoader);
   }
 }

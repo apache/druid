@@ -165,7 +165,7 @@ public class FlushingPlumber extends RealtimePlumber
             ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                StringUtils.safeFormat(
+                StringUtils.format(
                     "%s-flusher-%d",
                     getSchema().getDataSource(),
                     getConfig().getShardSpec().getPartitionNum()

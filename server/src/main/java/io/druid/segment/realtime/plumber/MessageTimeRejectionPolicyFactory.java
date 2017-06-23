@@ -82,7 +82,7 @@ public class MessageTimeRejectionPolicyFactory implements RejectionPolicyFactory
     @Override
     public String toString()
     {
-      return StringUtils.safeFormat("messageTime-%s", windowPeriod);
+      return StringUtils.format("messageTime-%s", windowPeriod);
     }
   }
 }

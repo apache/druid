@@ -274,7 +274,7 @@ public class IncrementalIndexTest
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
-      String dimName = StringUtils.safeFormat("Dim_%d", i);
+      String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
       builder.put(dimName, dimName + rowID);
     }
@@ -286,7 +286,7 @@ public class IncrementalIndexTest
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
-      String dimName = StringUtils.safeFormat("Dim_%d", i);
+      String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
       builder.put(dimName, (Long) 1L);
     }
@@ -413,14 +413,14 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              StringUtils.safeFormat("sumResult%s", i),
-              StringUtils.safeFormat("Dim_%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
       ingestAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              StringUtils.safeFormat("doubleSumResult%s", i),
-              StringUtils.safeFormat("Dim_%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
     }
@@ -452,14 +452,14 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; ++i) {
       queryAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              StringUtils.safeFormat("sumResult%s", i),
-              StringUtils.safeFormat("sumResult%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("sumResult%s", i)
           )
       );
       queryAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              StringUtils.safeFormat("doubleSumResult%s", i),
-              StringUtils.safeFormat("doubleSumResult%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("doubleSumResult%s", i)
           )
       );
     }
@@ -513,14 +513,14 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              StringUtils.safeFormat("sumResult%s", i),
-              StringUtils.safeFormat("Dim_%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
       ingestAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              StringUtils.safeFormat("doubleSumResult%s", i),
-              StringUtils.safeFormat("Dim_%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
     }
@@ -530,14 +530,14 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; ++i) {
       queryAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              StringUtils.safeFormat("sumResult%s", i),
-              StringUtils.safeFormat("sumResult%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("sumResult%s", i)
           )
       );
       queryAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              StringUtils.safeFormat("doubleSumResult%s", i),
-              StringUtils.safeFormat("doubleSumResult%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("doubleSumResult%s", i)
           )
       );
     }
@@ -668,7 +668,7 @@ public class IncrementalIndexTest
                         // Eventually consistent, but should be somewhere in that range
                         // Actual result is validated after all writes are guaranteed done.
                         Assert.assertTrue(
-                            StringUtils.safeFormat("%d >= %g >= 0 violated", maxValueExpected, result),
+                            StringUtils.format("%d >= %g >= 0 violated", maxValueExpected, result),
                             result >= 0 && result <= maxValueExpected
                         );
                       }
@@ -712,14 +712,14 @@ public class IncrementalIndexTest
       );
       for (int i = 0; i < dimensionCount; ++i) {
         Assert.assertEquals(
-            StringUtils.safeFormat("Failed long sum on dimension %d", i),
+            StringUtils.format("Failed long sum on dimension %d", i),
             elementsPerThread * concurrentThreads,
-            result.getValue().getLongMetric(StringUtils.safeFormat("sumResult%s", i)).intValue()
+            result.getValue().getLongMetric(StringUtils.format("sumResult%s", i)).intValue()
         );
         Assert.assertEquals(
-            StringUtils.safeFormat("Failed double sum on dimension %d", i),
+            StringUtils.format("Failed double sum on dimension %d", i),
             elementsPerThread * concurrentThreads,
-            result.getValue().getDoubleMetric(StringUtils.safeFormat("doubleSumResult%s", i)).intValue()
+            result.getValue().getDoubleMetric(StringUtils.format("doubleSumResult%s", i)).intValue()
         );
       }
     }

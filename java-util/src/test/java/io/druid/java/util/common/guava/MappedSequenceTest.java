@@ -49,7 +49,7 @@ public class MappedSequenceTest
       }
 
       SequenceTestHelper.testAll(
-          StringUtils.safeFormat("Run %,d: ", i),
+          StringUtils.format("Run %,d: ", i),
           new MappedSequence<>(Sequences.simple(vals), fn),
           Lists.transform(vals, fn)
       );

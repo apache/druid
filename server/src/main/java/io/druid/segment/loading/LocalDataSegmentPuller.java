@@ -212,7 +212,7 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   @Override
   public String getVersion(URI uri)
   {
-    return StringUtils.safeFormat("%d", buildFileObject(uri).getLastModified());
+    return StringUtils.format("%d", buildFileObject(uri).getLastModified());
   }
 
   @Override

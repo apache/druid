@@ -105,8 +105,8 @@ public class UnioningOffsetTest
     for (int i = 0; i < expectedValues.length; ++i) {
       for (int j = 0; j < offsets.size(); ++j) {
         Offset aClone = offsets.get(j);
-        Assert.assertTrue(StringUtils.safeFormat("Clone[%d] out of bounds", j), aClone.withinBounds());
-        Assert.assertEquals(StringUtils.safeFormat("Clone[%d] not right", j), expectedValues[i], aClone.getOffset());
+        Assert.assertTrue(StringUtils.format("Clone[%d] out of bounds", j), aClone.withinBounds());
+        Assert.assertEquals(StringUtils.format("Clone[%d] not right", j), expectedValues[i], aClone.getOffset());
         aClone.increment();
       }
       offsets.add(offsets.get(0).clone());

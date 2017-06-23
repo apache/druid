@@ -194,7 +194,7 @@ public class RabbitMQProducerMain
       String gender = r.nextBoolean() ? "male" : "female";
       int age = 20 + r.nextInt(70);
 
-      String line = StringUtils.safeFormat(msg_template, sdf.format(timer.getTime()), wp, gender, age);
+      String line = StringUtils.format(msg_template, sdf.format(timer.getTime()), wp, gender, age);
 
       channel.basicPublish(exchange, routingKey, null, StringUtils.toUtf8(line));
 

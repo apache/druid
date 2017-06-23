@@ -60,7 +60,7 @@ public class EntireLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
     {
       if (totalSize - index < toFill.length) {
         throw new IndexOutOfBoundsException(
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
             )
         );

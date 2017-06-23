@@ -185,7 +185,7 @@ public class RowExtraction
   public String toString()
   {
     if (extractionFn != null) {
-      return StringUtils.safeFormat("%s(%s)", extractionFn, column);
+      return StringUtils.format("%s(%s)", extractionFn, column);
     } else {
       return column;
     }

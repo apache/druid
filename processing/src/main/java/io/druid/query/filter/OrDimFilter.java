@@ -118,6 +118,6 @@ public class OrDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("(%s)", OR_JOINER.join(fields));
+    return StringUtils.format("(%s)", OR_JOINER.join(fields));
   }
 }

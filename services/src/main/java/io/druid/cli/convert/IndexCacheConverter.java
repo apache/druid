@@ -45,7 +45,7 @@ public class IndexCacheConverter implements PropertyConverter
 
     return ImmutableMap.of(
         "druid.segmentCache.locations",
-        StringUtils.safeFormat(
+        StringUtils.format(
             "[{\"path\": \"%s\", \"maxSize\": %s}]", value, properties.getProperty("druid.server.maxSize")
         )
     );

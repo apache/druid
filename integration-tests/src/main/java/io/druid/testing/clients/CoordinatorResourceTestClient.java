@@ -61,7 +61,7 @@ public class CoordinatorResourceTestClient
 
   private String getCoordinatorURL()
   {
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "%s/druid/coordinator/v1/",
         coordinator
     );
@@ -69,12 +69,12 @@ public class CoordinatorResourceTestClient
 
   private String getIntervalsURL(String dataSource)
   {
-    return StringUtils.safeFormat("%sdatasources/%s/intervals", getCoordinatorURL(), dataSource);
+    return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), dataSource);
   }
 
   private String getLoadStatusURL()
   {
-    return StringUtils.safeFormat("%s%s", getCoordinatorURL(), "loadstatus");
+    return StringUtils.format("%s%s", getCoordinatorURL(), "loadstatus");
   }
 
   // return a list of the segment dates for the specified datasource
@@ -125,7 +125,7 @@ public class CoordinatorResourceTestClient
     try {
       makeRequest(
           HttpMethod.DELETE,
-          StringUtils.safeFormat(
+          StringUtils.format(
               "%sdatasources/%s",
               getCoordinatorURL(),
               dataSource
@@ -142,7 +142,7 @@ public class CoordinatorResourceTestClient
     try {
       makeRequest(
           HttpMethod.DELETE,
-          StringUtils.safeFormat(
+          StringUtils.format(
               "%sdatasources/%s/intervals/%s",
               getCoordinatorURL(),
               dataSource, interval.toString().replace("/", "_")

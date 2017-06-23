@@ -94,7 +94,7 @@ public class HadoopIndexTask extends HadoopTask
   )
   {
     super(
-        id != null ? id : StringUtils.safeFormat("index_hadoop_%s_%s", getTheDataSource(spec), new DateTime()),
+        id != null ? id : StringUtils.format("index_hadoop_%s_%s", getTheDataSource(spec), new DateTime()),
         getTheDataSource(spec),
         hadoopDependencyCoordinates == null
         ? (hadoopCoordinates == null ? null : ImmutableList.of(hadoopCoordinates))

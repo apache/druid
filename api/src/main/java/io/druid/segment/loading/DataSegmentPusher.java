@@ -42,7 +42,7 @@ public interface DataSegmentPusher
     return getDefaultStorageDir(dataSegment);
   }
   default String makeIndexPathName(DataSegment dataSegment, String indexName) {
-    return StringUtils.safeFormat("./%s/%s", getStorageDir(dataSegment), indexName);
+    return StringUtils.format("./%s/%s", getStorageDir(dataSegment), indexName);
   }
 
   // Note: storage directory structure format = .../dataSource/interval/version/partitionNumber/
@@ -52,7 +52,7 @@ public interface DataSegmentPusher
   static String getDefaultStorageDir(DataSegment segment) {
     return JOINER.join(
         segment.getDataSource(),
-        StringUtils.safeFormat("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
+        StringUtils.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
         segment.getVersion(),
         segment.getShardSpec().getPartitionNum()
     );

@@ -89,8 +89,8 @@ public class DatabasePropertiesConverter implements PropertyConverter
   {
     final String value = properties.getProperty(property);
     if (value != null) {
-      if (!value.equals(StringUtils.safeFormat("%s_%s", tablePrefix, tablename))) {
-        retVal.put(StringUtils.safeFormat("druid.db.tables.%s", tablename), value);
+      if (!value.equals(StringUtils.format("%s_%s", tablePrefix, tablename))) {
+        retVal.put(StringUtils.format("druid.db.tables.%s", tablename), value);
       }
     }
   }

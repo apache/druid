@@ -123,7 +123,7 @@ public class JdbcExtractionNamespaceTest
             Assert.assertEquals(
                 0,
                 handle.createStatement(
-                    StringUtils.safeFormat(
+                    StringUtils.format(
                         "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64))",
                         tableName,
                         tsColumn_,
@@ -132,7 +132,7 @@ public class JdbcExtractionNamespaceTest
                     )
                 ).setQueryTimeout(1).execute()
             );
-            handle.createStatement(StringUtils.safeFormat("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
+            handle.createStatement(StringUtils.format("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
             handle.commit();
             closer.register(new Closeable()
             {
@@ -328,16 +328,16 @@ public class JdbcExtractionNamespaceTest
     final String query;
     if (tsColumn == null) {
       handle.createStatement(
-          StringUtils.safeFormat("DELETE FROM %s WHERE %s='%s'", tableName, keyName, key)
+          StringUtils.format("DELETE FROM %s WHERE %s='%s'", tableName, keyName, key)
       ).setQueryTimeout(1).execute();
-      query = StringUtils.safeFormat(
+      query = StringUtils.format(
           "INSERT INTO %s (%s, %s) VALUES ('%s', '%s')",
           tableName,
           keyName, valName,
           key, val
       );
     } else {
-      query = StringUtils.safeFormat(
+      query = StringUtils.format(
           "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', '%s')",
           tableName,
           tsColumn, keyName, valName,

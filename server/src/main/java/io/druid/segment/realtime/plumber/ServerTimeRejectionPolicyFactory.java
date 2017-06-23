@@ -52,7 +52,7 @@ public class ServerTimeRejectionPolicyFactory implements RejectionPolicyFactory
       @Override
       public String toString()
       {
-        return StringUtils.safeFormat("serverTime-%s", windowPeriod);
+        return StringUtils.format("serverTime-%s", windowPeriod);
       }
     };
   }

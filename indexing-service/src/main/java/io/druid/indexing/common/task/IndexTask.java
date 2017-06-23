@@ -114,7 +114,7 @@ public class IndexTask extends AbstractTask
 
   private static String makeId(String id, IndexIngestionSpec ingestionSchema)
   {
-    return id != null ? id : StringUtils.safeFormat("index_%s_%s", makeDataSource(ingestionSchema), new DateTime());
+    return id != null ? id : StringUtils.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime());
   }
 
   private static String makeDataSource(IndexIngestionSpec ingestionSchema)
@@ -443,7 +443,7 @@ public class IndexTask extends AbstractTask
             final ShardSpec shardSpec = shardSpecLookups.get(interval)
                                                         .getShardSpec(inputRow.getTimestampFromEpoch(), inputRow);
 
-            final String sequenceName = StringUtils.safeFormat("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
+            final String sequenceName = StringUtils.format("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
 
             if (!sequenceNameToShardSpecMap.containsKey(sequenceName)) {
               final ShardSpec shardSpecForPublishing = ingestionSchema.getTuningConfig().isForceExtendableShardSpecs()

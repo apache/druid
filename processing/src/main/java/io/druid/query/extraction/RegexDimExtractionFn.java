@@ -152,7 +152,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("regex(/%s/, %d)", expr, index);
+    return StringUtils.format("regex(/%s/, %d)", expr, index);
   }
 
   @Override

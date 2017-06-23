@@ -319,7 +319,7 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   public String getVersion(URI uri) throws IOException
   {
     try {
-      return StringUtils.safeFormat("%d", buildFileObject(uri, config).getLastModified());
+      return StringUtils.format("%d", buildFileObject(uri, config).getLastModified());
     }
     catch (HdfsIOException ex) {
       throw ex.getIOException();

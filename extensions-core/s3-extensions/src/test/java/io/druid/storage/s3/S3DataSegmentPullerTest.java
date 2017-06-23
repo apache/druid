@@ -69,11 +69,11 @@ public class S3DataSegmentPullerTest
 
     EasyMock.replay(s3Client);
 
-    String version = puller.getVersion(URI.create(StringUtils.safeFormat("s3://%s/%s", bucket, object0.getKey())));
+    String version = puller.getVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey())));
 
     EasyMock.verify(s3Client);
 
-    Assert.assertEquals(StringUtils.safeFormat("%d", new Date(0).getTime()), version);
+    Assert.assertEquals(StringUtils.format("%d", new Date(0).getTime()), version);
   }
 
   @Test

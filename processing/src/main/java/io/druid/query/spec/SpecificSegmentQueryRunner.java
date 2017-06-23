@@ -64,7 +64,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 
     final Thread currThread = Thread.currentThread();
     final String currThreadName = currThread.getName();
-    final String newName = StringUtils.safeFormat("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
+    final String newName = StringUtils.format("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
 
     final Sequence<T> baseSequence = doNamed(
         currThread, currThreadName, newName, new Supplier<Sequence<T>>()

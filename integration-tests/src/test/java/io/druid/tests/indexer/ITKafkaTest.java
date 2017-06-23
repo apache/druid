@@ -155,7 +155,7 @@ public class ITKafkaTest extends AbstractIndexerTest
     for (int i = 0; i < num_events; i++) {
       added += i;
       // construct the event to send
-      String event = StringUtils.safeFormat(
+      String event = StringUtils.format(
           event_template,
           event_fmt.print(dt), i, 0, i
       );

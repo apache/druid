@@ -132,7 +132,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
                 new Request(
                   HttpMethod.GET,
                   new URL(
-                    StringUtils.safeFormat(
+                    StringUtils.format(
                       "%s/status",
                       host
                     )

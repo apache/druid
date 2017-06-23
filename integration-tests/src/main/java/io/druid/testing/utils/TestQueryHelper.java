@@ -122,7 +122,7 @@ public class TestQueryHelper
 
   private String getBrokerURL()
   {
-    return StringUtils.safeFormat("%s/druid/v2?pretty", broker);
+    return StringUtils.format("%s/druid/v2?pretty", broker);
   }
 
   @SuppressWarnings("unchecked")

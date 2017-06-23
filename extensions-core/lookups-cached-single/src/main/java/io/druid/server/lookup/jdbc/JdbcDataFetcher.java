@@ -76,19 +76,19 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
     this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
 
-    this.fetchAllQuery = StringUtils.safeFormat(
+    this.fetchAllQuery = StringUtils.format(
         "SELECT %s, %s FROM %s",
         this.keyColumn,
         this.valueColumn,
         this.table
     );
-    this.fetchQuery = StringUtils.safeFormat(
+    this.fetchQuery = StringUtils.format(
         "SELECT %s FROM %s WHERE %s = :val",
         this.valueColumn,
         this.table,
         this.keyColumn
     );
-    this.reverseFetchQuery = StringUtils.safeFormat(
+    this.reverseFetchQuery = StringUtils.format(
         "SELECT %s FROM %s WHERE %s = :val",
         this.keyColumn,
         this.table,

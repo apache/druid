@@ -139,7 +139,7 @@ public class PullDependenciesTest
       final String version = artifact.getVersion();
       for (int i = 0; i < jarNames.size(); ++i) {
         expectedJars[i] = new File(
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "%s/%s/%s/%s",
                 rootHadoopDependenciesDir,
                 artifactId,
@@ -150,7 +150,7 @@ public class PullDependenciesTest
       }
     } else {
       for (int i = 0; i < jarNames.size(); ++i) {
-        expectedJars[i] = new File(StringUtils.safeFormat("%s/%s/%s", rootExtensionsDir, artifactId, jarNames.get(i)));
+        expectedJars[i] = new File(StringUtils.format("%s/%s/%s", rootExtensionsDir, artifactId, jarNames.get(i)));
       }
     }
     return expectedJars;

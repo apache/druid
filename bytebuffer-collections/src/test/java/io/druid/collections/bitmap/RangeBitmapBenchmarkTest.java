@@ -42,7 +42,7 @@ public class RangeBitmapBenchmarkTest extends BitmapBenchmark
   @BeforeClass
   public static void prepareRandomRanges() throws Exception
   {
-    System.setProperty("jub.customkey", StringUtils.safeFormat("%06.5f", DENSITY));
+    System.setProperty("jub.customkey", StringUtils.format("%06.5f", DENSITY));
     reset();
 
     final BitSet expectedUnion = new BitSet();

@@ -49,14 +49,14 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
     return new CompressedVSizeIndexedV3Writer(
         new CompressedIntsIndexedWriter(
             ioPeon,
-            StringUtils.safeFormat("%s.offsets", filenameBase),
+            StringUtils.format("%s.offsets", filenameBase),
             CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
             IndexIO.BYTE_ORDER,
             compression
         ),
         new CompressedVSizeIntsIndexedWriter(
             ioPeon,
-            StringUtils.safeFormat("%s.values", filenameBase),
+            StringUtils.format("%s.values", filenameBase),
             maxValue,
             CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
             IndexIO.BYTE_ORDER,

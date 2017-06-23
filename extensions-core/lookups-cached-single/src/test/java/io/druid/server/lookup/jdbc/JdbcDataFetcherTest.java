@@ -67,7 +67,7 @@ public class JdbcDataFetcherTest
     Assert.assertEquals(
         0,
         handle.createStatement(
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "CREATE TABLE %s (%s VARCHAR(64), %s VARCHAR(64))",
                 tableName,
                 keyColumn,
@@ -75,7 +75,7 @@ public class JdbcDataFetcherTest
             )
         ).setQueryTimeout(1).execute()
     );
-    handle.createStatement(StringUtils.safeFormat("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
+    handle.createStatement(StringUtils.format("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
 
     for (Map.Entry<String, String> entry : lookupMap.entrySet()) {
       insertValues(entry.getKey(), entry.getValue(), handle);
@@ -168,9 +168,9 @@ public class JdbcDataFetcherTest
   {
     final String query;
     handle.createStatement(
-        StringUtils.safeFormat("DELETE FROM %s WHERE %s='%s'", tableName, keyColumn, key)
+        StringUtils.format("DELETE FROM %s WHERE %s='%s'", tableName, keyColumn, key)
     ).setQueryTimeout(1).execute();
-    query = StringUtils.safeFormat(
+    query = StringUtils.format(
         "INSERT INTO %s (%s, %s) VALUES ('%s', '%s')",
         tableName,
         keyColumn, valueColumn,

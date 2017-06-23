@@ -60,7 +60,7 @@ public class ReflectionLoaderThingy<T>
 
       AtomicReference<T> retVal1;
       try {
-        final Class<?> queryToolChestClass = Class.forName(StringUtils.safeFormat("%s%s", clazz.getName(), interfaceName));
+        final Class<?> queryToolChestClass = Class.forName(StringUtils.format("%s%s", clazz.getName(), interfaceName));
         retVal1 = new AtomicReference<T>(interfaceClass.cast(queryToolChestClass.newInstance()));
       }
       catch (Exception e) {

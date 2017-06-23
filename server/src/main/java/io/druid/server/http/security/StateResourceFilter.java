@@ -74,7 +74,7 @@ public class StateResourceFilter extends AbstractResourceFilter
       if (!authResult.isAllowed()) {
         throw new WebApplicationException(
             Response.status(Response.Status.FORBIDDEN)
-                    .entity(StringUtils.safeFormat("Access-Check-Result: %s", authResult.toString()))
+                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
                     .build()
         );
       }

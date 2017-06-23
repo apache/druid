@@ -101,7 +101,7 @@ public class IndexingServiceClient
       return client.go(
           new Request(
               HttpMethod.POST,
-              new URL(StringUtils.safeFormat("%s/task", baseUrl()))
+              new URL(StringUtils.format("%s/task", baseUrl()))
           ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject)),
           RESPONSE_HANDLER
       ).get();

@@ -136,7 +136,7 @@ public class MySQLConnector extends SQLMetadataConnector
           public Void withHandle(Handle handle) throws Exception
           {
             handle.createStatement(
-                StringUtils.safeFormat(
+                StringUtils.format(
                     "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON DUPLICATE KEY UPDATE %3$s = :value",
                     tableName,
                     keyColumn,

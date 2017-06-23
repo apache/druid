@@ -254,7 +254,7 @@ public abstract class BaseFilterTest
         for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry : finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              final String testName = StringUtils.safeFormat(
+              final String testName = StringUtils.format(
                   "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
                   bitmapSerdeFactoryEntry.getKey(),
                   indexMergerEntry.getKey(),

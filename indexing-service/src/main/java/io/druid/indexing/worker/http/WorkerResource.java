@@ -181,7 +181,7 @@ public class WorkerResource
   {
     if (!(taskRunner instanceof TaskLogStreamer)) {
       return Response.status(501)
-                     .entity(StringUtils.safeFormat(
+                     .entity(StringUtils.format(
                          "Log streaming not supported by [%s]",
                          taskRunner.getClass().getCanonicalName()
                      ))

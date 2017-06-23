@@ -135,6 +135,6 @@ public class SubstringDimExtractionFn extends DimExtractionFn
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("substring(%s, %s)", index, getLength());
+    return StringUtils.format("substring(%s, %s)", index, getLength());
   }
 }

@@ -97,7 +97,7 @@ public class KafkaSimpleConsumer
     this.allBrokers = Collections.unmodifiableList(brokerList);
     this.topic = topic;
     this.partitionId = partitionId;
-    this.clientId = StringUtils.safeFormat("%s_%d_%s", topic, partitionId, clientId);
+    this.clientId = StringUtils.format("%s_%d_%s", topic, partitionId, clientId);
     this.leaderLookupClientId = clientId + "leaderLookup";
     this.replicaBrokers = new ArrayList<>();
     this.replicaBrokers.addAll(this.allBrokers);

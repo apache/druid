@@ -25,6 +25,6 @@ public class SegmentNotWritableException extends Exception
 {
   public SegmentNotWritableException(String message, Object... messageArgs)
   {
-    super(StringUtils.safeFormat(message, messageArgs));
+    super(StringUtils.unimportantSafeFormat(message, messageArgs));
   }
 }

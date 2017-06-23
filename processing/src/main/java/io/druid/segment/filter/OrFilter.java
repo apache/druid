@@ -182,6 +182,6 @@ public class OrFilter implements BooleanFilter
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("(%s)", OR_JOINER.join(filters));
+    return StringUtils.format("(%s)", OR_JOINER.join(filters));
   }
 }

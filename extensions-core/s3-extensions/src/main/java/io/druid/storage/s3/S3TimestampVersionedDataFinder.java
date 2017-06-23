@@ -88,7 +88,7 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
                 final long latestModified = storageObject.getLastModifiedDate().getTime();
                 if (latestModified >= mostRecent) {
                   mostRecent = latestModified;
-                  latest = new URI(StringUtils.safeFormat("s3://%s/%s", storageObject.getBucketName(), storageObject.getKey()));
+                  latest = new URI(StringUtils.format("s3://%s/%s", storageObject.getBucketName(), storageObject.getKey()));
                 }
               }
               return latest;

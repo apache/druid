@@ -45,7 +45,7 @@ public class WorkerResourceTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final String basePath = "/test/druid";
-  private static final String announcementsPath = StringUtils.safeFormat("%s/indexer/announcements/host", basePath);
+  private static final String announcementsPath = StringUtils.format("%s/indexer/announcements/host", basePath);
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;

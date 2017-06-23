@@ -2000,7 +2000,7 @@ public class CachingClusteredClientTest
     MultipleSpecificSegmentSpec spec = (MultipleSpecificSegmentSpec)query.getQuerySegmentSpec();
     List<Result<TimeseriesResultValue>> ret = Lists.newArrayList();
     for (SegmentDescriptor descriptor : spec.getDescriptors()) {
-      String id = StringUtils.safeFormat("%s_%s", queryIntervals.indexOf(descriptor.getInterval()), descriptor.getPartitionNumber());
+      String id = StringUtils.format("%s_%s", queryIntervals.indexOf(descriptor.getInterval()), descriptor.getPartitionNumber());
       int index = segmentIds.indexOf(id);
       if (index != -1) {
         ret.add(new Result(
@@ -2251,7 +2251,7 @@ public class CachingClusteredClientTest
 
         DataSegment mockSegment = makeMock(mocks, DataSegment.class);
         ServerExpectation expectation = new ServerExpectation(
-            StringUtils.safeFormat("%s_%s", k, j), // interval/chunk
+            StringUtils.format("%s_%s", k, j), // interval/chunk
             queryIntervals.get(k),
             mockSegment,
             expectedResults.get(k).get(j)

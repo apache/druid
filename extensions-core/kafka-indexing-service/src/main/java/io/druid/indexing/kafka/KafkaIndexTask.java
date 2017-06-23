@@ -198,7 +198,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   {
     super(
         id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt()) : id,
-        StringUtils.safeFormat("%s_%s", TYPE, dataSchema.getDataSource()),
+        StringUtils.format("%s_%s", TYPE, dataSchema.getDataSource()),
         taskResource,
         dataSchema.getDataSource(),
         context
@@ -333,7 +333,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       // Set up sequenceNames.
       final Map<Integer, String> sequenceNames = Maps.newHashMap();
       for (Integer partitionNum : nextOffsets.keySet()) {
-        sequenceNames.put(partitionNum, StringUtils.safeFormat("%s_%s", ioConfig.getBaseSequenceName(), partitionNum));
+        sequenceNames.put(partitionNum, StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), partitionNum));
       }
 
       // Set up committer.
@@ -713,7 +713,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     } else if (!endOffsets.keySet().containsAll(offsets.keySet())) {
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(
-                         StringUtils.safeFormat(
+                         StringUtils.format(
                              "Request contains partitions not being handled by this task, my partitions: %s",
                              endOffsets.keySet()
                          )
@@ -733,7 +733,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         if (entry.getValue().compareTo(nextOffsets.get(entry.getKey())) < 0) {
           return Response.status(Response.Status.BAD_REQUEST)
                          .entity(
-                             StringUtils.safeFormat(
+                             StringUtils.format(
                                  "End offset must be >= current offset for partition [%s] (current: %s)",
                                  entry.getKey(),
                                  nextOffsets.get(entry.getKey())
@@ -774,7 +774,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(StringUtils.safeFormat("Can't pause, task is not in a pausable state (state: [%s])", status))
+                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
                      .build();
     }
 

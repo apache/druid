@@ -226,7 +226,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
               values.add(stringValue);
               if (values.size() > maxSemiJoinRowsInMemory) {
                 throw new ResourceLimitExceededException(
-                    StringUtils.safeFormat("maxSemiJoinRowsInMemory[%,d] exceeded", maxSemiJoinRowsInMemory)
+                    StringUtils.format("maxSemiJoinRowsInMemory[%,d] exceeded", maxSemiJoinRowsInMemory)
                 );
               }
             }

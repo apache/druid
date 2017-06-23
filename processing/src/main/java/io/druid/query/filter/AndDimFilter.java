@@ -120,6 +120,6 @@ public class AndDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("(%s)", AND_JOINER.join(fields));
+    return StringUtils.format("(%s)", AND_JOINER.join(fields));
   }
 }

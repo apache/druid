@@ -286,7 +286,7 @@ public class RealtimePlumber implements Plumber
                                               );
 
     persistExecutor.execute(
-        new ThreadRenamingRunnable(StringUtils.safeFormat("%s-incremental-persist", schema.getDataSource()))
+        new ThreadRenamingRunnable(StringUtils.format("%s-incremental-persist", schema.getDataSource()))
         {
           @Override
           public void doRun()
@@ -353,7 +353,7 @@ public class RealtimePlumber implements Plumber
   // Submits persist-n-merge task for a Sink to the mergeExecutor
   private void persistAndMerge(final long truncatedTime, final Sink sink)
   {
-    final String threadName = StringUtils.safeFormat(
+    final String threadName = StringUtils.format(
         "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(truncatedTime)
     );
     mergeExecutor.execute(
@@ -761,7 +761,7 @@ public class RealtimePlumber implements Plumber
             ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                StringUtils.safeFormat(
+                StringUtils.format(
                     "%s-overseer-%d",
                     schema.getDataSource(),
                     config.getShardSpec().getPartitionNum()

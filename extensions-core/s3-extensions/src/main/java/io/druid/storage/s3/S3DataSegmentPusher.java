@@ -67,9 +67,9 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop()
   {
     if (config.isUseS3aSchema()) {
-      return StringUtils.safeFormat("s3a://%s/%s", config.getBucket(), config.getBaseKey());
+      return StringUtils.format("s3a://%s/%s", config.getBucket(), config.getBaseKey());
     }
-    return StringUtils.safeFormat("s3n://%s/%s", config.getBucket(), config.getBaseKey());
+    return StringUtils.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
   }
 
   @Deprecated

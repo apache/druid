@@ -58,7 +58,7 @@ public class ServerDiscoveryUtil
             return isInstanceReady(serviceProvider);
           }
         },
-        StringUtils.safeFormat("Instance %s to get ready", instanceType)
+        StringUtils.format("Instance %s to get ready", instanceType)
     );
   }
 

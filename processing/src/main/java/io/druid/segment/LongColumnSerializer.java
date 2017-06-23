@@ -72,7 +72,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
   {
     writer = CompressionFactory.getLongSerializer(
         ioPeon,
-        StringUtils.safeFormat("%s.long_column", filenameBase),
+        StringUtils.format("%s.long_column", filenameBase),
         byteOrder,
         encoding,
         compression

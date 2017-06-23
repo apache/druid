@@ -114,7 +114,7 @@ public class MetadataStorageTablesConfig
       if (base == null) {
         return null;
       }
-      return StringUtils.safeFormat("%s_%s", base, defaultSuffix);
+      return StringUtils.format("%s_%s", base, defaultSuffix);
     }
 
     return explicitTableName;

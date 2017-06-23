@@ -74,7 +74,7 @@ public class SearchSortSpec
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("%sSort", ordering.toString());
+    return StringUtils.format("%sSort", ordering.toString());
   }
 
   @Override

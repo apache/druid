@@ -127,7 +127,7 @@ public class SQLMetadataSupervisorManagerTest
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(StringUtils.safeFormat("DROP TABLE %s", tablesConfig.getSupervisorTable()))
+            handle.createStatement(StringUtils.format("DROP TABLE %s", tablesConfig.getSupervisorTable()))
                   .execute();
             return null;
           }

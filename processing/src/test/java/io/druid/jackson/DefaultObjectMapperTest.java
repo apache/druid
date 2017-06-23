@@ -36,6 +36,6 @@ public class DefaultObjectMapperTest
   {
     final DateTime time = new DateTime();
 
-    Assert.assertEquals(StringUtils.safeFormat("\"%s\"", time), mapper.writeValueAsString(time));
+    Assert.assertEquals(StringUtils.format("\"%s\"", time), mapper.writeValueAsString(time));
   }
 }

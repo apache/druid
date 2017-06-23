@@ -60,7 +60,7 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   public void open() throws IOException
   {
     writer = new GenericIndexedWriter(
-        ioPeon, StringUtils.safeFormat("%s.complex_column", filenameBase), strategy
+        ioPeon, StringUtils.format("%s.complex_column", filenameBase), strategy
     );
     writer.open();
   }

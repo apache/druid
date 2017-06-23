@@ -650,7 +650,7 @@ public class IndexMerger
         }
 
         dataInterval = new Interval(minTime, maxTime);
-        serializerUtils.writeString(channel, StringUtils.safeFormat("%s/%s", minTime, maxTime));
+        serializerUtils.writeString(channel, StringUtils.format("%s/%s", minTime, maxTime));
         serializerUtils.writeString(channel, mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory()));
       }
       IndexIO.checkFileSize(indexFile);
@@ -827,7 +827,7 @@ public class IndexMerger
           if (columnCapabilities.get(input).isDictionaryEncoded()) {
             formatString = "dim_%s.drd";
           } else {
-            formatString = StringUtils.safeFormat("numeric_dim_%%s_%s.drd", IndexIO.BYTE_ORDER);
+            formatString = StringUtils.format("numeric_dim_%%s_%s.drd", IndexIO.BYTE_ORDER);
           }
           return GuavaUtils.formatFunction(formatString).apply(input);
         }
@@ -836,11 +836,11 @@ public class IndexMerger
       final ArrayList<String> expectedFiles = Lists.newArrayList(
           Iterables.concat(
               Arrays.asList(
-                  "index.drd", "inverted.drd", "spatial.drd", StringUtils.safeFormat("time_%s.drd", IndexIO.BYTE_ORDER)
+                  "index.drd", "inverted.drd", "spatial.drd", StringUtils.format("time_%s.drd", IndexIO.BYTE_ORDER)
               ),
               Iterables.transform(mergedDimensions, dimFilenameFunction),
               Iterables.transform(
-                  mergedMetrics, GuavaUtils.formatFunction(StringUtils.safeFormat("met_%%s_%s.drd", IndexIO.BYTE_ORDER))
+                  mergedMetrics, GuavaUtils.formatFunction(StringUtils.format("met_%%s_%s.drd", IndexIO.BYTE_ORDER))
               )
           )
       );
@@ -1046,7 +1046,7 @@ public class IndexMerger
       availableDimensions.writeToChannel(channel);
       availableMetrics.writeToChannel(channel);
       serializerUtils.writeString(
-          channel, StringUtils.safeFormat("%s/%s", dataInterval.getStart(), dataInterval.getEnd())
+          channel, StringUtils.format("%s/%s", dataInterval.getStart(), dataInterval.getEnd())
       );
       serializerUtils.writeString(
           channel, mapper.writeValueAsString(bitmapSerdeFactory)

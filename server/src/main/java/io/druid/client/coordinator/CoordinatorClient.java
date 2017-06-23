@@ -71,7 +71,7 @@ public class CoordinatorClient
           new Request(
               HttpMethod.GET,
               new URL(
-                  StringUtils.safeFormat(
+                  StringUtils.format(
                       "%s/datasources/%s/intervals/%s/serverview?partial=%s",
                       baseUrl(),
                       dataSource,

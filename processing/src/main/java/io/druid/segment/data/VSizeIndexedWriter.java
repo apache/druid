@@ -65,9 +65,9 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
   )
   {
     this.ioPeon = ioPeon;
-    this.metaFileName = StringUtils.safeFormat("%s.meta", filenameBase);
-    this.headerFileName = StringUtils.safeFormat("%s.header", filenameBase);
-    this.valuesFileName = StringUtils.safeFormat("%s.values", filenameBase);
+    this.metaFileName = StringUtils.format("%s.meta", filenameBase);
+    this.headerFileName = StringUtils.format("%s.header", filenameBase);
+    this.valuesFileName = StringUtils.format("%s.values", filenameBase);
     this.maxId = maxId;
   }
 

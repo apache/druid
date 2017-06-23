@@ -236,7 +236,7 @@ public class CompressedVSizeIndexedV3WriterTest
 
   private void checkV2SerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
-    File tmpDirectory = Files.createTempDirectory(StringUtils.safeFormat(
+    File tmpDirectory = Files.createTempDirectory(StringUtils.format(
         "CompressedVSizeIndexedV3WriterTest_%d_%d",
         offsetChunkFactor,
         offsetChunkFactor

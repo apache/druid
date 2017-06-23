@@ -87,7 +87,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       final long startTime = System.currentTimeMillis();
       final Job groupByJob = Job.getInstance(
           new Configuration(),
-          StringUtils.safeFormat("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
       );
 
       JobHelper.injectSystemProperties(groupByJob);

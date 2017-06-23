@@ -60,10 +60,10 @@ public class CoordinatorRedirectInfo implements RedirectInfo
         return null;
       }
 
-      String location = StringUtils.safeFormat("http://%s%s", leader, requestURI);
+      String location = StringUtils.format("http://%s%s", leader, requestURI);
 
       if (queryString != null) {
-        location = StringUtils.safeFormat("%s?%s", location, queryString);
+        location = StringUtils.format("%s?%s", location, queryString);
       }
 
       return new URL(location);

@@ -176,7 +176,7 @@ public class AndFilter implements BooleanFilter
   @Override
   public String toString()
   {
-    return StringUtils.safeFormat("(%s)", AND_JOINER.join(filters));
+    return StringUtils.format("(%s)", AND_JOINER.join(filters));
   }
 
   private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)

@@ -117,9 +117,9 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final String storageDir = pusher.getStorageDir(dataSegment);
     Map<String, String> paths = pusher.getAzurePaths(dataSegment);
 
-    assertEquals(StringUtils.safeFormat("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME), paths.get("index"));
+    assertEquals(StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME), paths.get("index"));
     assertEquals(
-        StringUtils.safeFormat("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
+        StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
         paths.get("descriptor")
     );
   }

@@ -102,7 +102,7 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
 
       if (uri == null) {
         throw new FileNotFoundException(
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "Could not find match for pattern `%s` in [%s] for %s",
                 versionRegex,
                 originalUri,

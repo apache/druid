@@ -100,7 +100,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         storageDir
     );
 
-    Path tmpIndexFile = new Path(StringUtils.safeFormat(
+    Path tmpIndexFile = new Path(StringUtils.format(
         "%s/%s/%s/%s_index.zip",
         fullyQualifiedStorageDirectory,
         segment.getDataSource(),
@@ -116,13 +116,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
       size = CompressionUtils.zip(inDir, out);
-      final Path outIndexFile = new Path(StringUtils.safeFormat(
+      final Path outIndexFile = new Path(StringUtils.format(
           "%s/%s/%d_index.zip",
           fullyQualifiedStorageDirectory,
           storageDir,
           segment.getShardSpec().getPartitionNum()
       ));
-      final Path outDescriptorFile = new Path(StringUtils.safeFormat(
+      final Path outDescriptorFile = new Path(StringUtils.format(
           "%s/%s/%d_descriptor.json",
           fullyQualifiedStorageDirectory,
           storageDir,
@@ -135,7 +135,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       final Path tmpDescriptorFile = new Path(
           tmpIndexFile.getParent(),
-          StringUtils.safeFormat("%s_descriptor.json", dataSegment.getShardSpec().getPartitionNum())
+          StringUtils.format("%s_descriptor.json", dataSegment.getShardSpec().getPartitionNum())
       );
 
       log.info("Creating descriptor file at[%s]", tmpDescriptorFile);
@@ -212,7 +212,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   {
     return JOINER.join(
         segment.getDataSource(),
-        StringUtils.safeFormat(
+        StringUtils.format(
             "%s_%s",
             segment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
             segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
@@ -224,7 +224,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String makeIndexPathName(DataSegment dataSegment, String indexName)
   {
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "./%s/%d_%s",
         this.getStorageDir(dataSegment),
         dataSegment.getShardSpec().getPartitionNum(),

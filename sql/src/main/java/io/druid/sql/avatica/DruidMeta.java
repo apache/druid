@@ -79,7 +79,7 @@ public class DruidMeta extends MetaImpl
     this.config = config;
     this.exec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
-            .setNameFormat(StringUtils.safeFormat("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
+            .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
             .setDaemon(true)
             .build()
     );

@@ -139,7 +139,7 @@ public class S3TaskLogs implements TaskLogs
 
   private String getTaskLogKey(String taskid)
   {
-    return StringUtils.safeFormat("%s/%s/log", config.getS3Prefix(), taskid);
+    return StringUtils.format("%s/%s/log", config.getS3Prefix(), taskid);
   }
 
   @Override

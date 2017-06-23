@@ -138,7 +138,7 @@ public class DruidProcessingModule implements Module
 
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(
-            StringUtils.safeFormat(
+            StringUtils.format(
                 "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, druid.processing.numThreads, or druid.processing.numMergeBuffers: "
                 + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1)",
                 maxDirectMemory,

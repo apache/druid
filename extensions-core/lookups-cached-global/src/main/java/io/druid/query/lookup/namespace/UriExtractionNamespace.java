@@ -361,7 +361,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     @Override
     public String toString()
     {
-      return StringUtils.safeFormat(
+      return StringUtils.format(
           "CSVFlatDataParser = { columns = %s, keyColumn = %s, valueColumn = %s }",
           Arrays.toString(columns.toArray()),
           keyColumn,
@@ -503,7 +503,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     @Override
     public String toString()
     {
-      return StringUtils.safeFormat(
+      return StringUtils.format(
           "TSVFlatDataParser = { columns = %s, delimiter = '%s', listDelimiter = '%s',keyColumn = %s, valueColumn = %s }",
           Arrays.toString(columns.toArray()),
           delimiter,
@@ -581,7 +581,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     @Override
     public String toString()
     {
-      return StringUtils.safeFormat(
+      return StringUtils.format(
           "JSONFlatDataParser = { keyFieldName = %s, valueFieldName = %s }",
           keyFieldName,
           valueFieldName

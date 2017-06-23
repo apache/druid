@@ -140,7 +140,7 @@ public class HdfsDataSegmentPusherTest
 
     config.setStorageDirectory(
         scheme != null
-        ? StringUtils.safeFormat("%s://%s", scheme, storageDirectory.getAbsolutePath())
+        ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
@@ -160,7 +160,7 @@ public class HdfsDataSegmentPusherTest
     DataSegment segment = pusher.push(segmentDir, segmentToPush);
 
 
-    String indexUri = StringUtils.safeFormat(
+    String indexUri = StringUtils.format(
         "%s/%s/%d_index.zip",
         FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
         pusher.getStorageDir(segmentToPush),
@@ -178,14 +178,14 @@ public class HdfsDataSegmentPusherTest
     // rename directory after push
     final String segmentPath = pusher.getStorageDir(segment);
 
-    File indexFile = new File(StringUtils.safeFormat(
+    File indexFile = new File(StringUtils.format(
         "%s/%s/%d_index.zip",
         storageDirectory,
         segmentPath,
         segment.getShardSpec().getPartitionNum()
     ));
     Assert.assertTrue(indexFile.exists());
-    File descriptorFile = new File(StringUtils.safeFormat(
+    File descriptorFile = new File(StringUtils.format(
         "%s/%s/%d_descriptor.json",
         storageDirectory,
         segmentPath,
@@ -194,7 +194,7 @@ public class HdfsDataSegmentPusherTest
     Assert.assertTrue(descriptorFile.exists());
 
     // push twice will fail and temp dir cleaned
-    File outDir = new File(StringUtils.safeFormat("%s/%s", config.getStorageDirectory(), segmentPath));
+    File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
     outDir.setReadOnly();
     try {
       pusher.push(segmentDir, segmentToPush);
@@ -222,7 +222,7 @@ public class HdfsDataSegmentPusherTest
 
     config.setStorageDirectory(
         scheme != null
-        ? StringUtils.safeFormat("%s://%s", scheme, storageDirectory.getAbsolutePath())
+        ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
@@ -244,7 +244,7 @@ public class HdfsDataSegmentPusherTest
     for (int i = 0; i < numberOfSegments; i++) {
       final DataSegment pushedSegment = pusher.push(segmentDir, segments[i]);
 
-      String indexUri = StringUtils.safeFormat(
+      String indexUri = StringUtils.format(
           "%s/%s/%d_index.zip",
           FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
           pusher.getStorageDir(segments[i]),
@@ -262,14 +262,14 @@ public class HdfsDataSegmentPusherTest
       // rename directory after push
       String segmentPath = pusher.getStorageDir(pushedSegment);
 
-      File indexFile = new File(StringUtils.safeFormat(
+      File indexFile = new File(StringUtils.format(
           "%s/%s/%d_index.zip",
           storageDirectory,
           segmentPath,
           pushedSegment.getShardSpec().getPartitionNum()
       ));
       Assert.assertTrue(indexFile.exists());
-      File descriptorFile = new File(StringUtils.safeFormat(
+      File descriptorFile = new File(StringUtils.format(
           "%s/%s/%d_descriptor.json",
           storageDirectory,
           segmentPath,
@@ -291,7 +291,7 @@ public class HdfsDataSegmentPusherTest
       // rename directory after push
       segmentPath = pusher.getStorageDir(fromDescriptorFileDataSegment);
 
-      indexFile = new File(StringUtils.safeFormat(
+      indexFile = new File(StringUtils.format(
           "%s/%s/%d_index.zip",
           storageDirectory,
           segmentPath,
@@ -301,7 +301,7 @@ public class HdfsDataSegmentPusherTest
 
 
       // push twice will fail and temp dir cleaned
-      File outDir = new File(StringUtils.safeFormat("%s/%s", config.getStorageDirectory(), segmentPath));
+      File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
       outDir.setReadOnly();
       try {
         pusher.push(segmentDir, segments[i]);

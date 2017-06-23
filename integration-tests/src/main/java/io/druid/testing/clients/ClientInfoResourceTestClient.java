@@ -60,7 +60,7 @@ public class ClientInfoResourceTestClient
 
   private String getBrokerURL()
   {
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "%s/druid/v2/datasources",
         brokerUrl
     );
@@ -72,7 +72,7 @@ public class ClientInfoResourceTestClient
       StatusResponseHolder response = httpClient.go(
           new Request(
               HttpMethod.GET,
-              new URL(StringUtils.safeFormat("%s/%s/dimensions?interval=%s", getBrokerURL(), dataSource, interval))
+              new URL(StringUtils.format("%s/%s/dimensions?interval=%s", getBrokerURL(), dataSource, interval))
           ),
           responseHandler
       ).get();

@@ -102,7 +102,7 @@ public class ServerDiscoverySelectorTest
         null
     );
     Assert.assertEquals(PORT, uri.getPort());
-    Assert.assertEquals(StringUtils.safeFormat("[%s]", ADDRESS), uri.getHost());
+    Assert.assertEquals(StringUtils.format("[%s]", ADDRESS), uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
   }
 

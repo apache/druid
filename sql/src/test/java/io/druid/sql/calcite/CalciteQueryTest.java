@@ -4289,10 +4289,10 @@ public class CalciteQueryTest
       log.info("row #%d: %s", i, Arrays.toString(results.get(i)));
     }
 
-    Assert.assertEquals(StringUtils.safeFormat("result count: %s", sql), expectedResults.size(), results.size());
+    Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(
-          StringUtils.safeFormat("result #%d: %s", i + 1, sql),
+          StringUtils.format("result #%d: %s", i + 1, sql),
           expectedResults.get(i),
           results.get(i)
       );
@@ -4302,13 +4302,13 @@ public class CalciteQueryTest
       final List<Query> recordedQueries = queryLogHook.getRecordedQueries();
 
       Assert.assertEquals(
-          StringUtils.safeFormat("query count: %s", sql),
+          StringUtils.format("query count: %s", sql),
           expectedQueries.size(),
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
         Assert.assertEquals(
-            StringUtils.safeFormat("query #%d: %s", i + 1, sql),
+            StringUtils.format("query #%d: %s", i + 1, sql),
             expectedQueries.get(i),
             recordedQueries.get(i)
         );

@@ -299,7 +299,7 @@ public class CompressionUtilsTest
         final byte[] bytes = new byte[gzBytes.length];
         Assert.assertEquals(bytes.length, inputStream.read(bytes));
         Assert.assertArrayEquals(
-            StringUtils.safeFormat("Failed on range %d", i),
+            StringUtils.format("Failed on range %d", i),
             gzBytes,
             bytes
         );

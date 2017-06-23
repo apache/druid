@@ -54,9 +54,9 @@ public class RemoteTaskRunnerTestUtils
 {
   static final Joiner joiner = Joiner.on("/");
   static final String basePath = "/test/druid";
-  static final String announcementsPath = StringUtils.safeFormat("%s/indexer/announcements", basePath);
-  static final String tasksPath = StringUtils.safeFormat("%s/indexer/tasks", basePath);
-  static final String statusPath = StringUtils.safeFormat("%s/indexer/status", basePath);
+  static final String announcementsPath = StringUtils.format("%s/indexer/announcements", basePath);
+  static final String tasksPath = StringUtils.format("%s/indexer/tasks", basePath);
+  static final String statusPath = StringUtils.format("%s/indexer/status", basePath);
   static final TaskLocation DUMMY_LOCATION = TaskLocation.create("dummy", 9000);
 
   private TestingCluster testingCluster;

@@ -142,9 +142,9 @@ public class DimensionPredicateFilter implements Filter
   public String toString()
   {
     if (extractionFn != null) {
-      return StringUtils.safeFormat("%s(%s) = %s", extractionFn, dimension, basePredicateString);
+      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, basePredicateString);
     } else {
-      return StringUtils.safeFormat("%s = %s", dimension, basePredicateString);
+      return StringUtils.format("%s = %s", dimension, basePredicateString);
     }
   }
 }

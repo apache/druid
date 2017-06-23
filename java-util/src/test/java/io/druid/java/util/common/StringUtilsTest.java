@@ -111,7 +111,7 @@ public class StringUtilsTest
   @Test
   public void testSafeFormat()
   {
-    Assert.assertEquals("test%d; format", StringUtils.safeFormat("test%d", "format"));
-    Assert.assertEquals("test%s%s; format", StringUtils.safeFormat("test%s%s", "format"));
+    Assert.assertEquals("test%d; format", StringUtils.format("test%d", "format"));
+    Assert.assertEquals("test%s%s; format", StringUtils.format("test%s%s", "format"));
   }
 }

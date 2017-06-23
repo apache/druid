@@ -49,9 +49,9 @@ public class SmooshedFileMapperTest
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = folder.newFile(StringUtils.safeFormat("smoosh-%s.bin", i));
+        File tmpFile = folder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
-        smoosher.add(StringUtils.safeFormat("%d", i), tmpFile);
+        smoosher.add(StringUtils.format("%d", i), tmpFile);
       }
     }
     validateOutput(baseDir);
@@ -63,12 +63,12 @@ public class SmooshedFileMapperTest
     File baseDir = folder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
-      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.safeFormat("%d", 19), 4);
+      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%d", 19), 4);
 
       for (int i = 0; i < 19; ++i) {
-        File tmpFile = File.createTempFile(StringUtils.safeFormat("smoosh-%s", i), ".bin");
+        File tmpFile = File.createTempFile(StringUtils.format("smoosh-%s", i), ".bin");
         Files.write(Ints.toByteArray(i), tmpFile);
-        smoosher.add(StringUtils.safeFormat("%d", i), tmpFile);
+        smoosher.add(StringUtils.format("%d", i), tmpFile);
         if (i == 10) {
           writer.write(ByteBuffer.wrap(Ints.toByteArray(19)));
           writer.close();
@@ -86,7 +86,7 @@ public class SmooshedFileMapperTest
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 19; ++i) {
-        final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.safeFormat("%d", i), 4);
+        final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%d", i), 4);
         writer.write(ByteBuffer.wrap(Ints.toByteArray(i)));
       }
     }
@@ -98,13 +98,13 @@ public class SmooshedFileMapperTest
     File baseDir = folder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
-      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.safeFormat("%d", 19), 4);
+      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%d", 19), 4);
       writer.write(ByteBuffer.wrap(Ints.toByteArray(19)));
 
       for (int i = 0; i < 19; ++i) {
-        File tmpFile = File.createTempFile(StringUtils.safeFormat("smoosh-%s", i), ".bin");
+        File tmpFile = File.createTempFile(StringUtils.format("smoosh-%s", i), ".bin");
         Files.write(Ints.toByteArray(i), tmpFile);
-        smoosher.add(StringUtils.safeFormat("%d", i), tmpFile);
+        smoosher.add(StringUtils.format("%d", i), tmpFile);
         tmpFile.delete();
       }
       writer.close();
@@ -119,7 +119,7 @@ public class SmooshedFileMapperTest
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 20; ++i) {
-        final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.safeFormat("%d", i), 7);
+        final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%d", i), 7);
         writer.write(ByteBuffer.wrap(Ints.toByteArray(i)));
         try {
           writer.close();
@@ -143,7 +143,7 @@ public class SmooshedFileMapperTest
 
     try (SmooshedFileMapper mapper = SmooshedFileMapper.load(baseDir)) {
       for (int i = 0; i < 20; ++i) {
-        ByteBuffer buf = mapper.mapFile(StringUtils.safeFormat("%d", i));
+        ByteBuffer buf = mapper.mapFile(StringUtils.format("%d", i));
         Assert.assertEquals(0, buf.position());
         Assert.assertEquals(4, buf.remaining());
         Assert.assertEquals(4, buf.capacity());
@@ -205,7 +205,7 @@ public class SmooshedFileMapperTest
 
     try (SmooshedFileMapper mapper = SmooshedFileMapper.load(baseDir)) {
       for (int i = 0; i < 20; ++i) {
-        ByteBuffer buf = mapper.mapFile(StringUtils.safeFormat("%d", i));
+        ByteBuffer buf = mapper.mapFile(StringUtils.format("%d", i));
         Assert.assertEquals(0, buf.position());
         Assert.assertEquals(4, buf.remaining());
         Assert.assertEquals(4, buf.capacity());

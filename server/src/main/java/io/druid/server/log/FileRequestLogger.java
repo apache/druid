@@ -126,7 +126,7 @@ public class FileRequestLogger implements RequestLogger
   {
     synchronized (lock) {
       fileWriter.write(
-          StringUtils.safeFormat("%s%n", requestLogLine.getLine(objectMapper))
+          StringUtils.format("%s%n", requestLogLine.getLine(objectMapper))
       );
       fileWriter.flush();
     }

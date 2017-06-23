@@ -122,7 +122,7 @@ public class IndexBuilder
       return TestHelper.getTestIndexIO().loadIndex(
           indexMerger.persist(
               incrementalIndex,
-              new File(tmpDir, StringUtils.safeFormat("testIndex-%s", new Random().nextInt(Integer.MAX_VALUE))),
+              new File(tmpDir, StringUtils.format("testIndex-%s", new Random().nextInt(Integer.MAX_VALUE))),
               indexSpec
           )
       );
@@ -148,7 +148,7 @@ public class IndexBuilder
                         maxRows,
                         rows.subList(i, Math.min(rows.size(), i + ROWS_PER_INDEX_FOR_MERGING))
                     ),
-                    new File(tmpDir, StringUtils.safeFormat("testIndex-%s", UUID.randomUUID().toString())),
+                    new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID().toString())),
                     indexSpec
                 )
             )
@@ -182,7 +182,7 @@ public class IndexBuilder
                   ),
                   AggregatorFactory.class
               ),
-              new File(tmpDir, StringUtils.safeFormat("testIndex-%s", UUID.randomUUID())),
+              new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID())),
               indexSpec
           )
       );

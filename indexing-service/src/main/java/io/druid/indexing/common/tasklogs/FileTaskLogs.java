@@ -83,7 +83,7 @@ public class FileTaskLogs implements TaskLogs
 
   private File fileForTask(final String taskid)
   {
-    return new File(config.getDirectory(), StringUtils.safeFormat("%s.log", taskid));
+    return new File(config.getDirectory(), StringUtils.format("%s.log", taskid));
   }
 
   @Override

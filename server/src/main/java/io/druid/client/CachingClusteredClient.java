@@ -324,7 +324,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           // otherwise, if populating cache, add segment to list of segments to cache
           final String segmentIdentifier = segment.lhs.getSegment().getIdentifier();
           cachePopulatorMap.put(
-              StringUtils.safeFormat("%s_%s", segmentIdentifier, segmentQueryInterval),
+              StringUtils.format("%s_%s", segmentIdentifier, segmentQueryInterval),
               new CachePopulator(cache, objectMapper, segmentCacheKey)
           );
         }
@@ -487,7 +487,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                           {
                             final BySegmentResultValueClass<T> value = input.getValue();
                             final CachePopulator cachePopulator = cachePopulatorMap.get(
-                                StringUtils.safeFormat("%s_%s", value.getSegmentId(), value.getInterval())
+                                StringUtils.format("%s_%s", value.getSegmentId(), value.getInterval())
                             );
 
                             final Queue<ListenableFuture<Object>> cacheFutures = new ConcurrentLinkedQueue<>();

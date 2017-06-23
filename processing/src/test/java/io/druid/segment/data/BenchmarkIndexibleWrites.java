@@ -217,7 +217,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
       );
     }
     Futures.allAsList(futures).get();
-    Assert.assertTrue(StringUtils.safeFormat("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get() >= totalIndexSize);
+    Assert.assertTrue(StringUtils.format("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get() >= totalIndexSize);
     for(int i = 0; i < index.get(); ++i){
       Assert.assertEquals(i, concurrentIndexible.get(i).intValue());
     }
@@ -296,7 +296,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     Futures.allAsList(futures).get();
     executorService.shutdown();
 
-    Assert.assertTrue(StringUtils.safeFormat("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get() >= totalIndexSize);
+    Assert.assertTrue(StringUtils.format("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get() >= totalIndexSize);
     for(int i = 0; i < index.get(); ++i){
       Assert.assertEquals(i, concurrentIndexible.get(i).intValue());
     }

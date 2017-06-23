@@ -145,9 +145,9 @@ public class SelectorDimFilter implements DimFilter
   public String toString()
   {
     if (extractionFn != null) {
-      return StringUtils.safeFormat("%s(%s) = %s", extractionFn, dimension, value);
+      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, value);
     } else {
-      return StringUtils.safeFormat("%s = %s", dimension, value);
+      return StringUtils.format("%s = %s", dimension, value);
     }
   }
 

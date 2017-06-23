@@ -235,7 +235,7 @@ public class SQLServerConnector extends SQLMetadataConnector
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(StringUtils.safeFormat(
+            handle.createStatement(StringUtils.format(
                 "MERGE INTO %1$s WITH (UPDLOCK, HOLDLOCK) as target"
                     + " USING "
                     + " (:key, :value) as source (%2$s, %3$s)"

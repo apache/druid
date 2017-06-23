@@ -96,7 +96,7 @@ public class CompressionUtils
         log.info("Adding file[%s] with size[%,d].  Total size so far[%,d]", file, file.length(), totalSize);
         if (file.length() >= Integer.MAX_VALUE) {
           zipOut.finish();
-          throw new IOException(StringUtils.safeFormat("file[%s] too large [%,d]", file, file.length()));
+          throw new IOException(StringUtils.format("file[%s] too large [%,d]", file, file.length()));
         }
         zipOut.putNextEntry(new ZipEntry(file.getName()));
         totalSize += Files.asByteSource(file).copyTo(zipOut);

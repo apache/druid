@@ -80,7 +80,7 @@ public class GroupByRowProcessor
 
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
-        StringUtils.safeFormat("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
+        StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
     final List<Interval> queryIntervals = query.getIntervals();

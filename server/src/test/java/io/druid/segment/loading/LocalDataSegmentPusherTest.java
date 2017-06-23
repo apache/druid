@@ -144,7 +144,7 @@ public class LocalDataSegmentPusherTest
     config.storageDirectory = new File("druid");
 
     Assert.assertEquals(
-        StringUtils.safeFormat("file:%s/druid", System.getProperty("user.dir")),
+        StringUtils.format("file:%s/druid", System.getProperty("user.dir")),
         new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop()
     );
   }

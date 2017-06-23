@@ -107,7 +107,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     }
     TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromTypeString(typeString);
     Preconditions.checkArgument(typeInfo instanceof StructTypeInfo,
-        StringUtils.safeFormat("typeString should be struct type but not [%s]", typeString));
+        StringUtils.format("typeString should be struct type but not [%s]", typeString));
     Properties table = getTablePropertiesFromStructTypeInfo((StructTypeInfo)typeInfo);
     serde.initialize(new Configuration(), table);
     try {

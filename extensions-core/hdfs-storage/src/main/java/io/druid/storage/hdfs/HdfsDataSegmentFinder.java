@@ -85,7 +85,7 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
           if (descriptorParts.length == 2
               && descriptorParts[1].equals("descriptor.json")
               && org.apache.commons.lang.StringUtils.isNumeric(descriptorParts[0])) {
-            indexZip = new Path(path.getParent(), StringUtils.safeFormat("%s_index.zip", descriptorParts[0]));
+            indexZip = new Path(path.getParent(), StringUtils.format("%s_index.zip", descriptorParts[0]));
           } else {
             indexZip = new Path(path.getParent(), "index.zip");
           }

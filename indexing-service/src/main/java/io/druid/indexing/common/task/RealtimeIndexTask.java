@@ -97,7 +97,7 @@ public class RealtimeIndexTask extends AbstractTask
     for (int i = 0; i < Ints.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
     }
-    return StringUtils.safeFormat(
+    return StringUtils.format(
         "index_realtime_%s_%d_%s_%s",
         dataSource,
         partitionNumber,
@@ -145,7 +145,7 @@ public class RealtimeIndexTask extends AbstractTask
   {
     super(
         id == null ? makeTaskId(fireDepartment) : id,
-        StringUtils.safeFormat("index_realtime_%s", makeDatasource(fireDepartment)),
+        StringUtils.format("index_realtime_%s", makeDatasource(fireDepartment)),
         taskResource,
         makeDatasource(fireDepartment),
         context

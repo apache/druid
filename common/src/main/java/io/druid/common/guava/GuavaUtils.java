@@ -50,7 +50,7 @@ public class GuavaUtils
       @Override
       public String apply(@Nullable String input)
       {
-        return StringUtils.safeFormat(formatString, input);
+        return StringUtils.format(formatString, input);
       }
     };
   }

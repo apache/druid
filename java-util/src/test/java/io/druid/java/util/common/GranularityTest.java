@@ -298,7 +298,7 @@ public class GranularityTest {
             if (pd.exception == null) {
                 // check if path returns expected date
                 Assert.assertEquals(
-                    StringUtils.safeFormat(
+                    StringUtils.format(
                         "[%s,%s] Expected path %s to return date %s",
                         granularity,
                         formatter,
@@ -311,7 +311,7 @@ public class GranularityTest {
 
                 if(formatter.equals(Granularity.Formatter.DEFAULT)) {
                     Assert.assertEquals(
-                        StringUtils.safeFormat(
+                        StringUtils.format(
                             "[%s] Expected toDate(%s) to return the same as toDate(%s, DEFAULT)",
                             granularity,
                             pd.path,
@@ -324,7 +324,7 @@ public class GranularityTest {
                 if(pd.date != null) {
                     // check if formatter is readable by toDate
                     Assert.assertEquals(
-                        StringUtils.safeFormat(
+                        StringUtils.format(
                             "[%s,%s] Expected date %s to return date %s",
                             granularity,
                             formatter,
@@ -347,7 +347,7 @@ public class GranularityTest {
                 }
 
                 Assert.assertTrue(
-                    StringUtils.safeFormat(
+                    StringUtils.format(
                         "[%s,%s] Expected exception %s for path: %s",
                         granularity,
                         formatter,

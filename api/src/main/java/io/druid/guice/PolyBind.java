@@ -189,7 +189,7 @@ public class PolyBind
       if (implName == null) {
         if (defaultPropertyValue == null) {
           if (defaultKey == null) {
-            throw new ProvisionException(StringUtils.safeFormat("Some value must be configured for [%s]", key));
+            throw new ProvisionException(StringUtils.format("Some value must be configured for [%s]", key));
           }
           return injector.getInstance(defaultKey);
         }
@@ -199,7 +199,7 @@ public class PolyBind
 
       if (provider == null) {
         throw new ProvisionException(
-            StringUtils.safeFormat("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
+            StringUtils.format("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
         );
       }
 

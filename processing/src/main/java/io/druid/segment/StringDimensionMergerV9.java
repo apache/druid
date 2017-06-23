@@ -157,7 +157,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       numMergeIndex++;
     }
 
-    String dictFilename = StringUtils.safeFormat("%s.dim_values", dimensionName);
+    String dictFilename = StringUtils.format("%s.dim_values", dimensionName);
     dictionaryWriter = new GenericIndexedWriter<>(
         ioPeon,
         dictFilename,
@@ -201,7 +201,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   {
     final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompression();
 
-    String filenameBase = StringUtils.safeFormat("%s.forward_dim", dimensionName);
+    String filenameBase = StringUtils.format("%s.forward_dim", dimensionName);
     if (capabilities.hasMultipleValues()) {
       encodedValueWriter = (compressionStrategy != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED)
                            ? CompressedVSizeIndexedV3Writer.create(
@@ -276,7 +276,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     long dimStartTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 
-    String bmpFilename = StringUtils.safeFormat("%s.inverted", dimensionName);
+    String bmpFilename = StringUtils.format("%s.inverted", dimensionName);
     bitmapWriter = new GenericIndexedWriter<>(
         ioPeon,
         bmpFilename,
@@ -310,7 +310,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       if (hasSpatial) {
         spatialWriter = new ByteBufferWriter<>(
             ioPeon,
-            StringUtils.safeFormat("%s.spatial", dimensionName),
+            StringUtils.format("%s.spatial", dimensionName),
             new IndexedRTree.ImmutableRTreeObjectStrategy(bmpFactory)
         );
         spatialWriter.open();

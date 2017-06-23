@@ -159,7 +159,7 @@ public class IndexGeneratorJob implements Jobby
     try {
       Job job = Job.getInstance(
           new Configuration(),
-          StringUtils.safeFormat("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.23");
@@ -631,14 +631,14 @@ public class IndexGeneratorJob implements Jobby
             );
             runningTotalLineCount = lineCount;
 
-            final File file = new File(baseFlushFile, StringUtils.safeFormat("index%,05d", indexCount));
+            final File file = new File(baseFlushFile, StringUtils.format("index%,05d", indexCount));
             toMerge.add(file);
 
             context.progress();
             final IncrementalIndex persistIndex = index;
             persistFutures.add(
                 persistExecutor.submit(
-                    new ThreadRenamingRunnable(StringUtils.safeFormat("%s-persist", file.getName()))
+                    new ThreadRenamingRunnable(StringUtils.format("%s-persist", file.getName()))
                     {
                       @Override
                       public void doRun()

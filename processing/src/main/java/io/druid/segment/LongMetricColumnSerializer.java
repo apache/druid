@@ -62,7 +62,7 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   public void open() throws IOException
   {
     writer = CompressionFactory.getLongSerializer(
-        ioPeon, StringUtils.safeFormat("%s_little", metricName), IndexIO.BYTE_ORDER, encoding, compression
+        ioPeon, StringUtils.format("%s_little", metricName), IndexIO.BYTE_ORDER, encoding, compression
     );
 
     writer.open();

@@ -2278,7 +2278,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           if (bit == 0) {
             s.append("none");
           } else {
-            s.append(StringUtils.safeFormat("%4d", bit - 1));
+            s.append(StringUtils.format("%4d", bit - 1));
           }
           s.append(')');
         }

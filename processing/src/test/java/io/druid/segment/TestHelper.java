@@ -159,7 +159,7 @@ public class TestHelper
         // in result comparison
         assertTimeseriesResultValue(failMsg, (Result) expectedNext, (Result) next);
         assertTimeseriesResultValue(
-            StringUtils.safeFormat("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
             (Result) expectedNext,
             (Result) next2
         );
@@ -167,7 +167,7 @@ public class TestHelper
       } else {
         assertResult(failMsg, (Result) expectedNext, (Result) next);
         assertResult(
-            StringUtils.safeFormat("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
             (Result) expectedNext,
             (Result) next2
         );
@@ -176,19 +176,19 @@ public class TestHelper
 
     if (resultsIter.hasNext()) {
       Assert.fail(
-          StringUtils.safeFormat("%s: Expected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
+          StringUtils.format("%s: Expected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
       );
     }
 
     if (resultsIter2.hasNext()) {
       Assert.fail(
-          StringUtils.safeFormat("%s: Expected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
+          StringUtils.format("%s: Expected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
       );
     }
 
     if (expectedResultsIter.hasNext()) {
       Assert.fail(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "%s: Expected expectedResultsIter to be exhausted, next element was %s",
               failMsg,
               expectedResultsIter.next()
@@ -210,7 +210,7 @@ public class TestHelper
       final Object next2 = resultsIter2.next();
 
       String failMsg = msg + "-" + index++;
-      String failMsg2 = StringUtils.safeFormat("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg);
+      String failMsg2 = StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg);
 
       if (expectedNext instanceof Row) {
         // HACK! Special casing for groupBy
@@ -224,19 +224,19 @@ public class TestHelper
 
     if (resultsIter.hasNext()) {
       Assert.fail(
-          StringUtils.safeFormat("%s: Expected resultsIter to be exhausted, next element was %s", msg, resultsIter.next())
+          StringUtils.format("%s: Expected resultsIter to be exhausted, next element was %s", msg, resultsIter.next())
       );
     }
 
     if (resultsIter2.hasNext()) {
       Assert.fail(
-          StringUtils.safeFormat("%s: Expected resultsIter2 to be exhausted, next element was %s", msg, resultsIter.next())
+          StringUtils.format("%s: Expected resultsIter2 to be exhausted, next element was %s", msg, resultsIter.next())
       );
     }
 
     if (expectedResultsIter.hasNext()) {
       Assert.fail(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "%s: Expected expectedResultsIter to be exhausted, next element was %s",
               msg,
               expectedResultsIter.next()
@@ -254,7 +254,7 @@ public class TestHelper
   {
     // Custom equals check to get fuzzy comparison of numerics, useful because different groupBy strategies don't
     // always generate exactly the same results (different merge ordering / float vs double)
-    Assert.assertEquals(StringUtils.safeFormat("%s: timestamp", msg), expected.getTimestamp(), actual.getTimestamp());
+    Assert.assertEquals(StringUtils.format("%s: timestamp", msg), expected.getTimestamp(), actual.getTimestamp());
 
     TimeseriesResultValue expectedVal = (TimeseriesResultValue) expected.getValue();
     TimeseriesResultValue actualVal = (TimeseriesResultValue) actual.getValue();
@@ -262,21 +262,21 @@ public class TestHelper
     final Map<String, Object> expectedMap = (Map<String, Object>) expectedVal.getBaseObject();
     final Map<String, Object> actualMap = (Map<String, Object>) actualVal.getBaseObject();
 
-    Assert.assertEquals(StringUtils.safeFormat("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
+    Assert.assertEquals(StringUtils.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
     for (final String key : expectedMap.keySet()) {
       final Object expectedValue = expectedMap.get(key);
       final Object actualValue = actualMap.get(key);
 
       if (expectedValue instanceof Float || expectedValue instanceof Double) {
         Assert.assertEquals(
-            StringUtils.safeFormat("%s: key[%s]", msg, key),
+            StringUtils.format("%s: key[%s]", msg, key),
             ((Number) expectedValue).doubleValue(),
             ((Number) actualValue).doubleValue(),
             ((Number) expectedValue).doubleValue() * 1e-6
         );
       } else {
         Assert.assertEquals(
-            StringUtils.safeFormat("%s: key[%s]", msg, key),
+            StringUtils.format("%s: key[%s]", msg, key),
             expectedValue,
             actualValue
         );
@@ -289,7 +289,7 @@ public class TestHelper
     // Custom equals check to get fuzzy comparison of numerics, useful because different groupBy strategies don't
     // always generate exactly the same results (different merge ordering / float vs double)
     Assert.assertEquals(
-        StringUtils.safeFormat("%s: timestamp", msg),
+        StringUtils.format("%s: timestamp", msg),
         expected.getTimestamp().getMillis(),
         actual.getTimestamp().getMillis()
     );
@@ -297,21 +297,21 @@ public class TestHelper
     final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
     final Map<String, Object> actualMap = ((MapBasedRow) actual).getEvent();
 
-    Assert.assertEquals(StringUtils.safeFormat("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
+    Assert.assertEquals(StringUtils.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
     for (final String key : expectedMap.keySet()) {
       final Object expectedValue = expectedMap.get(key);
       final Object actualValue = actualMap.get(key);
 
       if (expectedValue instanceof Float || expectedValue instanceof Double) {
         Assert.assertEquals(
-            StringUtils.safeFormat("%s: key[%s]", msg, key),
+            StringUtils.format("%s: key[%s]", msg, key),
             ((Number) expectedValue).doubleValue(),
             ((Number) actualValue).doubleValue(),
             ((Number) expectedValue).doubleValue() * 1e-6
         );
       } else {
         Assert.assertEquals(
-            StringUtils.safeFormat("%s: key[%s]", msg, key),
+            StringUtils.format("%s: key[%s]", msg, key),
             expectedValue,
             actualValue
         );

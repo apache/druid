@@ -88,7 +88,7 @@ public class QuantileSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String histogramName = StringUtils.safeFormat("%s:agg", name);
+    final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
         rowSignature,
         project,

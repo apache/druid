@@ -74,7 +74,7 @@ public class NoopTask extends AbstractTask
   )
   {
     super(
-        id == null ? StringUtils.safeFormat("noop_%s_%s", new DateTime(), UUID.randomUUID().toString()) : id,
+        id == null ? StringUtils.format("noop_%s_%s", new DateTime(), UUID.randomUUID().toString()) : id,
         "none",
         context
     );
