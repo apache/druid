@@ -147,7 +147,7 @@ public class TaskLockboxTest
     lockbox.lock(task2, new Interval("2015-01-01/2015-01-15"));
   }
 
-  public class SomeTask extends NoopTask {
+  public static class SomeTask extends NoopTask {
 
     public SomeTask(
         @JsonProperty("id") String id,
