@@ -113,9 +113,12 @@ public class CSVParser implements Parser<String, Object>
   @Override
   public void startFileFromBeginning()
   {
-    supportSkipHeaderRows = true;
+    if (hasHeaderRow) {
+      fieldNames = null;
+    }
     hasParsedHeader = false;
     skippedHeaderRows = 0;
+    supportSkipHeaderRows = true;
   }
 
   @Override
