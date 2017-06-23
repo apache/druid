@@ -75,6 +75,9 @@ public class ValidateSegments extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        // It's unknown if those modules are required in ValidateSegments.
+        // Maybe some of those modules could be removed.
+        // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),

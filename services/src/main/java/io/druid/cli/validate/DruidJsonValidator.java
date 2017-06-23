@@ -96,6 +96,9 @@ public class DruidJsonValidator extends GuiceRunnable
   protected List<? extends com.google.inject.Module> getModules()
   {
     return ImmutableList.<com.google.inject.Module>of(
+        // It's unknown if those modules are required in DruidJsonValidator.
+        // Maybe some of those modules could be removed.
+        // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
