@@ -37,7 +37,7 @@ public class CompressedPools
   private static final Logger log = new Logger(CompressedPools.class);
 
   public static final int BUFFER_SIZE = 0x10000;
-  private static final NonBlockingPool<com.ning.compress.BufferRecycler> bufferRecyclerPool = new StupidPool<BufferRecycler>(
+  private static final NonBlockingPool<BufferRecycler> bufferRecyclerPool = new StupidPool<>(
       "bufferRecyclerPool",
       new Supplier<BufferRecycler>()
       {
