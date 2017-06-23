@@ -19,16 +19,23 @@
 
 package io.druid.indexing.overlord;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.server.initialization.ServerConfig;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Map;
 
 public class TaskLockboxTest
 {
@@ -40,7 +47,10 @@ public class TaskLockboxTest
   public void setUp()
   {
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    lockbox = new TaskLockbox(taskStorage);
+    ServerConfig serverConfig = EasyMock.niceMock(ServerConfig.class);
+    EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100));
+    EasyMock.replay(serverConfig);
+    lockbox = new TaskLockbox(taskStorage, serverConfig);
   }
 
   @Test
@@ -124,5 +134,42 @@ public class TaskLockboxTest
     Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
+  @Test(expected = InterruptedException.class)
+  public void testTimeoutForLock() throws InterruptedException
+  {
+    Task task1 = NoopTask.create();
+    Task task2 = new SomeTask(null, 0, 0, null, null, null);
+
+    lockbox.add(task1);
+    lockbox.add(task2);
+
+    lockbox.lock(task1, new Interval("2015-01-01/2015-01-02"));
+    lockbox.lock(task2, new Interval("2015-01-01/2015-01-15"));
+  }
+
+  public class SomeTask extends NoopTask {
+
+    public SomeTask(
+        @JsonProperty("id") String id,
+        @JsonProperty("runTime") long runTime,
+        @JsonProperty("isReadyTime") long isReadyTime,
+        @JsonProperty("isReadyResult") String isReadyResult,
+        @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+        @JsonProperty("context") Map<String, Object> context
+    )
+    {
+      super(id, runTime, isReadyTime, isReadyResult, firehoseFactory, context);
+    }
+
+    @Override
+    public String getType()
+    {
+      return "someTask";
+    }
+
+    @Override
+    public  String getGroupId() { return "someGroupId";}
+
+  }
 
 }
