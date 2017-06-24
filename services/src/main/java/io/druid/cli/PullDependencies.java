@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.ExtensionsConfig;
@@ -473,11 +472,9 @@ public class PullDependencies implements Runnable
 
     if (!atLocation.mkdir()) {
       throw new ISE(
-          StringUtils.format(
-              "Unable to create directory at [%s] for coordinate [%s]",
-              atLocation.getAbsolutePath(),
-              coordinate
-          )
+          "Unable to create directory at [%s] for coordinate [%s]",
+          atLocation.getAbsolutePath(),
+          coordinate
       );
     }
   }
