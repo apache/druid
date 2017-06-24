@@ -151,6 +151,9 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
               final S3Object s3Object = s3Client.getObject(bucket, prefix);
               if (!s3Object.isDirectoryPlaceholder()) {
                 objects.add(s3Object);
+              } else {
+                throw new IOException(uri + " is a directory placeholder, "
+                                      + "but failed to get the object list under the directory due to permission");
               }
             }
             catch (S3ServiceException innerException) {
