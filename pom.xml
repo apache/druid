@@ -627,15 +627,17 @@
                 </exclusions>
             </dependency>
             <!-- The htttpcomponents artifacts have non-matching release cadence -->
+            <!-- Watch out for compatibility issues between aws-java-sdk 1.10.x and httpclient > 4.5.1 and
+                 httpcore > 4.4.3; see https://github.com/druid-io/druid/issues/4456 -->
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.5.3</version>
+                <version>4.5.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.6</version>
+                <version>4.4.3</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
