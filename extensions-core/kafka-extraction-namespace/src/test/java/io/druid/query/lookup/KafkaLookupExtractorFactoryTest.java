@@ -47,11 +47,11 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -129,18 +129,15 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     );
-    factory.getMapRef().set(ImmutableMap.<String, String>of());
+    factory.getMapRef().set(ImmutableMap.of());
     final AtomicLong events = factory.getDoubleEventCount();
 
     final LookupExtractor extractor = factory.get();
 
-    final List<byte[]> byteArrays = new ArrayList<>(n);
+    final Set<ByteArray> byteArrays = new HashSet<>(n);
     for (int i = 0; i < n; ++i) {
-      final byte[] myKey = extractor.getCacheKey();
-      // Not terribly efficient.. but who cares
-      for (byte[] byteArray : byteArrays) {
-        Assert.assertFalse(Arrays.equals(byteArray, myKey));
-      }
+      final ByteArray myKey = new ByteArray(extractor.getCacheKey());
+      Assert.assertFalse(byteArrays.contains(myKey));
       byteArrays.add(myKey);
       events.incrementAndGet();
     }
@@ -156,17 +153,14 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     );
-    factory.getMapRef().set(ImmutableMap.<String, String>of());
+    factory.getMapRef().set(ImmutableMap.of());
     final AtomicLong events = factory.getDoubleEventCount();
 
-    final List<byte[]> byteArrays = new ArrayList<>(n);
+    final Set<ByteArray> byteArrays = new HashSet<>(n);
     for (int i = 0; i < n; ++i) {
       final LookupExtractor extractor = factory.get();
-      final byte[] myKey = extractor.getCacheKey();
-      // Not terribly efficient.. but who cares
-      for (byte[] byteArray : byteArrays) {
-        Assert.assertFalse(Arrays.equals(byteArray, myKey));
-      }
+      final ByteArray myKey = new ByteArray(extractor.getCacheKey());
+      Assert.assertFalse(byteArrays.contains(myKey));
       byteArrays.add(myKey);
       events.incrementAndGet();
     }
@@ -561,5 +555,32 @@ public class KafkaLookupExtractorFactoryTest
         return false;
       }
     };
+  }
+
+  private static class ByteArray
+  {
+    private final byte[] array;
+
+    ByteArray(byte[] array)
+    {
+      this.array = array;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Arrays.hashCode(array);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (o instanceof ByteArray)
+      {
+        final ByteArray that = (ByteArray) o;
+        return Arrays.equals(this.array, that.array);
+      }
+      return false;
+    }
   }
 }
