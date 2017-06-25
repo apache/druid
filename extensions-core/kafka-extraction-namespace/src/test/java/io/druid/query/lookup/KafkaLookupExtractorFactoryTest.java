@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Bytes;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.lookup.namespace.cache.CacheHandler;
@@ -34,7 +35,6 @@ import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.consumer.TopicFilter;
 import kafka.javaapi.consumer.ConsumerConnector;
-import org.apache.commons.lang.ArrayUtils;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.Assert;
@@ -138,7 +138,7 @@ public class KafkaLookupExtractorFactoryTest
 
     final Set<List<Byte>> byteArrays = new HashSet<>(n);
     for (int i = 0; i < n; ++i) {
-      final List<Byte> myKey = Arrays.asList(ArrayUtils.toObject(extractor.getCacheKey()));
+      final List<Byte> myKey = Bytes.asList(extractor.getCacheKey());
       Assert.assertFalse(byteArrays.contains(myKey));
       byteArrays.add(myKey);
       events.incrementAndGet();
@@ -161,7 +161,7 @@ public class KafkaLookupExtractorFactoryTest
     final Set<List<Byte>> byteArrays = new HashSet<>(n);
     for (int i = 0; i < n; ++i) {
       final LookupExtractor extractor = factory.get();
-      final List<Byte> myKey = Arrays.asList(ArrayUtils.toObject(extractor.getCacheKey()));
+      final List<Byte> myKey = Bytes.asList(extractor.getCacheKey());
       Assert.assertFalse(byteArrays.contains(myKey));
       byteArrays.add(myKey);
       events.incrementAndGet();
