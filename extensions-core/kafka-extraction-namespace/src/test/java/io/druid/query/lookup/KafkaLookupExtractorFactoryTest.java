@@ -34,6 +34,7 @@ import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.consumer.TopicFilter;
 import kafka.javaapi.consumer.ConsumerConnector;
+import org.apache.commons.lang.ArrayUtils;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.Assert;
@@ -49,6 +50,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -134,9 +136,9 @@ public class KafkaLookupExtractorFactoryTest
 
     final LookupExtractor extractor = factory.get();
 
-    final Set<ByteArray> byteArrays = new HashSet<>(n);
+    final Set<List<Byte>> byteArrays = new HashSet<>(n);
     for (int i = 0; i < n; ++i) {
-      final ByteArray myKey = new ByteArray(extractor.getCacheKey());
+      final List<Byte> myKey = Arrays.asList(ArrayUtils.toObject(extractor.getCacheKey()));
       Assert.assertFalse(byteArrays.contains(myKey));
       byteArrays.add(myKey);
       events.incrementAndGet();
@@ -156,10 +158,10 @@ public class KafkaLookupExtractorFactoryTest
     factory.getMapRef().set(ImmutableMap.of());
     final AtomicLong events = factory.getDoubleEventCount();
 
-    final Set<ByteArray> byteArrays = new HashSet<>(n);
+    final Set<List<Byte>> byteArrays = new HashSet<>(n);
     for (int i = 0; i < n; ++i) {
       final LookupExtractor extractor = factory.get();
-      final ByteArray myKey = new ByteArray(extractor.getCacheKey());
+      final List<Byte> myKey = Arrays.asList(ArrayUtils.toObject(extractor.getCacheKey()));
       Assert.assertFalse(byteArrays.contains(myKey));
       byteArrays.add(myKey);
       events.incrementAndGet();
@@ -555,32 +557,5 @@ public class KafkaLookupExtractorFactoryTest
         return false;
       }
     };
-  }
-
-  private static class ByteArray
-  {
-    private final byte[] array;
-
-    ByteArray(byte[] array)
-    {
-      this.array = array;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Arrays.hashCode(array);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (o instanceof ByteArray)
-      {
-        final ByteArray that = (ByteArray) o;
-        return Arrays.equals(this.array, that.array);
-      }
-      return false;
-    }
   }
 }
