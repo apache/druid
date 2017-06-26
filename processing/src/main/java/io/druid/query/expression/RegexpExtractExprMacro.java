@@ -42,7 +42,7 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     if (args.size() < 2 || args.size() > 3) {
-      throw new IAE("'%s' must have 2 to 3 arguments", name());
+      throw new IAE("Function[%s] must have 2 to 3 arguments", name());
     }
 
     final Expr arg = args.get(0);

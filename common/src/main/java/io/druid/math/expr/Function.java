@@ -42,7 +42,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
-        throw new IAE("function '%s' needs 1 argument", name());
+        throw new IAE("Function[%s] needs 1 argument", name());
       }
       Expr expr = args.get(0);
       return eval(expr.eval(bindings));
@@ -57,7 +57,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 2) {
-        throw new IAE("function '%s' needs 2 arguments", name());
+        throw new IAE("Function[%s] needs 2 arguments", name());
       }
       Expr expr1 = args.get(0);
       Expr expr2 = args.get(1);
@@ -260,7 +260,7 @@ interface Function
     @Override
     protected ExprEval eval(final double x, final double y)
     {
-      return ExprEval.of((long) x / (long) y);
+      return ExprEval.of((long) (x / y));
     }
   }
 
@@ -708,7 +708,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 3) {
-        throw new IAE("function 'if' needs 3 arguments");
+        throw new IAE("Function[%s] needs 3 arguments", name());
       }
 
       ExprEval x = args.get(0).eval(bindings);
@@ -716,6 +716,9 @@ interface Function
     }
   }
 
+  /**
+   * "Searched CASE" function, similar to {@code CASE WHEN boolean_expr THEN result [ELSE else_result] END} in SQL.
+   */
   class CaseSearchedFunc implements Function
   {
     @Override
@@ -727,9 +730,8 @@ interface Function
     @Override
     public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
-      // CASE WHEN boolean_expr THEN result ELSE else_result END
       if (args.size() < 2) {
-        throw new IAE("'%s' must have at least 2 arguments");
+        throw new IAE("Function[%s] must have at least 2 arguments", name());
       }
 
       for (int i = 0; i < args.size(); i += 2) {
@@ -746,6 +748,9 @@ interface Function
     }
   }
 
+  /**
+   * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
+   */
   class CaseSimpleFunc implements Function
   {
     @Override
@@ -757,9 +762,8 @@ interface Function
     @Override
     public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
-      // CASE expr WHEN value THEN result ELSE else_result END
       if (args.size() < 3) {
-        throw new IAE("'%s' must have at least 3 arguments");
+        throw new IAE("Function[%s] must have at least 3 arguments", name());
       }
 
       for (int i = 1; i < args.size(); i += 2) {
@@ -810,7 +814,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("function '%s' needs 1 or 2 arguments", name());
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
       }
       ExprEval value = args.get(0).eval(bindings);
       if (value.type() != ExprType.STRING) {
@@ -868,7 +872,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 2) {
-        throw new IAE("function 'nvl' needs 2 arguments");
+        throw new IAE("Function[%s] needs 2 arguments", name());
       }
       final ExprEval eval = args.get(0).eval(bindings);
       return eval.isNull() ? args.get(1).eval(bindings) : eval;
@@ -889,6 +893,7 @@ interface Function
       if (args.size() == 0) {
         return ExprEval.of(null);
       } else {
+        // Pass first argument in to the constructor to provide StringBuilder a little extra sizing hint.
         final StringBuilder builder = new StringBuilder(Strings.nullToEmpty(args.get(0).eval(bindings).asString()));
         for (int i = 1; i < args.size(); i++) {
           final String s = args.get(i).eval(bindings).asString();
@@ -913,7 +918,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
-        throw new IAE("function '%s' needs 1 argument", name());
+        throw new IAE("Function[%s] needs 1 argument", name());
       }
 
       final String arg = args.get(0).eval(bindings).asString();
@@ -933,23 +938,22 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 3) {
-        throw new IAE("function '%s' needs 3 arguments", name());
+        throw new IAE("Function[%s] needs 3 arguments", name());
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-
-      // Behaves like SubstringDimExtractionFn, not SQL SUBSTRING
-      final int index = args.get(1).eval(bindings).asInt();
-      final ExprEval lengthExprEval = args.get(2).eval(bindings);
-      final int end = lengthExprEval.asInt() >= 0 ? index + lengthExprEval.asInt() : -1;
 
       if (arg == null) {
         return ExprEval.of(null);
       }
 
+      // Behaves like SubstringDimExtractionFn, not SQL SUBSTRING
+      final int index = args.get(1).eval(bindings).asInt();
+      final int length = args.get(2).eval(bindings).asInt();
+
       if (index < arg.length()) {
-        if (end > 0) {
-          return ExprEval.of(arg.substring(index, Math.min(end, arg.length())));
+        if (length >= 0) {
+          return ExprEval.of(arg.substring(index, Math.min(index + length, arg.length())));
         } else {
           return ExprEval.of(arg.substring(index));
         }
@@ -971,7 +975,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 3) {
-        throw new IAE("function '%s' needs 3 arguments", name());
+        throw new IAE("Function[%s] needs 3 arguments", name());
       }
 
       final String arg = args.get(0).eval(bindings).asString();
@@ -995,7 +999,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
-        throw new IAE("function '%s' needs 1 argument", name());
+        throw new IAE("Function[%s] needs 1 argument", name());
       }
 
       final String arg = args.get(0).eval(bindings).asString();
@@ -1015,7 +1019,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
-        throw new IAE("function '%s' needs 1 argument", name());
+        throw new IAE("Function[%s] needs 1 argument", name());
       }
 
       final String arg = args.get(0).eval(bindings).asString();
@@ -1035,7 +1039,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
-        throw new IAE("function '%s' needs 1 argument", name());
+        throw new IAE("Function[%s] needs 1 argument", name());
       }
 
       final String arg = args.get(0).eval(bindings).asString();

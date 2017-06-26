@@ -43,12 +43,12 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     if (args.size() < 3 || args.size() > 4) {
-      throw new IAE("'%s' must have 3 to 4 arguments", name());
+      throw new IAE("Function[%s] must have 3 to 4 arguments", name());
     }
 
     final Expr arg = args.get(0);
 
-    if (args.get(1).isLiteral()) {
+    if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
       final PeriodGranularity granularity = getGranularity(args, ExprUtils.nilBindings());
       final Period period = granularity.getPeriod();
       final Chronology chronology = ISOChronology.getInstance(granularity.getTimeZone());

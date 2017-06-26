@@ -51,7 +51,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     if (args.size() != 2) {
-      throw new IAE("'%s' must have 2 arguments", name());
+      throw new IAE("Function[%s] must have 2 arguments", name());
     }
 
     final Expr arg = args.get(0);

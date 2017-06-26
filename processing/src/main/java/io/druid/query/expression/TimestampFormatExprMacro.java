@@ -43,14 +43,19 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     if (args.size() < 1 || args.size() > 3) {
-      throw new IAE("'%s' must have 1 to 3 arguments", name());
+      throw new IAE("Function[%s] must have 1 to 3 arguments", name());
     }
 
     final Expr arg = args.get(0);
     final String formatString = args.size() > 1 ? (String) args.get(1).getLiteralValue() : null;
-    final DateTimeZone timeZone = args.size() > 2
-                                  ? DateTimeZone.forID((String) args.get(2).getLiteralValue())
-                                  : DateTimeZone.UTC;
+    final DateTimeZone timeZone;
+
+    if (args.size() > 2 && args.get(2).getLiteralValue() != null) {
+      timeZone = DateTimeZone.forID((String) args.get(2).getLiteralValue());
+    } else {
+      timeZone = DateTimeZone.UTC;
+    }
+
     final DateTimeFormatter formatter = formatString == null
                                         ? ISODateTimeFormat.dateTime()
                                         : DateTimeFormat.forPattern(formatString).withZone(timeZone);
