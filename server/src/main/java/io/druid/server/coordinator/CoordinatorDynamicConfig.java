@@ -103,7 +103,7 @@ public class CoordinatorDynamicConfig
     }
   }
 
-  public CoordinatorDynamicConfig(
+  private CoordinatorDynamicConfig(
       long millisToWaitBeforeDeleting,
       long mergeBytesLimit,
       int mergeSegmentsLimit,
@@ -302,6 +302,11 @@ public class CoordinatorDynamicConfig
     return result;
   }
 
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
   public static class Builder
   {
     private long millisToWaitBeforeDeleting;
@@ -314,11 +319,11 @@ public class CoordinatorDynamicConfig
     private int balancerComputeThreads;
     private Set<String> killDataSourceWhitelist;
     private boolean killAllDataSources;
-    private int maxSegmentsInNodeLoadingQueue = Integer.MAX_VALUE;
+    private int maxSegmentsInNodeLoadingQueue;
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, false, Integer.MAX_VALUE);
+      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, false, 0);
     }
 
     private Builder(
@@ -390,9 +395,21 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withEmitBalancingStats(boolean emitBalancingStats)
+    {
+      this.emitBalancingStats = emitBalancingStats;
+      return this;
+    }
+
     public Builder withKillDataSourceWhitelist(Set<String> killDataSourceWhitelist)
     {
       this.killDataSourceWhitelist = killDataSourceWhitelist;
+      return this;
+    }
+
+    public Builder withKillAllDataSources(boolean killAllDataSources)
+    {
+      this.killAllDataSources = killAllDataSources;
       return this;
     }
 

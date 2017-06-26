@@ -36,6 +36,7 @@ import io.druid.timeline.DataSegment;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -62,17 +63,24 @@ public abstract class LoadRule implements Rule
       final int totalReplicantsInTier = params.getSegmentReplicantLookup()
                                               .getTotalReplicants(segment.getIdentifier(), tier);
       final int loadedReplicantsInTier = params.getSegmentReplicantLookup()
-                                         .getLoadedReplicants(segment.getIdentifier(), tier);
+                                               .getLoadedReplicants(segment.getIdentifier(), tier);
 
       final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getHistoricalsByTier(tier);
-      final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
+
       if (serverQueue == null) {
         log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
         continue;
       }
 
+      final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig()
+                                                      .getMaxSegmentsInNodeLoadingQueue();
+
+      Predicate<ServerHolder> serverHolderPredicate = (maxSegmentsInNodeLoadingQueue > 0) ?
+          s -> s != null && s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue :
+          s -> s != null;
+
       final List<ServerHolder> serverHolderList = serverQueue.stream()
-                                                             .filter(s -> s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue)
+                                                             .filter(serverHolderPredicate)
                                                              .collect(Collectors.toList());
 
       final BalancerStrategy strategy = params.getBalancerStrategy();
@@ -220,11 +228,12 @@ public abstract class LoadRule implements Rule
     return stats;
   }
 
-  protected void validateTieredReplicants(Map<String, Integer> tieredReplicants){
-    if(tieredReplicants.size() == 0) {
+  protected void validateTieredReplicants(Map<String, Integer> tieredReplicants)
+  {
+    if (tieredReplicants.size() == 0) {
       throw new IAE("A rule with empty tiered replicants is invalid");
     }
-    for (Map.Entry<String, Integer> entry: tieredReplicants.entrySet()) {
+    for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {
         throw new IAE("Replicant value cannot be empty");
       }
