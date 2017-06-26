@@ -50,22 +50,18 @@ import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
@@ -82,29 +78,21 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
-public class IndexMergerTest
+public class IndexMergerTestBase
 {
+  private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  protected IndexMerger INDEX_MERGER;
-  private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+  protected IndexMerger indexMerger;
 
-  @Parameterized.Parameters(name = "{index}: useV9={0}, bitmap={1}, metric compression={2}, dimension compression={3}, long encoding={4}")
+  @Parameterized.Parameters(name = "{index}: metric compression={0}, dimension compression={1}, long encoding={2}")
   public static Collection<Object[]> data()
   {
     return Collections2.transform(
         Sets.cartesianProduct(
             ImmutableList.of(
-                ImmutableSet.of(
-                    true,
-                    false
-                ),
-                ImmutableSet.of(
-                    new RoaringBitmapSerdeFactory(null),
-                    new ConciseBitmapSerdeFactory()
-                ),
                 EnumSet.allOf(CompressedObjectStrategy.CompressionStrategy.class),
                 ImmutableSet.copyOf(CompressedObjectStrategy.CompressionStrategy.noNoneValues()),
                 EnumSet.allOf(CompressionFactory.LongEncodingStrategy.class)
@@ -144,8 +132,7 @@ public class IndexMergerTest
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
-  public IndexMergerTest(
-      boolean useV9,
+  protected IndexMergerTestBase(
       BitmapSerdeFactory bitmapSerdeFactory,
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
       CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy,
@@ -153,11 +140,6 @@ public class IndexMergerTest
   )
   {
     this.indexSpec = makeIndexSpec(bitmapSerdeFactory, compressionStrategy, dimCompressionStrategy, longEncodingStrategy);
-    if (useV9) {
-      INDEX_MERGER = TestHelper.getTestIndexMergerV9();
-    } else {
-      INDEX_MERGER = TestHelper.getTestIndexMerger();
-    }
   }
 
   @Test
@@ -171,7 +153,7 @@ public class IndexMergerTest
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist,
                 tempDir,
                 indexSpec
@@ -218,7 +200,7 @@ public class IndexMergerTest
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist,
                 tempDir,
                 indexSpec
@@ -260,7 +242,7 @@ public class IndexMergerTest
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist,
                 tempDir,
                 indexSpec
@@ -293,12 +275,10 @@ public class IndexMergerTest
     IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
-    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersist2 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     toPersist2.add(
         new MapBasedInputRow(
@@ -322,7 +302,7 @@ public class IndexMergerTest
 
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist1,
                 tempDir1,
                 indexSpec
@@ -336,7 +316,7 @@ public class IndexMergerTest
 
     QueryableIndex index2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist2,
                 tempDir2,
                 indexSpec
@@ -353,7 +333,7 @@ public class IndexMergerTest
     };
     QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2),
                 true,
                 mergedAggregators,
@@ -379,18 +359,16 @@ public class IndexMergerTest
   @Test
   public void testPersistEmptyColumn() throws Exception
   {
-    final IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{},
-        10
-    );
-    final IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{},
-        10
-    );
+    final IncrementalIndex toPersist1 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(/* empty */)
+        .setMaxRowCount(10)
+        .buildOnheap();
+
+    final IncrementalIndex toPersist2 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(/* empty */)
+        .setMaxRowCount(10)
+        .buildOnheap();
+
     final File tmpDir1 = temporaryFolder.newFolder();
     final File tmpDir2 = temporaryFolder.newFolder();
     final File tmpDir3 = temporaryFolder.newFolder();
@@ -413,7 +391,7 @@ public class IndexMergerTest
 
     final QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist1,
                 tmpDir1,
                 indexSpec
@@ -422,7 +400,7 @@ public class IndexMergerTest
     );
     final QueryableIndex index2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist2,
                 tmpDir2,
                 indexSpec
@@ -431,7 +409,7 @@ public class IndexMergerTest
     );
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2),
                 true,
                 new AggregatorFactory[]{},
@@ -473,7 +451,7 @@ public class IndexMergerTest
 
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist1,
                 tempDir1,
                 indexSpec
@@ -493,7 +471,7 @@ public class IndexMergerTest
 
     QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -531,7 +509,7 @@ public class IndexMergerTest
 
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.append(
+            indexMerger.append(
                 ImmutableList.<IndexableAdapter>of(incrementalAdapter), null, tempDir1, indexSpec
             )
         )
@@ -552,7 +530,7 @@ public class IndexMergerTest
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
     QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 true,
                 mergedAggregators,
@@ -595,7 +573,7 @@ public class IndexMergerTest
 
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist1,
                 tempDir1,
                 indexSpec
@@ -628,7 +606,7 @@ public class IndexMergerTest
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
     QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 true,
                 mergedAggregators,
@@ -674,7 +652,7 @@ public class IndexMergerTest
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(INDEX_MERGER.persist(toPersist1, tempDir1, indexSpec))
+        INDEX_IO.loadIndex(indexMerger.persist(toPersist1, tempDir1, indexSpec))
     );
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
@@ -688,7 +666,7 @@ public class IndexMergerTest
 
     QueryableIndex converted = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.convert(
+            indexMerger.convert(
                 tempDir1,
                 convertDir,
                 indexSpec
@@ -738,7 +716,7 @@ public class IndexMergerTest
 
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist1,
                 tempDir1,
                 indexSpec
@@ -771,7 +749,7 @@ public class IndexMergerTest
 
     QueryableIndex converted = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.convert(
+            indexMerger.convert(
                 tempDir1,
                 convertDir,
                 newSpec
@@ -845,7 +823,7 @@ public class IndexMergerTest
 
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist1,
                 tmpDir,
                 indexSpec
@@ -855,7 +833,7 @@ public class IndexMergerTest
 
     QueryableIndex index2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist2,
                 tmpDir2,
                 indexSpec
@@ -865,7 +843,7 @@ public class IndexMergerTest
 
     QueryableIndex index3 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist3,
                 tmpDir3,
                 indexSpec
@@ -876,7 +854,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2, index3),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -924,15 +902,22 @@ public class IndexMergerTest
             null,
             null
         ))
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+        .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
 
-    IncrementalIndex toPersist1 = new OnheapIncrementalIndex(schema, true, 1000);
-    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(schema, true, 1000);
-    IncrementalIndex toPersist3 = new OnheapIncrementalIndex(schema, true, 1000);
+    IncrementalIndex toPersist1 = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+    IncrementalIndex toPersist2 = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+    IncrementalIndex toPersist3 = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     addDimValuesToIndex(toPersist1, "dimA", Arrays.asList("1", "2"));
     addDimValuesToIndex(toPersist2, "dimA", Arrays.asList("1", "2"));
@@ -946,7 +931,7 @@ public class IndexMergerTest
 
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist1,
                 tmpDir,
                 indexSpec
@@ -956,7 +941,7 @@ public class IndexMergerTest
 
     QueryableIndex index2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist2,
                 tmpDir2,
                 indexSpec
@@ -966,7 +951,7 @@ public class IndexMergerTest
 
     QueryableIndex index3 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist3,
                 tmpDir3,
                 indexSpec
@@ -976,7 +961,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2, index3),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -1027,7 +1012,7 @@ public class IndexMergerTest
 
     QueryableIndex indexA = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistA,
                 tmpDirA,
                 indexSpec
@@ -1037,7 +1022,7 @@ public class IndexMergerTest
 
     QueryableIndex indexB = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistB,
                 tmpDirB,
                 indexSpec
@@ -1047,7 +1032,7 @@ public class IndexMergerTest
 
     QueryableIndex indexB2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistB2,
                 tmpDirB2,
                 indexSpec
@@ -1057,7 +1042,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -1069,7 +1054,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB2),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -1142,12 +1127,11 @@ public class IndexMergerTest
     // d8: 'has null' join 'no null'
     // d9: 'no null' join 'no null'
 
-    IncrementalIndex toPersistA = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistA.add(
         new MapBasedInputRow(
             1,
@@ -1167,12 +1151,11 @@ public class IndexMergerTest
         )
     );
 
-    IncrementalIndex toPersistB = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistB.add(
         new MapBasedInputRow(
             3,
@@ -1197,7 +1180,7 @@ public class IndexMergerTest
 
     QueryableIndex indexA = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistA,
                 tmpDirA,
                 indexSpec
@@ -1207,7 +1190,7 @@ public class IndexMergerTest
 
     QueryableIndex indexB = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistB,
                 tmpDirB,
                 indexSpec
@@ -1217,7 +1200,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -1283,12 +1266,14 @@ public class IndexMergerTest
     // d9: 'no null' join 'no null'
 
     IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+        .withMetrics(new CountAggregatorFactory("count"))
         .withRollup(false)
         .build();
-    IncrementalIndex toPersistA = new OnheapIncrementalIndex(indexSchema, true, 1000);
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistA.add(
         new MapBasedInputRow(
             1,
@@ -1308,7 +1293,11 @@ public class IndexMergerTest
         )
     );
 
-    IncrementalIndex toPersistB = new OnheapIncrementalIndex(indexSchema, true, 1000);
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistB.add(
         new MapBasedInputRow(
             3,
@@ -1333,7 +1322,7 @@ public class IndexMergerTest
 
     QueryableIndex indexA = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistA,
                 tmpDirA,
                 indexSpec
@@ -1343,7 +1332,7 @@ public class IndexMergerTest
 
     QueryableIndex indexB = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistB,
                 tmpDirB,
                 indexSpec
@@ -1353,7 +1342,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -1418,12 +1407,14 @@ public class IndexMergerTest
     // 3. merge 2 indexes with duplicate rows
 
     IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+        .withMetrics(new CountAggregatorFactory("count"))
         .withRollup(false)
         .build();
-    IncrementalIndex toPersistA = new OnheapIncrementalIndex(indexSchema, true, 1000);
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistA.add(
         new MapBasedInputRow(
             1,
@@ -1443,7 +1434,11 @@ public class IndexMergerTest
         )
     );
 
-    IncrementalIndex toPersistB = new OnheapIncrementalIndex(indexSchema, true, 1000);
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     toPersistB.add(
         new MapBasedInputRow(
             1,
@@ -1468,7 +1463,7 @@ public class IndexMergerTest
 
     QueryableIndex indexA = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistA,
                 tmpDirA,
                 indexSpec
@@ -1478,7 +1473,7 @@ public class IndexMergerTest
 
     QueryableIndex indexB = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistB,
                 tmpDirB,
                 indexSpec
@@ -1488,7 +1483,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB),
                 false,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -1543,12 +1538,10 @@ public class IndexMergerTest
     IncrementalIndex toPersistBA = getSingleDimIndex("dimB", Arrays.asList("1", "2", "3"));
     addDimValuesToIndex(toPersistBA, "dimA", Arrays.asList("1", "2"));
 
-    IncrementalIndex toPersistBA2 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersistBA2 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     toPersistBA2.add(
         new MapBasedInputRow(
@@ -1580,7 +1573,7 @@ public class IndexMergerTest
 
     QueryableIndex indexA = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistA,
                 tmpDirA,
                 indexSpec
@@ -1590,7 +1583,7 @@ public class IndexMergerTest
 
     QueryableIndex indexB = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistB,
                 tmpDirB,
                 indexSpec
@@ -1600,7 +1593,7 @@ public class IndexMergerTest
 
     QueryableIndex indexBA = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistBA,
                 tmpDirBA,
                 indexSpec
@@ -1610,7 +1603,7 @@ public class IndexMergerTest
 
     QueryableIndex indexBA2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistBA2,
                 tmpDirBA2,
                 indexSpec
@@ -1620,7 +1613,7 @@ public class IndexMergerTest
 
     QueryableIndex indexC = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersistC,
                 tmpDirC,
                 indexSpec
@@ -1630,7 +1623,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB, indexBA, indexBA2),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -1642,7 +1635,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB, indexBA, indexC),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -1762,7 +1755,7 @@ public class IndexMergerTest
 
     final File tmpDirMerged = temporaryFolder.newFolder();
 
-    INDEX_MERGER.merge(
+    indexMerger.merge(
         toMerge,
         true,
         new AggregatorFactory[]{
@@ -1814,7 +1807,7 @@ public class IndexMergerTest
 
     final File tmpDirMerged = temporaryFolder.newFolder();
 
-    File merged = INDEX_MERGER.merge(
+    File merged = indexMerger.merge(
         toMerge,
         true,
         new AggregatorFactory[]{
@@ -1885,7 +1878,7 @@ public class IndexMergerTest
 
     final File tmpDirMerged = temporaryFolder.newFolder();
 
-    File merged = INDEX_MERGER.merge(
+    File merged = indexMerger.merge(
         toMerge,
         true,
         new AggregatorFactory[]{
@@ -1946,7 +1939,7 @@ public class IndexMergerTest
 
     final File tmpDirMerged = temporaryFolder.newFolder();
 
-    File merged = INDEX_MERGER.merge(
+    File merged = indexMerger.merge(
         toMerge,
         true,
         new AggregatorFactory[]{
@@ -1991,7 +1984,7 @@ public class IndexMergerTest
 
     final File tmpDirMerged = temporaryFolder.newFolder();
 
-    final File merged = INDEX_MERGER.merge(
+    final File merged = indexMerger.merge(
         toMerge,
         true,
         new AggregatorFactory[]{
@@ -2019,7 +2012,7 @@ public class IndexMergerTest
 
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist1,
                 tmpDir,
                 indexSpec
@@ -2029,7 +2022,7 @@ public class IndexMergerTest
 
     QueryableIndex index2 = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 toPersist2,
                 tmpDir2,
                 indexSpec
@@ -2039,7 +2032,7 @@ public class IndexMergerTest
 
     final QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
+            indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -2117,14 +2110,14 @@ public class IndexMergerTest
   private IncrementalIndex getIndexWithDimsFromSchemata(List<DimensionSchema> dims)
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
         .withDimensionsSpec(new DimensionsSpec(dims, null, null))
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
-        .withRollup(true)
+        .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
-    return new OnheapIncrementalIndex(schema, true, 1000);
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
   }
 
 
@@ -2150,7 +2143,7 @@ public class IndexMergerTest
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
         INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+            indexMerger.persist(
                 index1,
                 tempDir,
                 indexSpec
@@ -2174,12 +2167,10 @@ public class IndexMergerTest
 
   private IncrementalIndex getIndexD3() throws Exception
   {
-    IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersist1 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     toPersist1.add(
         new MapBasedInputRow(
@@ -2210,12 +2201,10 @@ public class IndexMergerTest
 
   private IncrementalIndex getSingleDimIndex(String dimName, List<String> values) throws Exception
   {
-    IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
-        0L,
-        Granularities.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        1000
-    );
+    IncrementalIndex toPersist1 = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     addDimValuesToIndex(toPersist1, dimName, values);
     return toPersist1;
@@ -2237,14 +2226,14 @@ public class IndexMergerTest
   private IncrementalIndex getIndexWithDims(List<String> dims)
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(0L)
-        .withQueryGranularity(Granularities.NONE)
         .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
-        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
-        .withRollup(true)
+        .withMetrics(new CountAggregatorFactory("count"))
         .build();
 
-    return new OnheapIncrementalIndex(schema, true, 1000);
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
   }
 
   private AggregatorFactory[] getCombiningAggregators(AggregatorFactory[] aggregators)
@@ -2295,7 +2284,7 @@ public class IndexMergerTest
     final File v9TmpDir = new File(tempDir, "v9-tmp");
 
     try {
-      INDEX_MERGER.persist(
+      indexMerger.persist(
           toPersist,
           tempDir,
           indexSpec
@@ -2417,6 +2406,6 @@ public class IndexMergerTest
     }
 
     final File tempDir = temporaryFolder.newFolder();
-    return closer.closeLater(INDEX_IO.loadIndex(INDEX_MERGER.persist(toPersist, tempDir, indexSpec)));
+    return closer.closeLater(INDEX_IO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec)));
   }
 }

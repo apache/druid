@@ -97,9 +97,10 @@ public class IncrementalIndexStorageAdapterTest
                   @Override
                   public IncrementalIndex createIndex()
                   {
-                    return new OnheapIncrementalIndex(
-                        0, Granularities.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
-                    );
+                    return new IncrementalIndex.Builder()
+                        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+                        .setMaxRowCount(1000)
+                        .buildOnheap();
                   }
                 }
             }

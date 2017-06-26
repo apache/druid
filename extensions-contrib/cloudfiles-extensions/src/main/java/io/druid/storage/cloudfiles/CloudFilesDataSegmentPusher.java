@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
@@ -32,9 +31,9 @@ import io.druid.timeline.DataSegment;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -102,9 +101,9 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
               log.info("Pushing %s.", segmentData.getPath());
               objectApi.put(segmentData);
 
-              try (FileOutputStream stream = new FileOutputStream(descFile)) {
-                stream.write(jsonMapper.writeValueAsBytes(inSegment));
-              }
+              // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+              // runtime, and because Guava deletes methods over time, that causes incompatibilities.
+              Files.write(descFile.toPath(), jsonMapper.writeValueAsBytes(inSegment));
               CloudFilesObject descriptorData = new CloudFilesObject(
                   segmentPath, descFile,
                   objectApi.getRegion(), objectApi.getContainer()

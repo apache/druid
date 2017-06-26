@@ -150,7 +150,7 @@ public class SchemaEvolutionTest
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
                              new IncrementalIndexSchema.Builder()
-                                 .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
+                                 .withMetrics(new CountAggregatorFactory("cnt"))
                                  .withRollup(false)
                                  .build()
                          )
@@ -162,11 +162,11 @@ public class SchemaEvolutionTest
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
                              new IncrementalIndexSchema.Builder()
-                                 .withMetrics(new AggregatorFactory[]{
+                                 .withMetrics(
                                      new CountAggregatorFactory("cnt"),
                                      new LongSumAggregatorFactory("c1", "c1"),
                                      new HyperUniquesAggregatorFactory("uniques", "c2")
-                                 })
+                                 )
                                  .withRollup(false)
                                  .build()
                          )
@@ -178,11 +178,11 @@ public class SchemaEvolutionTest
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
                              new IncrementalIndexSchema.Builder()
-                                 .withMetrics(new AggregatorFactory[]{
+                                 .withMetrics(
                                      new CountAggregatorFactory("cnt"),
                                      new DoubleSumAggregatorFactory("c1", "c1"),
                                      new HyperUniquesAggregatorFactory("uniques", "c2")
-                                 })
+                                 )
                                  .withRollup(false)
                                  .build()
                          )
@@ -194,9 +194,7 @@ public class SchemaEvolutionTest
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
                              new IncrementalIndexSchema.Builder()
-                                 .withMetrics(new AggregatorFactory[]{
-                                     new HyperUniquesAggregatorFactory("c2", "c2")
-                                 })
+                                 .withMetrics(new HyperUniquesAggregatorFactory("c2", "c2"))
                                  .withRollup(false)
                                  .build()
                          )
@@ -269,8 +267,9 @@ public class SchemaEvolutionTest
         .build();
 
     // Only string(1)
+    // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L, "d", 0.0)),
+        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
         runQuery(query, factory, ImmutableList.of(index1))
     );
 
@@ -293,12 +292,13 @@ public class SchemaEvolutionTest
     );
 
     // string(1) + long(2) + float(3) + nonexistent(4)
+    // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.
     Assert.assertEquals(
         timeseriesResult(ImmutableMap.of(
             "a", 31L * 2,
             "b", THIRTY_ONE_POINT_ONE + 31,
-            "c", 31L * 2,
-            "d", THIRTY_ONE_POINT_ONE + 31
+            "c", 31L * 3,
+            "d", THIRTY_ONE_POINT_ONE * 2 + 31
         )),
         runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))
     );

@@ -34,7 +34,6 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.Segment;
@@ -234,7 +233,7 @@ public class SameIntervalMergeTaskTest
           {
           }
         }, jsonMapper, temporaryFolder.newFolder(),
-            EasyMock.createMock(IndexMerger.class), indexIO, null, null, EasyMock.createMock(IndexMergerV9.class)
+            indexIO, null, null, EasyMock.createMock(IndexMergerV9.class)
         )
     );
 

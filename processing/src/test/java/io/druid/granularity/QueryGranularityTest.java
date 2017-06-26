@@ -804,7 +804,7 @@ public class QueryGranularityTest
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testDeadLock() throws Exception
   {
     final URL[] urls = ((URLClassLoader) Granularity.class.getClassLoader()).getURLs();

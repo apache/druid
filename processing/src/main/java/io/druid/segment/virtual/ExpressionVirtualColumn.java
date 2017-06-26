@@ -43,21 +43,22 @@ import java.util.Objects;
 
 public class ExpressionVirtualColumn implements VirtualColumn
 {
-  private static final ColumnCapabilities CAPABILITIES = new ColumnCapabilitiesImpl().setType(ValueType.FLOAT);
-
   private final String name;
   private final String expression;
+  private final ValueType outputType;
   private final Expr parsedExpression;
 
   @JsonCreator
   public ExpressionVirtualColumn(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
+      @JsonProperty("outputType") ValueType outputType,
       @JacksonInject ExprMacroTable macroTable
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = Preconditions.checkNotNull(expression, "expression");
+    this.outputType = outputType != null ? outputType : ValueType.FLOAT;
     this.parsedExpression = Parser.parse(expression, macroTable);
   }
 
@@ -72,6 +73,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public String getExpression()
   {
     return expression;
+  }
+
+  @JsonProperty
+  public ValueType getOutputType()
+  {
+    return outputType;
   }
 
   @Override
@@ -95,7 +102,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       @Override
       public Object get()
       {
-        return baseSelector.get();
+        return baseSelector.get().value();
       }
     };
   }
@@ -136,7 +143,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    return CAPABILITIES;
+    return new ColumnCapabilitiesImpl().setType(outputType);
   }
 
   @Override
@@ -157,6 +164,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
         .appendString(name)
         .appendString(expression)
+        .appendString(outputType.toString())
         .build();
   }
 
@@ -171,13 +179,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
     }
     final ExpressionVirtualColumn that = (ExpressionVirtualColumn) o;
     return Objects.equals(name, that.name) &&
-           Objects.equals(expression, that.expression);
+           Objects.equals(expression, that.expression) &&
+           outputType == that.outputType;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, expression);
+    return Objects.hash(name, expression, outputType);
   }
 
   @Override
@@ -186,7 +195,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return "ExpressionVirtualColumn{" +
            "name='" + name + '\'' +
            ", expression='" + expression + '\'' +
-           ", parsedExpression=" + parsedExpression +
+           ", outputType=" + outputType +
            '}';
   }
 }
