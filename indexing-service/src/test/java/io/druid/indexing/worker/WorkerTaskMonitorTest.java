@@ -39,7 +39,6 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
@@ -81,7 +80,6 @@ public class WorkerTaskMonitorTest
 
   private Worker worker;
   private ObjectMapper jsonMapper;
-  private IndexMerger indexMerger;
   private IndexMergerV9 indexMergerV9;
   private IndexIO indexIO;
 
@@ -89,7 +87,6 @@ public class WorkerTaskMonitorTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-    indexMerger = testUtils.getTestIndexMerger();
     indexMergerV9 = testUtils.getTestIndexMergerV9();
     indexIO = testUtils.getTestIndexIO();
   }
@@ -184,7 +181,6 @@ public class WorkerTaskMonitorTest
                 )
             ),
                 jsonMapper,
-                indexMerger,
                 indexIO,
                 null,
                 null,

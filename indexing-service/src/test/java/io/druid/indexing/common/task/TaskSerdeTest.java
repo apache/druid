@@ -98,7 +98,6 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(true, tuningConfig.isBuildV9Directly());
     Assert.assertEquals(false, tuningConfig.isForceExtendableShardSpecs());
     Assert.assertEquals(false, tuningConfig.isReportParseExceptions());
     Assert.assertEquals(new IndexSpec(), tuningConfig.getIndexSpec());
@@ -223,7 +222,6 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getMaxRowsInMemory(), task2TuningConfig.getMaxRowsInMemory());
     Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
     Assert.assertEquals(taskTuningConfig.getTargetPartitionSize(), task2TuningConfig.getTargetPartitionSize());
-    Assert.assertEquals(taskTuningConfig.isBuildV9Directly(), task2TuningConfig.isBuildV9Directly());
     Assert.assertEquals(
         taskTuningConfig.isForceExtendableShardSpecs(),
         task2TuningConfig.isForceExtendableShardSpecs()
@@ -362,7 +360,6 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
     Assert.assertEquals(task.getRollup(), task2.getRollup());
-    Assert.assertEquals(task.getBuildV9Directly(), task2.getBuildV9Directly());
     Assert.assertEquals(task.getIndexSpec(), task2.getIndexSpec());
     Assert.assertEquals(
         task.getAggregators().get(0).getName(),
