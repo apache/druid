@@ -25,7 +25,6 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
-import io.druid.segment.data.GenericIndexed;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -56,11 +55,6 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   public static SerializerBuilder serializerBuilder()
   {
     return new SerializerBuilder();
-  }
-
-  public static LegacySerializerBuilder legacySerializerBuilder()
-  {
-    return new LegacySerializerBuilder();
   }
 
   @JsonProperty
@@ -122,44 +116,6 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
         public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
         {
           delegate.writeToChannel(channel, smoosher);
-        }
-      }
-      );
-    }
-  }
-
-  public static class LegacySerializerBuilder
-  {
-    private String typeName = null;
-    private GenericIndexed delegate = null;
-
-    public LegacySerializerBuilder withTypeName(final String typeName)
-    {
-      this.typeName = typeName;
-      return this;
-    }
-
-    public LegacySerializerBuilder withDelegate(final GenericIndexed delegate)
-    {
-      this.delegate = delegate;
-      return this;
-    }
-
-    public ComplexColumnPartSerde build()
-    {
-      return new ComplexColumnPartSerde(
-          typeName, new Serializer()
-      {
-        @Override
-        public long numBytes()
-        {
-          return delegate.getSerializedSize();
-        }
-
-        @Override
-        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-        {
-          delegate.writeToChannel(channel);
         }
       }
       );

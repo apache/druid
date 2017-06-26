@@ -117,7 +117,6 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if targetPartitionSize is set.|null|no|
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|buildV9Directly|Whether to build a v9 index directly instead of first building a v8 index and then converting it to v9 format.|true|no|
 |forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |publishTimeout|Milliseconds to wait for publishing segments. It must be >= 0, where 0 means to wait forever.|0|no|
@@ -162,7 +161,6 @@ Append tasks append a list of segments together into a single segment (one after
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>,
-    "buildV9Directly": <true or false, default true>,
     "aggregations": <optional list of aggregators>
 }
 ```
@@ -181,7 +179,6 @@ The grammar is:
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
     "rollup": <whether or not to rollup data during a merge>,
-    "buildV9Directly": <true or false, default true>,
     "segments": <JSON list of DataSegment objects to merge>
 }
 ```
@@ -199,7 +196,6 @@ The grammar is:
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
     "rollup": <whether or not to rollup data during a merge>,
-    "buildV9Directly": <true or false, default true>,
     "interval": <DataSegment objects in this interval are going to be merged>
 }
 ```

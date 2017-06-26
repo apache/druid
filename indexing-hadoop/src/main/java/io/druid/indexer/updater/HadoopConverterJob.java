@@ -530,12 +530,18 @@ public class HadoopConverterJob
       context.progress();
       final File outDir = new File(tmpDir, "out");
       FileUtils.forceMkdir(outDir);
-      HadoopDruidConverterConfig.INDEX_MERGER.convert(
-          inDir,
-          outDir,
-          config.getIndexSpec(),
-          JobHelper.progressIndicatorForContext(context)
-      );
+      try {
+        HadoopDruidConverterConfig.INDEX_MERGER.convert(
+            inDir,
+            outDir,
+            config.getIndexSpec(),
+            JobHelper.progressIndicatorForContext(context)
+        );
+      }
+      catch (Exception e) {
+        log.error(e, "Conversion failed.");
+        throw e;
+      }
       if (config.isValidate()) {
         context.setStatus("Validating");
         HadoopDruidConverterConfig.INDEX_IO.validateTwoSegments(inDir, outDir);

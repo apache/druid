@@ -870,7 +870,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
         toolbox.getIndexIO(),
-        tuningConfig.getBuildV9Directly() ? toolbox.getIndexMergerV9() : toolbox.getIndexMerger(),
+        toolbox.getIndexMergerV9(),
         toolbox.getQueryRunnerFactoryConglomerate(),
         toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),

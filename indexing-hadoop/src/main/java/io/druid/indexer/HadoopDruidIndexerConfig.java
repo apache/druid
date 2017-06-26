@@ -51,7 +51,6 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
@@ -92,7 +91,6 @@ public class HadoopDruidIndexerConfig
   public static final Joiner TAB_JOINER = Joiner.on("\t");
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
-  public static final IndexMerger INDEX_MERGER;
   public static final IndexMergerV9 INDEX_MERGER_V9;
   public static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
   public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
@@ -120,7 +118,6 @@ public class HadoopDruidIndexerConfig
     );
     JSON_MAPPER = injector.getInstance(ObjectMapper.class);
     INDEX_IO = injector.getInstance(IndexIO.class);
-    INDEX_MERGER = injector.getInstance(IndexMerger.class);
     INDEX_MERGER_V9 = injector.getInstance(IndexMergerV9.class);
     HADOOP_KERBEROS_CONFIG = injector.getInstance(HadoopKerberosConfig.class);
     DATA_SEGMENT_PUSHER = injector.getInstance(DataSegmentPusher.class);
@@ -377,11 +374,6 @@ public class HadoopDruidIndexerConfig
   public int getShardSpecCount(Bucket bucket)
   {
     return schema.getTuningConfig().getShardSpecs().get(bucket.time.getMillis()).size();
-  }
-
-  public boolean isBuildV9Directly()
-  {
-    return schema.getTuningConfig().getBuildV9Directly();
   }
 
   /**

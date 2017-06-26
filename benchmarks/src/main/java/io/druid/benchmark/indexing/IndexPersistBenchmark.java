@@ -30,7 +30,6 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.column.ColumnConfig;
@@ -81,7 +80,6 @@ public class IndexPersistBenchmark
   private BenchmarkSchemaInfo schemaInfo;
 
 
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
@@ -99,7 +97,6 @@ public class IndexPersistBenchmark
           }
         }
     );
-    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
   }
 
@@ -162,28 +159,6 @@ public class IndexPersistBenchmark
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void persist(Blackhole blackhole) throws Exception
-  {
-    File tmpDir = Files.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-    try {
-      File indexFile = INDEX_MERGER.persist(
-          incIndex,
-          tmpDir,
-          new IndexSpec()
-      );
-
-      blackhole.consume(indexFile);
-    }
-    finally {
-      FileUtils.deleteDirectory(tmpDir);
-    }
-
   }
 
   @Benchmark
