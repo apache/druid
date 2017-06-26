@@ -72,11 +72,11 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     this.prefixes = prefixes == null ? new ArrayList<>() : prefixes;
 
     if (!this.uris.isEmpty() && !this.prefixes.isEmpty()) {
-      throw new IAE("uris and directories cannot be used together");
+      throw new IAE("uris and prefixes cannot be used together");
     }
 
     if (this.uris.isEmpty() && this.prefixes.isEmpty()) {
-      throw new IAE("uris or directories must be specified");
+      throw new IAE("uris or prefixes must be specified");
     }
 
     for (final URI inputURI : this.uris) {
@@ -146,7 +146,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
             // Usually this is not a problem, but the uris might be the full paths to input objects instead of prefixes.
             // In this case, users should be able to get objects if they have a proper permission for GetObject.
 
-            log.warn("Access denied for %s. Try to get the object directly without listing", uri);
+            log.warn("Access denied for %s. Try to get the object from the uri without listing", uri);
             try {
               final S3Object s3Object = s3Client.getObject(bucket, prefix);
               if (!s3Object.isDirectoryPlaceholder()) {
