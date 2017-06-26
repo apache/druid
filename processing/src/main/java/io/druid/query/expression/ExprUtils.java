@@ -17,23 +17,16 @@
  * under the License.
  */
 
-package io.druid.query.filter;
+package io.druid.query.expression;
 
-import io.druid.collections.bitmap.BitmapFactory;
-import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.collections.spatial.ImmutableRTree;
-import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.data.Indexed;
+import io.druid.math.expr.Expr;
 
-/**
- */
-public interface BitmapIndexSelector
+public class ExprUtils
 {
-  public Indexed<String> getDimensionValues(String dimension);
-  public boolean hasMultipleValues(String dimension);
-  public int getNumRows();
-  public BitmapFactory getBitmapFactory();
-  public BitmapIndex getBitmapIndex(String dimension);
-  public ImmutableBitmap getBitmapIndex(String dimension, String value);
-  public ImmutableRTree getSpatialIndex(String dimension);
+  private static final Expr.ObjectBinding NIL_BINDINGS = name -> null;
+
+  public static Expr.ObjectBinding nilBindings()
+  {
+    return NIL_BINDINGS;
+  }
 }

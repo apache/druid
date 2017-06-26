@@ -641,6 +641,56 @@ public class TopNQueryRunnerTest
   }
 
   @Test
+  public void testTopNOverHyperUniqueExpression()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(QueryRunnerTestHelper.qualityUniques)
+        )
+        .postAggregators(
+            Collections.singletonList(new ExpressionPostAggregator(
+                QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
+                "uniques + 1",
+                null,
+                TestExprMacroTable.INSTANCE
+            ))
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put(QueryRunnerTestHelper.uniqueMetric, QueryRunnerTestHelper.UNIQUES_9)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, QueryRunnerTestHelper.UNIQUES_9 + 1)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put(QueryRunnerTestHelper.uniqueMetric, QueryRunnerTestHelper.UNIQUES_2)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, QueryRunnerTestHelper.UNIQUES_2 + 1)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put(QueryRunnerTestHelper.uniqueMetric, QueryRunnerTestHelper.UNIQUES_2)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, QueryRunnerTestHelper.UNIQUES_2 + 1)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
   public void testTopNOverFirstLastAggregator()
   {
     TopNQuery query = new TopNQueryBuilder()

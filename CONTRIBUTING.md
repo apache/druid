@@ -24,93 +24,95 @@ When submitting a pull request (PR), please use the following guidelines:
 
 1. Fork the druid-io/druid repository into your GitHub account
 
-  https://github.com/druid-io/druid/fork
+    https://github.com/druid-io/druid/fork
 
 1. Clone your fork of the GitHub repository
 
-  ```sh
-  git clone git@github.com:<username>/druid.git
-  ```
+    ```sh
+    git clone git@github.com:<username>/druid.git
+    ```
 
-  replace `<username>` with your GitHub username.
+    replace `<username>` with your GitHub username.
 
 1. Add a remote to keep up with upstream changes
 
-  ```
-  git remote add upstream https://github.com/druid-io/druid.git
-  ```
+    ```
+    git remote add upstream https://github.com/druid-io/druid.git
+    ```
 
-  If you already have a copy, fetch upstream changes
+    If you already have a copy, fetch upstream changes
 
-  ```
-  git fetch upstream
-  ```
+    ```
+    git fetch upstream master
+    ```
 
 1. Create a feature branch to work in
 
-  ```
-  git checkout -b feature-xxx remotes/upstream/master
-  ```
+    ```
+    git checkout -b feature-xxx remotes/upstream/master
+    ```
 
-1. Work in your feature branch
+1. _Before submitting a pull request_ periodically rebase your changes
+    (but don't do it when a pull request is already submitted)
 
-  ```
-  git commit -a
-  ```
-
-1. Before submitting a pull request, periodically rebase your changes
-
-  ```
-  git pull --rebase
-  ```
+    ```
+    git pull --rebase upstream master
+    ```
 
 1. Before submitting a pull request, combine ("squash") related commits into a single one
 
-  ```
-  git rebase -i upstream/master
-  ```
+    ```
+    git rebase -i upstream/master
+    ```
 
-  This will open your editor and allow you to re-order commits and merge them:
-  - Re-order the lines to change commit order (to the extent possible without creating conflicts)
-  - Prefix commits using `s` (squash) or `f` (fixup) to merge extraneous commits.
+    This will open your editor and allow you to re-order commits and merge them:
+    - Re-order the lines to change commit order (to the extent possible without creating conflicts)
+    - Prefix commits using `s` (squash) or `f` (fixup) to merge extraneous commits.
 
 1. Submit a pull-request
 
-  ```
-  git push origin feature-xxx
-  ```
+    ```
+    git push origin feature-xxx
+    ```
 
-  Go to your Druid fork main page
+    Go to your Druid fork main page
 
-  ```
-  https://github.com/<username>/druid
-  ```
+    ```
+    https://github.com/<username>/druid
+    ```
 
-  If you recently pushed your changes GitHub will automatically pop up a
-  `Compare & pull request` button for any branches you recently pushed to. If you
-  click that button it will automatically offer you to submit your pull-request
-  to the druid-io/druid repository.
+    If you recently pushed your changes GitHub will automatically pop up a
+    `Compare & pull request` button for any branches you recently pushed to. If you
+    click that button it will automatically offer you to submit your pull-request
+    to the druid-io/druid repository.
 
-  - Give your pull-request a meaningful title.
-  - In the description, explain your changes and the problem they are solving.
+    - Give your pull-request a meaningful title.
+    - In the description, explain your changes and the problem they are solving.
 
 1. Addressing code review comments
 
-  Address code review comments by committing changes and pushing them to your feature
-  branch.
+    Address code review comments by committing changes and pushing them to your feature
+    branch.
 
+    ```
+    git push origin feature-xxx
+    ```
+
+### If your pull request shows conflicts with master
+  If your pull request shows conflicts with master, merge master into your feature branch:
+  
+
+  ```
+  git merge upstream/master
+  ```
+  
+  and resolve the conflicts. After resolving conflicts, push your branch again:
+  
   ```
   git push origin feature-xxx
   ```
 
-  If your pull request shows conflicts with master, merge master into your feature branch
-  and resolve the conflicts. After resolving conflicts, push your branch again.
-
-  ```
-  git merge master
-  ```
-
-  Avoid rebasing and force pushes after submitting a pull request, since these make it
+  _Avoid rebasing and force pushes after submitting a pull request,_ since these make it
   difficult for reviewers to see what you've changed in response to their reviews. The Druid
   committer that merges your change will rebase and squash it into a single commit before
   committing it to master.
