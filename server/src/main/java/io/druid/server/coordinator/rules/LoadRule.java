@@ -72,7 +72,7 @@ public abstract class LoadRule implements Rule
       final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
       final BalancerStrategy strategy = params.getBalancerStrategy();
       if (availableSegments.contains(segment)) {
-        CoordinatorStats assignStats = assign(
+        int assignedCount = assign(
             params.getReplicationManager(),
             tier,
             totalReplicantsInCluster,
@@ -82,8 +82,8 @@ public abstract class LoadRule implements Rule
             serverHolderList,
             segment
         );
-        stats.accumulate(assignStats);
-        totalReplicantsInCluster += assignStats.getTieredStat(ASSIGNED_COUNT, tier);
+        stats.addToTieredStat(ASSIGNED_COUNT, tier, assignedCount);
+        totalReplicantsInCluster += assignedCount;
       }
 
       loadStatus.put(tier, expectedReplicantsInTier - loadedReplicantsInTier);
@@ -95,7 +95,7 @@ public abstract class LoadRule implements Rule
     return stats;
   }
 
-  private CoordinatorStats assign(
+  private int assign(
       final ReplicationThrottler replicationManager,
       final String tier,
       final int totalReplicantsInCluster,
@@ -106,9 +106,7 @@ public abstract class LoadRule implements Rule
       final DataSegment segment
   )
   {
-    final CoordinatorStats stats = new CoordinatorStats();
-    stats.addToTieredStat(ASSIGNED_COUNT, tier, 0);
-
+    int assignedCount = 0;
     int currReplicantsInTier = totalReplicantsInTier;
     int currTotalReplicantsInCluster = totalReplicantsInCluster;
     while (currReplicantsInTier < expectedReplicantsInTier) {
@@ -152,12 +150,12 @@ public abstract class LoadRule implements Rule
           }
       );
 
-      stats.addToTieredStat(ASSIGNED_COUNT, tier, 1);
+      ++assignedCount;
       ++currReplicantsInTier;
       ++currTotalReplicantsInCluster;
     }
 
-    return stats;
+    return assignedCount;
   }
 
   private CoordinatorStats drop(
