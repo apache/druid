@@ -269,9 +269,16 @@ public class TaskLockbox
         if (foundPosse.getTaskLock().getInterval().contains(interval) && foundPosse.getTaskLock().getGroupId().equals(task.getGroupId())) {
           posseToUse = foundPosse;
         } else {
-          //Could be a deadlock for LOCK action: same task trying to acquire lock for overlapping interval
+          //Could be a deadlock for LockAcquireAction: same task trying to acquire lock for overlapping interval
           if (foundPosse.getTaskIds().contains(task.getId())) {
-            log.warn("Same Task [%s] is trying to acquire lock for overlapping interval [%s]", task.getId(), interval);
+            log.makeAlert("Same Task is trying to acquire lock for overlapping interval")
+               .addData("task", task.getId())
+               .addData("interval", interval);
+            throw new ISE(
+                "Same Task [%s] is trying to acquire lock for overlapping interval [%s]",
+                task.getId(),
+                interval
+            );
           }
           return Optional.absent();
         }

@@ -22,11 +22,14 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.ISE;
 import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -50,6 +53,11 @@ public class TaskLockboxTest
     ServerConfig serverConfig = EasyMock.niceMock(ServerConfig.class);
     EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100));
     EasyMock.replay(serverConfig);
+
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    EmittingLogger.registerEmitter(emitter);
+    EasyMock.replay(emitter);
+
     lockbox = new TaskLockbox(taskStorage, serverConfig);
   }
 
@@ -104,9 +112,6 @@ public class TaskLockboxTest
     Assert.assertTrue(lock1.isPresent());
     Assert.assertEquals(new Interval("2015-01-01/2015-01-03"), lock1.get().getInterval());
 
-    // same task tries to take partially overlapping interval; should fail
-    Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-02/2015-01-04")).isPresent());
-
     // same task tries to take contained interval; should succeed and should match the original lock
     Optional<TaskLock> lock2 = lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02"));
     Assert.assertTrue(lock2.isPresent());
@@ -117,6 +122,19 @@ public class TaskLockboxTest
         ImmutableList.of(lock1.get()),
         lockbox.findLocksForTask(task)
     );
+  }
+
+  @Test(expected = ISE.class)
+  public void testOverlappingIntervalForSameTask() throws InterruptedException
+  {
+    Task task = NoopTask.create();
+    lockbox.add(task);
+    Optional<TaskLock> lock1 = lockbox.tryLock(task, new Interval("2015-01-01/2015-01-03"));
+    Assert.assertTrue(lock1.isPresent());
+    Assert.assertEquals(new Interval("2015-01-01/2015-01-03"), lock1.get().getInterval());
+
+    // same task tries to take partially overlapping interval; should throw exception
+    lockbox.tryLock(task, new Interval("2015-01-02/2015-01-04"));
   }
 
   @Test(expected = IllegalStateException.class)
