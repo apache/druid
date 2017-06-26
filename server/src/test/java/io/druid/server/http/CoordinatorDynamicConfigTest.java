@@ -70,7 +70,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
-                     + "  \"maxSegmentsInQueue\": 1\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -102,7 +102,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": \" test1 ,test2 \", \n"
-                     + "  \"maxSegmentsInQueue\": 1\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -134,7 +134,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killAllDataSources\": true,\n"
-                     + "  \"maxSegmentsInQueue\": 1\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(

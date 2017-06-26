@@ -65,14 +65,14 @@ public abstract class LoadRule implements Rule
                                          .getLoadedReplicants(segment.getIdentifier(), tier);
 
       final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getHistoricalsByTier(tier);
-      final int maxSegmentsInQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInQueue();
+      final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
       if (serverQueue == null) {
         log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
         continue;
       }
 
       final List<ServerHolder> serverHolderList = serverQueue.stream()
-                                                             .filter(s -> s.getNumberOfSegmentsInQueue() < maxSegmentsInQueue)
+                                                             .filter(s -> s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue)
                                                              .collect(Collectors.toList());
 
       final BalancerStrategy strategy = params.getBalancerStrategy();

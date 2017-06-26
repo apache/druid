@@ -604,7 +604,7 @@ public class LoadRuleTest
             .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .withAvailableSegments(Arrays.asList(dataSegment1, dataSegment2, dataSegment3))
-            .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsInQueue(2).build())
+            .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsInNodeLoadingQueue(2).build())
             .build();
 
     CoordinatorStats stats1 = rule.run(null, params, dataSegment1);
