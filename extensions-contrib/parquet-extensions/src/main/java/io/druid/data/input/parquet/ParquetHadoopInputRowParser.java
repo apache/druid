@@ -29,16 +29,22 @@ import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import org.apache.avro.LogicalType;
+import org.apache.avro.LogicalTypes;
+import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord>
 {
   private final ParseSpec parseSpec;
   private final boolean binaryAsString;
   private final List<String> dimensions;
+  private final TimestampSpec timestampSpec;
 
   @JsonCreator
   public ParquetHadoopInputRowParser(
@@ -47,6 +53,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   )
   {
     this.parseSpec = parseSpec;
+    this.timestampSpec = parseSpec.getTimestampSpec();
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
 
     List<DimensionSchema> dimensionSchema = parseSpec.getDimensionsSpec().getDimensions();
@@ -56,15 +63,41 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
     }
   }
 
+  @Nullable
+  private LogicalType determineTimestampSpecLogicalType(Schema schema, String timestampSpecField)
+  {
+    for (Schema.Field field : schema.getFields()) {
+      if (field.name().equals(timestampSpecField)) {
+        return field.schema().getLogicalType();
+      }
+    }
+    return null;
+  }
+
   /**
    * imitate avro extension {@link AvroStreamInputRowParser#parseGenericRecord(GenericRecord, ParseSpec, List, boolean, boolean)}
    */
   @Override
   public InputRow parse(GenericRecord record)
   {
+    // Map the record to a map
     GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, false, binaryAsString);
-    TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
-    DateTime dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);
+
+    // Determine logical type of the timestamp column
+    LogicalType logicalType = determineTimestampSpecLogicalType(record.getSchema(), timestampSpec.getTimestampColumn());
+
+    // Parse time timestamp based on the parquet schema.
+    // https://github.com/Parquet/parquet-format/blob/1afe8d9ae7e38acfc4ea273338a3c0c35feca115/LogicalTypes.md#date
+    DateTime dateTime;
+    if (logicalType instanceof LogicalTypes.Date) {
+      int daysSinceEpoch = (Integer) genericRecordAsMap.get(timestampSpec.getTimestampColumn());
+
+      dateTime = new DateTime(TimeUnit.DAYS.toMillis(daysSinceEpoch));
+    } else {
+      // Fall back to a binary format that will be parsed using joda-time
+      dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);
+    }
+
     return new MapBasedInputRow(dateTime, dimensions, genericRecordAsMap);
   }
 

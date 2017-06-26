@@ -6,7 +6,7 @@
       "inputSpec": {
         "type": "static",
         "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
-        "paths": "example/wikipedia_list.parquet"
+        "paths": "example/test_date_data.snappy.parquet"
       },
       "metadataUpdateSpec": {
         "type": "postgresql",
@@ -18,44 +18,30 @@
       "segmentOutputPath": "/tmp/segments"
     },
     "dataSchema": {
-      "dataSource": "wikipedia",
+      "dataSource": "date_dataset_date",
       "parser": {
         "type": "parquet",
         "parseSpec": {
           "format": "timeAndDims",
           "timestampSpec": {
-            "column": "timestamp",
-            "format": "auto"
+            "column": "date_as_date"
           },
           "dimensionsSpec": {
             "dimensions": [
-              "page",
-              "language",
-              "user",
-              "unpatrolled"
-            ],
-            "dimensionExclusions": [],
-            "spatialDimensions": []
+              "idx"
+            ]
           }
         }
       },
       "metricsSpec": [{
         "type": "count",
         "name": "count"
-      }, {
-        "type": "doubleSum",
-        "name": "deleted",
-        "fieldName": "deleted"
-      }, {
-        "type": "doubleSum",
-        "name": "delta",
-        "fieldName": "delta"
       }],
       "granularitySpec": {
         "type": "uniform",
         "segmentGranularity": "DAY",
         "queryGranularity": "NONE",
-        "intervals": ["2013-08-30/2013-09-02"]
+        "intervals": ["2017-06-17/2017-09-24"]
       }
     },
     "tuningConfig": {

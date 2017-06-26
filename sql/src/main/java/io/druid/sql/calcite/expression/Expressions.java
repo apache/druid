@@ -211,7 +211,8 @@ public class Expressions
       final String name,
       final List<String> rowOrder,
       final List<PostAggregatorFactory> finalizingPostAggregatorFactories,
-      final RexNode expression
+      final RexNode expression,
+      final PlannerContext plannerContext
   )
   {
     final PostAggregator retVal;
@@ -227,7 +228,7 @@ public class Expressions
       // types internally and there isn't much we can do to respect
       // TODO(gianm): Probably not a good idea to ignore CAST like this.
       final RexNode operand = ((RexCall) expression).getOperands().get(0);
-      retVal = toPostAggregator(name, rowOrder, finalizingPostAggregatorFactories, operand);
+      retVal = toPostAggregator(name, rowOrder, finalizingPostAggregatorFactories, operand, plannerContext);
     } else if (expression.getKind() == SqlKind.LITERAL
                && SqlTypeName.NUMERIC_TYPES.contains(expression.getType().getSqlTypeName())) {
       retVal = new ConstantPostAggregator(name, (Number) RexLiteral.value(expression));
@@ -247,7 +248,8 @@ public class Expressions
             null,
             rowOrder,
             finalizingPostAggregatorFactories,
-            operand
+            operand,
+            plannerContext
         );
         if (translatedOperand == null) {
           return null;
@@ -261,7 +263,7 @@ public class Expressions
       if (mathExpression == null) {
         retVal = null;
       } else {
-        retVal = new ExpressionPostAggregator(name, mathExpression);
+        retVal = new ExpressionPostAggregator(name, mathExpression, null, plannerContext.getExprMacroTable());
       }
     }
 
