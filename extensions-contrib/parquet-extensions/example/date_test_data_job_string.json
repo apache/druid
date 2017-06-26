@@ -6,7 +6,7 @@
       "inputSpec": {
         "type": "static",
         "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
-        "paths": "no_metrics"
+        "paths": "example/test_date_data.snappy.parquet"
       },
       "metadataUpdateSpec": {
         "type": "postgresql",
@@ -15,24 +15,22 @@
         "password" : "asdf",
         "segmentTable": "druid_segments"
       },
-      "segmentOutputPath": "tmp/segments"
+      "segmentOutputPath": "/tmp/segments"
     },
     "dataSchema": {
-      "dataSource": "no_metrics",
+      "dataSource": "date_dataset_string",
       "parser": {
         "type": "parquet",
         "parseSpec": {
           "format": "timeAndDims",
           "timestampSpec": {
-            "column": "time",
-            "format": "auto"
+            "column": "date_as_string",
+            "format": "Y-M-d"
           },
           "dimensionsSpec": {
             "dimensions": [
-              "name"
-            ],
-            "dimensionExclusions": [],
-            "spatialDimensions": []
+              "idx"
+            ]
           }
         }
       },
@@ -43,8 +41,8 @@
       "granularitySpec": {
         "type": "uniform",
         "segmentGranularity": "DAY",
-        "queryGranularity": "ALL",
-        "intervals": ["2015-12-31/2016-01-02"]
+        "queryGranularity": "NONE",
+        "intervals": ["2017-06-17/2017-09-24"]
       }
     },
     "tuningConfig": {
