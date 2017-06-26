@@ -58,7 +58,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
     final Expr lookupExpr = args.get(1);
 
     if (!lookupExpr.isLiteral() || lookupExpr.getLiteralValue() == null) {
-      throw new IAE("'%s' second argument must be a registered lookup name", name());
+      throw new IAE("Function[%s] second argument must be a registered lookup name", name());
     }
 
     final String lookupName = lookupExpr.getLiteralValue().toString();

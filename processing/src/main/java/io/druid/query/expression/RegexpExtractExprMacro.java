@@ -50,7 +50,7 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     final Expr indexExpr = args.size() > 2 ? args.get(2) : null;
 
     if (!patternExpr.isLiteral() || (indexExpr != null && !indexExpr.isLiteral())) {
-      throw new IAE("'%s' pattern and index must be literals", name());
+      throw new IAE("Function[%s] pattern and index must be literals", name());
     }
 
     // Precompile the pattern.

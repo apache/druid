@@ -19,6 +19,7 @@
 
 package io.druid.query.expression;
 
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -47,11 +48,18 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
     }
 
     final Expr arg = args.get(0);
-    final String formatString = args.size() > 1 ? (String) args.get(1).getLiteralValue() : null;
+    final String formatString;
     final DateTimeZone timeZone;
 
-    if (args.size() > 2 && args.get(2).getLiteralValue() != null) {
-      timeZone = DateTimeZone.forID((String) args.get(2).getLiteralValue());
+    if (args.size() > 1) {
+      Preconditions.checkArgument(args.get(1).isLiteral(), "Function[%s] format arg must be a literal", name());
+      formatString = (String) args.get(1).getLiteralValue();
+    } else {
+      formatString = null;
+    }
+
+    if (args.size() > 2) {
+      timeZone = ExprUtils.toTimeZone(args.get(2));
     } else {
       timeZone = DateTimeZone.UTC;
     }

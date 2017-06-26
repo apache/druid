@@ -19,6 +19,7 @@
 
 package io.druid.query.expression;
 
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.Expr;
 import org.joda.time.DateTime;
@@ -32,6 +33,16 @@ public class ExprUtils
   public static Expr.ObjectBinding nilBindings()
   {
     return NIL_BINDINGS;
+  }
+
+  public static DateTimeZone toTimeZone(final Expr timeZoneArg)
+  {
+    if (!timeZoneArg.isLiteral()) {
+      throw new IAE("Time zone must be a literal");
+    }
+
+    final Object literalValue = timeZoneArg.getLiteralValue();
+    return literalValue == null ? DateTimeZone.UTC : DateTimeZone.forID((String) literalValue);
   }
 
   public static PeriodGranularity toPeriodGranularity(

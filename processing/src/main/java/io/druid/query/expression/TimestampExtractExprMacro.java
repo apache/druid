@@ -62,19 +62,19 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     }
 
     if (!args.get(1).isLiteral() || args.get(1).getLiteralValue() == null) {
-      throw new IAE("'%s' unit arg must be literal");
+      throw new IAE("Function[%s] unit arg must be literal", name());
     }
 
     if (args.size() > 2 && !args.get(2).isLiteral()) {
-      throw new IAE("'%s' timezone arg must be literal");
+      throw new IAE("Function[%s] timezone arg must be literal", name());
     }
 
     final Expr arg = args.get(0);
     final Unit unit = Unit.valueOf(((String) args.get(1).getLiteralValue()).toUpperCase());
     final DateTimeZone timeZone;
 
-    if (args.size() > 2 && args.get(2).getLiteralValue() != null) {
-      timeZone = DateTimeZone.forID((String) args.get(2).getLiteralValue());
+    if (args.size() > 2) {
+      timeZone = ExprUtils.toTimeZone(args.get(2));
     } else {
       timeZone = DateTimeZone.UTC;
     }
