@@ -479,7 +479,7 @@ public class IndexTaskTest
 
     Assert.assertEquals(1, segments.size());
 
-    Assert.assertEquals(Arrays.asList("dim"), segments.get(0).getDimensions());
+    Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
     Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
     Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
   }
