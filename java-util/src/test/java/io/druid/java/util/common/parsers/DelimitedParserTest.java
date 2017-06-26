@@ -22,12 +22,16 @@ package io.druid.java.util.common.parsers;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Map;
 
 public class DelimitedParserTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testValidHeader()
@@ -127,9 +131,73 @@ public class DelimitedParserTest
     );
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
+  public void testTSVParserWithHeaderRow()
+  {
+    final Parser<String, Object> parser = new DelimitedParser(
+        Optional.of("\t"),
+        Optional.absent(),
+        true,
+        0
+    );
+    parser.startFileFromBeginning();
+    final String[] body = new String[] {
+        "time\tvalue1\tvalue2",
+        "hello\tworld\tfoo"
+    };
+    Assert.assertNull(parser.parse(body[0]));
+    final Map<String, Object> jsonMap = parser.parse(body[1]);
+    Assert.assertEquals(
+        "jsonMap",
+        ImmutableMap.of("time", "hello", "value1", "world", "value2", "foo"),
+        jsonMap
+    );
+  }
+
+  @Test
+  public void testTSVParserWithDifferentHeaderRows()
+  {
+    final Parser<String, Object> csvParser = new DelimitedParser(
+        Optional.of("\t"),
+        Optional.absent(),
+        true,
+        0
+    );
+    csvParser.startFileFromBeginning();
+    final String[] body = new String[] {
+        "time\tvalue1\tvalue2",
+        "hello\tworld\tfoo"
+    };
+    Assert.assertNull(csvParser.parse(body[0]));
+    Map<String, Object> jsonMap = csvParser.parse(body[1]);
+    Assert.assertEquals(
+        "jsonMap",
+        ImmutableMap.of("time", "hello", "value1", "world", "value2", "foo"),
+        jsonMap
+    );
+
+    csvParser.startFileFromBeginning();
+    final String[] body2 = new String[] {
+        "time\tvalue1\tvalue2\tvalue3",
+        "hello\tworld\tfoo\tbar"
+    };
+    Assert.assertNull(csvParser.parse(body2[0]));
+    jsonMap = csvParser.parse(body2[1]);
+    Assert.assertEquals(
+        "jsonMap",
+        ImmutableMap.of("time", "hello", "value1", "world", "value2", "foo", "value3", "bar"),
+        jsonMap
+    );
+  }
+
+  @Test
   public void testTSVParserWithoutStartFileFromBeginning()
   {
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage(
+        "hasHeaderRow or maxSkipHeaderRows is not supported. Please check the indexTask supports these options."
+    );
+
     final int skipHeaderRows = 2;
     final Parser<String, Object> delimitedParser = new DelimitedParser(
         Optional.of("\t"),
