@@ -324,7 +324,7 @@ public class IndexTask extends AbstractTask
       log.warn("Unable to find a matching interval for [%,d] events", thrownAway);
     }
     if (unparseable > 0) {
-      log.warn("Unable to parse [%d,] events", unparseable);
+      log.warn("Unable to parse [%,d] events", unparseable);
     }
 
     final ImmutableSortedMap<Interval, Optional<HyperLogLogCollector>> sortedMap = ImmutableSortedMap.copyOf(
