@@ -43,6 +43,12 @@ public class CoordinatorDynamicConfig
   private final boolean emitBalancingStats;
   private final boolean killAllDataSources;
   private final Set<String> killDataSourceWhitelist;
+  /**
+   * The maximum number of segments that could be queued for loading to any given server.
+   * Default values is 0 with the meaning of "unbounded" (any number of
+   * segments could be added to the loading queue for any server).
+   * See {@link LoadQueuePeon}, {@link io.druid.server.coordinator.rules.LoadRule#run}
+   */
   private final int maxSegmentsInNodeLoadingQueue;
 
   @JsonCreator

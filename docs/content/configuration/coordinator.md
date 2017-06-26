@@ -93,6 +93,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`emitBalancingStats`|Boolean flag for whether or not we should emit balancing stats. This is an expensive operation.|false|
 |`killDataSourceWhitelist`|List of dataSources for which kill tasks are sent if property `druid.coordinator.kill.on` is true.|none|
 |`killAllDataSources`|Send kill tasks for ALL dataSources if property `druid.coordinator.kill.on` is true. If this is set to true then `killDataSourceWhitelist` must not be specified or be empty list.|false|
+|`maxSegmentsInNodeLoadingQueue`|The maximum number of segments that could be queued for loading to any given server. Default value is 0 (loading queue is unbounded) |0|
 
 To view the audit history of coordinator dynamic config issue a GET request to the URL -
 
