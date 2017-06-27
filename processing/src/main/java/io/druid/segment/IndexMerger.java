@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -58,6 +60,10 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = IndexMergerV9.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "v9", value = IndexMergerV9.class)
+})
 @ImplementedBy(IndexMergerV9.class)
 public interface IndexMerger
 {

@@ -185,7 +185,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTask.IndexTuningConfig(10000, 10, 9999, null, indexSpec, 3, true, true, true, null, null)
+            new IndexTask.IndexTuningConfig(10000, 10, 9999, null, indexSpec, 3, true, true, true, null, null, null)
         ),
         null,
         jsonMapper
@@ -248,7 +248,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null, null, null)
         ),
         null,
         jsonMapper
@@ -294,6 +294,7 @@ public class TaskSerdeTest
         aggregators,
         true,
         indexSpec,
+        null,
         true,
         null
     );
@@ -343,6 +344,7 @@ public class TaskSerdeTest
         aggregators,
         true,
         indexSpec,
+        null,
         true,
         null
     );
@@ -498,6 +500,7 @@ public class TaskSerdeTest
                 0,
                 0,
                 true,
+                null,
                 null,
                 null,
                 null

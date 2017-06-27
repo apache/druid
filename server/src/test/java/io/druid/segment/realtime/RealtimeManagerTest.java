@@ -230,7 +230,8 @@ public class RealtimeManagerTest
         null,
         null,
         null,
-        sinkFactory
+        sinkFactory,
+        null
     );
     plumber = new TestPlumber(tuningConfig.getSinkFactory().create(
         new Interval("0/P5000Y"),
@@ -289,7 +290,8 @@ public class RealtimeManagerTest
         null,
         null,
         null,
-        sinkFactory
+        sinkFactory,
+        null
     );
 
     tuningConfig_1 = new RealtimeTuningConfig(
@@ -308,7 +310,8 @@ public class RealtimeManagerTest
         null,
         null,
         null,
-        sinkFactory
+        sinkFactory,
+        null
     );
 
     schema3 = new DataSchema(

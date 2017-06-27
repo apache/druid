@@ -36,6 +36,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
@@ -113,6 +114,10 @@ public class YeOldePlumberSchool implements PlumberSchool
     // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = Sets.newHashSet();
 
+    // IndexMerger implementation.
+    final IndexMerger theIndexMerger = config.getCustomIndexMerger() != null
+                                       ? config.getCustomIndexMerger() : indexMergerV9;
+
     return new Plumber()
     {
       @Override
@@ -181,7 +186,7 @@ public class YeOldePlumberSchool implements PlumberSchool
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            indexMergerV9.mergeQueryableIndex(indexes, schema.getGranularitySpec().isRollup(), schema.getAggregators(), fileToUpload, config.getIndexSpec());
+            theIndexMerger.mergeQueryableIndex(indexes, schema.getGranularitySpec().isRollup(), schema.getAggregators(), fileToUpload, config.getIndexSpec());
           }
 
           // Map merged segment so we can extract dimensions
@@ -226,7 +231,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           log.info("Spilling index[%d] with rows[%d] to: %s", indexToPersist.getCount(), rowsToPersist, dirToPersist);
 
           try {
-            indexMergerV9.persist(
+            theIndexMerger.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
                 config.getIndexSpec()

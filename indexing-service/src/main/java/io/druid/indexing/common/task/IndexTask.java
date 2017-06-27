@@ -63,6 +63,7 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.DruidMetrics;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IOConfig;
@@ -555,7 +556,8 @@ public class IndexTask extends AbstractTask
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
         toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9()
+        ingestionSchema.getTuningConfig().getCustomIndexMerger() != null
+        ? ingestionSchema.getTuningConfig().getCustomIndexMerger() : toolbox.getIndexMergerV9()
     );
   }
 
@@ -595,7 +597,7 @@ public class IndexTask extends AbstractTask
       this.ioConfig = ioConfig;
       this.tuningConfig = tuningConfig == null
                           ?
-                          new IndexTuningConfig(null, null, null, null, null, null, null, null, (File) null, null)
+                          new IndexTuningConfig(null, null, null, null, null, null, null, null, (File) null, null, null)
                           : tuningConfig;
     }
 
@@ -676,6 +678,7 @@ public class IndexTask extends AbstractTask
     private final boolean reportParseExceptions;
     private final long publishTimeout;
     private final SinkFactory sinkFactory;
+    private final IndexMerger customIndexMerger;
 
     @JsonCreator
     public IndexTuningConfig(
@@ -690,7 +693,8 @@ public class IndexTask extends AbstractTask
         @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
         @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
         @JsonProperty("publishTimeout") @Nullable Long publishTimeout,
-        @JsonProperty("sinkFactory") @Nullable SinkFactory sinkFactory
+        @JsonProperty("sinkFactory") @Nullable SinkFactory sinkFactory,
+        @JsonProperty("customIndexMerger") @Nullable IndexMerger customIndexMerger
     )
     {
       this(
@@ -703,7 +707,8 @@ public class IndexTask extends AbstractTask
           reportParseExceptions,
           publishTimeout,
           null,
-          sinkFactory
+          sinkFactory,
+          customIndexMerger
       );
     }
 
@@ -717,7 +722,8 @@ public class IndexTask extends AbstractTask
         @Nullable Boolean reportParseExceptions,
         @Nullable Long publishTimeout,
         @Nullable File basePersistDirectory,
-        @Nullable SinkFactory sinkFactory
+        @Nullable SinkFactory sinkFactory,
+        @Nullable IndexMerger customIndexMerger
     )
     {
       Preconditions.checkArgument(
@@ -743,6 +749,7 @@ public class IndexTask extends AbstractTask
       this.publishTimeout = publishTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : publishTimeout;
       this.basePersistDirectory = basePersistDirectory;
       this.sinkFactory = sinkFactory == null ? DEFAULT_SINK_FACTORY : sinkFactory;
+      this.customIndexMerger = customIndexMerger;
     }
 
     public IndexTuningConfig withBasePersistDirectory(File dir)
@@ -757,7 +764,8 @@ public class IndexTask extends AbstractTask
           reportParseExceptions,
           publishTimeout,
           dir,
-          sinkFactory
+          sinkFactory,
+          customIndexMerger
       );
     }
 
@@ -798,6 +806,13 @@ public class IndexTask extends AbstractTask
     public SinkFactory getSinkFactory()
     {
       return sinkFactory;
+    }
+
+    @JsonProperty
+    @Override
+    public IndexMerger getCustomIndexMerger()
+    {
+      return customIndexMerger;
     }
 
     @JsonProperty

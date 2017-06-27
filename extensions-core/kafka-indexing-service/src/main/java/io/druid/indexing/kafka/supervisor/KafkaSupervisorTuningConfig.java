@@ -21,6 +21,7 @@ package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexing.kafka.KafkaTuningConfig;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.realtime.plumber.SinkFactory;
 import org.joda.time.Duration;
@@ -50,6 +51,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout, // for backward compatibility
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("sinkFactory") SinkFactory sinkFactory,
+      @JsonProperty("customIndexMerger") IndexMerger customIndexMerger,
       @JsonProperty("workerThreads") Integer workerThreads,
       @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
@@ -71,7 +73,8 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         // handoffConditionTimeout
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        sinkFactory
+        sinkFactory,
+        customIndexMerger
     );
 
     this.workerThreads = workerThreads;
@@ -132,6 +135,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
            ", sinkFactory=" + getSinkFactory() +
+           ", customIndexMerger=" + getCustomIndexMerger() +
            ", workerThreads=" + workerThreads +
            ", chatThreads=" + chatThreads +
            ", chatRetries=" + chatRetries +

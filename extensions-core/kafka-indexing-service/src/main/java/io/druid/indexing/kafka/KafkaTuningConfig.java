@@ -21,6 +21,7 @@ package io.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.TuningConfig;
@@ -46,6 +47,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
   private final SinkFactory sinkFactory;
+  private final IndexMerger customIndexMerger;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -60,7 +62,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
-      @JsonProperty("sinkFactory") SinkFactory sinkFactory
+      @JsonProperty("sinkFactory") SinkFactory sinkFactory,
+      @JsonProperty("customIndexMerger") IndexMerger customIndexMerger
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -84,6 +87,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
                                     ? DEFAULT_RESET_OFFSET_AUTOMATICALLY
                                     : resetOffsetAutomatically;
     this.sinkFactory = sinkFactory == null ? defaults.getSinkFactory() : sinkFactory;
+    this.customIndexMerger = customIndexMerger;
   }
 
   public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
@@ -99,7 +103,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         config.reportParseExceptions,
         config.handoffConditionTimeout,
         config.resetOffsetAutomatically,
-        config.sinkFactory
+        config.sinkFactory,
+        config.customIndexMerger
     );
   }
 
@@ -135,6 +140,13 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   public SinkFactory getSinkFactory()
   {
     return sinkFactory;
+  }
+
+  @Override
+  @JsonProperty
+  public IndexMerger getCustomIndexMerger()
+  {
+    return customIndexMerger;
   }
 
   @Override
@@ -194,7 +206,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        sinkFactory
+        sinkFactory,
+        customIndexMerger
     );
   }
 
@@ -211,7 +224,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        sinkFactory
+        sinkFactory,
+        customIndexMerger
     );
   }
 
@@ -258,7 +272,12 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     if (indexSpec != null ? !indexSpec.equals(that.indexSpec) : that.indexSpec != null) {
       return false;
     }
-    return sinkFactory != null ? sinkFactory.equals(that.sinkFactory) : that.sinkFactory == null;
+    if (sinkFactory != null ? !sinkFactory.equals(that.sinkFactory) : that.sinkFactory != null) {
+      return false;
+    }
+    return customIndexMerger != null
+           ? customIndexMerger.equals(that.customIndexMerger)
+           : that.customIndexMerger == null;
   }
 
   @Override
@@ -274,6 +293,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     result = 31 * result + (int) (handoffConditionTimeout ^ (handoffConditionTimeout >>> 32));
     result = 31 * result + (resetOffsetAutomatically ? 1 : 0);
     result = 31 * result + (sinkFactory != null ? sinkFactory.hashCode() : 0);
+    result = 31 * result + (customIndexMerger != null ? customIndexMerger.hashCode() : 0);
     return result;
   }
 
@@ -291,6 +311,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            ", handoffConditionTimeout=" + handoffConditionTimeout +
            ", resetOffsetAutomatically=" + resetOffsetAutomatically +
            ", sinkFactory=" + sinkFactory +
+           ", customIndexMerger=" + customIndexMerger +
            '}';
   }
 }

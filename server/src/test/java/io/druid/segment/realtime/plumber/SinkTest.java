@@ -92,7 +92,8 @@ public class SinkTest
         null,
         null,
         null,
-        sinkFactory
+        sinkFactory,
+        null
     );
     final Sink sink = tuningConfig.getSinkFactory().create(
         interval,

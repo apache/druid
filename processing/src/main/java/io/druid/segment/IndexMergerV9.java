@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -93,9 +95,10 @@ public class IndexMergerV9 implements IndexMerger
   protected final IndexIO indexIO;
 
   @Inject
+  @JsonCreator
   public IndexMergerV9(
-      ObjectMapper mapper,
-      IndexIO indexIO
+      @JacksonInject ObjectMapper mapper,
+      @JacksonInject IndexIO indexIO
   )
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");

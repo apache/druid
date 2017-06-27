@@ -26,6 +26,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -43,6 +44,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
   private final List<AggregatorFactory> aggregators;
   private final Boolean rollup;
   private final IndexSpec indexSpec;
+  private final IndexMerger customIndexMerger;
 
   public SameIntervalMergeTask(
       @JsonProperty("id") String id,
@@ -51,6 +53,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
       @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
       @JsonProperty("rollup") Boolean rollup,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("customIndexMerger") IndexMerger customIndexMerger,
       // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("context") Map<String, Object> context
@@ -65,6 +68,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
     this.aggregators = Preconditions.checkNotNull(aggregators, "null aggregations");
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
+    this.customIndexMerger = customIndexMerger;
   }
 
   @JsonProperty("aggregations")
@@ -129,6 +133,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
         aggregators,
         rollup,
         indexSpec,
+        customIndexMerger,
         getContext()
     );
     final TaskStatus status = mergeTask.run(toolbox);
@@ -147,6 +152,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
         List<AggregatorFactory> aggregators,
         Boolean rollup,
         IndexSpec indexSpec,
+        IndexMerger customIndexMerger,
         Map<String, Object> context
     )
     {
@@ -157,6 +163,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
           aggregators,
           rollup,
           indexSpec,
+          customIndexMerger,
           true,
           context
       );

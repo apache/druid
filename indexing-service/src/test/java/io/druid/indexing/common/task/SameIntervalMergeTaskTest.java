@@ -89,6 +89,7 @@ public class SameIntervalMergeTaskTest
         aggregators,
         true,
         indexSpec,
+        null,
         true,
         null
     );

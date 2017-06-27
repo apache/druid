@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
 import io.druid.segment.realtime.plumber.DefaultSinkFactory;
@@ -78,7 +79,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         defaultReportParseExceptions,
         defaultHandoffConditionTimeout,
         defaultAlertTimeout,
-        defaultSinkFactory
+        defaultSinkFactory,
+        null
     );
   }
 
@@ -97,6 +99,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private final long handoffConditionTimeout;
   private final long alertTimeout;
   private final SinkFactory sinkFactory;
+  private final IndexMerger customIndexMerger;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -116,7 +119,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
-      @JsonProperty("sinkFactory") SinkFactory sinkFactory
+      @JsonProperty("sinkFactory") SinkFactory sinkFactory,
+      @JsonProperty("customIndexMerger") IndexMerger customIndexMerger
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -145,6 +149,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.sinkFactory = sinkFactory == null ? defaultSinkFactory : sinkFactory;
+    this.customIndexMerger = customIndexMerger;
   }
 
   @Override
@@ -254,6 +259,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return sinkFactory;
   }
 
+  @Override
+  @JsonProperty
+  public IndexMerger getCustomIndexMerger()
+  {
+    return customIndexMerger;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -272,7 +284,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         alertTimeout,
-        sinkFactory
+        sinkFactory,
+        customIndexMerger
     );
   }
 
@@ -294,7 +307,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         alertTimeout,
-        sinkFactory
+        sinkFactory,
+        customIndexMerger
     );
   }
 }

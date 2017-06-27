@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.appenderator;
 
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.realtime.plumber.SinkFactory;
 import org.joda.time.Period;
@@ -40,4 +41,6 @@ public interface AppenderatorConfig
   File getBasePersistDirectory();
 
   SinkFactory getSinkFactory();
+
+  IndexMerger getCustomIndexMerger();
 }
