@@ -91,7 +91,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         params.getDruidCluster().getHistoricals().entrySet()) {
       String tier = entry.getKey();
 
-      currentlyMovingSegments.putIfAbsent(tier, new ConcurrentHashMap<>());
+      currentlyMovingSegments.computeIfAbsent(tier, t -> new ConcurrentHashMap<>());
 
       if (!currentlyMovingSegments.get(tier).isEmpty()) {
         reduceLifetimes(tier);
