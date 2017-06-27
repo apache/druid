@@ -35,6 +35,7 @@ import io.druid.timeline.DataSegment;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -75,9 +76,12 @@ public abstract class LoadRule implements Rule
       final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig()
                                                       .getMaxSegmentsInNodeLoadingQueue();
 
-      Predicate<ServerHolder> serverHolderPredicate = (maxSegmentsInNodeLoadingQueue > 0) ?
-          s -> s != null && s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue :
-          s -> s != null;
+      Predicate<ServerHolder> serverHolderPredicate;
+      if (maxSegmentsInNodeLoadingQueue > 0) {
+        serverHolderPredicate = s -> (s != null && s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue);
+      } else {
+        serverHolderPredicate = Objects::nonNull;
+      }
 
       final List<ServerHolder> serverHolderList = serverQueue.stream()
                                                              .filter(serverHolderPredicate)
