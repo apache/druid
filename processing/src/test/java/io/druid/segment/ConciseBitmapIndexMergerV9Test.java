@@ -19,15 +19,22 @@
 
 package io.druid.segment;
 
-import java.io.File;
-import java.io.IOException;
+import io.druid.segment.data.CompressedObjectStrategy.CompressionStrategy;
+import io.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-/**
- */
-public interface MetricColumnSerializer
+@RunWith(Parameterized.class)
+public class ConciseBitmapIndexMergerV9Test extends IndexMergerTestBase
 {
-  public void open() throws IOException;
-  public void serialize(Object aggs) throws IOException;
-  public void close() throws IOException;
-  public void closeFile(File outFile) throws IOException;
+  public ConciseBitmapIndexMergerV9Test(
+      CompressionStrategy compressionStrategy,
+      CompressionStrategy dimCompressionStrategy,
+      LongEncodingStrategy longEncodingStrategy
+  )
+  {
+    super(new ConciseBitmapSerdeFactory(), compressionStrategy, dimCompressionStrategy, longEncodingStrategy);
+    indexMerger = TestHelper.getTestIndexMergerV9();
+  }
 }

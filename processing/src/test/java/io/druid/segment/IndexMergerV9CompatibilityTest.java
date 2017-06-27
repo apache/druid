@@ -19,23 +19,20 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
+import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -43,12 +40,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -57,7 +52,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
 public class IndexMergerV9CompatibilityTest
 {
   @Rule
@@ -71,9 +65,8 @@ public class IndexMergerV9CompatibilityTest
 
   private static final IndexMergerV9 INDEX_MERGER_V9 = TestHelper.getTestIndexMergerV9();
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
 
-  private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
+  private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,
       CompressedObjectStrategy.CompressionStrategy.LZ4,
@@ -81,38 +74,12 @@ public class IndexMergerV9CompatibilityTest
   );
   private static final List<String> DIMS = ImmutableList.of("dim0", "dim1");
 
-  private static final Function<Collection<Map<String, Object>>, Object[]> OBJECT_MAKER = new Function<Collection<Map<String, Object>>, Object[]>()
-  {
-    @Nullable
-    @Override
-    public Object[] apply(Collection<Map<String, Object>> input)
-    {
-      final ArrayList<InputRow> list = new ArrayList<>();
-      int i = 0;
-      for (final Map<String, Object> map : input) {
-        list.add(new MapBasedInputRow(TIMESTAMP + i++, DIMS, map));
-      }
-      return new Object[]{list};
-    }
-  };
+  private final Collection<InputRow> events;
 
-  @SafeVarargs
-  public static Collection<Object[]> permute(Map<String, Object>... maps)
+  public IndexMergerV9CompatibilityTest()
   {
-    if (maps == null) {
-      return ImmutableList.<Object[]>of();
-    }
-    return Collections2.transform(
-        Collections2.permutations(
-            Arrays.asList(maps)
-        ),
-        OBJECT_MAKER
-    );
-  }
+    events = new ArrayList<>();
 
-  @Parameterized.Parameters
-  public static Iterable<Object[]> paramFeeder()
-  {
     final Map<String, Object> map1 = ImmutableMap.<String, Object>of(
         DIMS.get(0), ImmutableList.<String>of("dim00", "dim01"),
         DIMS.get(1), "dim10"
@@ -138,25 +105,10 @@ public class IndexMergerV9CompatibilityTest
     final Map<String, Object> map6 = new HashMap<>();
     map6.put(DIMS.get(1), null); // ImmutableMap cannot take null
 
-
-    return Iterables.<Object[]>concat(
-        permute(map1)
-        , permute(map1, map4)
-        , permute(map1, map5)
-        , permute(map5, map6)
-        , permute(map4, map5)
-        , Iterables.transform(ImmutableList.of(Arrays.asList(map1, map2, map3, map4, map5, map6)), OBJECT_MAKER)
-    );
-
-  }
-
-  private final Collection<InputRow> events;
-
-  public IndexMergerV9CompatibilityTest(
-      final Collection<InputRow> events
-  )
-  {
-    this.events = events;
+    int i = 0;
+    for (final Map<String, Object> map : Arrays.asList(map1, map2, map3, map4, map5, map6)) {
+      events.add(new MapBasedInputRow(TIMESTAMP + i++, DIMS, map));
+    }
   }
 
   IncrementalIndex toPersist;
@@ -166,19 +118,34 @@ public class IndexMergerV9CompatibilityTest
   @Before
   public void setUp() throws IOException
   {
-    toPersist = new OnheapIncrementalIndex(
-        JodaUtils.MIN_INSTANT,
-        Granularities.NONE,
-        DEFAULT_AGG_FACTORIES,
-        1000000
-    );
+    toPersist = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(JodaUtils.MIN_INSTANT)
+                .withMetrics(DEFAULT_AGG_FACTORIES)
+                .build()
+        )
+    .setMaxRowCount(1000000)
+    .buildOnheap();
+
     toPersist.getMetadata().put("key", "value");
     for (InputRow event : events) {
       toPersist.add(event);
     }
     tmpDir = Files.createTempDir();
     persistTmpDir = new File(tmpDir, "persistDir");
-    INDEX_MERGER.persist(toPersist, persistTmpDir, INDEX_SPEC);
+    FileUtils.forceMkdir(persistTmpDir);
+    String[] files = new String[] {"00000.smoosh", "meta.smoosh", "version.bin"};
+    for (String file : files) {
+      new ByteSource()
+      {
+        @Override
+        public InputStream openStream() throws IOException
+        {
+          return IndexMergerV9CompatibilityTest.class.getResourceAsStream("/v8SegmentPersistDir/" + file);
+        }
+      }.copyTo(Files.asByteSink(new File(persistTmpDir, file)));
+    }
   }
 
   @After
@@ -234,18 +201,6 @@ public class IndexMergerV9CompatibilityTest
     return outDir;
   }
 
-  private File appendAndValidate(File inDir, File tmpDir) throws IOException
-  {
-    final File outDir = INDEX_MERGER.append(
-        ImmutableList.<IndexableAdapter>of(new QueryableIndexIndexableAdapter(closer.closeLater(INDEX_IO.loadIndex(inDir)))),
-        null,
-        tmpDir,
-        INDEX_SPEC
-    );
-    INDEX_IO.validateTwoSegments(persistTmpDir, outDir);
-    return outDir;
-  }
-
   @Test
   public void testIdempotentReprocess() throws IOException
   {
@@ -269,44 +224,5 @@ public class IndexMergerV9CompatibilityTest
     final IndexableAdapter adapter3 = new QueryableIndexIndexableAdapter(closer.closeLater(INDEX_IO.loadIndex(tmpDir2)));
     Assert.assertEquals(events.size(), adapter3.getNumRows());
     reprocessAndValidate(tmpDir2, tmpDir3);
-  }
-
-  @Test
-  public void testSimpleAppend() throws IOException
-  {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(
-        closer.closeLater(
-            INDEX_IO.loadIndex(
-                persistTmpDir
-            )
-        )
-    );
-    Assert.assertEquals(events.size(), adapter.getNumRows());
-    appendAndValidate(persistTmpDir, new File(tmpDir, "reprocessed"));
-  }
-
-  @Test
-  public void testIdempotentAppend() throws IOException
-  {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(
-        closer.closeLater(
-            INDEX_IO.loadIndex(
-                persistTmpDir
-            )
-        )
-    );
-    Assert.assertEquals(events.size(), adapter.getNumRows());
-    final File tmpDir1 = new File(tmpDir, "reprocessed1");
-    appendAndValidate(persistTmpDir, tmpDir1);
-
-    final File tmpDir2 = new File(tmpDir, "reprocessed2");
-    final IndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(closer.closeLater(INDEX_IO.loadIndex(tmpDir1)));
-    Assert.assertEquals(events.size(), adapter2.getNumRows());
-    appendAndValidate(tmpDir1, tmpDir2);
-
-    final File tmpDir3 = new File(tmpDir, "reprocessed3");
-    final IndexableAdapter adapter3 = new QueryableIndexIndexableAdapter(closer.closeLater(INDEX_IO.loadIndex(tmpDir2)));
-    Assert.assertEquals(events.size(), adapter3.getNumRows());
-    appendAndValidate(tmpDir2, tmpDir3);
   }
 }

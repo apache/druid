@@ -271,6 +271,7 @@ public class ArithmeticPostAggregator implements PostAggregator
 
   public static enum Ordering implements Comparator<Double> {
     // ensures the following order: numeric > NaN > Infinite
+    // The name may be referenced via Ordering.valueOf(ordering) in the constructor.
     numericFirst {
       @Override
       public int compare(Double lhs, Double rhs) {

@@ -44,8 +44,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
@@ -120,22 +118,21 @@ public class GroupByQueryHelper
         .build();
 
     if (query.getContextValue("useOffheap", false)) {
-      index = new OffheapIncrementalIndex(
-          indexSchema,
-          false,
-          true,
-          sortResults,
-          querySpecificConfig.getMaxResults(),
-          bufferPool
-      );
+      index = new IncrementalIndex.Builder()
+          .setIndexSchema(indexSchema)
+          .setDeserializeComplexMetrics(false)
+          .setConcurrentEventAdd(true)
+          .setSortFacts(sortResults)
+          .setMaxRowCount(querySpecificConfig.getMaxResults())
+          .buildOffheap(bufferPool);
     } else {
-      index = new OnheapIncrementalIndex(
-          indexSchema,
-          false,
-          true,
-          sortResults,
-          querySpecificConfig.getMaxResults()
-      );
+      index = new IncrementalIndex.Builder()
+          .setIndexSchema(indexSchema)
+          .setDeserializeComplexMetrics(false)
+          .setConcurrentEventAdd(true)
+          .setSortFacts(sortResults)
+          .setMaxRowCount(querySpecificConfig.getMaxResults())
+          .buildOnheap();
     }
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()

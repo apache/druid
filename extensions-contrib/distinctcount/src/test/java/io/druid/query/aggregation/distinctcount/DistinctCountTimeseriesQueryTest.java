@@ -27,15 +27,14 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
@@ -50,9 +49,16 @@ public class DistinctCountTimeseriesQueryTest
   {
     TimeseriesQueryEngine engine =  new TimeseriesQueryEngine();
 
-    IncrementalIndex index = new OnheapIncrementalIndex(
-        0, Granularities.SECOND, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
-    );
+    IncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.SECOND)
+                .withMetrics(new CountAggregatorFactory("cnt"))
+                .build()
+        )
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
     String visitor_id = "visitor_id";
     String client_type = "client_type";
     DateTime time = new DateTime("2016-03-04T00:00:00.000Z");

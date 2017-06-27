@@ -70,6 +70,7 @@ import io.druid.query.topn.TopNQueryRunnerFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
@@ -77,7 +78,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.junit.rules.TemporaryFolder;
@@ -154,7 +155,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO),
         indexIO,
         factory.getToolchest(),
         factory,
@@ -210,7 +211,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO),
         indexIO,
         toolchest,
         factory,
@@ -250,7 +251,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO),
         indexIO,
         toolchest,
         factory,
@@ -301,7 +302,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO),
         indexIO,
         toolchest,
         factory,
@@ -413,7 +414,18 @@ public class AggregationTestHelper
     List<File> toMerge = new ArrayList<>();
 
     try {
-      index = new OnheapIncrementalIndex(minTimestamp, gran, metrics, deserializeComplexMetrics, true, true, maxRowCount);
+      index = new IncrementalIndex.Builder()
+          .setIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(minTimestamp)
+                  .withQueryGranularity(gran)
+                  .withMetrics(metrics)
+                  .build()
+          )
+          .setDeserializeComplexMetrics(deserializeComplexMetrics)
+          .setMaxRowCount(maxRowCount)
+          .buildOnheap();
+
       while (rows.hasNext()) {
         Object row = rows.next();
         if (!index.canAppendRow()) {
@@ -421,7 +433,17 @@ public class AggregationTestHelper
           toMerge.add(tmp);
           indexMerger.persist(index, tmp, new IndexSpec());
           index.close();
-          index = new OnheapIncrementalIndex(minTimestamp, gran, metrics, deserializeComplexMetrics, true, true, maxRowCount);
+          index = new IncrementalIndex.Builder()
+              .setIndexSchema(
+                  new IncrementalIndexSchema.Builder()
+                      .withMinTimestamp(minTimestamp)
+                      .withQueryGranularity(gran)
+                      .withMetrics(metrics)
+                      .build()
+              )
+              .setDeserializeComplexMetrics(deserializeComplexMetrics)
+              .setMaxRowCount(maxRowCount)
+              .buildOnheap();
         }
         if (row instanceof String && parser instanceof StringInputRowParser) {
           //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to

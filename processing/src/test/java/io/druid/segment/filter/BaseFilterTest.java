@@ -84,7 +84,7 @@ public abstract class BaseFilterTest
 {
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.<VirtualColumn>of(
-          new ExpressionVirtualColumn("expr", "1.0 + 0.1", TestExprMacroTable.INSTANCE)
+          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
       )
   );
 
@@ -183,8 +183,7 @@ public abstract class BaseFilterTest
         "roaring", new RoaringBitmapSerdeFactory(true)
     );
 
-    final Map<String, IndexMerger> indexMergers = ImmutableMap.<String, IndexMerger>of(
-        "IndexMerger", TestHelper.getTestIndexMerger(),
+    final Map<String, IndexMerger> indexMergers = ImmutableMap.of(
         "IndexMergerV9", TestHelper.getTestIndexMergerV9()
     );
 

@@ -29,7 +29,6 @@ import io.druid.java.util.common.ISE;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -43,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 public class TestUtils
 {
   private final ObjectMapper jsonMapper;
-  private final IndexMerger indexMerger;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
 
@@ -61,7 +59,6 @@ public class TestUtils
           }
         }
     );
-    indexMerger = new IndexMerger(jsonMapper, indexIO);
     indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO);
 
     final List<? extends Module> list = new ServerModule().getJacksonModules();
@@ -73,7 +70,6 @@ public class TestUtils
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
-            .addValue(IndexMerger.class, indexMerger)
             .addValue(ObjectMapper.class, jsonMapper)
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
     );
@@ -82,11 +78,6 @@ public class TestUtils
   public ObjectMapper getTestObjectMapper()
   {
     return jsonMapper;
-  }
-
-  public IndexMerger getTestIndexMerger()
-  {
-    return indexMerger;
   }
 
   public IndexMergerV9 getTestIndexMergerV9()

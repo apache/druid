@@ -745,7 +745,7 @@ public class IndexTask extends AbstractTask
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
         toolbox.getIndexIO(),
-        tuningConfig.isBuildV9Directly() ? toolbox.getIndexMergerV9() : toolbox.getIndexMerger()
+        toolbox.getIndexMergerV9()
     );
   }
 
@@ -898,7 +898,6 @@ public class IndexTask extends AbstractTask
     private final IndexSpec indexSpec;
     private final File basePersistDirectory;
     private final int maxPendingPersists;
-    private final boolean buildV9Directly;
     private final boolean forceExtendableShardSpecs;
     private final boolean forceGuaranteedRollup;
     private final boolean reportParseExceptions;
@@ -913,6 +912,7 @@ public class IndexTask extends AbstractTask
         @JsonProperty("numShards") @Nullable Integer numShards,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
+        // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
         @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
         @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
         @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
@@ -927,7 +927,6 @@ public class IndexTask extends AbstractTask
           numShards,
           indexSpec,
           maxPendingPersists,
-          buildV9Directly,
           forceExtendableShardSpecs,
           forceGuaranteedRollup,
           reportParseExceptions,
@@ -938,7 +937,7 @@ public class IndexTask extends AbstractTask
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, (File) null);
+      this(null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -948,7 +947,6 @@ public class IndexTask extends AbstractTask
         @Nullable Integer numShards,
         @Nullable IndexSpec indexSpec,
         @Nullable Integer maxPendingPersists,
-        @Nullable Boolean buildV9Directly,
         @Nullable Boolean forceExtendableShardSpecs,
         @Nullable Boolean forceGuaranteedRollup,
         @Nullable Boolean reportParseExceptions,
@@ -973,7 +971,6 @@ public class IndexTask extends AbstractTask
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-      this.buildV9Directly = buildV9Directly == null ? DEFAULT_BUILD_V9_DIRECTLY : buildV9Directly;
       this.forceExtendableShardSpecs = forceExtendableShardSpecs == null
                                        ? DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS
                                        : forceExtendableShardSpecs;
@@ -999,7 +996,6 @@ public class IndexTask extends AbstractTask
           numShards,
           indexSpec,
           maxPendingPersists,
-          buildV9Directly,
           forceExtendableShardSpecs,
           forceGuaranteedRollup,
           reportParseExceptions,
@@ -1053,10 +1049,14 @@ public class IndexTask extends AbstractTask
       return maxPendingPersists;
     }
 
+    /**
+     * Always returns true, doesn't affect the version being built.
+     */
+    @Deprecated
     @JsonProperty
     public boolean isBuildV9Directly()
     {
-      return buildV9Directly;
+      return true;
     }
 
     @JsonProperty

@@ -29,7 +29,6 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.Pair;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -95,11 +94,12 @@ public class InvalidFilteringTest extends BaseFilterTest
 
   private static IndexBuilder overrideIndexBuilderSchema(IndexBuilder indexBuilder)
   {
-    IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder().withMetrics(new AggregatorFactory[]{
-        new CountAggregatorFactory("count"),
-        new HyperUniquesAggregatorFactory("hyperion", "dim1"),
-        new DoubleMaxAggregatorFactory("dmax", "dim0")
-    }).build();
+    IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withMetrics(
+            new CountAggregatorFactory("count"),
+            new HyperUniquesAggregatorFactory("hyperion", "dim1"),
+            new DoubleMaxAggregatorFactory("dmax", "dim0")
+        ).build();
 
     return indexBuilder.schema(schema);
   }

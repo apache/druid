@@ -53,7 +53,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -72,7 +71,7 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class SpatialFilterTest
 {
-  private static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   private static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   public static final int NUM_POINTS = 5000;
@@ -109,30 +108,33 @@ public class SpatialFilterTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                            .withQueryGranularity(Granularities.DAY)
-                                            .withMetrics(METRIC_AGGS)
-                                            .withDimensionsSpec(
-                                                new DimensionsSpec(
-                                                    null,
-                                                    null,
-                                                    Arrays.asList(
-                                                        new SpatialDimensionSchema(
-                                                            "dim.geo",
-                                                            Arrays.asList("lat", "long")
-                                                        ),
-                                                        new SpatialDimensionSchema(
-                                                            "spatialIsRad",
-                                                            Arrays.asList("lat2", "long2")
-                                                        )
+    IncrementalIndex theIndex = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                .withQueryGranularity(Granularities.DAY)
+                .withMetrics(METRIC_AGGS)
+                .withDimensionsSpec(
+                    new DimensionsSpec(
+                        null,
+                        null,
+                        Arrays.asList(
+                            new SpatialDimensionSchema(
+                                "dim.geo",
+                                Arrays.asList("lat", "long")
+                            ),
+                            new SpatialDimensionSchema(
+                                "spatialIsRad",
+                                Arrays.asList("lat2", "long2")
+                            )
 
-                                                    )
-                                                )
-                                            ).build(),
-        false,
-        NUM_POINTS
-    );
+                        )
+                    )
+                ).build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(NUM_POINTS)
+        .buildOnheap();
 
     theIndex.add(
         new MapBasedInputRow(
@@ -273,79 +275,86 @@ public class SpatialFilterTest
   private static QueryableIndex makeMergedQueryableIndex(IndexSpec indexSpec)
   {
     try {
-      IncrementalIndex first = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Arrays.asList("lat", "long")
-                                                          ),
-                                                          new SpatialDimensionSchema(
-                                                              "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
-                                                          )
+      IncrementalIndex first = new IncrementalIndex.Builder()
+          .setIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Arrays.asList("lat", "long")
+                              ),
+                              new SpatialDimensionSchema(
+                                  "spatialIsRad",
+                                  Arrays.asList("lat2", "long2")
+                              )
+                          )
+                      )
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(1000)
+          .buildOnheap();
 
-                                                      )
-                                                  )
-                                              ).build(),
-          false,
-          1000
-      );
-      IncrementalIndex second = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Arrays.asList("lat", "long")
-                                                          ),
-                                                          new SpatialDimensionSchema(
-                                                              "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
-                                                          )
+      IncrementalIndex second = new IncrementalIndex.Builder()
+          .setIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Arrays.asList("lat", "long")
+                              ),
+                              new SpatialDimensionSchema(
+                                  "spatialIsRad",
+                                  Arrays.asList("lat2", "long2")
+                              )
+                          )
+                      )
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(1000)
+          .buildOnheap();
 
-                                                      )
-                                                  )
-                                              ).build(),
-          false,
-          1000
-      );
-      IncrementalIndex third = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Arrays.asList("lat", "long")
-                                                          ),
-                                                          new SpatialDimensionSchema(
-                                                              "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
-                                                          )
-
-                                                      )
-                                                  )
-                                              ).build(),
-          false,
-          NUM_POINTS
-      );
-
+      IncrementalIndex third = new IncrementalIndex.Builder()
+          .setIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Arrays.asList("lat", "long")
+                              ),
+                              new SpatialDimensionSchema(
+                                  "spatialIsRad",
+                                  Arrays.asList("lat2", "long2")
+                              )
+                          )
+                      )
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(NUM_POINTS)
+          .buildOnheap();
 
       first.add(
           new MapBasedInputRow(

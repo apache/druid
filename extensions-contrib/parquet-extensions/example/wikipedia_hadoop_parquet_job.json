@@ -6,7 +6,7 @@
       "inputSpec": {
         "type": "static",
         "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
-        "paths": "wikipedia.gz.parquet"
+        "paths": "example/wikipedia_list.parquet"
       },
       "metadataUpdateSpec": {
         "type": "postgresql",

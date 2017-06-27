@@ -54,19 +54,16 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -110,14 +107,12 @@ import java.util.Set;
 public class IngestSegmentFirehoseFactoryTest
 {
   private static final ObjectMapper MAPPER;
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
-    INDEX_MERGER = testUtils.getTestIndexMerger();
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
   }
@@ -133,21 +128,17 @@ public class IngestSegmentFirehoseFactoryTest
         }
     );
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withQueryGranularity(Granularities.NONE)
         .withMinTimestamp(JodaUtils.MIN_INSTANT)
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory(METRIC_LONG_NAME, DIM_LONG_NAME),
-                new DoubleSumAggregatorFactory(METRIC_FLOAT_NAME, DIM_FLOAT_NAME)
-            }
+            new LongSumAggregatorFactory(METRIC_LONG_NAME, DIM_LONG_NAME),
+            new DoubleSumAggregatorFactory(METRIC_FLOAT_NAME, DIM_FLOAT_NAME)
         )
         .build();
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
-        schema,
-        true,
-        MAX_ROWS * MAX_SHARD_NUMBER
-    );
+    final IncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(MAX_ROWS * MAX_SHARD_NUMBER)
+        .buildOnheap();
 
     for (Integer i = 0; i < MAX_ROWS; ++i) {
       index.add(ROW_PARSER.parse(buildRow(i.longValue())));
@@ -156,7 +147,7 @@ public class IngestSegmentFirehoseFactoryTest
     if (!persistDir.mkdirs() && !persistDir.exists()) {
       throw new IOException(String.format("Could not create directory at [%s]", persistDir.getAbsolutePath()));
     }
-    INDEX_MERGER.persist(index, persistDir, indexSpec);
+    INDEX_MERGER_V9.persist(index, persistDir, indexSpec);
 
     final TaskLockbox tl = new TaskLockbox(ts);
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
@@ -296,7 +287,6 @@ public class IngestSegmentFirehoseFactoryTest
             )
         ),
         MAPPER,
-        INDEX_MERGER,
         INDEX_IO,
         null,
         null,

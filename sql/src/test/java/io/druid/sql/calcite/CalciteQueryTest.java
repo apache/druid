@@ -1529,7 +1529,7 @@ public class CalciteQueryTest
                       new DoubleSumAggregatorFactory("a2", "m1", null, macroTable)
                   ))
                   .postAggregators(ImmutableList.of(
-                      new ExpressionPostAggregator("a3", "log((\"a1\" + \"a2\"))"),
+                      EXPRESSION_POST_AGG("a3", "log((\"a1\" + \"a2\"))"),
                       new ArithmeticPostAggregator("a4", "quotient", ImmutableList.of(
                           new FieldAccessPostAggregator(null, "a1"),
                           new ConstantPostAggregator(null, 0.25)
@@ -4415,5 +4415,10 @@ public class CalciteQueryTest
   private static List<AggregatorFactory> AGGS(final AggregatorFactory... aggregators)
   {
     return Arrays.asList(aggregators);
+  }
+
+  private static ExpressionPostAggregator EXPRESSION_POST_AGG(final String name, final String expression)
+  {
+    return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
   }
 }

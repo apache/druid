@@ -351,7 +351,13 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
       log.info("Subs are good!  Italian BMT and Meatball are probably my favorite.");
-      convertSegment(toolbox, segment, indexSpec, force, validate);
+      try {
+        convertSegment(toolbox, segment, indexSpec, force, validate);
+      }
+      catch (Exception e) {
+        log.error(e, "Conversion failed.");
+        throw e;
+      }
       return success();
     }
   }
