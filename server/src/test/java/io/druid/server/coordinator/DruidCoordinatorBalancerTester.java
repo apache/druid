@@ -69,8 +69,6 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
       catch (Exception e) {
         log.info(e, String.format("[%s] : Moving exception", segmentName));
       }
-    } else {
-      currentlyMovingSegments.get("normal").remove(segmentName);
     }
   }
 }
