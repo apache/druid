@@ -89,6 +89,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -114,15 +115,15 @@ public class AppenderatorImpl implements Appenderator
   );
 
   private final QuerySegmentWalker texasRanger;
+  // This variable updated in add(), persist(), and drop()
+  private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
+  private final AtomicInteger totalRows = new AtomicInteger();
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
   private volatile long nextFlush;
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
-
-  private int rowsCurrentlyInMemory;
-  private int totalRows;
 
   public AppenderatorImpl(
       DataSchema schema,
@@ -216,12 +217,12 @@ public class AppenderatorImpl implements Appenderator
     }
 
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
-    rowsCurrentlyInMemory += numAddedRows;
-    totalRows += numAddedRows;
+    rowsCurrentlyInMemory.addAndGet(numAddedRows);
+    totalRows.addAndGet(numAddedRows);
 
     if (!sink.canAppendRow()
         || System.currentTimeMillis() > nextFlush
-        || rowsCurrentlyInMemory >= tuningConfig.getMaxRowsInMemory()) {
+        || rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
       // persistAll clears rowsCurrentlyInMemory, no need to update it.
       persistAll(committerSupplier.get());
     }
@@ -250,13 +251,13 @@ public class AppenderatorImpl implements Appenderator
   @Override
   public int getTotalRowCount()
   {
-    return totalRows;
+    return totalRows.get();
   }
 
   @VisibleForTesting
   int getRowsInMemory()
   {
-    return rowsCurrentlyInMemory;
+    return rowsCurrentlyInMemory.get();
   }
 
   private Sink getOrCreateSink(final SegmentIdentifier identifier)
@@ -444,7 +445,7 @@ public class AppenderatorImpl implements Appenderator
     resetNextFlush();
 
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
-    rowsCurrentlyInMemory -= numPersistedRows;
+    rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
 
     return future;
   }
@@ -879,8 +880,8 @@ public class AppenderatorImpl implements Appenderator
     droppingSinks.add(identifier);
 
     // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
-    rowsCurrentlyInMemory -= sink.getNumRowsInMemory();
-    totalRows -= sink.getNumRows();
+    rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
+    totalRows.addAndGet(-sink.getNumRows());
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(

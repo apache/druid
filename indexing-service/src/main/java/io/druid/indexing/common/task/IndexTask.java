@@ -662,7 +662,7 @@ public class IndexTask extends AbstractTask
                 // the below code is needed to update the total number of rows added to the appenderator so far.
                 // See AppenderatorDriver.registerHandoff() and Appenderator.drop().
                 // A hard-coded timeout is used here because the below get() is expected to return immediately.
-                driver.registerHandoff(published).get(1000, TimeUnit.MILLISECONDS);
+                driver.registerHandoff(published).get(30, TimeUnit.SECONDS);
               }
             } else {
               throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -816,11 +816,6 @@ public class IndexTask extends AbstractTask
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
       this.tuningConfig = tuningConfig == null ? new IndexTuningConfig() : tuningConfig;
-
-      if (this.ioConfig.isAppendToExisting() && this.tuningConfig.isForceGuaranteedRollup()) {
-        log.warn("Perfect rollup is not guaranteed when appending to existing data sources."
-                 + " forceGuaranteedRollup flag is ignored.");
-      }
     }
 
     @Override
