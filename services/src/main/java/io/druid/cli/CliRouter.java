@@ -29,6 +29,8 @@ import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.guice.BrokerIntermediateResultsPoolProvider;
+import io.druid.guice.IntermediateResultsPoolProvider;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
@@ -83,6 +85,8 @@ public class CliRouter extends ServerRunnable
 
             binder.bind(CoordinatorRuleManager.class);
             LifecycleModule.register(binder, CoordinatorRuleManager.class);
+
+            binder.bind(IntermediateResultsPoolProvider.class).to(BrokerIntermediateResultsPoolProvider.class);
 
             binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
             binder.bind(QueryHostFinder.class).in(LazySingleton.class);
