@@ -20,7 +20,6 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.ImmutableDruidServer;
@@ -58,7 +57,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
   protected final DruidCoordinator coordinator;
 
-  protected final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments = Maps.newHashMap();
+  protected final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments =
+      new ConcurrentHashMap<>();
 
   public DruidCoordinatorBalancer(
       DruidCoordinator coordinator
@@ -91,7 +91,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         params.getDruidCluster().getHistoricals().entrySet()) {
       String tier = entry.getKey();
 
-      Map<String, BalancerSegmentHolder> tierMovingSegments = currentlyMovingSegments.computeIfAbsent(tier, key -> new ConcurrentHashMap<>());
+      Map<String, BalancerSegmentHolder> tierMovingSegments =
+          currentlyMovingSegments.computeIfAbsent(tier, t -> new ConcurrentHashMap<>());
 
       final int numberOfMovingSegments = tierMovingSegments.size();
 
@@ -206,8 +207,6 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
           callback.execute();
         }
       }
-    } else {
-      currentlyMovingSegments.get(toServer.getTier()).remove(segmentName);
     }
     return false;
   }
