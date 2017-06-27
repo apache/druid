@@ -56,7 +56,7 @@ public class TimestampBufferAggregator implements BufferAggregator
   {
     Long newTime = TimestampAggregatorFactory.convertLong(timestampSpec, selector.get());
     if (newTime != null) {
-      Long prev = buf.getLong(position);
+      long prev = buf.getLong(position);
       buf.putLong(position, comparator.compare(prev, newTime) > 0 ? prev: newTime);
     }
   }

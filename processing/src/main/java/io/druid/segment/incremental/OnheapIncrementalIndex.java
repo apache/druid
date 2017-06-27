@@ -125,7 +125,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       factorizeAggs(metrics, aggs, rowContainer, row);
       doAggregate(metrics, aggs, rowContainer, row, reportParseExceptions);
 
-      final Integer rowIndex = indexIncrement.getAndIncrement();
+      final int rowIndex = indexIncrement.getAndIncrement();
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
