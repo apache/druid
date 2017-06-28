@@ -31,17 +31,19 @@ import com.google.common.io.Resources;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.cli.GuiceRunnable;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.ParsersModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.IndexingHadoopModule;
 import io.druid.indexing.common.task.Task;
@@ -94,6 +96,12 @@ public class DruidJsonValidator extends GuiceRunnable
   protected List<? extends com.google.inject.Module> getModules()
   {
     return ImmutableList.<com.google.inject.Module>of(
+        // It's unknown if those modules are required in DruidJsonValidator.
+        // Maybe some of those modules could be removed.
+        // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new com.google.inject.Module()
         {
           @Override
