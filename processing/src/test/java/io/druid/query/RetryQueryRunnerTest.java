@@ -105,7 +105,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -174,7 +174,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -242,7 +242,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -295,7 +295,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -408,7 +408,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 

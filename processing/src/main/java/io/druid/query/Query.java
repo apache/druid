@@ -22,7 +22,6 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Ordering;
-import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
@@ -70,20 +69,7 @@ public interface Query<T>
 
   String getType();
 
-  /**
-   * @deprecated use {@link QueryPlus#run(QuerySegmentWalker, Map)} instead. This method is going to be removed in Druid
-   * 0.11. In the future, a method like getRunner(QuerySegmentWalker, Map) could be added instead of this method, so
-   * that {@link QueryPlus#run(QuerySegmentWalker, Map)} could be implemented as {@code
-   * this.query.getRunner(walker, context).run(this, context))}.
-   */
-  @Deprecated
-  Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
-
-  /**
-   * @deprecated use {@link QueryRunner#run(QueryPlus, Map)} instead. This method is going to be removed in Druid 0.11.
-   */
-  @Deprecated
-  Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context);
+  QueryRunner<T> getRunner(QuerySegmentWalker walker, Map<String, Object> context);
 
   List<Interval> getIntervals();
 

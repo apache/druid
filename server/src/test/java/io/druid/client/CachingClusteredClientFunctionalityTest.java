@@ -32,6 +32,7 @@ import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -95,47 +96,47 @@ public class CachingClusteredClientFunctionalityTest
                                                         ));
 
     Map<String, Object> responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     Assert.assertNull(responseContext.get("uncoveredIntervals"));
 
     builder.intervals("2015-01-01/2015-01-03");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02");
 
     builder.intervals("2015-01-01/2015-01-04");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-02/2015-01-04");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-01/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-02/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-04/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     assertUncovered(responseContext, false, "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-10/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     assertUncovered(responseContext, false, "2015-01-10/2015-01-30");
 
     builder.intervals("2015-01-01/2015-02-25");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    client.run(QueryPlus.wrap(builder.build()), responseContext);
     assertUncovered(responseContext, true, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-02-04");
   }
 

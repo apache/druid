@@ -32,6 +32,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -185,7 +186,7 @@ public class MapVirtualColumnTest
   private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected) throws Exception
   {
     List<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(searchQuery, ImmutableMap.of()),
+        runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
     Assert.assertEquals(1, results.size());

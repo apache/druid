@@ -123,7 +123,7 @@ public class SchemaEvolutionTest
             )
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
-    ).run(query, Maps.<String, Object>newHashMap());
+    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return Sequences.toList(results, Lists.<T>newArrayList());
   }
 

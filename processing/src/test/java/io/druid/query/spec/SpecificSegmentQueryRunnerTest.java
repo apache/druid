@@ -106,13 +106,13 @@ public class SpecificSegmentQueryRunnerTest
                                       )
                                   )
                                   .build();
-    Sequence results = queryRunner.run(query, responseContext);
+    Sequence results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     Sequences.toList(results, Lists.newArrayList());
     validate(mapper, descriptor, responseContext);
 
     // from toYielder
     responseContext = Maps.newHashMap();
-    results = queryRunner.run(query, responseContext);
+    results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     results.toYielder(
         null, new YieldingAccumulator()
         {
@@ -183,10 +183,7 @@ public class SpecificSegmentQueryRunnerTest
                                       )
                                   )
                                   .build();
-    Sequence results = queryRunner.run(
-        query,
-        responseContext
-    );
+    Sequence results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     List<Result<TimeseriesResultValue>> res = Sequences.toList(
         results,
         Lists.<Result<TimeseriesResultValue>>newArrayList()

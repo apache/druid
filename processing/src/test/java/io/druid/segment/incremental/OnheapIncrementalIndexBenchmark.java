@@ -39,6 +39,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -392,7 +393,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                   Map<String, Object> context = new HashMap<String, Object>();
                   for (Result<TimeseriesResultValue> result :
                       Sequences.toList(
-                          runner.run(query, context),
+                          runner.run(QueryPlus.wrap(query), context),
                           new LinkedList<Result<TimeseriesResultValue>>()
                       )
                       ) {
@@ -428,7 +429,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                   .build();
     Map<String, Object> context = new HashMap<String, Object>();
     List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         new LinkedList<Result<TimeseriesResultValue>>()
     );
     final int expectedVal = elementsPerThread * taskCount;

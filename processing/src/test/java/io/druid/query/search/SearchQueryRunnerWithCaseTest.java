@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.CharSource;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.search.search.AutoStrategy;
@@ -242,7 +243,7 @@ public class SearchQueryRunnerWithCaseTest
   {
     HashMap<String, List> context = new HashMap<>();
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(searchQuery, context),
+        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
 

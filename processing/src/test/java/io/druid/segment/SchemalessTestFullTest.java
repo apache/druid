@@ -27,6 +27,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
@@ -1457,7 +1458,7 @@ public class SchemalessTestFullTest
     failMsg += " timeseries ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1491,7 +1492,7 @@ public class SchemalessTestFullTest
     failMsg += " filtered timeseries ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1524,7 +1525,7 @@ public class SchemalessTestFullTest
     failMsg += " topN ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TopNResultValue>>newArrayList()
     );
 
@@ -1558,7 +1559,7 @@ public class SchemalessTestFullTest
     failMsg += " filtered topN ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TopNResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1576,7 +1577,7 @@ public class SchemalessTestFullTest
     failMsg += " search ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1595,7 +1596,7 @@ public class SchemalessTestFullTest
     failMsg += " filtered search ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1614,7 +1615,7 @@ public class SchemalessTestFullTest
     failMsg += " timeBoundary ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TimeBoundaryResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
