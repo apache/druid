@@ -184,8 +184,8 @@ public class Initialization
             + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
         );
-      } else if (extensionsConfig.getExcludeModules().contains(serviceImplName)) {
-        log.info("Not loading module [%s] because it is present in excludeModules config", serviceImplName);
+      } else if (extensionsConfig.getModuleExcludeList().contains(serviceImplName)) {
+        log.info("Not loading module [%s] because it is present in moduleExcludeList", serviceImplName);
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
         log.info(
             "Adding implementation [%s] for class [%s] from %s extension",

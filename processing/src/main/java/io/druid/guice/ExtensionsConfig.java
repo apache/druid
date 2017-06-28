@@ -54,7 +54,7 @@ public class ExtensionsConfig
    * #loadList}.
    */
   @JsonProperty
-  private List<String> excludeModules = Collections.emptyList();
+  private List<String> moduleExcludeList = Collections.emptyList();
 
   public boolean searchCurrentClassloader()
   {
@@ -86,9 +86,9 @@ public class ExtensionsConfig
     return loadList;
   }
 
-  public List<String> getExcludeModules()
+  public List<String> getModuleExcludeList()
   {
-    return excludeModules;
+    return moduleExcludeList;
   }
 
   @Override
@@ -101,7 +101,7 @@ public class ExtensionsConfig
            ", hadoopContainerDruidClasspath='" + hadoopContainerDruidClasspath + '\'' +
            ", addExtensionsToHadoopContainer=" + addExtensionsToHadoopContainer +
            ", loadList=" + loadList +
-           ", excludeModules=" + excludeModules +
+           ", moduleExcludeList=" + moduleExcludeList +
            '}';
   }
 }
