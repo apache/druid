@@ -21,8 +21,8 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -45,7 +45,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
   private static final Logger log = new Logger(OffheapIncrementalIndex.class);
 
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
 
   private final List<ResourceHolder<ByteBuffer>> aggBuffers = new ArrayList<>();
   private final List<int[]> indexAndOffsets = new ArrayList<>();
@@ -73,7 +73,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
-      StupidPool<ByteBuffer> bufferPool
+      NonBlockingPool<ByteBuffer> bufferPool
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);

@@ -118,15 +118,22 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"), ImmutableMap.<String, Integer>of("hot", 1)),
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), ImmutableMap.<String, Integer>of("normal", 1)),
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), ImmutableMap.<String, Integer>of("cold", 1))
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("hot", 1)
+            ),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 1)
+            ),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("cold", 1)
+            )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
@@ -185,9 +192,9 @@ public class DruidCoordinatorRuleRunnerTest
     );
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
@@ -226,14 +233,18 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"), ImmutableMap.<String, Integer>of("hot", 2)),
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), ImmutableMap.<String, Integer>of("cold", 1))
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("hot", 2)
+            ),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("cold", 1)
+            )
         )
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -288,9 +299,9 @@ public class DruidCoordinatorRuleRunnerTest
     );
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
@@ -327,14 +338,18 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), ImmutableMap.<String, Integer>of("hot", 1)),
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), ImmutableMap.<String, Integer>of("normal", 1))
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("hot", 1)
+            ),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 1)
+            )
         )
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -385,9 +400,9 @@ public class DruidCoordinatorRuleRunnerTest
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
@@ -417,9 +432,7 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
     EasyMock.expectLastCall().times(12);
@@ -427,8 +440,14 @@ public class DruidCoordinatorRuleRunnerTest
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), ImmutableMap.<String, Integer>of("hot",1)),
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), ImmutableMap.<String, Integer>of("normal", 1))
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("hot", 1)
+            ),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 1)
+            )
         )
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -456,9 +475,9 @@ public class DruidCoordinatorRuleRunnerTest
     );
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
@@ -488,7 +507,10 @@ public class DruidCoordinatorRuleRunnerTest
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-02T00:00:00.000Z/2012-01-03T00:00:00.000Z"), ImmutableMap.<String, Integer>of("normal", 1))
+            new IntervalLoadRule(
+                new Interval("2012-01-02T00:00:00.000Z/2012-01-03T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 1)
+            )
         )
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -534,14 +556,10 @@ public class DruidCoordinatorRuleRunnerTest
   {
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
-        new CoordinatorDynamicConfig(
-            0, 0, 0, 0, 1, 24, 0, false, null, false
-        )
+        createCoordinatorDynamicConfig()
     ).anyTimes();
     coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
@@ -549,7 +567,10 @@ public class DruidCoordinatorRuleRunnerTest
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), ImmutableMap.<String, Integer>of("normal", 1)),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 1)
+            ),
             new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
@@ -585,9 +606,9 @@ public class DruidCoordinatorRuleRunnerTest
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
@@ -614,13 +635,14 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), ImmutableMap.<String, Integer>of("normal", 1)),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 1)
+            ),
             new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
@@ -670,9 +692,9 @@ public class DruidCoordinatorRuleRunnerTest
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
@@ -702,13 +724,14 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.expectLastCall().atLeastOnce();
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), ImmutableMap.<String, Integer>of("hot", 1)),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("hot", 1)
+            ),
             new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
@@ -762,9 +785,9 @@ public class DruidCoordinatorRuleRunnerTest
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
@@ -792,13 +815,14 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), ImmutableMap.<String, Integer>of("hot", 1)),
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("hot", 1)
+            ),
             new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
@@ -850,9 +874,9 @@ public class DruidCoordinatorRuleRunnerTest
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
@@ -880,7 +904,10 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T01:00:00.000Z"), ImmutableMap.<String, Integer>of("normal", 0))
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2012-01-01T01:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 0)
+            )
         )
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -916,9 +943,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     LoadQueuePeon anotherMockPeon = EasyMock.createMock(LoadQueuePeon.class);
     EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -951,9 +976,9 @@ public class DruidCoordinatorRuleRunnerTest
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
@@ -987,13 +1012,14 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"), ImmutableMap.<String, Integer>of("hot", 2))
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("hot", 2)
+            )
         )
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -1032,9 +1058,9 @@ public class DruidCoordinatorRuleRunnerTest
     );
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
@@ -1097,18 +1123,19 @@ public class DruidCoordinatorRuleRunnerTest
   public void testReplicantThrottleAcrossTiers() throws Exception
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
-        new CoordinatorDynamicConfig(
-            0, 0, 0, 0, 1, 7, 0, false, null, false
-        )
+        CoordinatorDynamicConfig.builder()
+                                .withReplicationThrottleLimit(7)
+                                .withReplicantLifetime(1)
+                                .withMaxSegmentsInNodeLoadingQueue(1000)
+                                .build()
+
     ).atLeastOnce();
     coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
@@ -1162,9 +1189,9 @@ public class DruidCoordinatorRuleRunnerTest
     );
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
@@ -1195,13 +1222,14 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"), ImmutableMap.<String, Integer>of("normal", 1))
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 1)
+            )
         )
     ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -1265,9 +1293,9 @@ public class DruidCoordinatorRuleRunnerTest
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
@@ -1320,9 +1348,7 @@ public class DruidCoordinatorRuleRunnerTest
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().once();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
@@ -1353,9 +1379,9 @@ public class DruidCoordinatorRuleRunnerTest
     );
 
     ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(1));
+        Executors.newFixedThreadPool(1));
     BalancerStrategy balancerStrategy =
-            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
@@ -1387,12 +1413,35 @@ public class DruidCoordinatorRuleRunnerTest
   private void mockCoordinator()
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
-        new CoordinatorDynamicConfig(
-            0, 0, 0, 0, 1, 24, 0, false, null, false
-        )
+        createCoordinatorDynamicConfig()
     ).anyTimes();
     coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
+  }
+
+  private void mockEmptyPeon()
+  {
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
+    EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
+    EasyMock.replay(mockPeon);
+  }
+
+  private CoordinatorDynamicConfig createCoordinatorDynamicConfig()
+  {
+    return CoordinatorDynamicConfig.builder()
+                                   .withMillisToWaitBeforeDeleting(0)
+                                   .withMergeBytesLimit(0)
+                                   .withMergeSegmentsLimit(0)
+                                   .withMaxSegmentsToMove(0)
+                                   .withReplicantLifetime(1)
+                                   .withReplicationThrottleLimit(24)
+                                   .withBalancerComputeThreads(0)
+                                   .withEmitBalancingStats(false)
+                                   .withKillDataSourceWhitelist(null)
+                                   .withKillAllDataSources(false)
+                                   .withMaxSegmentsInNodeLoadingQueue(1000)
+                                   .build();
   }
 }

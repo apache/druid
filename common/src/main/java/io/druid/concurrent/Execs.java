@@ -41,6 +41,13 @@ import java.util.concurrent.TimeUnit;
  */
 public class Execs
 {
+  /**
+   * Returns an ExecutorService which is terminated and shutdown from the beginning and not able to accept any tasks.
+   */
+  public static ExecutorService dummy()
+  {
+    return DummyExecutorService.INSTANCE;
+  }
 
   public static ExecutorService singleThreaded(@NotNull String nameFormat)
   {
