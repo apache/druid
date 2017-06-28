@@ -38,6 +38,7 @@ public class ExprMacroTest
           .put("x", "foo")
           .put("y", 2)
           .put("z", 3.1)
+          .put("CityOfAngels", "America/Los_Angeles")
           .build()
   );
 
@@ -83,6 +84,7 @@ public class ExprMacroTest
   {
     assertExpr("timestamp_ceil(t, 'P1M')", new DateTime("2000-03-01").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D','','America/Los_Angeles')", new DateTime("2000-02-03T08").getMillis());
+    assertExpr("timestamp_ceil(t, 'P1D','',CityOfAngels)", new DateTime("2000-02-03T08").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D','1970-01-01T01','Etc/UTC')", new DateTime("2000-02-04T01").getMillis());
   }
 
@@ -91,6 +93,7 @@ public class ExprMacroTest
   {
     assertExpr("timestamp_floor(t, 'P1M')", new DateTime("2000-02-01").getMillis());
     assertExpr("timestamp_floor(t, 'P1D','','America/Los_Angeles')", new DateTime("2000-02-02T08").getMillis());
+    assertExpr("timestamp_floor(t, 'P1D','',CityOfAngels)", new DateTime("2000-02-02T08").getMillis());
     assertExpr("timestamp_floor(t, 'P1D','1970-01-01T01','Etc/UTC')", new DateTime("2000-02-03T01").getMillis());
   }
 
@@ -99,6 +102,7 @@ public class ExprMacroTest
   {
     assertExpr("timestamp_shift(t, 'P1D', 2)", new DateTime("2000-02-05T04:05:06").getMillis());
     assertExpr("timestamp_shift(t, 'P1D', 2, 'America/Los_Angeles')", new DateTime("2000-02-05T04:05:06").getMillis());
+    assertExpr("timestamp_shift(t, 'P1D', 2, CityOfAngels)", new DateTime("2000-02-05T04:05:06").getMillis());
     assertExpr("timestamp_shift(t, 'P1D', 2, '-08:00')", new DateTime("2000-02-05T04:05:06").getMillis());
   }
 
