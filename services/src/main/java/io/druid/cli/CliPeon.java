@@ -31,7 +31,6 @@ import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
@@ -39,6 +38,7 @@ import io.druid.client.cache.CacheConfig;
 import io.druid.client.coordinator.CoordinatorClient;
 import io.druid.guice.Binders;
 import io.druid.guice.CacheModule;
+import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -47,6 +47,8 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.PolyBind;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
@@ -84,13 +86,13 @@ import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.http.SegmentListerResource;
-import io.druid.server.metrics.QueryCountStatsProvider;
-import io.druid.server.QueryResource;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import org.eclipse.jetty.server.Server;
 
 import java.io.File;
@@ -129,6 +131,9 @@ public class CliPeon extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.<Module>of(
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new Module()
         {
           @Override

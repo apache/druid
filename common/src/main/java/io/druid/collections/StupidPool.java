@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class StupidPool<T>
+public class StupidPool<T> implements NonBlockingPool<T>
 {
   private static final Logger log = new Logger(StupidPool.class);
 
@@ -95,6 +95,7 @@ public class StupidPool<T>
            "}";
   }
 
+  @Override
   public ResourceHolder<T> take()
   {
     ObjectResourceHolder resourceHolder = objects.poll();
@@ -233,7 +234,7 @@ public class StupidPool<T>
 
     ObjectLeakNotifier(StupidPool<?> pool)
     {
-      poolReference = new WeakReference<StupidPool<?>>(pool);
+      poolReference = new WeakReference<>(pool);
       leakedObjectsCounter = pool.leakedObjectsCounter;
     }
 
