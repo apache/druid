@@ -91,17 +91,18 @@ public class Initialization
   private static final Logger log = new Logger(Initialization.class);
   private static final ConcurrentMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
 
-  private final static Map<Class, Set> extensionsMap = Maps.<Class, Set>newHashMap();
+  private final static Map<Class, Collection> extensionsMap = Maps.newHashMap();
 
   /**
-   * @param clazz Module class
-   * @param <T>
+   * @param clazz service class
+   * @param <T> the service type
    *
-   * @return Returns the set of modules loaded.
+   * @return Returns a collection of implementations loaded.
    */
-  public static <T> Set<T> getLoadedModules(Class<T> clazz)
+  public static <T> Collection<T> getLoadedImplementations(Class<T> clazz)
   {
-    Set<T> retVal = extensionsMap.get(clazz);
+    @SuppressWarnings("unchecked")
+    Collection<T> retVal = extensionsMap.get(clazz);
     if (retVal == null) {
       return Sets.newHashSet();
     }
@@ -109,7 +110,7 @@ public class Initialization
   }
 
   @VisibleForTesting
-  static void clearLoadedModules()
+  static void clearLoadedImplementations()
   {
     extensionsMap.clear();
   }
@@ -121,18 +122,20 @@ public class Initialization
   }
 
   /**
-   * Look for extension modules for the given class from both classpath and extensions directory. A user should never
-   * put the same two extensions in classpath and extensions directory, if he/she does that, the one that is in the
-   * classpath will be loaded, the other will be ignored.
+   * Look for implementations for the given class from both classpath and extensions directory, using {@link
+   * java.util.ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if
+   * he/she does that, the one that is in the classpath will be loaded, the other will be ignored.
    *
-   * @param config Extensions configuration
-   * @param clazz  The class of extension module (e.g., DruidModule)
+   * @param config        Extensions configuration
+   * @param serviceClass  The class to look the implementations of (e.g., DruidModule)
    *
-   * @return A set that contains distinct extension modules
+   * @return A collection that contains implementations (of distinct concrete classes) of the given class. The order of
+   * elements in the returned collection is not specified and not guaranteed to be the same for different calls to
+   * getFromExtensions().
    */
-  public synchronized static <T> Set<T> getFromExtensions(ExtensionsConfig config, Class<T> serviceClass)
+  public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> serviceClass)
   {
-    Set<T> modulesToLoad = new ServiceLoadingFromExtensions<T>(config, serviceClass).implsToLoad;
+    Collection<T> modulesToLoad = new ServiceLoadingFromExtensions<>(config, serviceClass).implsToLoad;
     extensionsMap.put(serviceClass, modulesToLoad);
     return modulesToLoad;
   }
@@ -141,7 +144,7 @@ public class Initialization
   {
     private final ExtensionsConfig extensionsConfig;
     private final Class<T> serviceClass;
-    private final Set<T> implsToLoad = new HashSet<>();
+    private final List<T> implsToLoad = new ArrayList<>();
     private final Set<String> implClassNamesToLoad = new HashSet<>();
 
     private ServiceLoadingFromExtensions(ExtensionsConfig extensionsConfig, Class<T> serviceClass)
