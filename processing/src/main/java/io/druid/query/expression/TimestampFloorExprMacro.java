@@ -20,6 +20,7 @@
 package io.druid.query.expression;
 
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -44,47 +45,10 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
       throw new IAE("Function[%s] must have 2 to 4 arguments", name());
     }
 
-    final Expr arg = args.get(0);
-
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
-      final PeriodGranularity granularity = getGranularity(args, ExprUtils.nilBindings());
-
-      class TimestampFloorExpr implements Expr
-      {
-        @Nonnull
-        @Override
-        public ExprEval eval(final ObjectBinding bindings)
-        {
-          return ExprEval.of(granularity.bucketStart(new DateTime(arg.eval(bindings).asLong())).getMillis());
-        }
-
-        @Override
-        public void visit(final Visitor visitor)
-        {
-          arg.visit(visitor);
-          visitor.visit(this);
-        }
-      }
-      return new TimestampFloorExpr();
+      return new TimestampFloorExpr(args);
     } else {
-      class TimestampFloorDynamicExpr implements Expr
-      {
-        @Nonnull
-        @Override
-        public ExprEval eval(final ObjectBinding bindings)
-        {
-          final PeriodGranularity granularity = getGranularity(args, bindings);
-          return ExprEval.of(granularity.bucketStart(new DateTime(arg.eval(bindings).asLong())).getMillis());
-        }
-
-        @Override
-        public void visit(final Visitor visitor)
-        {
-          arg.visit(visitor);
-          visitor.visit(this);
-        }
-      }
-      return new TimestampFloorDynamicExpr();
+      return new TimestampFloorDynamicExpr(args);
     }
   }
 
@@ -96,5 +60,58 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
         args.size() > 3 ? args.get(3) : null,
         bindings
     );
+  }
+
+  private static class TimestampFloorExpr implements Expr
+  {
+    private final Expr arg;
+    private final Granularity granularity;
+
+    public TimestampFloorExpr(final List<Expr> args)
+    {
+      this.arg = args.get(0);
+      this.granularity = getGranularity(args, ExprUtils.nilBindings());
+    }
+
+    @Nonnull
+    @Override
+    public ExprEval eval(final ObjectBinding bindings)
+    {
+      return ExprEval.of(granularity.bucketStart(new DateTime(arg.eval(bindings).asLong())).getMillis());
+    }
+
+    @Override
+    public void visit(final Visitor visitor)
+    {
+      arg.visit(visitor);
+      visitor.visit(this);
+    }
+  }
+
+  private static class TimestampFloorDynamicExpr implements Expr
+  {
+    private final List<Expr> args;
+
+    public TimestampFloorDynamicExpr(final List<Expr> args)
+    {
+      this.args = args;
+    }
+
+    @Nonnull
+    @Override
+    public ExprEval eval(final ObjectBinding bindings)
+    {
+      final PeriodGranularity granularity = getGranularity(args, bindings);
+      return ExprEval.of(granularity.bucketStart(new DateTime(args.get(0).eval(bindings).asLong())).getMillis());
+    }
+
+    @Override
+    public void visit(final Visitor visitor)
+    {
+      for (Expr arg : args) {
+        arg.visit(visitor);
+      }
+      visitor.visit(this);
+    }
   }
 }

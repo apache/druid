@@ -46,55 +46,12 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
       throw new IAE("Function[%s] must have 3 to 4 arguments", name());
     }
 
-    final Expr arg = args.get(0);
-
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
-      final PeriodGranularity granularity = getGranularity(args, ExprUtils.nilBindings());
-      final Period period = granularity.getPeriod();
-      final Chronology chronology = ISOChronology.getInstance(granularity.getTimeZone());
-      final int step = getStep(args, ExprUtils.nilBindings());
-
-      class TimestampShiftExpr implements Expr
-      {
-        @Nonnull
-        @Override
-        public ExprEval eval(final ObjectBinding bindings)
-        {
-          return ExprEval.of(chronology.add(period, arg.eval(bindings).asLong(), step));
-        }
-
-        @Override
-        public void visit(final Visitor visitor)
-        {
-          arg.visit(visitor);
-          visitor.visit(this);
-        }
-      }
-      return new TimestampShiftExpr();
+      return new TimestampShiftExpr(args);
     } else {
       // Use dynamic impl if any args are non-literal. Don't bother optimizing for the case where period is
       // literal but step isn't.
-      class TimestampShiftDynamicExpr implements Expr
-      {
-        @Nonnull
-        @Override
-        public ExprEval eval(final ObjectBinding bindings)
-        {
-          final PeriodGranularity granularity = getGranularity(args, bindings);
-          final Period period = granularity.getPeriod();
-          final Chronology chronology = ISOChronology.getInstance(granularity.getTimeZone());
-          final int step = getStep(args, bindings);
-          return ExprEval.of(chronology.add(period, arg.eval(bindings).asLong(), step));
-        }
-
-        @Override
-        public void visit(final Visitor visitor)
-        {
-          arg.visit(visitor);
-          visitor.visit(this);
-        }
-      }
-      return new TimestampShiftDynamicExpr();
+      return new TimestampShiftDynamicExpr(args);
     }
   }
 
@@ -111,5 +68,66 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
   private static int getStep(final List<Expr> args, final Expr.ObjectBinding bindings)
   {
     return args.get(2).eval(bindings).asInt();
+  }
+
+  private static class TimestampShiftExpr implements Expr
+  {
+    private final Expr arg;
+    private final Chronology chronology;
+    private final Period period;
+    private final int step;
+
+    public TimestampShiftExpr(final List<Expr> args)
+    {
+      final PeriodGranularity granularity = getGranularity(args, ExprUtils.nilBindings());
+      arg = args.get(0);
+      period = granularity.getPeriod();
+      chronology = ISOChronology.getInstance(granularity.getTimeZone());
+      step = getStep(args, ExprUtils.nilBindings());
+    }
+
+    @Nonnull
+    @Override
+    public ExprEval eval(final ObjectBinding bindings)
+    {
+      return ExprEval.of(chronology.add(period, arg.eval(bindings).asLong(), step));
+    }
+
+    @Override
+    public void visit(final Visitor visitor)
+    {
+      arg.visit(visitor);
+      visitor.visit(this);
+    }
+  }
+
+  private static class TimestampShiftDynamicExpr implements Expr
+  {
+    private final List<Expr> args;
+
+    public TimestampShiftDynamicExpr(final List<Expr> args)
+    {
+      this.args = args;
+    }
+
+    @Nonnull
+    @Override
+    public ExprEval eval(final ObjectBinding bindings)
+    {
+      final PeriodGranularity granularity = getGranularity(args, bindings);
+      final Period period = granularity.getPeriod();
+      final Chronology chronology = ISOChronology.getInstance(granularity.getTimeZone());
+      final int step = getStep(args, bindings);
+      return ExprEval.of(chronology.add(period, args.get(0).eval(bindings).asLong(), step));
+    }
+
+    @Override
+    public void visit(final Visitor visitor)
+    {
+      for (Expr arg : args) {
+        arg.visit(visitor);
+      }
+      visitor.visit(this);
+    }
   }
 }
