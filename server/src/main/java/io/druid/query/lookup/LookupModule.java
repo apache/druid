@@ -35,6 +35,7 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.curator.announcement.Announcer;
+import io.druid.guice.ExpressionModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LifecycleModule;
@@ -44,6 +45,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.expression.LookupExprMacro;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.initialization.jetty.JettyBindings;
@@ -89,6 +91,7 @@ public class LookupModule implements DruidModule
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupListeningAnnouncerConfig.class);
     Jerseys.addResource(binder, LookupListeningResource.class);
     Jerseys.addResource(binder, LookupIntrospectionResource.class);
+    ExpressionModule.addExprMacro(binder, LookupExprMacro.class);
     LifecycleModule.register(binder, LookupResourceListenerAnnouncer.class);
     // Nothing else starts this, so we bind it to get it to start
     binder.bind(LookupResourceListenerAnnouncer.class).in(ManageLifecycle.class);

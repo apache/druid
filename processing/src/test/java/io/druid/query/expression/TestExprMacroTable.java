@@ -20,7 +20,17 @@
 package io.druid.query.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.lookup.LookupExtractor;
+import io.druid.query.lookup.LookupExtractorFactory;
+import io.druid.query.lookup.LookupExtractorFactoryContainer;
+import io.druid.query.lookup.LookupIntrospectHandler;
+import io.druid.query.lookup.LookupReferencesManager;
+import org.easymock.EasyMock;
+
+import javax.annotation.Nullable;
 
 public class TestExprMacroTable extends ExprMacroTable
 {
@@ -30,8 +40,64 @@ public class TestExprMacroTable extends ExprMacroTable
   {
     super(
         ImmutableList.of(
-            new LikeExprMacro()
+            new LikeExprMacro(),
+            new LookupExprMacro(createTestLookupReferencesManager(ImmutableMap.of("foo", "xfoo"))),
+            new RegexpExtractExprMacro(),
+            new TimestampCeilExprMacro(),
+            new TimestampExtractExprMacro(),
+            new TimestampFloorExprMacro(),
+            new TimestampFormatExprMacro(),
+            new TimestampParseExprMacro(),
+            new TimestampShiftExprMacro()
         )
     );
+  }
+
+  /**
+   * Returns a mock {@link LookupReferencesManager} that has one lookup, "lookyloo".
+   */
+  public static LookupReferencesManager createTestLookupReferencesManager(final ImmutableMap<String, String> theLookup)
+  {
+    final LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
+    EasyMock.expect(lookupReferencesManager.get(EasyMock.eq("lookyloo"))).andReturn(
+        new LookupExtractorFactoryContainer(
+            "v0",
+            new LookupExtractorFactory()
+            {
+              @Override
+              public boolean start()
+              {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public boolean close()
+              {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public boolean replaces(@Nullable final LookupExtractorFactory other)
+              {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public LookupIntrospectHandler getIntrospectHandler()
+              {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public LookupExtractor get()
+              {
+                return new MapLookupExtractor(theLookup, false);
+              }
+            }
+        )
+    ).anyTimes();
+    EasyMock.expect(lookupReferencesManager.get(EasyMock.not(EasyMock.eq("lookyloo")))).andReturn(null).anyTimes();
+    EasyMock.replay(lookupReferencesManager);
+    return lookupReferencesManager;
   }
 }

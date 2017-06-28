@@ -27,6 +27,13 @@ import io.druid.initialization.DruidModule;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.expression.GuiceExprMacroTable;
 import io.druid.query.expression.LikeExprMacro;
+import io.druid.query.expression.RegexpExtractExprMacro;
+import io.druid.query.expression.TimestampCeilExprMacro;
+import io.druid.query.expression.TimestampExtractExprMacro;
+import io.druid.query.expression.TimestampFloorExprMacro;
+import io.druid.query.expression.TimestampFormatExprMacro;
+import io.druid.query.expression.TimestampParseExprMacro;
+import io.druid.query.expression.TimestampShiftExprMacro;
 
 import java.util.List;
 
@@ -37,6 +44,13 @@ public class ExpressionModule implements DruidModule
   public static final List<Class<? extends ExprMacroTable.ExprMacro>> EXPR_MACROS =
       ImmutableList.<Class<? extends ExprMacroTable.ExprMacro>>builder()
           .add(LikeExprMacro.class)
+          .add(RegexpExtractExprMacro.class)
+          .add(TimestampCeilExprMacro.class)
+          .add(TimestampExtractExprMacro.class)
+          .add(TimestampFloorExprMacro.class)
+          .add(TimestampFormatExprMacro.class)
+          .add(TimestampParseExprMacro.class)
+          .add(TimestampShiftExprMacro.class)
           .build();
 
   @Override

@@ -19,61 +19,62 @@
 
 package io.druid.query.expression;
 
-import com.google.common.base.Strings;
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.math.expr.ExprType;
-import io.druid.query.filter.LikeDimFilter;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public class LikeExprMacro implements ExprMacroTable.ExprMacro
+public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
 {
   @Override
   public String name()
   {
-    return "like";
+    return "timestamp_format";
   }
 
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 3) {
-      throw new IAE("Function[%s] must have 2 or 3 arguments", name());
+    if (args.size() < 1 || args.size() > 3) {
+      throw new IAE("Function[%s] must have 1 to 3 arguments", name());
     }
 
     final Expr arg = args.get(0);
-    final Expr patternExpr = args.get(1);
-    final Expr escapeExpr = args.size() > 2 ? args.get(2) : null;
+    final String formatString;
+    final DateTimeZone timeZone;
 
-    if (!patternExpr.isLiteral() || (escapeExpr != null && !escapeExpr.isLiteral())) {
-      throw new IAE("pattern and escape must be literals");
-    }
-
-    final String escape = escapeExpr == null ? null : (String) escapeExpr.getLiteralValue();
-    final Character escapeChar;
-
-    if (escape != null && escape.length() != 1) {
-      throw new IllegalArgumentException("Escape must be null or a single character");
+    if (args.size() > 1) {
+      Preconditions.checkArgument(args.get(1).isLiteral(), "Function[%s] format arg must be a literal", name());
+      formatString = (String) args.get(1).getLiteralValue();
     } else {
-      escapeChar = escape == null ? null : escape.charAt(0);
+      formatString = null;
     }
 
-    final LikeDimFilter.LikeMatcher likeMatcher = LikeDimFilter.LikeMatcher.from(
-        Strings.nullToEmpty((String) patternExpr.getLiteralValue()),
-        escapeChar
-    );
+    if (args.size() > 2) {
+      timeZone = ExprUtils.toTimeZone(args.get(2));
+    } else {
+      timeZone = DateTimeZone.UTC;
+    }
 
-    class LikeExtractExpr implements Expr
+    final DateTimeFormatter formatter = formatString == null
+                                        ? ISODateTimeFormat.dateTime()
+                                        : DateTimeFormat.forPattern(formatString).withZone(timeZone);
+
+    class TimestampFormatExpr implements Expr
     {
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(likeMatcher.matches(arg.eval(bindings).asString()), ExprType.LONG);
+        return ExprEval.of(formatter.print(arg.eval(bindings).asLong()));
       }
 
       @Override
@@ -83,7 +84,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
         visitor.visit(this);
       }
     }
-    return new LikeExtractExpr();
+
+    return new TimestampFormatExpr();
   }
 }
-
