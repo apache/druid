@@ -261,6 +261,7 @@ public class IndexTask extends AbstractTask
     // determine intervals containing data and prime HLL collectors
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = Maps.newHashMap();
     int thrownAway = 0;
+    int unparseable = 0;
 
     log.info("Determining intervals and shardSpecs");
     long determineShardSpecsStartMillis = System.currentTimeMillis();
@@ -269,48 +270,61 @@ public class IndexTask extends AbstractTask
         firehoseTempDir)
     ) {
       while (firehose.hasMore()) {
-        final InputRow inputRow = firehose.nextRow();
+        try {
+          final InputRow inputRow = firehose.nextRow();
 
-        // The null inputRow means the caller must skip this row.
-        if (inputRow == null) {
-          continue;
-        }
-
-        final Interval interval;
-        if (determineIntervals) {
-          interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
-        } else {
-          final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-          if (!optInterval.isPresent()) {
-            thrownAway++;
+          // The null inputRow means the caller must skip this row.
+          if (inputRow == null) {
             continue;
           }
-          interval = optInterval.get();
-        }
 
-        if (!determineNumPartitions) {
-          // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
-          // for the interval and don't instantiate a HLL collector
-          if (!hllCollectors.containsKey(interval)) {
-            hllCollectors.put(interval, Optional.<HyperLogLogCollector>absent());
+          final Interval interval;
+          if (determineIntervals) {
+            interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
+          } else {
+            final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+            if (!optInterval.isPresent()) {
+              thrownAway++;
+              continue;
+            }
+            interval = optInterval.get();
           }
-          continue;
-        }
 
-        if (!hllCollectors.containsKey(interval)) {
-          hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
-        }
+          if (!determineNumPartitions) {
+            // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
+            // for the interval and don't instantiate a HLL collector
+            if (!hllCollectors.containsKey(interval)) {
+              hllCollectors.put(interval, Optional.<HyperLogLogCollector>absent());
+            }
+            continue;
+          }
 
-        List<Object> groupKey = Rows.toGroupKey(
-            queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
-            inputRow
-        );
-        hllCollectors.get(interval).get().add(hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
+          if (!hllCollectors.containsKey(interval)) {
+            hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
+          }
+
+          List<Object> groupKey = Rows.toGroupKey(
+              queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
+              inputRow
+          );
+          hllCollectors.get(interval).get().add(hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
+        }
+        catch (ParseException e) {
+          if (ingestionSchema.getTuningConfig().isReportParseExceptions()) {
+            throw e;
+          } else {
+            unparseable++;
+          }
+        }
       }
     }
 
+    // These metrics are reported in generateAndPublishSegments()
     if (thrownAway > 0) {
-      log.warn("Unable to to find a matching interval for [%,d] events", thrownAway);
+      log.warn("Unable to find a matching interval for [%,d] events", thrownAway);
+    }
+    if (unparseable > 0) {
+      log.warn("Unable to parse [%,d] events", unparseable);
     }
 
     final ImmutableSortedMap<Interval, Optional<HyperLogLogCollector>> sortedMap = ImmutableSortedMap.copyOf(

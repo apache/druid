@@ -37,8 +37,10 @@ import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -62,6 +64,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedWriter;
@@ -78,6 +81,9 @@ public class IndexTaskTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
       new TimestampSpec(
@@ -446,7 +452,6 @@ public class IndexTaskTest
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
-
     IndexTask indexTask = new IndexTask(
         null,
         null,
@@ -485,6 +490,115 @@ public class IndexTaskTest
     Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
     Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
     Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+  }
+
+  @Test
+  public void testIgnoreParseException() throws Exception
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+
+    final File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("time,d,val\n");
+      writer.write("unparseable,a,1\n");
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+    }
+
+    // GranularitySpec.intervals and numShards must be null to verify reportParseException=false is respected both in
+    // IndexTask.determineShardSpecs() and IndexTask.generateAndPublishSegments()
+    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        tmpDir,
+        new CSVParseSpec(
+            new TimestampSpec(
+                "time",
+                "auto",
+                null
+            ),
+            new DimensionsSpec(
+                null,
+                Lists.<String>newArrayList(),
+                Lists.<SpatialDimensionSchema>newArrayList()
+            ),
+            null,
+            Arrays.asList("time", "dim", "val"),
+            true,
+            0
+        ),
+        null,
+        2,
+        null,
+        false,
+        false,
+        false // ignore parse exception
+    );
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        parseExceptionIgnoreSpec,
+        null,
+        jsonMapper
+    );
+
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
+    Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
+    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+  }
+
+  @Test
+  public void testReportParseException() throws Exception
+  {
+    expectedException.expect(ParseException.class);
+    expectedException.expectMessage("Unparseable timestamp found!");
+
+    final File tmpDir = temporaryFolder.newFolder();
+
+    final File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("time,d,val\n");
+      writer.write("unparseable,a,1\n");
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+    }
+
+    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        tmpDir,
+        new CSVParseSpec(
+            new TimestampSpec(
+                "time",
+                "auto",
+                null
+            ),
+            new DimensionsSpec(
+                null,
+                Lists.<String>newArrayList(),
+                Lists.<SpatialDimensionSchema>newArrayList()
+            ),
+            null,
+            Arrays.asList("time", "dim", "val"),
+            true,
+            0
+        ),
+        null,
+        2,
+        null,
+        false,
+        false,
+        true // report parse exception
+    );
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        parseExceptionIgnoreSpec,
+        null,
+        jsonMapper
+    );
+
+    runTask(indexTask);
   }
 
   private final List<DataSegment> runTask(final IndexTask indexTask) throws Exception
@@ -578,6 +692,29 @@ public class IndexTaskTest
       boolean appendToExisting
   )
   {
+    return createIngestionSpec(
+        baseDir,
+        parseSpec,
+        granularitySpec,
+        targetPartitionSize,
+        numShards,
+        forceExtendableShardSpecs,
+        appendToExisting,
+        true
+    );
+  }
+
+  private IndexTask.IndexIngestionSpec createIngestionSpec(
+      File baseDir,
+      ParseSpec parseSpec,
+      GranularitySpec granularitySpec,
+      Integer targetPartitionSize,
+      Integer numShards,
+      boolean forceExtendableShardSpecs,
+      boolean appendToExisting,
+      boolean reportParseException
+  )
+  {
     return new IndexTask.IndexIngestionSpec(
         new DataSchema(
             "test",
@@ -614,7 +751,7 @@ public class IndexTaskTest
             null,
             true,
             forceExtendableShardSpecs,
-            true,
+            reportParseException,
             null
         )
     );
