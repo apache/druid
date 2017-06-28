@@ -43,9 +43,10 @@ public class TestHelper
 {
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
+  private static final ObjectMapper jsonMapper;
 
   static {
-    final ObjectMapper jsonMapper = getJsonMapper();
+    jsonMapper = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         jsonMapper,
         new ColumnConfig()
@@ -56,6 +57,12 @@ public class TestHelper
             return 0;
           }
         }
+    );
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), jsonMapper)
+            .addValue(IndexIO.class, INDEX_IO)
     );
     INDEX_MERGER_V9 = new IndexMergerV9(jsonMapper, INDEX_IO);
   }
@@ -72,24 +79,12 @@ public class TestHelper
 
   public static ObjectMapper getJsonMapper()
   {
-    final ObjectMapper mapper = new DefaultObjectMapper();
-    mapper.setInjectableValues(
-        new InjectableValues.Std()
-            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
-            .addValue(ObjectMapper.class.getName(), mapper)
-    );
-    return mapper;
+    return jsonMapper;
   }
 
   public static ObjectMapper getSmileMapper()
   {
-    final ObjectMapper mapper = new DefaultObjectMapper();
-    mapper.setInjectableValues(
-        new InjectableValues.Std()
-            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
-            .addValue(ObjectMapper.class.getName(), mapper)
-    );
-    return mapper;
+    return jsonMapper;
   }
 
   public static <T> Iterable<T> revert(Iterable<T> input)

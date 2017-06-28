@@ -58,6 +58,8 @@ import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
+import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
+import io.druid.segment.loading.SegmentizerFactory;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.DictionaryEncodedColumnSupplier;
@@ -91,12 +93,13 @@ public class IndexIO
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
   private final ObjectMapper mapper;
+  private final ColumnConfig columnConfig;
 
   @Inject
   public IndexIO(ObjectMapper mapper, ColumnConfig columnConfig)
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
-    Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
+    this.columnConfig = Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     ImmutableMap.Builder<Integer, IndexLoader> indexLoadersBuilder = ImmutableMap.builder();
     LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler(), columnConfig);
     for (int i = 0; i <= V8_VERSION; i++) {
@@ -104,6 +107,11 @@ public class IndexIO
     }
     indexLoadersBuilder.put((int) V9_VERSION, new V9IndexLoader(columnConfig));
     indexLoaders = indexLoadersBuilder.build();
+  }
+
+  public ColumnConfig getColumnConfig()
+  {
+    return columnConfig;
   }
 
   public void validateTwoSegments(File dir1, File dir2) throws IOException
@@ -181,6 +189,11 @@ public class IndexIO
 
   public QueryableIndex loadIndex(File inDir) throws IOException
   {
+    return getSegmentizerFactory(inDir).loadIndex(inDir);
+  }
+
+  public QueryableIndex loadIndexDirectly(File inDir) throws IOException
+  {
     final int version = SegmentUtils.getVersionFromDir(inDir);
 
     final IndexLoader loader = indexLoaders.get(version);
@@ -190,6 +203,25 @@ public class IndexIO
     } else {
       throw new ISE("Unknown index version[%s]", version);
     }
+  }
+
+  public SegmentizerFactory getSegmentizerFactory(File segmentDir) throws IOException
+  {
+    File factoryJson = new File(segmentDir, "factory.json");
+    final SegmentizerFactory factory;
+
+    if (factoryJson.exists()) {
+      factory = mapper.readValue(factoryJson, SegmentizerFactory.class);
+    } else {
+      factory = new MMappedQueryableSegmentizerFactory(this);
+    }
+
+    return factory;
+  }
+
+  public IndexLoader getIndexLoader(int version) throws IOException
+  {
+    return indexLoaders.get(version);
   }
 
   public static int getVersionFromDir(File inDir) throws IOException
@@ -410,7 +442,7 @@ public class IndexIO
 
   }
 
-  static interface IndexLoader
+  public static interface IndexLoader
   {
     public QueryableIndex load(File inDir, ObjectMapper mapper) throws IOException;
   }
@@ -519,7 +551,7 @@ public class IndexIO
     }
   }
 
-  static class V9IndexLoader implements IndexLoader
+  public static class V9IndexLoader implements IndexLoader
   {
     private final ColumnConfig columnConfig;
 
@@ -539,8 +571,15 @@ public class IndexIO
         throw new IllegalArgumentException(String.format("Expected version[9], got[%s]", theVersion));
       }
 
-      SmooshedFileMapper smooshedFiles = Smoosh.map(inDir);
+      final QueryableIndex index = load(Smoosh.map(inDir), inDir, mapper);
 
+      log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
+
+      return index;
+    }
+
+    public QueryableIndex load(SmooshedFileMapper smooshedFiles, File inDir, ObjectMapper mapper) throws IOException
+    {
       ByteBuffer indexBuffer = smooshedFiles.mapFile("index.drd");
       /**
        * Index.drd should consist of the segment version, the columns and dimensions of the segment as generic
@@ -597,13 +636,9 @@ public class IndexIO
 
       columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), smooshedFiles));
 
-      final QueryableIndex index = new SimpleQueryableIndex(
+      return new SimpleQueryableIndex(
           dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, metadata
       );
-
-      log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
-
-      return index;
     }
 
     private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, SmooshedFileMapper smooshedFiles)

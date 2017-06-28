@@ -20,10 +20,12 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  * Factory that loads segment files from the disk and creates {@link Segment} object
@@ -32,4 +34,6 @@ import java.io.File;
 public interface SegmentizerFactory
 {
   public Segment factorize(DataSegment segment, File parentDir) throws SegmentLoadingException;
+
+  public QueryableIndex loadIndex(File parentDir) throws IOException;
 }

@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.appenderator;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
@@ -155,6 +156,11 @@ public class AppenderatorTester implements AutoCloseable
             return 0;
           }
         }
+    );
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ObjectMapper.class.getName(), objectMapper)
+            .addValue(IndexIO.class, indexIO)
     );
     indexMerger = new IndexMergerV9(objectMapper, indexIO);
 

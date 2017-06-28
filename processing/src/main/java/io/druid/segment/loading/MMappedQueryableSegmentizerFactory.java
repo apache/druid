@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
+import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.timeline.DataSegment;
@@ -47,10 +48,16 @@ public class MMappedQueryableSegmentizerFactory implements SegmentizerFactory
   public Segment factorize(DataSegment dataSegment, File parentDir) throws SegmentLoadingException
   {
     try {
-      return new QueryableIndexSegment(dataSegment.getIdentifier(), indexIO.loadIndex(parentDir));
+      return new QueryableIndexSegment(dataSegment.getIdentifier(), loadIndex(parentDir));
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "%s", e.getMessage());
     }
+  }
+
+  @Override
+  public QueryableIndex loadIndex(File parentDir) throws IOException
+  {
+    return indexIO.loadIndexDirectly(parentDir);
   }
 }

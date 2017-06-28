@@ -174,7 +174,7 @@ public class AggregationTestHelper
         new InjectableValues.Std().addValue(
             SelectQueryConfig.class,
             new SelectQueryConfig(true)
-        )
+        ).addValue(IndexIO.class, TestHelper.getTestIndexIO())
     );
 
     Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));

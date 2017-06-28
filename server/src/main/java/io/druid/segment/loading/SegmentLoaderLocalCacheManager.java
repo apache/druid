@@ -102,22 +102,13 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   @Override
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
-    File segmentFiles = getSegmentFiles(segment);
-    File factoryJson = new File(segmentFiles, "factory.json");
-    final SegmentizerFactory factory;
-
-    if (factoryJson.exists()) {
-      try {
-        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "%s", e.getMessage());
-      }
-    } else {
-      factory = new MMappedQueryableSegmentizerFactory(indexIO);
+    try {
+      File segmentDir = getSegmentFiles(segment);
+      return indexIO.getSegmentizerFactory(segmentDir).factorize(segment, segmentDir);
     }
-
-    return factory.factorize(segment, segmentFiles);
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, "%s", e.getMessage());
+    }
   }
 
   @Override

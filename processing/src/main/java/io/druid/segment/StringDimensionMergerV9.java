@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -90,6 +91,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   protected ColumnCapabilities capabilities;
   protected final File outDir;
   protected List<IndexableAdapter> adapters;
+  protected List<Indexed<String>> dimValuesList;
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
 
@@ -120,17 +122,19 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     long dimStartTime = System.currentTimeMillis();
 
     this.adapters = adapters;
+    this.dimValuesList = toDimValuesList(adapters);
+    int adaptersCount = dimValuesList.size();
 
-    dimConversions = Lists.newArrayListWithCapacity(adapters.size());
-    for (int i = 0; i < adapters.size(); ++i) {
+    dimConversions = Lists.newArrayListWithCapacity(adaptersCount);
+    for (int i = 0; i < dimValuesList.size(); ++i) {
       dimConversions.add(null);
     }
 
     int numMergeIndex = 0;
     Indexed<String> dimValueLookup = null;
-    Indexed<String>[] dimValueLookups = new Indexed[adapters.size() + 1];
-    for (int i = 0; i < adapters.size(); i++) {
-      Indexed<String> dimValues = (Indexed) adapters.get(i).getDimValueLookup(dimensionName);
+    Indexed<String>[] dimValueLookups = new Indexed[adaptersCount + 1];
+    for (int i = 0; i < adaptersCount; i++) {
+      Indexed<String> dimValues = dimValuesList.get(i);
       if (!isNullColumn(dimValues)) {
         dimHasValues = true;
         hasNull |= dimValues.indexOf(null) >= 0;
@@ -152,7 +156,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
      */
     if (convertMissingValues && !hasNull) {
       hasNull = true;
-      dimValueLookups[adapters.size()] = dimValueLookup = EMPTY_STR_DIM_VAL;
+      dimValueLookups[adaptersCount] = dimValueLookup = EMPTY_STR_DIM_VAL;
       numMergeIndex++;
     }
 
@@ -172,7 +176,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         dictionaryWriter.write(iterator.next());
       }
 
-      for (int i = 0; i < adapters.size(); i++) {
+      for (int i = 0; i < adaptersCount; i++) {
         if (dimValueLookups[i] != null && iterator.needConversion(i)) {
           dimConversions.set(i, iterator.conversions[i]);
         }
@@ -194,6 +198,20 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     dictionaryWriter.close();
 
     setupEncodedValueWriter();
+  }
+
+  protected List<Indexed<String>> toDimValuesList(List<IndexableAdapter> adapters) throws IOException
+  {
+    return Lists.newArrayList(
+        Lists.transform(adapters, new Function<IndexableAdapter, Indexed<String>>()
+        {
+          @Override
+          public Indexed apply(IndexableAdapter input)
+          {
+            return input.getDimValueLookup(dimensionName);
+          }
+        })
+    );
   }
 
   protected void setupEncodedValueWriter() throws IOException
@@ -316,12 +334,12 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bmpFactory), bmpFactory);
       }
 
-      IndexSeeker[] dictIdSeeker = toIndexSeekers(adapters, dimConversions, dimensionName);
+      IndexSeeker[] dictIdSeeker = toIndexSeekers(dimValuesList, dimConversions, dimensionName);
 
       //Iterate all dim values's dictionary id in ascending order which in line with dim values's compare result.
       for (int dictId = 0; dictId < dimVals.size(); dictId++) {
         progress.progress();
-        mergeBitmaps(
+        mergeBitmapsInternal(
             segmentRowNumConversions,
             dimVals,
             bmpFactory,
@@ -349,6 +367,34 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
           System.currentTimeMillis() - dimStartTime
       );
     }
+  }
+
+  protected void mergeBitmapsInternal(
+      List<IntBuffer> segmentRowNumConversions,
+      Indexed<String> dimVals,
+      BitmapFactory bmpFactory,
+      RTree tree,
+      boolean hasSpatial,
+      IndexSeeker[] dictIdSeeker,
+      int dictId,
+      List<IndexableAdapter> adapters,
+      String dimensionName,
+      MutableBitmap nullRowsBitmap,
+      GenericIndexedWriter<ImmutableBitmap> bitmapWriter) throws IOException
+  {
+    mergeBitmaps(
+        segmentRowNumConversions,
+        dimVals,
+        bmpFactory,
+        tree,
+        hasSpatial,
+        dictIdSeeker,
+        dictId,
+        adapters,
+        dimensionName,
+        nullRowsBitmap,
+        bitmapWriter
+    );
   }
 
   static void mergeBitmaps(
@@ -585,18 +631,18 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   }
 
   protected IndexSeeker[] toIndexSeekers(
-      List<IndexableAdapter> adapters,
+      List<Indexed<String>> dimValuesList,
       ArrayList<IntBuffer> dimConversions,
       String dimension
   )
   {
-    IndexSeeker[] seekers = new IndexSeeker[adapters.size()];
-    for (int i = 0; i < adapters.size(); i++) {
+    IndexSeeker[] seekers = new IndexSeeker[dimValuesList.size()];
+    for (int i = 0; i < dimValuesList.size(); i++) {
       IntBuffer dimConversion = dimConversions.get(i);
       if (dimConversion != null) {
         seekers[i] = new IndexSeekerWithConversion((IntBuffer) dimConversion.asReadOnlyBuffer().rewind());
       } else {
-        Indexed<String> dimValueLookup = (Indexed) adapters.get(i).getDimValueLookup(dimension);
+        Indexed<String> dimValueLookup = dimValuesList.get(i);
         seekers[i] = new IndexSeekerWithoutConversion(dimValueLookup == null ? 0 : dimValueLookup.size());
       }
     }

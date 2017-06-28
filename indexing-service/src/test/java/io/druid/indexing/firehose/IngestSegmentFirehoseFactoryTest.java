@@ -62,6 +62,7 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.loading.DataSegmentArchiver;
@@ -373,6 +374,16 @@ public class IngestSegmentFirehoseFactoryTest
                       public void configure(Binder binder)
                       {
                         binder.bind(LocalDataSegmentPuller.class);
+                        binder.bind(ColumnConfig.class).toInstance(
+                            new ColumnConfig()
+                            {
+                              @Override
+                              public int columnCacheSizeBytes()
+                              {
+                                return 0;
+                              }
+                            }
+                        );
                       }
                     }
                 )

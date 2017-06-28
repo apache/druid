@@ -97,7 +97,7 @@ public class SmooshedFileMapper implements Closeable
   private final Map<String, Metadata> internalFiles;
   private final List<MappedByteBuffer> buffersList = Lists.newArrayList();
 
-  private SmooshedFileMapper(
+  public SmooshedFileMapper(
       List<File> outFiles,
       Map<String, Metadata> internalFiles
   )
