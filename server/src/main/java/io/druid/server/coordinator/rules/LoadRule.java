@@ -35,7 +35,10 @@ import io.druid.timeline.DataSegment;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * LoadRules indicate the number of replicants a segment should have in a given tier.
@@ -61,15 +64,29 @@ public abstract class LoadRule implements Rule
       final int totalReplicantsInTier = params.getSegmentReplicantLookup()
                                               .getTotalReplicants(segment.getIdentifier(), tier);
       final int loadedReplicantsInTier = params.getSegmentReplicantLookup()
-                                         .getLoadedReplicants(segment.getIdentifier(), tier);
+                                               .getLoadedReplicants(segment.getIdentifier(), tier);
 
       final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getHistoricalsByTier(tier);
+
       if (serverQueue == null) {
         log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
         continue;
       }
 
-      final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
+      final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig()
+                                                      .getMaxSegmentsInNodeLoadingQueue();
+
+      Predicate<ServerHolder> serverHolderPredicate;
+      if (maxSegmentsInNodeLoadingQueue > 0) {
+        serverHolderPredicate = s -> (s != null && s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue);
+      } else {
+        serverHolderPredicate = Objects::nonNull;
+      }
+
+      final List<ServerHolder> serverHolderList = serverQueue.stream()
+                                                             .filter(serverHolderPredicate)
+                                                             .collect(Collectors.toList());
+
       final BalancerStrategy strategy = params.getBalancerStrategy();
       if (availableSegments.contains(segment)) {
         int assignedCount = assign(
@@ -213,11 +230,12 @@ public abstract class LoadRule implements Rule
     return stats;
   }
 
-  protected void validateTieredReplicants(Map<String, Integer> tieredReplicants){
-    if(tieredReplicants.size() == 0) {
+  protected void validateTieredReplicants(Map<String, Integer> tieredReplicants)
+  {
+    if (tieredReplicants.size() == 0) {
       throw new IAE("A rule with empty tiered replicants is invalid");
     }
-    for (Map.Entry<String, Integer> entry: tieredReplicants.entrySet()) {
+    for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {
         throw new IAE("Replicant value cannot be empty");
       }
