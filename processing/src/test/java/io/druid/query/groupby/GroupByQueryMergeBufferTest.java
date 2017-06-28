@@ -26,7 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.BlockingPool;
+import io.druid.collections.DefaultBlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
@@ -59,7 +60,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class GroupByQueryMergeBufferTest
 {
-  private static class TestBlockingPool extends BlockingPool<ByteBuffer>
+  private static class TestBlockingPool extends DefaultBlockingPool<ByteBuffer>
   {
     private int minRemainBufferNum;
 
@@ -136,7 +137,7 @@ public class GroupByQueryMergeBufferTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
+    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByQueryEngine-bufferPool",
         new Supplier<ByteBuffer>()
         {
