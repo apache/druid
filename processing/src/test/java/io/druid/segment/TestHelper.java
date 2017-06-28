@@ -32,11 +32,15 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.Result;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.timeseries.TimeseriesResultValue;
+import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.ColumnConfig;
 import org.junit.Assert;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  */
@@ -157,7 +161,13 @@ public class TestHelper
             (Result) next2
         );
 
-      } else {
+      } else if (expectedNext instanceof Result
+                 && (((Result) expectedNext).getValue()) instanceof TopNResultValue) {
+        // Special to allow a floating point delta to be used in result comparison due to legacy expected results
+        assertTopNResultValue(failMsg, (Result) expectedNext, (Result) next);
+        assertTopNResultValue(String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg), (Result) expectedNext, (Result) next2);
+      }
+      else {
         assertResult(failMsg, (Result) expectedNext, (Result) next);
         assertResult(
             StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
@@ -255,26 +265,36 @@ public class TestHelper
     final Map<String, Object> expectedMap = (Map<String, Object>) expectedVal.getBaseObject();
     final Map<String, Object> actualMap = (Map<String, Object>) actualVal.getBaseObject();
 
-    Assert.assertEquals(StringUtils.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
-    for (final String key : expectedMap.keySet()) {
-      final Object expectedValue = expectedMap.get(key);
-      final Object actualValue = actualMap.get(key);
+    assertRow(msg, new MapBasedRow(expected.getTimestamp(), expectedMap), new MapBasedRow(actual.getTimestamp(), actualMap));
+  }
 
-      if (expectedValue instanceof Float || expectedValue instanceof Double) {
-        Assert.assertEquals(
-            StringUtils.format("%s: key[%s]", msg, key),
-            ((Number) expectedValue).doubleValue(),
-            ((Number) actualValue).doubleValue(),
-            ((Number) expectedValue).doubleValue() * 1e-6
-        );
-      } else {
-        Assert.assertEquals(
-            StringUtils.format("%s: key[%s]", msg, key),
-            expectedValue,
-            actualValue
-        );
-      }
-    }
+  private static void assertTopNResultValue(String msg, Result expected, Result actual)
+  {
+    TopNResultValue expectedVal = (TopNResultValue) expected.getValue();
+    TopNResultValue actualVal = (TopNResultValue) actual.getValue();
+
+    List<Row> listExpectedRows = expectedVal.getValue()
+                                            .stream()
+                                            .map(dimensionAndMetricValueExtractor -> new MapBasedRow(
+                                                expected.getTimestamp(),
+                                                dimensionAndMetricValueExtractor.getBaseObject()
+                                            ))
+                                            .collect(Collectors.toList());
+
+    List<Row> listActualRows = actualVal.getValue()
+                                        .stream()
+                                        .map(dimensionAndMetricValueExtractor -> new MapBasedRow(
+                                            actual.getTimestamp(),
+                                            dimensionAndMetricValueExtractor.getBaseObject()
+                                        ))
+                                        .collect(Collectors.toList());
+    Assert.assertEquals("Size of list must match", listExpectedRows.size(), listActualRows.size());
+
+    IntStream.range(0, listExpectedRows.size()).forEach(value -> assertRow(
+        String.format("%s, on value number [%s]", msg, value),
+        listExpectedRows.get(value),
+        listActualRows.get(value)
+    ));
   }
 
   private static void assertRow(String msg, Row expected, Row actual)

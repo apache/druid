@@ -7316,7 +7316,7 @@ public class GroupByQueryRunnerTest
         .build();
 
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "spot", "rows", 9L, "numVals", 9.019833517963864d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "spot", "rows", 9L, "numVals", 8.015665809687173d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "total_market", "rows", 2L, "numVals", 2.000977198748901d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "upfront", "rows", 2L, "numVals", 2.000977198748901d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "spot", "rows", 9L, "numVals", 9.019833517963864d),
@@ -7747,7 +7747,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
             "index_alias",
-            "super-158.74722290039062",
+            "super-158.747224",
             "rows",
             1L,
             "idx",
@@ -7756,7 +7756,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-02",
             "index_alias",
-            "super-166.01605224609375",
+            "super-166.016049",
             "rows",
             1L,
             "idx",

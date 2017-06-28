@@ -127,8 +127,6 @@ public class QueryRunnerTestHelper
   public static final String indexMetric = "index";
   public static final String uniqueMetric = "uniques";
   public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
-  public static final List<String> metrics = Lists.newArrayList(indexMetric, uniqueMetric, addRowsIndexConstantMetric);
-
   public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", indexMetric);

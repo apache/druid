@@ -195,7 +195,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
-                ValueType.FLOAT.toString(),
+                ValueType.DOUBLE.toString(),
                 false,
                 9672,
                 null,
@@ -238,7 +238,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
-                ValueType.FLOAT.toString(),
+                ValueType.DOUBLE.toString(),
                 false,
                 9672,
                 null,
@@ -541,7 +541,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
-                ValueType.FLOAT.toString(),
+                ValueType.DOUBLE.toString(),
                 false,
                 9672 * 2,
                 null,

@@ -309,7 +309,7 @@ public class CalciteQueryTest
             new Object[]{"cnt", "BIGINT", "NO"},
             new Object[]{"dim1", "VARCHAR", "NO"},
             new Object[]{"dim2", "VARCHAR", "NO"},
-            new Object[]{"m1", "FLOAT", "NO"},
+            new Object[]{"m1", "DOUBLE", "NO"},
             new Object[]{"unique_dim1", "OTHER", "NO"}
         )
     );

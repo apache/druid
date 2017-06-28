@@ -102,7 +102,7 @@ public class DruidStatementTest
             Lists.newArrayList("cnt", "BIGINT", "java.lang.Long"),
             Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
-            Lists.newArrayList("m1", "FLOAT", "java.lang.Double"),
+            Lists.newArrayList("m1", "DOUBLE", "java.lang.Double"),
             Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
         ),
         Lists.transform(

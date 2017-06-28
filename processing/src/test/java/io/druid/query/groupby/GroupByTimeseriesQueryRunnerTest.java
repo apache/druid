@@ -171,8 +171,8 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
     final TimeseriesResultValue value = result.getValue();
 
-    Assert.assertEquals(result.toString(), 1870.06103515625, value.getDoubleMetric("maxIndex"), 0.0);
-    Assert.assertEquals(result.toString(), 59.02102279663086, value.getDoubleMetric("minIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 1870.061029, value.getDoubleMetric("maxIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 59.021022, value.getDoubleMetric("minIndex"), 0.0);
   }
 
 
