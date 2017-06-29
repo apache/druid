@@ -174,14 +174,25 @@ public class DruidCoordinatorBalancerTest
     // Mock stuff that the coordinator needs
     mockCoordinator(coordinator);
 
+    BalancerStrategy predefinedPickOrderStrategy = new PredefinedPickOrderBalancerStrategy(
+        balancerStrategy,
+        ImmutableList.of(
+            new BalancerSegmentHolder(druidServer1, segment1),
+            new BalancerSegmentHolder(druidServer1, segment2),
+            new BalancerSegmentHolder(druidServer1, segment3),
+            new BalancerSegmentHolder(druidServer1, segment4)
+        )
+    );
+
     DruidCoordinatorRuntimeParams params = defaullRuntimeParamsBuilder(
         ImmutableList.of(druidServer1, druidServer2),
         ImmutableList.of(peon1, peon2)
-    ).build();
+    )
+        .withBalancerStrategy(predefinedPickOrderStrategy)
+        .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertTrue(params.getCoordinatorStats().getTieredStat("movedCount", "normal") > 0);
-    Assert.assertTrue(params.getCoordinatorStats().getTieredStat("movedCount", "normal") < segments.size());
+    Assert.assertEquals(2, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
   }
 
   @Test
@@ -312,7 +323,13 @@ public class DruidCoordinatorBalancerTest
     EasyMock.expect(druidServer.getCurrSize()).andReturn(currentSize).atLeastOnce();
     EasyMock.expect(druidServer.getMaxSize()).andReturn(maxSize).atLeastOnce();
     EasyMock.expect(druidServer.getSegments()).andReturn(segments).anyTimes();
-    EasyMock.expect(druidServer.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
+    if (!segments.isEmpty()) {
+      segments.values().forEach(
+          s -> EasyMock.expect(druidServer.getSegment(s.getIdentifier())).andReturn(s).anyTimes()
+      );
+    } else {
+      EasyMock.expect(druidServer.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
+    }
     EasyMock.replay(druidServer);
   }
 
