@@ -109,9 +109,9 @@ public class StringUtilsTest
   }
 
   @Test
-  public void testSafeFormat()
+  public void testNonStrictFormat()
   {
-    Assert.assertEquals("test%d; format", StringUtils.unimportantSafeFormat("test%d", "format"));
-    Assert.assertEquals("test%s%s; format", StringUtils.unimportantSafeFormat("test%s%s", "format"));
+    Assert.assertEquals("test%d; format", StringUtils.nonStrictFormat("test%d", "format"));
+    Assert.assertEquals("test%s%s; format", StringUtils.nonStrictFormat("test%s%s", "format"));
   }
 }

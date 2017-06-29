@@ -30,7 +30,7 @@ public class SegmentLoadingException extends Exception
       Object... objs
   )
   {
-    super(StringUtils.unimportantSafeFormat(formatString, objs));
+    super(StringUtils.nonStrictFormat(formatString, objs));
   }
 
   public SegmentLoadingException(
@@ -39,6 +39,6 @@ public class SegmentLoadingException extends Exception
       Object... objs
   )
   {
-    super(StringUtils.unimportantSafeFormat(formatString, objs), cause);
+    super(StringUtils.nonStrictFormat(formatString, objs), cause);
   }
 }

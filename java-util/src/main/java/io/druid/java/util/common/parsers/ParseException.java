@@ -27,11 +27,11 @@ public class ParseException extends RuntimeException
 {
   public ParseException(String formatText, Object... arguments)
   {
-    super(StringUtils.unimportantSafeFormat(formatText, arguments));
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
   public ParseException(Throwable cause, String formatText, Object... arguments)
   {
-    super(StringUtils.unimportantSafeFormat(formatText, arguments), cause);
+    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 }

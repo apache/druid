@@ -31,6 +31,6 @@ public class ResourceLimitExceededException extends RuntimeException
 {
   public ResourceLimitExceededException(String message, Object... arguments)
   {
-    super(StringUtils.unimportantSafeFormat(message, arguments));
+    super(StringUtils.nonStrictFormat(message, arguments));
   }
 }

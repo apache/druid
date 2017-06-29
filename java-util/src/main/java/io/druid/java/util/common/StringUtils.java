@@ -113,7 +113,7 @@ public class StringUtils
    * concatenated format string and format arguments. Should be used for unimportant formatting like logging,
    * exception messages, typically not directly.
    */
-  public static String unimportantSafeFormat(String message, Object... formatArgs)
+  public static String nonStrictFormat(String message, Object... formatArgs)
   {
     if(formatArgs == null || formatArgs.length == 0) {
       return message;

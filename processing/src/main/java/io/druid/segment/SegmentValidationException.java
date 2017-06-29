@@ -28,11 +28,11 @@ public class SegmentValidationException extends RuntimeException
 {
   public SegmentValidationException(String formatText, Object... arguments)
   {
-    super(StringUtils.unimportantSafeFormat(formatText, arguments));
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
   public SegmentValidationException(Throwable cause, String formatText, Object... arguments)
   {
-    super(StringUtils.unimportantSafeFormat(formatText, arguments), cause);
+    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 }

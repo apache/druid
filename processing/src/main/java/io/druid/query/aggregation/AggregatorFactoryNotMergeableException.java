@@ -31,12 +31,12 @@ public class AggregatorFactoryNotMergeableException extends Exception
 
   public AggregatorFactoryNotMergeableException(String formatText, Object... arguments)
   {
-    super(StringUtils.unimportantSafeFormat(formatText, arguments));
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
   public AggregatorFactoryNotMergeableException(Throwable cause, String formatText, Object... arguments)
   {
-    super(StringUtils.unimportantSafeFormat(formatText, arguments), cause);
+    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 
   public AggregatorFactoryNotMergeableException(Throwable cause)
