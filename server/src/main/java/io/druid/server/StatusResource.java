@@ -44,7 +44,7 @@ public class StatusResource
   @Produces(MediaType.APPLICATION_JSON)
   public Status doGet()
   {
-    return new Status(Initialization.getLoadedModules(DruidModule.class));
+    return new Status(Initialization.getLoadedImplementations(DruidModule.class));
   }
 
   public static class Status

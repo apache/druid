@@ -74,6 +74,7 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -88,17 +89,18 @@ public class Initialization
   private static final Logger log = new Logger(Initialization.class);
   private static final ConcurrentMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
 
-  private final static Map<Class, Set> extensionsMap = Maps.<Class, Set>newHashMap();
+  private final static Map<Class, Collection> extensionsMap = Maps.newHashMap();
 
   /**
-   * @param clazz Module class
-   * @param <T>
+   * @param clazz service class
+   * @param <T> the service type
    *
-   * @return Returns the set of modules loaded.
+   * @return Returns a collection of implementations loaded.
    */
-  public static <T> Set<T> getLoadedModules(Class<T> clazz)
+  public static <T> Collection<T> getLoadedImplementations(Class<T> clazz)
   {
-    Set<T> retVal = extensionsMap.get(clazz);
+    @SuppressWarnings("unchecked")
+    Collection<T> retVal = extensionsMap.get(clazz);
     if (retVal == null) {
       return Sets.newHashSet();
     }
@@ -106,7 +108,7 @@ public class Initialization
   }
 
   @VisibleForTesting
-  static void clearLoadedModules()
+  static void clearLoadedImplementations()
   {
     extensionsMap.clear();
   }
@@ -118,63 +120,84 @@ public class Initialization
   }
 
   /**
-   * Look for extension modules for the given class from both classpath and extensions directory. A user should never
-   * put the same two extensions in classpath and extensions directory, if he/she does that, the one that is in the
-   * classpath will be loaded, the other will be ignored.
+   * Look for implementations for the given class from both classpath and extensions directory, using {@link
+   * java.util.ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if
+   * he/she does that, the one that is in the classpath will be loaded, the other will be ignored.
    *
-   * @param config Extensions configuration
-   * @param clazz  The class of extension module (e.g., DruidModule)
+   * @param config        Extensions configuration
+   * @param serviceClass  The class to look the implementations of (e.g., DruidModule)
    *
-   * @return A collection that contains distinct extension modules
+   * @return A collection that contains implementations (of distinct concrete classes) of the given class. The order of
+   * elements in the returned collection is not specified and not guaranteed to be the same for different calls to
+   * getFromExtensions().
    */
-  public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
+  public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> serviceClass)
   {
-    final Set<T> retVal = Sets.newHashSet();
-    final Set<String> loadedExtensionNames = Sets.newHashSet();
+    Collection<T> modulesToLoad = new ServiceLoadingFromExtensions<>(config, serviceClass).implsToLoad;
+    extensionsMap.put(serviceClass, modulesToLoad);
+    return modulesToLoad;
+  }
 
-    if (config.searchCurrentClassloader()) {
-      for (T module : ServiceLoader.load(clazz, Thread.currentThread().getContextClassLoader())) {
-        final String moduleName = module.getClass().getCanonicalName();
-        if (moduleName == null) {
-          log.warn(
-              "Extension module [%s] was ignored because it doesn't have a canonical name, is it a local or anonymous class?",
-              module.getClass().getName()
-          );
-        } else if (!loadedExtensionNames.contains(moduleName)) {
-          log.info("Adding classpath extension module [%s] for class [%s]", moduleName, clazz.getName());
-          loadedExtensionNames.add(moduleName);
-          retVal.add(module);
+  private static class ServiceLoadingFromExtensions<T>
+  {
+    private final ExtensionsConfig extensionsConfig;
+    private final Class<T> serviceClass;
+    private final List<T> implsToLoad = new ArrayList<>();
+    private final Set<String> implClassNamesToLoad = new HashSet<>();
+
+    private ServiceLoadingFromExtensions(ExtensionsConfig extensionsConfig, Class<T> serviceClass)
+    {
+      this.extensionsConfig = extensionsConfig;
+      this.serviceClass = serviceClass;
+      if (extensionsConfig.searchCurrentClassloader()) {
+        addAllFromCurrentClassLoader();
+      }
+      addAllFromFileSystem();
+    }
+
+    private void addAllFromCurrentClassLoader()
+    {
+      ServiceLoader
+          .load(serviceClass, Thread.currentThread().getContextClassLoader())
+          .forEach(impl -> tryAdd(impl, "classpath"));
+    }
+
+    private void addAllFromFileSystem()
+    {
+      for (File extension : getExtensionFilesToLoad(extensionsConfig)) {
+        log.info("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
+        try {
+          final URLClassLoader loader = getClassLoaderForExtension(extension);
+          ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
         }
       }
     }
 
-    for (File extension : getExtensionFilesToLoad(config)) {
-      log.info("Loading extension [%s] for class [%s]", extension.getName(), clazz.getName());
-      try {
-        final URLClassLoader loader = getClassLoaderForExtension(extension);
-        for (T module : ServiceLoader.load(clazz, loader)) {
-          final String moduleName = module.getClass().getCanonicalName();
-          if (moduleName == null) {
-            log.warn(
-                "Extension module [%s] was ignored because it doesn't have a canonical name, is it a local or anonymous class?",
-                module.getClass().getName()
-            );
-          } else if (!loadedExtensionNames.contains(moduleName)) {
-            log.info("Adding local file system extension module [%s] for class [%s]", moduleName, clazz.getName());
-            loadedExtensionNames.add(moduleName);
-            retVal.add(module);
-          }
-        }
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
+    private void tryAdd(T serviceImpl, String extensionType)
+    {
+      final String serviceImplName = serviceImpl.getClass().getCanonicalName();
+      if (serviceImplName == null) {
+        log.warn(
+            "Implementation [%s] was ignored because it doesn't have a canonical name, "
+            + "is it a local or anonymous class?",
+            serviceImpl.getClass().getName()
+        );
+      } else if (extensionsConfig.getModuleExcludeList().contains(serviceImplName)) {
+        log.info("Not loading module [%s] because it is present in moduleExcludeList", serviceImplName);
+      } else if (!implClassNamesToLoad.contains(serviceImplName)) {
+        log.info(
+            "Adding implementation [%s] for class [%s] from %s extension",
+            serviceImplName,
+            serviceClass,
+            extensionType
+        );
+        implClassNamesToLoad.add(serviceImplName);
+        implsToLoad.add(serviceImpl);
       }
     }
-
-    // update the map with currently loaded modules
-    extensionsMap.put(clazz, retVal);
-
-    return retVal;
   }
 
   /**
