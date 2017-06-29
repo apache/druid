@@ -362,25 +362,7 @@ outer:
               }
 
               // Convert dimension types to specified output types
-              for (DimensionSpec dimSpec : query.getDimensions()) {
-                Object baseVal = theMap.get(dimSpec.getOutputName());
-                switch (dimSpec.getOutputType()) {
-                  case STRING:
-                    baseVal = baseVal == null ? "" : baseVal.toString();
-                    break;
-                  case LONG:
-                    baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
-                    baseVal = baseVal == null ? 0L : baseVal;
-                    break;
-                  case FLOAT:
-                    baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
-                    baseVal = baseVal == null ? 0.f : baseVal;
-                    break;
-                  default:
-                    throw new IAE("Unsupported type: " + dimSpec.getOutputType());
-                }
-                theMap.put(dimSpec.getOutputName(), baseVal);
-              }
+              convertRowTypesToOutputTypes(query.getDimensions(), theMap);
 
               // Add aggregations.
               for (int i = 0; i < entry.getValues().length; i++) {
@@ -421,6 +403,29 @@ outer:
       if (delegate != null) {
         delegate.close();
       }
+    }
+  }
+
+  private static void convertRowTypesToOutputTypes(List<DimensionSpec> dimensionSpecs, Map<String, Object> rowMap)
+  {
+    for (DimensionSpec dimSpec : dimensionSpecs) {
+      Object baseVal = rowMap.get(dimSpec.getOutputName());
+      switch (dimSpec.getOutputType()) {
+        case STRING:
+          baseVal = baseVal == null ? "" : baseVal.toString();
+          break;
+        case LONG:
+          baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
+          baseVal = baseVal == null ? 0L : baseVal;
+          break;
+        case FLOAT:
+          baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
+          baseVal = baseVal == null ? 0.f : baseVal;
+          break;
+        default:
+          throw new IAE("Unsupported type: " + dimSpec.getOutputType());
+      }
+      rowMap.put(dimSpec.getOutputName(), baseVal);
     }
   }
 
