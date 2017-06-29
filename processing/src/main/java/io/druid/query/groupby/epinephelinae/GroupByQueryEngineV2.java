@@ -36,6 +36,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
@@ -358,6 +359,27 @@ outer:
                     entry.getKey(),
                     theMap
                 );
+              }
+
+              // Convert dimension types to specified output types
+              for (DimensionSpec dimSpec : query.getDimensions()) {
+                Object baseVal = theMap.get(dimSpec.getOutputName());
+                switch (dimSpec.getOutputType()) {
+                  case STRING:
+                    baseVal = baseVal == null ? "" : baseVal.toString();
+                    break;
+                  case LONG:
+                    baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
+                    baseVal = baseVal == null ? 0L : baseVal;
+                    break;
+                  case FLOAT:
+                    baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
+                    baseVal = baseVal == null ? 0.f : baseVal;
+                    break;
+                  default:
+                    throw new IAE("Unsupported type: " + dimSpec.getOutputType());
+                }
+                theMap.put(dimSpec.getOutputName(), baseVal);
               }
 
               // Add aggregations.
