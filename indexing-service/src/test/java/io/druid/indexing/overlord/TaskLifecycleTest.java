@@ -70,6 +70,8 @@ import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
@@ -402,7 +404,7 @@ public class TaskLifecycleTest
       }
 
       default: {
-        throw new RuntimeException(String.format("Unknown task storage type [%s]", taskStorageType));
+        throw new RE("Unknown task storage type [%s]", taskStorageType);
       }
     }
     tsqa = new TaskStorageQueryAdapter(taskStorage);
@@ -1168,7 +1170,7 @@ public class TaskLifecycleTest
 
   private RealtimeIndexTask newRealtimeIndexTask()
   {
-    String taskId = String.format("rt_task_%s", System.currentTimeMillis());
+    String taskId = StringUtils.format("rt_task_%s", System.currentTimeMillis());
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,

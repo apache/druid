@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.java.util.common.RetryUtils;
 
+import io.druid.java.util.common.StringUtils;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
@@ -87,7 +88,7 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
                 final long latestModified = storageObject.getLastModifiedDate().getTime();
                 if (latestModified >= mostRecent) {
                   mostRecent = latestModified;
-                  latest = new URI(String.format("s3://%s/%s", storageObject.getBucketName(), storageObject.getKey()));
+                  latest = new URI(StringUtils.format("s3://%s/%s", storageObject.getBucketName(), storageObject.getKey()));
                 }
               }
               return latest;

@@ -22,6 +22,7 @@ package io.druid.server.coordinator;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -167,7 +168,7 @@ public class ReplicationThrottler
       List<String> retVal = Lists.newArrayList();
       for (Map.Entry<String, String> entry : segments.entrySet()) {
         retVal.add(
-            String.format("%s ON %s", entry.getKey(), entry.getValue())
+            StringUtils.format("%s ON %s", entry.getKey(), entry.getValue())
         );
       }
       return retVal;

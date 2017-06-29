@@ -63,6 +63,7 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -525,7 +526,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
       URL url = null;
       try {
-        url = makeWorkerURL(zkWorker.getWorker(), String.format("/task/%s/shutdown", taskId));
+        url = makeWorkerURL(zkWorker.getWorker(), StringUtils.format("/task/%s/shutdown", taskId));
         final StatusResponseHolder response = httpClient.go(
             new Request(HttpMethod.POST, url),
             RESPONSE_HANDLER,
@@ -563,7 +564,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return Optional.absent();
     } else {
       // Worker is still running this task
-      final URL url = makeWorkerURL(zkWorker.getWorker(), String.format("/task/%s/log?offset=%d", taskId, offset));
+      final URL url = makeWorkerURL(zkWorker.getWorker(), StringUtils.format("/task/%s/log?offset=%d", taskId, offset));
       return Optional.<ByteSource>of(
           new ByteSource()
           {
@@ -595,7 +596,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     Preconditions.checkArgument(path.startsWith("/"), "path must start with '/': %s", path);
 
     try {
-      return new URL(String.format("http://%s/druid/worker/v1%s", worker.getHost(), path));
+      return new URL(StringUtils.format("http://%s/druid/worker/v1%s", worker.getHost(), path));
     }
     catch (MalformedURLException e) {
       throw Throwables.propagate(e);
@@ -995,7 +996,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       if (zkWorkers.putIfAbsent(worker.getHost(), zkWorker) == null) {
                         retVal.set(zkWorker);
                       } else {
-                        final String message = String.format(
+                        final String message = StringUtils.format(
                             "WTF?! Tried to add already-existing worker[%s]",
                             worker.getHost()
                         );

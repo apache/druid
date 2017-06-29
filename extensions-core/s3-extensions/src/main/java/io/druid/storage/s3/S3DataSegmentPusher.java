@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
@@ -66,9 +67,9 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop()
   {
     if (config.isUseS3aSchema()) {
-      return String.format("s3a://%s/%s", config.getBucket(), config.getBaseKey());
+      return StringUtils.format("s3a://%s/%s", config.getBucket(), config.getBaseKey());
     }
-    return String.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
+    return StringUtils.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
   }
 
   @Deprecated

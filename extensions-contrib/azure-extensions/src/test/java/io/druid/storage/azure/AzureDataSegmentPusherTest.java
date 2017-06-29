@@ -27,6 +27,7 @@ import com.google.common.io.Files;
 import com.microsoft.azure.storage.StorageException;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMockSupport;
@@ -116,9 +117,9 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final String storageDir = pusher.getStorageDir(dataSegment);
     Map<String, String> paths = pusher.getAzurePaths(dataSegment);
 
-    assertEquals(String.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME), paths.get("index"));
+    assertEquals(StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME), paths.get("index"));
     assertEquals(
-        String.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
+        StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
         paths.get("descriptor")
     );
   }

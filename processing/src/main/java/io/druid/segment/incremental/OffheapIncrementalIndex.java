@@ -26,6 +26,7 @@ import io.druid.collections.ResourceHolder;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -247,7 +248,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   {
     final boolean canAdd = size() < maxRowCount;
     if (!canAdd) {
-      outOfRowsReason = String.format("Maximum number of rows [%d] reached", maxRowCount);
+      outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
     }
     return canAdd;
   }

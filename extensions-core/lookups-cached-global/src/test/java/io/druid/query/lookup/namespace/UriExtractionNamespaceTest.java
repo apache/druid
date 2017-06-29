@@ -31,6 +31,7 @@ import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.annotations.Json;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -180,7 +181,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of("B", "C"),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%s\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
                       valueField
@@ -204,7 +205,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of("B", "C"),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
                       valueField
@@ -227,7 +228,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of("B", "C"),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
                       valueField
@@ -250,7 +251,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of("B", "C"),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
                       valueField
@@ -273,7 +274,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of("B", "C"),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
                       valueField
@@ -387,7 +388,7 @@ public class UriExtractionNamespaceTest
     final String keyField = "keyField";
     final String valueField = "valueField";
     final int n = 341879;
-    final String nString = String.format("%d", n);
+    final String nString = StringUtils.format("%d", n);
     UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
         new ObjectMapper(),
         keyField,
@@ -398,7 +399,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of("B", nString),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%s\":\"B\", \"%s\":\"%d\", \"FOO\":\"BAR\"}",
                       keyField,
                       valueField,
@@ -411,7 +412,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of(nString, "C"),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%s\":\"%d\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
                       n,
@@ -424,7 +425,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of("B", nString),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%s\":\"B\", \"%s\":%d, \"FOO\":\"BAR\"}",
                       keyField,
                       valueField,
@@ -437,7 +438,7 @@ public class UriExtractionNamespaceTest
         ImmutableMap.of(nString, "C"),
         parser.getParser()
               .parse(
-                  String.format(
+                  StringUtils.format(
                       "{\"%s\":%d, \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
                       n,
@@ -454,10 +455,10 @@ public class UriExtractionNamespaceTest
         registerTypes(new DefaultObjectMapper())
     );
     final int n = 341879;
-    final String nString = String.format("%d", n);
+    final String nString = StringUtils.format("%d", n);
     Assert.assertEquals(
         ImmutableMap.of("key", nString),
-        parser.getParser().parse(String.format("{\"key\":%d}", n))
+        parser.getParser().parse(StringUtils.format("{\"key\":%d}", n))
     );
   }
 }

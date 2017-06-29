@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -143,7 +144,7 @@ public class LocalDataSegmentPusherTest
     config.storageDirectory = new File("druid");
 
     Assert.assertEquals(
-        String.format("file:%s/druid", System.getProperty("user.dir")),
+        StringUtils.format("file:%s/druid", System.getProperty("user.dir")),
         new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop()
     );
   }

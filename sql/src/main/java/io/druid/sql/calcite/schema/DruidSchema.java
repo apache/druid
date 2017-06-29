@@ -38,6 +38,7 @@ import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.common.utils.JodaUtils;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -352,7 +353,7 @@ public class DruidSchema extends AbstractSchema
         if (!columnTypes.containsKey(entry.getKey()) || timestamp >= maxTimestamp) {
           ValueType valueType;
           try {
-            valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
+            valueType = ValueType.valueOf(StringUtils.toUpperCase(entry.getValue().getType()));
           }
           catch (IllegalArgumentException e) {
             // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly

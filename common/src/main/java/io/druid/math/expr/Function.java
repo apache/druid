@@ -21,6 +21,7 @@ package io.druid.math.expr;
 
 import com.google.common.base.Strings;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -793,7 +794,7 @@ interface Function
     {
       ExprType castTo;
       try {
-        castTo = ExprType.valueOf(y.asString().toUpperCase());
+        castTo = ExprType.valueOf(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
         throw new IAE("invalid type '%s'", y.asString());

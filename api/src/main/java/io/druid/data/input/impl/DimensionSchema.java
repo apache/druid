@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.StringUtils;
 
 /**
  */
@@ -57,13 +58,13 @@ public abstract class DimensionSchema
     @Override
     public String toString()
     {
-      return this.name().toUpperCase();
+      return StringUtils.toUpperCase(this.name());
     }
 
     @JsonCreator
     public static ValueType fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
   }
 
@@ -85,13 +86,13 @@ public abstract class DimensionSchema
     @JsonValue
     public String toString()
     {
-      return name().toUpperCase();
+      return StringUtils.toUpperCase(name());
     }
 
     @JsonCreator
     public static MultiValueHandling fromString(String name)
     {
-      return name == null ? ofDefault() : valueOf(name.toUpperCase());
+      return name == null ? ofDefault() : valueOf(StringUtils.toUpperCase(name));
     }
 
     // this can be system configuration

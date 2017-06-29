@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.ExtensionsConfig;
@@ -176,7 +175,7 @@ public class PullDependencies implements Runnable
       title = "A local repository that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed.",
       required = false
   )
-  public String localRepository = String.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
+  public String localRepository = StringUtils.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
 
   @Option(
       name = {"-r", "--remoteRepository"},
@@ -314,7 +313,7 @@ public class PullDependencies implements Runnable
               {
                 String scope = node.getDependency().getScope();
                 if (scope != null) {
-                  scope = scope.toLowerCase();
+                  scope = StringUtils.toLowerCase(scope);
                   if (scope.equals("provided")) {
                     return false;
                   }
@@ -473,11 +472,9 @@ public class PullDependencies implements Runnable
 
     if (!atLocation.mkdir()) {
       throw new ISE(
-          String.format(
-              "Unable to create directory at [%s] for coordinate [%s]",
-              atLocation.getAbsolutePath(),
-              coordinate
-          )
+          "Unable to create directory at [%s] for coordinate [%s]",
+          atLocation.getAbsolutePath(),
+          coordinate
       );
     }
   }

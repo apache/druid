@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
@@ -207,7 +208,7 @@ public class CacheSchedulerTest
         long minEnd = start + ((repeatCount - 1) * delay);
         long end = System.currentTimeMillis();
         Assert.assertTrue(
-            String.format(
+            StringUtils.format(
                 "Didn't wait long enough between runs. Expected more than %d was %d",
                 minEnd - start,
                 end - start

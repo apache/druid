@@ -34,6 +34,7 @@ import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
@@ -85,7 +86,7 @@ public class HadoopConverterJob
     if (segments.size() == 1) {
       final DataSegment segment = segments.get(0);
       jobConf.setJobName(
-          String.format(
+          StringUtils.format(
               "druid-convert-%s-%s-%s",
               segment.getDataSource(),
               segment.getInterval(),
@@ -120,7 +121,7 @@ public class HadoopConverterJob
           )
       );
       jobConf.setJobName(
-          String.format(
+          StringUtils.format(
               "druid-convert-%s-%s",
               Arrays.toString(dataSources.toArray()),
               Arrays.toString(versions.toArray())

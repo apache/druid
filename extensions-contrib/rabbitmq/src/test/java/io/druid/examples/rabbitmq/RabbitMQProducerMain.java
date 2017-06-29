@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -174,11 +175,11 @@ public class RabbitMQProducerMain
     int interval = Integer.parseInt(cmd.getOptionValue("interval", "10"));
     int delay = Integer.parseInt(cmd.getOptionValue("delay", "100"));
 
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ENGLISH);
     Date stop = sdf.parse(cmd.getOptionValue("stop", sdf.format(new Date())));
 
     Random r = new Random();
-    Calendar timer = Calendar.getInstance();
+    Calendar timer = Calendar.getInstance(Locale.ENGLISH);
     timer.setTime(sdf.parse(cmd.getOptionValue("start", "2010-01-01T00:00:00")));
 
     String msg_template = "{\"utcdt\": \"%s\", \"wp\": %d, \"gender\": \"%s\", \"age\": %d}";
@@ -188,12 +189,12 @@ public class RabbitMQProducerMain
 
     channel.exchangeDeclare(exchange, type, durable, autoDelete, null);
 
-    do{
+    do {
       int wp = (10 + r.nextInt(90)) * 100;
       String gender = r.nextBoolean() ? "male" : "female";
       int age = 20 + r.nextInt(70);
 
-      String line = String.format(msg_template, sdf.format(timer.getTime()), wp, gender, age);
+      String line = StringUtils.format(msg_template, sdf.format(timer.getTime()), wp, gender, age);
 
       channel.basicPublish(exchange, routingKey, null, StringUtils.toUtf8(line));
 
@@ -202,7 +203,7 @@ public class RabbitMQProducerMain
       timer.add(Calendar.SECOND, interval);
 
       Thread.sleep(delay);
-    }while((!single && stop.after(timer.getTime())));
+    } while((!single && stop.after(timer.getTime())));
 
     connection.close();
   }

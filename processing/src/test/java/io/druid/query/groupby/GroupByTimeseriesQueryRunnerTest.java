@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -164,7 +165,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());
     Assert.assertFalse(
-        String.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
+        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
         result.getTimestamp().isAfter(expectedLast)
     );
 

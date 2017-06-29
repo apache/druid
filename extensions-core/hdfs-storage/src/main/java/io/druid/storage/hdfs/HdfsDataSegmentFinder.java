@@ -22,12 +22,11 @@ package io.druid.storage.hdfs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import org.apache.commons.lang.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -85,8 +84,8 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
           final String descriptorParts[] = path.getName().split("_");
           if (descriptorParts.length == 2
               && descriptorParts[1].equals("descriptor.json")
-              && StringUtils.isNumeric(descriptorParts[0])) {
-            indexZip = new Path(path.getParent(),  String.format("%s_index.zip", descriptorParts[0]));
+              && org.apache.commons.lang.StringUtils.isNumeric(descriptorParts[0])) {
+            indexZip = new Path(path.getParent(), StringUtils.format("%s_index.zip", descriptorParts[0]));
           } else {
             indexZip = new Path(path.getParent(), "index.zip");
           }

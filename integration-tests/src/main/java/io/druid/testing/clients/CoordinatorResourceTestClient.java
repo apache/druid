@@ -29,6 +29,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -60,7 +61,7 @@ public class CoordinatorResourceTestClient
 
   private String getCoordinatorURL()
   {
-    return String.format(
+    return StringUtils.format(
         "%s/druid/coordinator/v1/",
         coordinator
     );
@@ -68,12 +69,12 @@ public class CoordinatorResourceTestClient
 
   private String getIntervalsURL(String dataSource)
   {
-    return String.format("%sdatasources/%s/intervals", getCoordinatorURL(), dataSource);
+    return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), dataSource);
   }
 
   private String getLoadStatusURL()
   {
-    return String.format("%s%s", getCoordinatorURL(), "loadstatus");
+    return StringUtils.format("%s%s", getCoordinatorURL(), "loadstatus");
   }
 
   // return a list of the segment dates for the specified datasource
@@ -124,7 +125,7 @@ public class CoordinatorResourceTestClient
     try {
       makeRequest(
           HttpMethod.DELETE,
-          String.format(
+          StringUtils.format(
               "%sdatasources/%s",
               getCoordinatorURL(),
               dataSource
@@ -141,7 +142,7 @@ public class CoordinatorResourceTestClient
     try {
       makeRequest(
           HttpMethod.DELETE,
-          String.format(
+          StringUtils.format(
               "%sdatasources/%s/intervals/%s",
               getCoordinatorURL(),
               dataSource, interval.toString().replace("/", "_")

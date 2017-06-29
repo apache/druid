@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.junit.Assert;
@@ -249,7 +250,7 @@ public class CompressedLongsSerdeTest
               final long indexedVal = indexed.get(j);
               if (Longs.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(String.format("Thread1[%d]: %d != %d", j, val, indexedVal));
+                reason.set(StringUtils.format("Thread1[%d]: %d != %d", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -288,7 +289,7 @@ public class CompressedLongsSerdeTest
                 final long indexedVal = indexed2.get(j);
                 if (Longs.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(String.format("Thread2[%d]: %d != %d", j, val, indexedVal));
+                  reason.set(StringUtils.format("Thread2[%d]: %d != %d", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }

@@ -38,6 +38,7 @@ import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 
@@ -556,7 +557,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         }
 
         if (LOGGER.isDebugEnabled() && stringBuilder.length() > 2) {
-          LOGGER.debug(String.format(
+          LOGGER.debug(StringUtils.format(
               "%s@%s is consuming the following message queues: %s",
               defaultMQPullConsumer.getClientIP(),
               defaultMQPullConsumer.getInstanceName(),

@@ -32,6 +32,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Accumulator;
@@ -242,9 +243,12 @@ public class GroupByQueryHelper
 
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
       final String typeName = aggregatorFactory.getTypeName();
-      final ValueType valueType = typeName != null
-                                  ? Enums.getIfPresent(ValueType.class, typeName.toUpperCase()).orNull()
-                                  : null;
+      final ValueType valueType;
+      if (typeName != null) {
+        valueType = Enums.getIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)).orNull();
+      } else {
+        valueType = null;
+      }
       if (valueType != null) {
         types.put(aggregatorFactory.getName(), valueType);
       }

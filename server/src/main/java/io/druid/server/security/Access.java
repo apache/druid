@@ -19,6 +19,8 @@
 
 package io.druid.server.security;
 
+import io.druid.java.util.common.StringUtils;
+
 public class Access
 {
   private final boolean allowed;
@@ -46,6 +48,6 @@ public class Access
   @Override
   public String toString()
   {
-    return String.format("Allowed:%s, Message:%s", allowed, message);
+    return StringUtils.format("Allowed:%s, Message:%s", allowed, message);
   }
 }
