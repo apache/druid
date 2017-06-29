@@ -422,28 +422,38 @@ public class DruidCoordinator
           ), segmentName
       );
 
-      loadPeon.loadSegment(
-          segmentToLoad,
-          new LoadPeonCallback()
-          {
-            @Override
-            public void execute()
-            {
+      final LoadPeonCallback loadPeonCallback = () -> {
+        dropPeon.unmarkSegmentToDrop(segmentToLoad);
+        if (callback != null) {
+          callback.execute();
+        }
+      };
+
+      // mark segment to drop before it is actually loaded on server
+      // to be able to account this information in DruidBalancerStrategy immediately
+      dropPeon.markSegmentToDrop(segmentToLoad);
+      try {
+        loadPeon.loadSegment(
+            segmentToLoad,
+            () -> {
               try {
                 if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
                     curator.checkExists().forPath(toLoadQueueSegPath) == null &&
                     !dropPeon.getSegmentsToDrop().contains(segment)) {
-                  dropPeon.dropSegment(segment, callback);
-                } else if (callback != null) {
-                  callback.execute();
+                  dropPeon.dropSegment(segment, loadPeonCallback);
+                } else {
+                  loadPeonCallback.execute();
                 }
               }
               catch (Exception e) {
                 throw Throwables.propagate(e);
               }
             }
-          }
-      );
+        );
+      } catch (Exception e) {
+        dropPeon.unmarkSegmentToDrop(segmentToLoad);
+        Throwables.propagate(e);
+      }
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception moving segment %s", segmentName).emit();

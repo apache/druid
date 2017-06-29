@@ -45,8 +45,7 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
     final String segmentName = segmentToMove.getIdentifier();
 
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
-        !fromServerName.equals(toServer.getName()) &&
-        !currentlyMovingSegments.get(toServer.getTier()).containsKey(segmentName) &&
+        (toServer.getSegment(segmentName) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
       log.info(
           "Moving [%s] from [%s] to [%s]",
@@ -64,6 +63,9 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
           {
           }
         });
+
+        final LoadQueuePeon dropPeon = params.getLoadManagementPeons().get(fromServerName);
+        dropPeon.markSegmentToDrop(segment.getSegment());
 
         currentlyMovingSegments.get(toServer.getTier()).put(segmentName, segment);
         return true;
