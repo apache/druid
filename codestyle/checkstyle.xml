@@ -71,5 +71,26 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use Comparators.naturalNullsFirst() instead of Ordering.natural().nullsFirst()"/>
     </module>
+
+    <module name="Regexp">
+      <property name="format" value="Float\.MAX_VALUE"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use Float.POSITIVE_INFINITY"/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="Float\.MIN_VALUE"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use Float.NEGATIVE_INFINITY"/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="Double\.MAX_VALUE"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use Double.POSITIVE_INFINITY"/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="Double\.MIN_VALUE"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use Double.NEGATIVE_INFINITY"/>
+    </module>
   </module>
 </module>

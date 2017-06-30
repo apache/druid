@@ -37,7 +37,7 @@ public class QuadraticGutmanSplitStrategy extends GutmanSplitStrategy
   @Override
   public Node[] pickSeeds(List<Node> nodes)
   {
-    double highestCost = Double.MIN_VALUE;
+    double highestCost = Double.NEGATIVE_INFINITY;
     int[] highestCostIndices = new int[2];
 
     for (int i = 0; i < nodes.size() - 1; i++) {
@@ -58,7 +58,7 @@ public class QuadraticGutmanSplitStrategy extends GutmanSplitStrategy
   @Override
   public Node pickNext(List<Node> nodes, Node[] groups)
   {
-    double highestCost = Double.MIN_VALUE;
+    double highestCost = Double.NEGATIVE_INFINITY;
     Node costlyNode = null;
     int counter = 0;
     int index = -1;

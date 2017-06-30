@@ -335,11 +335,11 @@ public class ApproximateHistogram
     // or merge existing bins before inserting the new one
 
     int minPos = minDeltaIndex();
-    float minDelta = minPos >= 0 ? positions[minPos + 1] - positions[minPos] : Float.MAX_VALUE;
+    float minDelta = minPos >= 0 ? positions[minPos + 1] - positions[minPos] : Float.POSITIVE_INFINITY;
 
     // determine the distance of new value to the nearest bins
-    final float deltaRight = insertAt < binCount ? positions[insertAt] - value : Float.MAX_VALUE;
-    final float deltaLeft = insertAt > 0 ? value - positions[insertAt - 1] : Float.MAX_VALUE;
+    final float deltaRight = insertAt < binCount ? positions[insertAt] - value : Float.POSITIVE_INFINITY;
+    final float deltaLeft = insertAt > 0 ? value - positions[insertAt - 1] : Float.POSITIVE_INFINITY;
 
     boolean mergeValue = false;
     if (deltaRight < minDelta) {
@@ -368,7 +368,7 @@ public class ApproximateHistogram
   protected int minDeltaIndex()
   {
     // determine minimum distance between existing bins
-    float minDelta = Float.MAX_VALUE;
+    float minDelta = Float.POSITIVE_INFINITY;
     int minPos = -1;
     for (int i = 0; i < binCount - 1; ++i) {
       float delta = (positions[i + 1] - positions[i]);
@@ -1037,7 +1037,7 @@ public class ApproximateHistogram
   private static int minIndex(float[] deltas, int lastValidIndex)
   {
     int minIndex = -1;
-    float min = Float.MAX_VALUE;
+    float min = Float.POSITIVE_INFINITY;
     for (int k = 0; k < lastValidIndex; ++k) {
       float value = deltas[k];
       if (value < min) {

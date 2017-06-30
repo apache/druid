@@ -42,8 +42,8 @@ public class Histogram
     this.breaks = breaks;
     this.bins   = new long[this.breaks.length + 1];
     this.count  = 0;
-    this.min = Float.MAX_VALUE;
-    this.max = Float.MIN_VALUE;
+    this.min = Float.POSITIVE_INFINITY;
+    this.max = Float.NEGATIVE_INFINITY;
   }
 
   public Histogram(float[] breaks, long[] bins, float min, float max) {
