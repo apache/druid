@@ -583,7 +583,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         @Override
         public int skip(int n)
         {
-          return IntIteratorUtils.skip(this, n);
+          return IntIteratorUtils.skip(baseIterator, n);
         }
       };
     }
