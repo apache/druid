@@ -24,10 +24,13 @@ import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.timeline.TimelineLookup;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public interface TimelineServerView extends ServerView
 {
+  @Nullable
   TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource);
   <T> QueryRunner<T> getQueryRunner(DruidServer server);
 }
