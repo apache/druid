@@ -408,23 +408,28 @@ outer:
   private static void convertRowTypesToOutputTypes(List<DimensionSpec> dimensionSpecs, Map<String, Object> rowMap)
   {
     for (DimensionSpec dimSpec : dimensionSpecs) {
-      Object baseVal = rowMap.get(dimSpec.getOutputName());
-      switch (dimSpec.getOutputType()) {
-        case STRING:
-          baseVal = baseVal == null ? "" : baseVal.toString();
-          break;
-        case LONG:
-          baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
-          baseVal = baseVal == null ? 0L : baseVal;
-          break;
-        case FLOAT:
-          baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
-          baseVal = baseVal == null ? 0.f : baseVal;
-          break;
-        default:
-          throw new IAE("Unsupported type: " + dimSpec.getOutputType());
-      }
-      rowMap.put(dimSpec.getOutputName(), baseVal);
+      final ValueType outputType = dimSpec.getOutputType();
+      rowMap.compute(
+          dimSpec.getOutputName(),
+          (dimName, baseVal) -> {
+            switch (outputType) {
+              case STRING:
+                baseVal = baseVal == null ? "" : baseVal.toString();
+                break;
+              case LONG:
+                baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
+                baseVal = baseVal == null ? 0L : baseVal;
+                break;
+              case FLOAT:
+                baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
+                baseVal = baseVal == null ? 0.f : baseVal;
+                break;
+              default:
+                throw new IAE("Unsupported type: " + outputType);
+            }
+            return baseVal;
+          }
+      );
     }
   }
 
