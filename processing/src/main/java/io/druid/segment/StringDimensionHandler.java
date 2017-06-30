@@ -28,7 +28,6 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.Closeable;
-import java.io.File;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 
@@ -199,14 +198,4 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     return new StringDimensionMergerV9(dimensionName, indexSpec, capabilities, progress);
   }
 
-  @Override
-  public DimensionMergerLegacy makeLegacyMerger(
-      IndexSpec indexSpec,
-      File outDir,
-      ColumnCapabilities capabilities,
-      ProgressIndicator progress
-  )
-  {
-    return new StringDimensionMergerLegacy(dimensionName, indexSpec, outDir, capabilities, progress);
-  }
 }
