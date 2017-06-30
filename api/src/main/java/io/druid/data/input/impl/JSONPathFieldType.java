@@ -21,6 +21,7 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.druid.java.util.common.StringUtils;
 
 public enum JSONPathFieldType
 {
@@ -31,12 +32,12 @@ public enum JSONPathFieldType
   @Override
   public String toString()
   {
-    return this.name().toLowerCase();
+    return StringUtils.toLowerCase(this.name());
   }
 
   @JsonCreator
   public static JSONPathFieldType fromString(String name)
   {
-    return valueOf(name.toUpperCase());
+    return valueOf(StringUtils.toUpperCase(name));
   }
 }

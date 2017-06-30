@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
@@ -68,27 +69,27 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     if (routerUrl == null) {
       String routerHost = props.get("router_host");
       if (null != routerHost) {
-        routerUrl = String.format("http://%s:%s", routerHost, props.get("router_port"));
+        routerUrl = StringUtils.format("http://%s:%s", routerHost, props.get("router_port"));
       }
     }
     brokerUrl = props.get("broker_url");
     if (brokerUrl == null) {
-      brokerUrl = String.format("http://%s:%s", props.get("broker_host"), props.get("broker_port"));
+      brokerUrl = StringUtils.format("http://%s:%s", props.get("broker_host"), props.get("broker_port"));
     }
 
     historicalUrl = props.get("historical_url");
     if (historicalUrl == null) {
-      historicalUrl = String.format("http://%s:%s", props.get("historical_host"), props.get("historical_port"));
+      historicalUrl = StringUtils.format("http://%s:%s", props.get("historical_host"), props.get("historical_port"));
     }
 
     coordinatorUrl = props.get("coordinator_url");
     if (coordinatorUrl == null) {
-      coordinatorUrl = String.format("http://%s:%s", props.get("coordinator_host"), props.get("coordinator_port"));
+      coordinatorUrl = StringUtils.format("http://%s:%s", props.get("coordinator_host"), props.get("coordinator_port"));
     }
 
     indexerUrl = props.get("indexer_url");
     if (indexerUrl == null) {
-      indexerUrl = String.format("http://%s:%s", props.get("indexer_host"), props.get("indexer_port"));
+      indexerUrl = StringUtils.format("http://%s:%s", props.get("indexer_host"), props.get("indexer_port"));
     }
     middleManagerHost = props.get("middlemanager_host");
 

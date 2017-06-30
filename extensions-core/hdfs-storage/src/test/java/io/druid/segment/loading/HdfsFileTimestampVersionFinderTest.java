@@ -20,6 +20,7 @@
 package io.druid.segment.loading;
 
 import com.google.common.io.ByteStreams;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.storage.hdfs.HdfsFileTimestampVersionFinder;
 import org.apache.commons.io.FileUtils;
@@ -59,7 +60,7 @@ public class HdfsFileTimestampVersionFinderTest
   {
     hdfsTmpDir = File.createTempFile("hdfsHandlerTest", "dir");
     if (!hdfsTmpDir.delete()) {
-      throw new IOException(String.format("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath()));
+      throw new IOE("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath());
     }
     conf = new Configuration(true);
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, hdfsTmpDir.getAbsolutePath());

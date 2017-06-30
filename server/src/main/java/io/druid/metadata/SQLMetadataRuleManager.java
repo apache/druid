@@ -40,6 +40,7 @@ import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
@@ -87,7 +88,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
             {
               List<Map<String, Object>> existing = handle
                   .createQuery(
-                      String.format(
+                      StringUtils.format(
                           "SELECT id from %s where datasource=:dataSource",
                           ruleTable
                       )
@@ -109,12 +110,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
               );
               final String version = new DateTime().toString();
               handle.createStatement(
-                  String.format(
+                  StringUtils.format(
                       "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
                       ruleTable
                   )
               )
-                    .bind("id", String.format("%s_%s", defaultDatasourceName, version))
+                    .bind("id", StringUtils.format("%s_%s", defaultDatasourceName, version))
                     .bind("dataSource", defaultDatasourceName)
                     .bind("version", version)
                     .bind("payload", jsonMapper.writeValueAsBytes(defaultRules))
@@ -239,7 +240,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 {
                   return handle.createQuery(
                       // Return latest version rule by dataSource
-                      String.format(
+                      StringUtils.format(
                           "SELECT r.dataSource, r.payload "
                           + "FROM %1$s r "
                           + "INNER JOIN(SELECT dataSource, max(version) as version FROM %1$s GROUP BY dataSource) ds "
@@ -377,12 +378,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 );
                 String version = auditTime.toString();
                 handle.createStatement(
-                    String.format(
+                    StringUtils.format(
                         "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
                         getRulesTable()
                     )
                 )
-                      .bind("id", String.format("%s_%s", dataSource, version))
+                      .bind("id", StringUtils.format("%s_%s", dataSource, version))
                       .bind("dataSource", dataSource)
                       .bind("version", version)
                       .bind("payload", jsonMapper.writeValueAsBytes(newRules))
@@ -394,7 +395,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         );
       }
       catch (Exception e) {
-        log.error(e, String.format("Exception while overriding rule for %s", dataSource));
+        log.error(e, StringUtils.format("Exception while overriding rule for %s", dataSource));
         return false;
       }
     }
@@ -402,7 +403,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       poll();
     }
     catch (Exception e) {
-      log.error(e, String.format("Exception while polling for rules after overriding the rule for %s", dataSource));
+      log.error(e, StringUtils.format("Exception while polling for rules after overriding the rule for %s", dataSource));
     }
     return true;
   }

@@ -45,6 +45,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.coordination.DataSegmentChangeCallback;
@@ -507,14 +508,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       try {
         final String req;
         if (counter != null) {
-          req = String.format(
+          req = StringUtils.format(
               "/druid-internal/v1/segments?counter=%s&hash=%s&timeout=%s",
               counter.getCounter(),
               counter.getHash(),
               config.getServerTimeout()
           );
         } else {
-          req = String.format(
+          req = StringUtils.format(
               "/druid-internal/v1/segments?counter=-1&timeout=%s",
               config.getServerTimeout()
           );

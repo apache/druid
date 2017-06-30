@@ -19,17 +19,19 @@
 
 package io.druid.java.util.common.parsers;
 
+import io.druid.java.util.common.StringUtils;
+
 /**
  */
 public class ParseException extends RuntimeException
 {
   public ParseException(String formatText, Object... arguments)
   {
-    super(String.format(formatText, arguments));
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
   public ParseException(Throwable cause, String formatText, Object... arguments)
   {
-    super(String.format(formatText, arguments), cause);
+    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 }

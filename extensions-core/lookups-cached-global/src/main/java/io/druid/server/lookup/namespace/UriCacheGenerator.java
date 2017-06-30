@@ -26,6 +26,7 @@ import io.druid.data.input.MapPopulator;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
@@ -101,7 +102,7 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
 
       if (uri == null) {
         throw new FileNotFoundException(
-            String.format(
+            StringUtils.format(
                 "Could not find match for pattern `%s` in [%s] for %s",
                 versionRegex,
                 originalUri,

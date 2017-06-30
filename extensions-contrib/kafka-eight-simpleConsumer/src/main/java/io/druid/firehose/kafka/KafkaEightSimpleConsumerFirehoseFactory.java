@@ -32,6 +32,7 @@ import io.druid.data.input.FirehoseFactoryV2;
 import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.firehose.kafka.KafkaSimpleConsumer.BytesMessageWithOffset;
+import io.druid.java.util.common.StringUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -323,7 +324,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
         }
       };
       thread.setDaemon(true);
-      thread.setName(String.format("kafka-%s-%s", topic, partitionId));
+      thread.setName(StringUtils.format("kafka-%s-%s", topic, partitionId));
       thread.start();
     }
 

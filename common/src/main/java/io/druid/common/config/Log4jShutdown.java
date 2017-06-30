@@ -20,6 +20,7 @@
 package io.druid.common.config;
 
 import com.google.common.base.Throwables;
+import io.druid.java.util.common.ISE;
 import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.util.Cancellable;
 import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
@@ -91,7 +92,7 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
   public void start()
   {
     if (!state.compareAndSet(State.INITIALIZED, State.STARTED)) { // Skip STARTING
-      throw new IllegalStateException(String.format("Expected state [%s] found [%s]", State.INITIALIZED, state.get()));
+      throw new ISE("Expected state [%s] found [%s]", State.INITIALIZED, state.get());
     }
   }
 
@@ -101,7 +102,7 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
     if (!state.compareAndSet(State.STARTED, State.STOPPING)) {
       State current = state.waitForTransition(State.STOPPING, State.STOPPED, SHUTDOWN_WAIT_TIMEOUT);
       if (current != State.STOPPED) {
-        throw new IllegalStateException(String.format("Expected state [%s] found [%s]", State.STARTED, current));
+        throw new ISE("Expected state [%s] found [%s]", State.STARTED, current);
       }
       return;
     }

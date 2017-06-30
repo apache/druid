@@ -27,6 +27,7 @@ import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.ObjectMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -207,7 +208,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 public Integer withHandle(Handle handle) throws Exception
                 {
                   return handle.createStatement(
-                      String.format(
+                      StringUtils.format(
                           "UPDATE %s SET used = false WHERE id = :id",
                           derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
                       )

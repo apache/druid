@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
@@ -91,14 +92,14 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     for (int i = 0; i < dimensionCount; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              String.format("sumResult%s", i),
-              String.format("Dim_%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
       ingestAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              String.format("doubleSumResult%s", i),
-              String.format("Dim_%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
     }
@@ -265,7 +266,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
-      String dimName = String.format("Dim_%d", i);
+      String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
       builder.put(dimName, new Integer(rowID).longValue());
     }
@@ -304,14 +305,14 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     for (int i = 0; i < dimensionCount; ++i) {
       queryAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              String.format("sumResult%s", i),
-              String.format("sumResult%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("sumResult%s", i)
           )
       );
       queryAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              String.format("doubleSumResult%s", i),
-              String.format("doubleSumResult%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("doubleSumResult%s", i)
           )
       );
     }
@@ -436,14 +437,14 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
       Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());
       for (int i = 0; i < dimensionCount; ++i) {
         Assert.assertEquals(
-            String.format("Failed long sum on dimension %d", i),
+            StringUtils.format("Failed long sum on dimension %d", i),
             expectedVal,
-            result.getValue().getLongMetric(String.format("sumResult%s", i)).intValue()
+            result.getValue().getLongMetric(StringUtils.format("sumResult%s", i)).intValue()
         );
         Assert.assertEquals(
-            String.format("Failed double sum on dimension %d", i),
+            StringUtils.format("Failed double sum on dimension %d", i),
             expectedVal,
-            result.getValue().getDoubleMetric(String.format("doubleSumResult%s", i)).intValue()
+            result.getValue().getDoubleMetric(StringUtils.format("doubleSumResult%s", i)).intValue()
         );
       }
     }

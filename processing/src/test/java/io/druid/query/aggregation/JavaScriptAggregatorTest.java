@@ -22,6 +22,7 @@ package io.druid.query.aggregation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
@@ -321,7 +322,7 @@ public class JavaScriptAggregatorTest
         a.aggregate();
         a.aggregate();
         a.aggregate();
-        if(i % 1000 == 0) System.out.println(String.format("Query object %d", i));
+        if(i % 1000 == 0) System.out.println(StringUtils.format("Query object %d", i));
     }
     */
 
@@ -357,7 +358,7 @@ public class JavaScriptAggregatorTest
       ++i;
     }
     long t1 = System.currentTimeMillis() - t;
-    System.out.println(String.format("JavaScript aggregator == %,f: %d ms", aggRhino.getFloat(), t1));
+    System.out.println(StringUtils.format("JavaScript aggregator == %,f: %d ms", aggRhino.getFloat(), t1));
 
     t = System.currentTimeMillis();
     i = 0;
@@ -366,8 +367,8 @@ public class JavaScriptAggregatorTest
       ++i;
     }
     long t2 = System.currentTimeMillis() - t;
-    System.out.println(String.format("DoubleSum  aggregator == %,f: %d ms", doubleAgg.getFloat(), t2));
+    System.out.println(StringUtils.format("DoubleSum  aggregator == %,f: %d ms", doubleAgg.getFloat(), t2));
 
-    System.out.println(String.format("JavaScript is %2.1fx slower", (double) t1 / t2));
+    System.out.println(StringUtils.format("JavaScript is %2.1fx slower", (double) t1 / t2));
   }
 }

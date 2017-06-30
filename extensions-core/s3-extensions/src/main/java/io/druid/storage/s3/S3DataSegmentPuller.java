@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
@@ -100,7 +101,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
           }
         }
         catch (ServiceException e) {
-          throw new IOException(StringUtils.safeFormat("Could not load S3 URI [%s]", uri), e);
+          throw new IOE(e, "Could not load S3 URI [%s]", uri);
         }
       }
 
@@ -178,7 +179,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
     try {
       org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
-      final URI uri = URI.create(String.format("s3://%s/%s", s3Coords.bucket, s3Coords.path));
+      final URI uri = URI.create(StringUtils.format("s3://%s/%s", s3Coords.bucket, s3Coords.path));
       final ByteSource byteSource = new ByteSource()
       {
         @Override
@@ -250,7 +251,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       return buildFileObject(uri, s3Client).openInputStream();
     }
     catch (ServiceException e) {
-      throw new IOException(String.format("Could not load URI [%s]", uri.toString()), e);
+      throw new IOE(e, "Could not load URI [%s]", uri);
     }
   }
 
@@ -292,15 +293,12 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   {
     try {
       final FileObject object = buildFileObject(uri, s3Client);
-      return String.format("%d", object.getLastModified());
+      return StringUtils.format("%d", object.getLastModified());
     }
     catch (ServiceException e) {
       if (S3Utils.isServiceExceptionRecoverable(e)) {
         // The recoverable logic is always true for IOException, so we want to only pass IOException if it is recoverable
-        throw new IOException(
-            String.format("Could not fetch last modified timestamp from URI [%s]", uri.toString()),
-            e
-        );
+        throw new IOE(e, "Could not fetch last modified timestamp from URI [%s]", uri);
       } else {
         throw Throwables.propagate(e);
       }
@@ -366,7 +364,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
     @Override
     public String toString()
     {
-      return String.format("s3://%s/%s", bucket, path);
+      return StringUtils.format("s3://%s/%s", bucket, path);
     }
   }
 }

@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -65,7 +66,7 @@ public class JSONToLowerParser extends JSONParser
               @Override
               public String apply(String input)
               {
-                return input.toLowerCase();
+                return StringUtils.toLowerCase(input);
               }
             }
         )
@@ -84,7 +85,7 @@ public class JSONToLowerParser extends JSONParser
       while (keysIter.hasNext()) {
         String key = keysIter.next();
 
-        if (exclude.contains(key.toLowerCase())) {
+        if (exclude.contains(StringUtils.toLowerCase(key))) {
           continue;
         }
 
@@ -98,11 +99,11 @@ public class JSONToLowerParser extends JSONParser
               nodeValue.add(subnodeValue);
             }
           }
-          map.put(key.toLowerCase(), nodeValue); // difference from JSONParser parse()
+          map.put(StringUtils.toLowerCase(key), nodeValue); // difference from JSONParser parse()
         } else {
           final Object nodeValue = valueFunction.apply(node);
           if (nodeValue != null) {
-            map.put(key.toLowerCase(), nodeValue); // difference from JSONParser parse()
+            map.put(StringUtils.toLowerCase(key), nodeValue); // difference from JSONParser parse()
           }
         }
       }

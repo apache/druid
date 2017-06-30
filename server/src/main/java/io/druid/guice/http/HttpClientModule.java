@@ -27,6 +27,7 @@ import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Global;
+import io.druid.java.util.common.StringUtils;
 
 import java.lang.annotation.Annotation;
 
@@ -109,7 +110,9 @@ public class HttpClientModule implements Module
           .withNumConnections(config.getNumConnections())
           .withReadTimeout(config.getReadTimeout())
           .withWorkerCount(config.getNumMaxThreads())
-          .withCompressionCodec(HttpClientConfig.CompressionCodec.valueOf(config.getCompressionCodec().toUpperCase()));
+          .withCompressionCodec(
+              HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(config.getCompressionCodec()))
+          );
 
       if (getSslContextBinding() != null) {
         builder.withSslContext(getSslContextBinding().getProvider().get());

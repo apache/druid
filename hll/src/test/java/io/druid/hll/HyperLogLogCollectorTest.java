@@ -36,6 +36,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -121,7 +122,7 @@ public class HyperLogLogCollectorTest
     System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
     System.out.println("Simple  buffer cardinality " + simple.estimateCardinality());
     System.out.println(
-        String.format(
+        StringUtils.format(
             "Rolling cardinality estimate off by %4.1f%%",
             100 * (1 - rolling.estimateCardinality() / n)
         )
@@ -144,14 +145,18 @@ public class HyperLogLogCollectorTest
       theCollector.add(fn.hashLong(count).asBytes());
       rolling.fold(theCollector);
     }
-    System.out.printf("testHighCardinalityRollingFold2 took %d ms%n", System.currentTimeMillis() - start);
+    System.out.printf(
+        Locale.ENGLISH,
+        "testHighCardinalityRollingFold2 took %d ms%n",
+        System.currentTimeMillis() - start
+    );
 
     int n = count;
 
     System.out.println("True cardinality " + n);
     System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
     System.out.println(
-        String.format(
+        StringUtils.format(
             "Rolling cardinality estimate off by %4.1f%%",
             100 * (1 - rolling.estimateCardinality() / n)
         )
@@ -837,6 +842,7 @@ public class HyperLogLogCollectorTest
     error += errorThisTime;
 
     System.out.printf(
+        Locale.ENGLISH,
         "%,d ==? %,f in %,d millis. actual error[%,f%%], avg. error [%,f%%]%n",
         numThings,
         estimatedValue,

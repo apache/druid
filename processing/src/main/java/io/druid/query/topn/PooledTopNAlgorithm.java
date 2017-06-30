@@ -22,8 +22,8 @@ package io.druid.query.topn;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.BaseQuery;
@@ -185,13 +185,13 @@ public class PooledTopNAlgorithm
   }
 
   private final TopNQuery query;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
   private static final int AGG_UNROLL_COUNT = 8; // Must be able to fit loop below
 
   public PooledTopNAlgorithm(
       Capabilities capabilities,
       TopNQuery query,
-      StupidPool<ByteBuffer> bufferPool
+      NonBlockingPool<ByteBuffer> bufferPool
   )
   {
     super(capabilities);

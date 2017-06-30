@@ -23,8 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
@@ -87,7 +87,7 @@ public class GroupByQueryEngineV2
   public static Sequence<Row> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
-      final StupidPool<ByteBuffer> intermediateResultsBufferPool,
+      final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
       final GroupByQueryConfig config
   )
   {

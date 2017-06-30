@@ -21,6 +21,7 @@ package io.druid.metadata.storage.sqlserver;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
@@ -234,7 +235,7 @@ public class SQLServerConnector extends SQLMetadataConnector
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format(
+            handle.createStatement(StringUtils.format(
                 "MERGE INTO %1$s WITH (UPDLOCK, HOLDLOCK) as target"
                     + " USING "
                     + " (:key, :value) as source (%2$s, %3$s)"

@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import io.druid.concurrent.Execs;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
@@ -103,7 +104,7 @@ public class DruidStatement implements Closeable
     this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
     this.yielderOpenCloseExecutor = Execs.singleThreaded(
-        String.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
+        StringUtils.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
     );
   }
 

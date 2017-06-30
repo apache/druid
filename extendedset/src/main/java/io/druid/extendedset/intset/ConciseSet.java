@@ -20,6 +20,8 @@
 package io.druid.extendedset.intset;
 
 
+import io.druid.java.util.common.StringUtils;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -2277,7 +2279,7 @@ public class ConciseSet extends AbstractIntSet implements Serializable
           if (bit == 0) {
             s.append("none");
           } else {
-            s.append(String.format("%4d", bit - 1));
+            s.append(StringUtils.format("%4d", bit - 1));
           }
           s.append(')');
         }

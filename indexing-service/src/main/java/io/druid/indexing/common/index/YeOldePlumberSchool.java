@@ -32,6 +32,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -248,7 +249,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 
       private File getSpillDir(final int n)
       {
-        return new File(persistDir, String.format("spill%d", n));
+        return new File(persistDir, StringUtils.format("spill%d", n));
       }
     };
   }

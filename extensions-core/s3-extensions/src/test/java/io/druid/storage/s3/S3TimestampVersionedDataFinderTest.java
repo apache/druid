@@ -19,6 +19,7 @@
 
 package io.druid.storage.s3;
 
+import io.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -60,11 +61,11 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(String.format("s3://%s/%s", bucket, object1.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object1.getKey()));
 
     Assert.assertEquals(expected, latest);
   }
@@ -96,7 +97,7 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
@@ -126,11 +127,11 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(String.format("s3://%s/%s", bucket, object0.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey()));
 
     Assert.assertEquals(expected, latest);
   }
@@ -157,11 +158,11 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, object0.getKey())), null);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey())), null);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(String.format("s3://%s/%s", bucket, object0.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey()));
 
     Assert.assertEquals(expected, latest);
   }

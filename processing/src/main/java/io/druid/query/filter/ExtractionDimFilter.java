@@ -113,6 +113,6 @@ public class ExtractionDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    return String.format("%s(%s) = %s", extractionFn, dimension, value);
+    return StringUtils.format("%s(%s) = %s", extractionFn, dimension, value);
   }
 }

@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Doubles;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -144,6 +145,6 @@ public class BucketExtractionFn implements ExtractionFn
   @Override
   public String toString()
   {
-    return String.format("bucket(%f, %f)", size, offset);
+    return StringUtils.format("bucket(%f, %f)", size, offset);
   }
 }

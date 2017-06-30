@@ -20,11 +20,12 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 
 public class SegmentMissingException extends ISE
 {
   public SegmentMissingException(String formatText, Object... arguments) {
-    super(String.format(formatText, arguments));
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
   public SegmentMissingException(Throwable cause, String formatText, Object... arguments){

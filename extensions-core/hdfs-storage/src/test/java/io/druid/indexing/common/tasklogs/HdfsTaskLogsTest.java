@@ -57,7 +57,7 @@ public class HdfsTaskLogsTest
     final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
     for (Map.Entry<Long, String> entry : expected.entrySet()) {
       final String string = readLog(taskLogs, "foo", entry.getKey());
-      Assert.assertEquals(String.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
+      Assert.assertEquals(StringUtils.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
     }
   }
 

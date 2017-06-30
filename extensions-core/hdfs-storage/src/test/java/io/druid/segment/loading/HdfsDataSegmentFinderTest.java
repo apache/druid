@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.IOE;
 import io.druid.storage.hdfs.HdfsDataSegmentFinder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -157,7 +158,7 @@ public class HdfsDataSegmentFinderTest
 
     hdfsTmpDir = File.createTempFile("hdfsDataSource", "dir");
     if (!hdfsTmpDir.delete()) {
-      throw new IOException(String.format("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath()));
+      throw new IOE("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath());
     }
     conf = new Configuration(true);
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, hdfsTmpDir.getAbsolutePath());
