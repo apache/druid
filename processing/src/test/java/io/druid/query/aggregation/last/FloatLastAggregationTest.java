@@ -23,7 +23,7 @@ import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.TestDoubleColumnSelectorImpl;
+import io.druid.query.aggregation.TestFloatColumnSelector;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -35,35 +35,35 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-public class DoubleLastAggregationTest
+public class FloatLastAggregationTest
 {
-  private DoubleLastAggregatorFactory doubleLastAggFactory;
-  private DoubleLastAggregatorFactory combiningAggFactory;
+  private FloatLastAggregatorFactory floatLastAggregatorFactory;
+  private FloatLastAggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
-  private TestDoubleColumnSelectorImpl valueSelector;
+  private TestFloatColumnSelector valueSelector;
   private TestObjectColumnSelector objectSelector;
 
-  private double[] doubles = {1.1897d, 0.001d, 86.23d, 166.228d};
+  private float[] floats = {1.1897f, 0.001f, 86.23f, 166.228f};
   private long[] times = {8224, 6879, 2436, 7888};
   private SerializablePair[] pairs = {
-      new SerializablePair<>(52782L, 134.3d),
-      new SerializablePair<>(65492L, 1232.212d),
-      new SerializablePair<>(69134L, 18.1233d),
-      new SerializablePair<>(11111L, 233.5232d)
+      new SerializablePair<>(52782L, 134.3f),
+      new SerializablePair<>(65492L, 1232.212f),
+      new SerializablePair<>(69134L, 18.1233f),
+      new SerializablePair<>(11111L, 233.5232f)
   };
 
   @Before
   public void setup()
   {
-    doubleLastAggFactory = new DoubleLastAggregatorFactory("billy", "nilly");
-    combiningAggFactory = (DoubleLastAggregatorFactory) doubleLastAggFactory.getCombiningFactory();
+    floatLastAggregatorFactory = new FloatLastAggregatorFactory("billy", "nilly");
+    combiningAggFactory = (FloatLastAggregatorFactory) floatLastAggregatorFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
-    valueSelector = new TestDoubleColumnSelectorImpl(doubles);
+    valueSelector = new TestFloatColumnSelector(floats);
     objectSelector = new TestObjectColumnSelector(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
-    EasyMock.expect(colSelectorFactory.makeDoubleColumnSelector("nilly")).andReturn(valueSelector);
+    EasyMock.expect(colSelectorFactory.makeFloatColumnSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeObjectColumnSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);
   }
@@ -71,31 +71,31 @@ public class DoubleLastAggregationTest
   @Test
   public void testDoubleLastAggregator()
   {
-    DoubleLastAggregator agg = (DoubleLastAggregator) doubleLastAggFactory.factorize(colSelectorFactory);
+    FloatLastAggregator agg = (FloatLastAggregator) floatLastAggregatorFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
 
-    Pair<Long, Double> result = (Pair<Long, Double>) agg.get();
+    Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
 
     Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(doubles[0], result.rhs, 0.0001);
-    Assert.assertEquals((long) doubles[0], agg.getLong());
-    Assert.assertEquals(doubles[0], agg.getDouble(), 0.0001);
+    Assert.assertEquals(floats[0], result.rhs, 0.0001);
+    Assert.assertEquals((long) floats[0], agg.getLong());
+    Assert.assertEquals(floats[0], agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
+    Assert.assertEquals(0, ((Pair<Long, Float>) agg.get()).rhs, 0.0001);
   }
 
   @Test
   public void testDoubleLastBufferAggregator()
   {
-    DoubleLastBufferAggregator agg = (DoubleLastBufferAggregator) doubleLastAggFactory.factorizeBuffered(
+    FloatLastBufferAggregator agg = (FloatLastBufferAggregator) floatLastAggregatorFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleLastAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[floatLastAggregatorFactory.getMaxIntermediateSize()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -103,12 +103,12 @@ public class DoubleLastAggregationTest
     aggregate(agg, buffer, 0);
     aggregate(agg, buffer, 0);
 
-    Pair<Long, Double> result = (Pair<Long, Double>) agg.get(buffer, 0);
+    Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
 
     Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(doubles[0], result.rhs, 0.0001);
-    Assert.assertEquals((long) doubles[0], agg.getLong(buffer, 0));
-    Assert.assertEquals(doubles[0], agg.getDouble(buffer, 0), 0.0001);
+    Assert.assertEquals(floats[0], result.rhs, 0.0001);
+    Assert.assertEquals((long) floats[0], agg.getLong(buffer, 0));
+    Assert.assertEquals(floats[0], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -116,38 +116,38 @@ public class DoubleLastAggregationTest
   {
     SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621);
     SerializablePair pair2 = new SerializablePair<>(1467240000L, 785.4);
-    Assert.assertEquals(pair2, doubleLastAggFactory.combine(pair1, pair2));
+    Assert.assertEquals(pair2, floatLastAggregatorFactory.combine(pair1, pair2));
   }
 
   @Test
   public void testDoubleLastCombiningAggregator()
   {
-    DoubleLastAggregator agg = (DoubleLastAggregator) combiningAggFactory.factorize(colSelectorFactory);
+    FloatLastAggregator agg = (FloatLastAggregator) combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
 
-    Pair<Long, Double> result = (Pair<Long, Double>) agg.get();
-    Pair<Long, Double> expected = (Pair<Long, Double>)pairs[2];
+    Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
+    Pair<Long, Float> expected = (Pair<Long, Float>)pairs[2];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
-    Assert.assertEquals(expected.rhs, agg.getDouble(), 0.0001);
+    Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
+    Assert.assertEquals(0, ((Pair<Long, Float>) agg.get()).rhs, 0.0001);
   }
 
   @Test
   public void testDoubleLastCombiningBufferAggregator()
   {
-    DoubleLastBufferAggregator agg = (DoubleLastBufferAggregator) combiningAggFactory.factorizeBuffered(
+    FloatLastBufferAggregator agg = (FloatLastBufferAggregator) combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleLastAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[floatLastAggregatorFactory.getMaxIntermediateSize()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -155,13 +155,13 @@ public class DoubleLastAggregationTest
     aggregate(agg, buffer, 0);
     aggregate(agg, buffer, 0);
 
-    Pair<Long, Double> result = (Pair<Long, Double>) agg.get(buffer, 0);
-    Pair<Long, Double> expected = (Pair<Long, Double>)pairs[2];
+    Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
+    Pair<Long, Float> expected = (Pair<Long, Float>)pairs[2];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(expected.rhs, agg.getDouble(buffer, 0), 0.0001);
+    Assert.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 0.0001);
   }
 
 
@@ -169,12 +169,12 @@ public class DoubleLastAggregationTest
   public void testSerde() throws Exception
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    String doubleSpecJson = "{\"type\":\"doubleLast\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(doubleLastAggFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
+    String doubleSpecJson = "{\"type\":\"floatLast\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
+    Assert.assertEquals(floatLastAggregatorFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
   }
 
   private void aggregate(
-      DoubleLastAggregator agg
+      FloatLastAggregator agg
   )
   {
     agg.aggregate();
@@ -184,7 +184,7 @@ public class DoubleLastAggregationTest
   }
 
   private void aggregate(
-      DoubleLastBufferAggregator agg,
+      FloatLastBufferAggregator agg,
       ByteBuffer buff,
       int position
   )

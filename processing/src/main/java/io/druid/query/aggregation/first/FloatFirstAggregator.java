@@ -17,27 +17,27 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.last;
+package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
-public class DoubleLastAggregator implements Aggregator
+public class FloatFirstAggregator implements Aggregator
 {
 
-  private final DoubleColumnSelector valueSelector;
+  private final FloatColumnSelector valueSelector;
   private final LongColumnSelector timeSelector;
   private final String name;
 
-  protected long lastTime;
-  protected double lastValue;
+  protected long firstTime;
+  protected float firstValue;
 
-  public DoubleLastAggregator(
+  public FloatFirstAggregator(
       String name,
       LongColumnSelector timeSelector,
-      DoubleColumnSelector valueSelector
+      FloatColumnSelector valueSelector
   )
   {
     this.name = name;
@@ -51,29 +51,35 @@ public class DoubleLastAggregator implements Aggregator
   public void aggregate()
   {
     long time = timeSelector.get();
-    if (time >= lastTime) {
-      lastTime = timeSelector.get();
-      lastValue = valueSelector.get();
+    if (time < firstTime) {
+      firstTime = time;
+      firstValue = valueSelector.get();
     }
   }
 
   @Override
   public void reset()
   {
-    lastTime = Long.MIN_VALUE;
-    lastValue = 0;
+    firstTime = Long.MAX_VALUE;
+    firstValue = 0;
   }
 
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, lastValue);
+    return new SerializablePair<>(firstTime, firstValue);
   }
 
   @Override
   public float getFloat()
   {
-    return (float) lastValue;
+    return firstValue;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return (double) firstValue;
   }
 
   @Override
@@ -85,12 +91,7 @@ public class DoubleLastAggregator implements Aggregator
   @Override
   public long getLong()
   {
-    return (long) lastValue;
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return lastValue;
+    return (long) firstValue;
   }
 }
+

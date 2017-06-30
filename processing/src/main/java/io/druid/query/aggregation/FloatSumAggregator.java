@@ -17,80 +17,87 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.last;
+package io.druid.query.aggregation;
 
-import io.druid.collections.SerializablePair;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import com.google.common.collect.Ordering;
+import io.druid.segment.FloatColumnSelector;
 
-public class DoubleLastAggregator implements Aggregator
+import java.util.Comparator;
+
+/**
+ */
+public class FloatSumAggregator implements Aggregator
 {
-
-  private final DoubleColumnSelector valueSelector;
-  private final LongColumnSelector timeSelector;
-  private final String name;
-
-  protected long lastTime;
-  protected double lastValue;
-
-  public DoubleLastAggregator(
-      String name,
-      LongColumnSelector timeSelector,
-      DoubleColumnSelector valueSelector
-  )
+  static final Comparator COMPARATOR = new Ordering()
   {
-    this.name = name;
-    this.valueSelector = valueSelector;
-    this.timeSelector = timeSelector;
+    @Override
+    public int compare(Object o, Object o1)
+    {
+      return Float.compare(((Number) o).floatValue(), ((Number) o1).floatValue());
+    }
+  }.nullsFirst();
 
-    reset();
+  static double combineValues(Object lhs, Object rhs)
+  {
+    return ((Number) lhs).floatValue() + ((Number) rhs).floatValue();
+  }
+
+  private final FloatColumnSelector selector;
+
+  private float sum;
+
+  public FloatSumAggregator(FloatColumnSelector selector)
+  {
+    this.selector = selector;
+
+    this.sum = 0;
   }
 
   @Override
   public void aggregate()
   {
-    long time = timeSelector.get();
-    if (time >= lastTime) {
-      lastTime = timeSelector.get();
-      lastValue = valueSelector.get();
-    }
+    sum += selector.get();
   }
 
   @Override
   public void reset()
   {
-    lastTime = Long.MIN_VALUE;
-    lastValue = 0;
+    sum = 0;
   }
 
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, lastValue);
+    return sum;
   }
 
   @Override
   public float getFloat()
   {
-    return (float) lastValue;
-  }
-
-  @Override
-  public void close()
-  {
-
+    return sum;
   }
 
   @Override
   public long getLong()
   {
-    return (long) lastValue;
+    return (long) sum;
+  }
+
+  @Override
+  public Aggregator clone()
+  {
+    return new FloatSumAggregator(selector);
+  }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
   }
 
   @Override
   public double getDouble()
   {
-    return lastValue;
+    return (double) sum;
   }
 }

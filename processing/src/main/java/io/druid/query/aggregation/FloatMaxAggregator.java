@@ -17,32 +17,30 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.last;
+package io.druid.query.aggregation;
 
-import io.druid.collections.SerializablePair;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.FloatColumnSelector;
 
-public class DoubleLastAggregator implements Aggregator
+import java.util.Comparator;
+
+/**
+ */
+public class FloatMaxAggregator implements Aggregator
 {
+  static final Comparator COMPARATOR = FloatSumAggregator.COMPARATOR;
 
-  private final DoubleColumnSelector valueSelector;
-  private final LongColumnSelector timeSelector;
-  private final String name;
-
-  protected long lastTime;
-  protected double lastValue;
-
-  public DoubleLastAggregator(
-      String name,
-      LongColumnSelector timeSelector,
-      DoubleColumnSelector valueSelector
-  )
+  static double combineValues(Object lhs, Object rhs)
   {
-    this.name = name;
-    this.valueSelector = valueSelector;
-    this.timeSelector = timeSelector;
+    return Math.max(((Number) lhs).floatValue(), ((Number) rhs).floatValue());
+  }
+
+  private final FloatColumnSelector selector;
+
+  private float max;
+
+  public FloatMaxAggregator(FloatColumnSelector selector)
+  {
+    this.selector = selector;
 
     reset();
   }
@@ -50,47 +48,48 @@ public class DoubleLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    long time = timeSelector.get();
-    if (time >= lastTime) {
-      lastTime = timeSelector.get();
-      lastValue = valueSelector.get();
-    }
+    max = Math.max(max, selector.get());
   }
 
   @Override
   public void reset()
   {
-    lastTime = Long.MIN_VALUE;
-    lastValue = 0;
+    max = Float.NEGATIVE_INFINITY;
   }
 
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, lastValue);
+    return max;
   }
 
   @Override
   public float getFloat()
   {
-    return (float) lastValue;
-  }
-
-  @Override
-  public void close()
-  {
-
+    return max;
   }
 
   @Override
   public long getLong()
   {
-    return (long) lastValue;
+    return (long) max;
+  }
+
+  @Override
+  public Aggregator clone()
+  {
+    return new FloatMaxAggregator(selector);
+  }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
   }
 
   @Override
   public double getDouble()
   {
-    return lastValue;
+    return (double) max;
   }
 }

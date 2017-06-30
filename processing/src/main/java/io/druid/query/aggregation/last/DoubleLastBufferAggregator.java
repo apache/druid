@@ -23,7 +23,7 @@ import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -31,9 +31,9 @@ import java.nio.ByteBuffer;
 public class DoubleLastBufferAggregator implements BufferAggregator
 {
   private final LongColumnSelector timeSelector;
-  private final FloatColumnSelector valueSelector;
+  private final DoubleColumnSelector valueSelector;
 
-  public DoubleLastBufferAggregator(LongColumnSelector timeSelector, FloatColumnSelector valueSelector)
+  public DoubleLastBufferAggregator(LongColumnSelector timeSelector, DoubleColumnSelector valueSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;

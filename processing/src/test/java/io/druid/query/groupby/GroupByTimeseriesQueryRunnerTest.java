@@ -133,7 +133,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
   public GroupByTimeseriesQueryRunnerTest(QueryRunner runner)
   {
-    super(runner, false);
+    super(runner, false, QueryRunnerTestHelper.commonDoubleAggregators);
   }
 
   // GroupBy handles timestamps differently when granularity is ALL

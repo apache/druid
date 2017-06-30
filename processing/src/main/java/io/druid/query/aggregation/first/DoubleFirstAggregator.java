@@ -21,13 +21,13 @@ package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
 public class DoubleFirstAggregator implements Aggregator
 {
 
-  private final FloatColumnSelector valueSelector;
+  private final DoubleColumnSelector valueSelector;
   private final LongColumnSelector timeSelector;
   private final String name;
 
@@ -37,7 +37,7 @@ public class DoubleFirstAggregator implements Aggregator
   public DoubleFirstAggregator(
       String name,
       LongColumnSelector timeSelector,
-      FloatColumnSelector valueSelector
+      DoubleColumnSelector valueSelector
   )
   {
     this.name = name;

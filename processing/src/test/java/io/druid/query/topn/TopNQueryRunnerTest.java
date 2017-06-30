@@ -54,13 +54,17 @@ import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.aggregation.FloatMaxAggregatorFactory;
+import io.druid.query.aggregation.FloatMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import io.druid.query.aggregation.last.LongLastAggregatorFactory;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -119,14 +123,18 @@ public class TopNQueryRunnerTest
     List<Object[]> parameters = new ArrayList<>();
     for (int i = 0; i < 32; i++) {
       for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
-        Object[] params = new Object[6];
+        Object[] params = new Object[7];
         params[0] = firstParameter;
         params[1] = (i & 1) != 0;
         params[2] = (i & 2) != 0;
         params[3] = (i & 4) != 0;
         params[4] = (i & 8) != 0;
         params[5] = (i & 16) != 0;
+        params[6] = QueryRunnerTestHelper.commonDoubleAggregators;
+        Object[] params2 = Arrays.copyOf(params, 7);
+        params2[6] = QueryRunnerTestHelper.commonFloatAggregators;
         parameters.add(params);
+        parameters.add(params2);
       }
     }
     return parameters;
@@ -174,6 +182,8 @@ public class TopNQueryRunnerTest
 
   private final QueryRunner<Result<TopNResultValue>> runner;
   private final boolean duplicateSingleAggregatorQueries;
+  private final List<AggregatorFactory> commonAggregators;
+
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -184,7 +194,8 @@ public class TopNQueryRunnerTest
       boolean specializeGeneric2AggPooledTopN,
       boolean specializeHistorical1SimpleDoubleAggPooledTopN,
       boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN,
-      boolean duplicateSingleAggregatorQueries
+      boolean duplicateSingleAggregatorQueries,
+      List<AggregatorFactory> commonAggregators
   )
   {
     this.runner = runner;
@@ -197,6 +208,7 @@ public class TopNQueryRunnerTest
         specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN
     );
     this.duplicateSingleAggregatorQueries = duplicateSingleAggregatorQueries;
+    this.commonAggregators = commonAggregators;
   }
 
   private List<AggregatorFactory> duplicateAggregators(AggregatorFactory aggregatorFactory, AggregatorFactory duplicate)
@@ -271,7 +283,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index"),
@@ -305,7 +317,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -353,6 +365,15 @@ public class TopNQueryRunnerTest
         )
     );
     assertExpectedResults(expectedResults, query);
+    assertExpectedResults(expectedResults,
+                          query.withAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(Iterables.concat(
+                              QueryRunnerTestHelper.commonFloatAggregators,
+                              Lists.newArrayList(
+                                  new FloatMaxAggregatorFactory("maxIndex", "indexFloat"),
+                                  new FloatMinAggregatorFactory("minIndex", "indexFloat")
+                              )
+                          )))
+    );
   }
 
   @Test
@@ -368,7 +389,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -431,7 +452,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -503,7 +524,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -916,6 +937,230 @@ public class TopNQueryRunnerTest
   }
 
   @Test
+  public void testTopNOverFirstLastFloatAggregatorUsingDoubleColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.monthGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(
+                new FloatFirstAggregatorFactory("first", "index"),
+                new FloatLastAggregatorFactory("last", "index")
+            )
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1000f)
+                        .put("last", 1127.23095703125f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 800f)
+                        .put("last", 943.4971923828125f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 100f)
+                        .put("last", 155.7449493408203f)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-02-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1203.4656f)
+                        .put("last", 1292.5428466796875f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1667.497802734375f)
+                        .put("last", 1101.918212890625f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 132.123779296875f)
+                        .put("last", 114.2845687866211f)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-03-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1124.2014f)
+                        .put("last", 1366.4476f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1166.1411f)
+                        .put("last", 1063.2012f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 153.05994f)
+                        .put("last", 125.83968f)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1314.8397f)
+                        .put("last", 1029.057f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1447.3412)
+                        .put("last", 780.272)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 135.8851f)
+                        .put("last", 120.290344f)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOverFirstLastFloatAggregatorUsingFloatColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.monthGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(
+                new FloatFirstAggregatorFactory("first", "indexFloat"),
+                new FloatLastAggregatorFactory("last", "indexFloat")
+            )
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1000f)
+                        .put("last", 1127.23095703125f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 800f)
+                        .put("last", 943.4971923828125f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 100f)
+                        .put("last", 155.7449493408203f)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-02-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1203.4656f)
+                        .put("last", 1292.5428466796875f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1667.497802734375f)
+                        .put("last", 1101.918212890625f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 132.123779296875f)
+                        .put("last", 114.2845687866211f)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-03-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1124.2014f)
+                        .put("last", 1366.4476f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1166.1411f)
+                        .put("last", 1063.2012f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 153.05994f)
+                        .put("last", 125.83968f)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1314.8397f)
+                        .put("last", 1029.057f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1447.3412)
+                        .put("last", 780.272)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 135.8851f)
+                        .put("last", 120.290344f)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+
+
+  @Test
   public void testTopNBySegment()
   {
 
@@ -928,7 +1173,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .context(specialContext)
         .build();
@@ -1034,7 +1279,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1082,7 +1327,7 @@ public class TopNQueryRunnerTest
         .metric(new NumericTopNMetricSpec("uniques"))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1131,7 +1376,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1179,7 +1424,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1220,7 +1465,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1254,7 +1499,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1306,7 +1551,7 @@ public class TopNQueryRunnerTest
                 Arrays.asList(new Interval("2011-04-01T00:00:00.000Z/2011-04-02T00:00:00.000Z"))
             )
         )
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1354,7 +1599,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1395,7 +1640,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -1433,7 +1678,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
     assertExpectedResults(
@@ -1457,7 +1702,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1472,7 +1717,7 @@ public class TopNQueryRunnerTest
                     .metric(QueryRunnerTestHelper.indexMetric)
                     .threshold(4)
                     .intervals(QueryRunnerTestHelper.firstToThird)
-                    .aggregators(QueryRunnerTestHelper.commonAggregators)
+                    .aggregators(commonAggregators)
                     .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                     .build()
             ), Lists.<Result<TopNResultValue>>newArrayList()
@@ -1491,7 +1736,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1506,7 +1751,7 @@ public class TopNQueryRunnerTest
                     .metric(QueryRunnerTestHelper.indexMetric)
                     .threshold(4)
                     .intervals(QueryRunnerTestHelper.firstToThird)
-                    .aggregators(QueryRunnerTestHelper.commonAggregators)
+                    .aggregators(commonAggregators)
                     .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                     .build()
             ), Lists.<Result<TopNResultValue>>newArrayList()
@@ -1525,7 +1770,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1566,7 +1811,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1614,7 +1859,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1668,7 +1913,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(1)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1703,7 +1948,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1738,7 +1983,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(1)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1772,7 +2017,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec("", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1852,7 +2097,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec("spot", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1892,7 +2137,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec("t", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1932,7 +2177,7 @@ public class TopNQueryRunnerTest
         .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("upfront", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1972,7 +2217,7 @@ public class TopNQueryRunnerTest
         .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("u", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2019,7 +2264,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(10)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2135,7 +2380,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2237,7 +2482,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2301,7 +2546,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2366,7 +2611,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2433,7 +2678,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2499,7 +2744,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2565,7 +2810,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2632,7 +2877,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2685,7 +2930,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2738,7 +2983,7 @@ public class TopNQueryRunnerTest
         .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2791,7 +3036,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec("s", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2861,7 +3106,7 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec("s", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2908,7 +3153,7 @@ public class TopNQueryRunnerTest
         .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("u", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -2954,7 +3199,7 @@ public class TopNQueryRunnerTest
         .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("p", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -3020,7 +3265,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .dimension(
             new ExtractionDimensionSpec(
@@ -3109,7 +3354,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .dimension(
             new ExtractionDimensionSpec(
@@ -3167,7 +3412,7 @@ public class TopNQueryRunnerTest
             .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec(QueryRunnerTestHelper.indexMetric)))
             .threshold(3)
             .intervals(QueryRunnerTestHelper.firstToThird)
-            .aggregators(QueryRunnerTestHelper.commonAggregators)
+            .aggregators(commonAggregators)
             .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
             .build();
 
@@ -3315,7 +3560,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -3399,7 +3644,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -3591,7 +3836,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -3639,7 +3884,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -3681,7 +3926,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(1000)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .build();
 
     Map<String, Object> map = Maps.newHashMap();
@@ -3719,7 +3964,7 @@ public class TopNQueryRunnerTest
         .filters(new SelectorDimFilter("partial_null_column", null, null))
         .threshold(1000)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .build();
 
     Map<String, Object> map = Maps.newHashMap();
@@ -3751,7 +3996,7 @@ public class TopNQueryRunnerTest
         .filters(new SelectorDimFilter("partial_null_column", "value", null))
         .threshold(1000)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
@@ -3865,7 +4110,7 @@ public class TopNQueryRunnerTest
                                             .metric("rows")
                                             .threshold(3)
                                             .intervals(QueryRunnerTestHelper.firstToThird)
-                                            .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                            .aggregators(commonAggregators)
                                             .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                             .filters(
                                                 new ExtractionDimFilter(
@@ -3919,7 +4164,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators, Lists.newArrayList(
+                    commonAggregators, Lists.newArrayList(
                         new FilteredAggregatorFactory(
                             new DoubleMaxAggregatorFactory("maxIndex", "index"),
                             extractionFilter
@@ -3988,7 +4233,7 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(Lists.newArrayList(Iterables.concat(QueryRunnerTestHelper.commonAggregators, Lists.newArrayList(
+        .aggregators(Lists.newArrayList(Iterables.concat(commonAggregators, Lists.newArrayList(
             new FilteredAggregatorFactory(new DoubleMaxAggregatorFactory("maxIndex", "index"),
                                           extractionFilter),
             //new DoubleMaxAggregatorFactory("maxIndex", "index"),
@@ -4035,7 +4280,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4110,7 +4355,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4182,7 +4427,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4254,7 +4499,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4326,7 +4571,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4404,7 +4649,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -4457,7 +4702,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4529,7 +4774,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4601,7 +4846,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4673,7 +4918,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4745,7 +4990,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4820,7 +5065,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4899,7 +5144,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -4947,7 +5192,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -5025,7 +5270,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -5094,7 +5339,7 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    commonAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")

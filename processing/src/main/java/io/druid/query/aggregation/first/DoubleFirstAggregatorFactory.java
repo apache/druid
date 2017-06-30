@@ -43,23 +43,15 @@ import java.util.Map;
 
 public class DoubleFirstAggregatorFactory extends AggregatorFactory
 {
-  public static final Comparator VALUE_COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o1, Object o2)
-    {
-      return Doubles.compare(((SerializablePair<Long, Double>) o1).rhs, ((SerializablePair<Long, Double>) o2).rhs);
-    }
-  };
+  public static final Comparator VALUE_COMPARATOR = (o1, o2) -> Doubles.compare(
+      ((SerializablePair<Long, Double>) o1).rhs,
+      ((SerializablePair<Long, Double>) o2).rhs
+  );
 
-  public static final Comparator TIME_COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o1, Object o2)
-    {
-      return Longs.compare(((SerializablePair<Long, Object>) o1).lhs, ((SerializablePair<Long, Object>) o2).lhs);
-    }
-  };
+  public static final Comparator TIME_COMPARATOR = (o1, o2) -> Longs.compare(
+      ((SerializablePair<Long, Object>) o1).lhs,
+      ((SerializablePair<Long, Object>) o2).lhs
+  );
 
   private static final byte CACHE_TYPE_ID = 16;
 
@@ -85,7 +77,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
     return new DoubleFirstAggregator(
         name,
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeDoubleColumnSelector(fieldName)
     );
   }
 
@@ -94,7 +86,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   {
     return new DoubleFirstBufferAggregator(
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeDoubleColumnSelector(fieldName)
     );
   }
 
@@ -223,7 +215,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "double";
   }
 
   @Override

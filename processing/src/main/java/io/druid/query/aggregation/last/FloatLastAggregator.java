@@ -21,26 +21,24 @@ package io.druid.query.aggregation.last;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
-public class DoubleLastAggregator implements Aggregator
+public class FloatLastAggregator implements Aggregator
 {
 
-  private final DoubleColumnSelector valueSelector;
+  private final FloatColumnSelector valueSelector;
   private final LongColumnSelector timeSelector;
-  private final String name;
 
   protected long lastTime;
-  protected double lastValue;
+  protected float lastValue;
 
-  public DoubleLastAggregator(
+  public FloatLastAggregator(
       String name,
       LongColumnSelector timeSelector,
-      DoubleColumnSelector valueSelector
+      FloatColumnSelector valueSelector
   )
   {
-    this.name = name;
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
 
@@ -73,7 +71,7 @@ public class DoubleLastAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    return (float) lastValue;
+    return lastValue;
   }
 
   @Override
@@ -91,6 +89,6 @@ public class DoubleLastAggregator implements Aggregator
   @Override
   public double getDouble()
   {
-    return lastValue;
+    return (double) lastValue;
   }
 }

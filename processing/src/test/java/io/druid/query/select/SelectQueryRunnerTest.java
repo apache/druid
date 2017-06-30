@@ -175,8 +175,26 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
-        Lists.newArrayList("market", "quality", "qualityLong", "qualityFloat", "qualityNumericString", "placement", "placementish", "partial_null_column", "null_column"),
-        Lists.newArrayList("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
+        Lists.newArrayList(
+            "market",
+            "quality",
+            "qualityLong",
+            "qualityFloat",
+            "qualityNumericString",
+            "placement",
+            "placementish",
+            "partial_null_column",
+            "null_column"
+        ),
+        Lists.newArrayList(
+            "index",
+            "quality_uniques",
+            "indexMin",
+            "indexMaxPlusTen",
+            "indexFloat",
+            "indexMaxFloat",
+            "indexMinFloat"
+        ),
         offset.startOffset(),
         offset.threshold()
     );
@@ -265,7 +283,7 @@ public class SelectQueryRunnerTest
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
                 Sets.newHashSet("mar", "qual", "place"),
-                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat", "indexFloat", "indexMaxFloat"),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -311,7 +329,7 @@ public class SelectQueryRunnerTest
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
                 Sets.newHashSet("mar", "qual", "place"),
-                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat", "indexFloat", "indexMaxFloat"),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -629,8 +647,26 @@ public class SelectQueryRunnerTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.<String, Integer>of(),
-                Sets.newHashSet("market", "quality", "qualityLong", "qualityFloat", "qualityNumericString", "placement", "placementish", "partial_null_column", "null_column"),
-                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
+                Sets.newHashSet(
+                    "market",
+                    "quality",
+                    "qualityLong",
+                    "qualityFloat",
+                    "qualityNumericString",
+                    "placement",
+                    "placementish",
+                    "partial_null_column",
+                    "null_column"
+                ),
+                Sets.newHashSet(
+                    "index",
+                    "quality_uniques",
+                    "indexMin",
+                    "indexMaxPlusTen",
+                    "indexMinFloat",
+                    "indexFloat",
+                    "indexMaxFloat"
+                ),
                 Lists.<EventHolder>newArrayList()
             )
         )
