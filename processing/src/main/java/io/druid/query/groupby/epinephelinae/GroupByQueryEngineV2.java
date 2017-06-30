@@ -361,7 +361,6 @@ outer:
                 );
               }
 
-              // Convert dimension types to specified output types
               convertRowTypesToOutputTypes(query.getDimensions(), theMap);
 
               // Add aggregations.
