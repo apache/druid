@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -194,7 +195,7 @@ public class TimeseriesQueryRunnerTest
     for (Result<TimeseriesResultValue> result : results) {
       DateTime current = result.getTimestamp();
       Assert.assertFalse(
-          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          StringUtils.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
           descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
       );
 
@@ -254,7 +255,7 @@ public class TimeseriesQueryRunnerTest
     for (Result<TimeseriesResultValue> result : results) {
       DateTime current = result.getTimestamp();
       Assert.assertFalse(
-          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          StringUtils.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
           descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
       );
       Assert.assertEquals(ImmutableMap.of(), result.getValue().getBaseObject());
@@ -291,7 +292,7 @@ public class TimeseriesQueryRunnerTest
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());
     Assert.assertFalse(
-        String.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
+        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
         result.getTimestamp().isAfter(expectedLast)
     );
 
@@ -339,7 +340,7 @@ public class TimeseriesQueryRunnerTest
     for (Result<TimeseriesResultValue> result : results) {
       DateTime current = result.getTimestamp();
       Assert.assertFalse(
-          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          StringUtils.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
           descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
       );
 

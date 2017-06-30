@@ -18,12 +18,13 @@
  */
 package io.druid.metadata.storage.sqlserver;
 
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.regex.Pattern;
-
+import com.google.common.base.Supplier;
+import com.google.inject.Inject;
+import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.StringUtils;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.metadata.SQLMetadataConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Binding;
 import org.skife.jdbi.v2.ColonPrefixNamedParamStatementRewriter;
@@ -35,13 +36,11 @@ import org.skife.jdbi.v2.tweak.RewrittenStatement;
 import org.skife.jdbi.v2.tweak.StatementRewriter;
 import org.skife.jdbi.v2.util.StringMapper;
 
-import com.google.common.base.Supplier;
-import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
-
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
-import io.druid.metadata.SQLMetadataConnector;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("nls")
 public class SQLServerConnector extends SQLMetadataConnector
@@ -236,7 +235,7 @@ public class SQLServerConnector extends SQLMetadataConnector
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format(
+            handle.createStatement(StringUtils.format(
                 "MERGE INTO %1$s WITH (UPDLOCK, HOLDLOCK) as target"
                     + " USING "
                     + " (:key, :value) as source (%2$s, %3$s)"

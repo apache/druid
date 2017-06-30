@@ -299,7 +299,7 @@ public class TestKafkaExtractionCluster
     kafkaProducerProperties.putAll(kafkaProperties);
     kafkaProducerProperties.put(
         "metadata.broker.list",
-        String.format("127.0.0.1:%d", kafkaServer.socketServer().port())
+        StringUtils.format("127.0.0.1:%d", kafkaServer.socketServer().port())
     );
     kafkaProperties.put("request.required.acks", "1");
     return kafkaProducerProperties;

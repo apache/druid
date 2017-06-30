@@ -198,6 +198,6 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public String toString()
   {
-    return String.format("timeFormat(\"%s\", %s, %s, %s, %s)", format, tz, locale, granularity, asMillis);
+    return StringUtils.format("timeFormat(\"%s\", %s, %s, %s, %s)", format, tz, locale, granularity, asMillis);
   }
 }

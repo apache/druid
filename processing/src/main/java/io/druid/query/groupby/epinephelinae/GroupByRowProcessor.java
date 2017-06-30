@@ -27,6 +27,7 @@ import io.druid.collections.ResourceHolder;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -79,7 +80,7 @@ public class GroupByRowProcessor
 
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
-        String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
+        StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
     final List<Interval> queryIntervals = query.getIntervals();

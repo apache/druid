@@ -378,7 +378,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
 
     Capture<Request> captured = Capture.newInstance();
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    expect(responseHolder.getContent()).andReturn(String.format("\"%s\"", status.toString())).anyTimes();
+    expect(responseHolder.getContent()).andReturn(StringUtils.format("\"%s\"", status.toString())).anyTimes();
     expect(httpClient.go(capture(captured), anyObject(FullResponseHandler.class), eq(TEST_HTTP_TIMEOUT))).andReturn(
         Futures.immediateFuture(responseHolder)
     );
@@ -634,7 +634,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "stop")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "stop")));
       futures.add(client.stopAsync(TEST_IDS.get(i), false));
     }
 
@@ -666,7 +666,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "resume")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "resume")));
       futures.add(client.resumeAsync(TEST_IDS.get(i)));
     }
 
@@ -699,7 +699,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "pause")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "pause")));
       futures.add(client.pauseAsync(TEST_IDS.get(i)));
     }
 
@@ -732,7 +732,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "pause?timeout=9")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "pause?timeout=9")));
       futures.add(client.pauseAsync(TEST_IDS.get(i), 9));
     }
 
@@ -765,7 +765,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<KafkaIndexTask.Status>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "status")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "status")));
       futures.add(client.getStatusAsync(TEST_IDS.get(i)));
     }
 
@@ -799,7 +799,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<DateTime>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "time/start")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "time/start")));
       futures.add(client.getStartTimeAsync(TEST_IDS.get(i)));
     }
 
@@ -832,7 +832,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "offsets/current")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "offsets/current")));
       futures.add(client.getCurrentOffsetsAsync(TEST_IDS.get(i), false));
     }
 
@@ -865,7 +865,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "offsets/end")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "offsets/end")));
       futures.add(client.getEndOffsetsAsync(TEST_IDS.get(i)));
     }
 
@@ -898,7 +898,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
     for (int i = 0; i < numRequests; i++) {
-      expectedUrls.add(new URL(String.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "offsets/end")));
+      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, TEST_IDS.get(i), "offsets/end")));
       futures.add(client.setEndOffsetsAsync(TEST_IDS.get(i), endOffsets));
     }
 
@@ -933,7 +933,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       expectedUrls.add(
           new URL(
-              String.format(
+              StringUtils.format(
                   URL_FORMATTER,
                   TEST_HOST,
                   TEST_PORT,

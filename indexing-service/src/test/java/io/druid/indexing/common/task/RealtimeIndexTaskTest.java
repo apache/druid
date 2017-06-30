@@ -782,7 +782,7 @@ public class RealtimeIndexTaskTest
 
     // Corrupt the data:
     final File smooshFile = new File(
-        String.format(
+        StringUtils.format(
             "%s/persistent/task/%s/work/persist/%s/%s_%s/0/00000.smoosh",
             directory,
             task1.getId(),

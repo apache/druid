@@ -34,6 +34,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -274,7 +275,7 @@ public class IncrementalIndexTest
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
-      String dimName = String.format("Dim_%d", i);
+      String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
       builder.put(dimName, dimName + rowID);
     }
@@ -286,7 +287,7 @@ public class IncrementalIndexTest
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
-      String dimName = String.format("Dim_%d", i);
+      String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
       builder.put(dimName, (Long) 1L);
     }
@@ -413,14 +414,14 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              String.format("sumResult%s", i),
-              String.format("Dim_%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
       ingestAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              String.format("doubleSumResult%s", i),
-              String.format("Dim_%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
     }
@@ -452,14 +453,14 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; ++i) {
       queryAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              String.format("sumResult%s", i),
-              String.format("sumResult%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("sumResult%s", i)
           )
       );
       queryAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              String.format("doubleSumResult%s", i),
-              String.format("doubleSumResult%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("doubleSumResult%s", i)
           )
       );
     }
@@ -492,14 +493,14 @@ public class IncrementalIndexTest
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
     for (int i = 0; i < dimensionCount; ++i) {
       Assert.assertEquals(
-          String.format("Failed long sum on dimension %d", i),
+          "Failed long sum on dimension " + i,
           2 * rows,
-          result.getValue().getLongMetric(String.format("sumResult%s", i)).intValue()
+          result.getValue().getLongMetric("sumResult" + i).intValue()
       );
       Assert.assertEquals(
-          String.format("Failed double sum on dimension %d", i),
+          "Failed double sum on dimension " + i,
           2 * rows,
-          result.getValue().getDoubleMetric(String.format("doubleSumResult%s", i)).intValue()
+          result.getValue().getDoubleMetric("doubleSumResult" + i).intValue()
       );
     }
   }
@@ -513,14 +514,14 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              String.format("sumResult%s", i),
-              String.format("Dim_%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
       ingestAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              String.format("doubleSumResult%s", i),
-              String.format("Dim_%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
     }
@@ -530,14 +531,14 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; ++i) {
       queryAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              String.format("sumResult%s", i),
-              String.format("sumResult%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("sumResult%s", i)
           )
       );
       queryAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              String.format("doubleSumResult%s", i),
-              String.format("doubleSumResult%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("doubleSumResult%s", i)
           )
       );
     }
@@ -668,7 +669,7 @@ public class IncrementalIndexTest
                         // Eventually consistent, but should be somewhere in that range
                         // Actual result is validated after all writes are guaranteed done.
                         Assert.assertTrue(
-                            String.format("%d >= %g >= 0 violated", maxValueExpected, result),
+                            StringUtils.format("%d >= %g >= 0 violated", maxValueExpected, result),
                             result >= 0 && result <= maxValueExpected
                         );
                       }
@@ -712,14 +713,14 @@ public class IncrementalIndexTest
       );
       for (int i = 0; i < dimensionCount; ++i) {
         Assert.assertEquals(
-            String.format("Failed long sum on dimension %d", i),
+            StringUtils.format("Failed long sum on dimension %d", i),
             elementsPerThread * concurrentThreads,
-            result.getValue().getLongMetric(String.format("sumResult%s", i)).intValue()
+            result.getValue().getLongMetric(StringUtils.format("sumResult%s", i)).intValue()
         );
         Assert.assertEquals(
-            String.format("Failed double sum on dimension %d", i),
+            StringUtils.format("Failed double sum on dimension %d", i),
             elementsPerThread * concurrentThreads,
-            result.getValue().getDoubleMetric(String.format("doubleSumResult%s", i)).intValue()
+            result.getValue().getDoubleMetric(StringUtils.format("doubleSumResult%s", i)).intValue()
         );
       }
     }

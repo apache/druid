@@ -34,6 +34,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.SegmentDescriptor;
@@ -165,7 +166,7 @@ public class AppenderatorDriverTest
           ImmutableList.of("dim2"),
           ImmutableMap.of(
               "dim2",
-              String.format("bar-%d", i),
+              StringUtils.format("bar-%d", i),
               "met1",
               2.0
           )

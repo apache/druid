@@ -136,7 +136,7 @@ public class S3DataSegmentMover implements DataSegmentMover
                     s3Object.getStorageClass().equals(S3Object.STORAGE_CLASS_GLACIER)) {
                   log.warn("Cannot move file[s3://%s/%s] of storage class glacier, skipping.", s3Bucket, s3Path);
                 } else {
-                  final String copyMsg = StringUtils.safeFormat(
+                  final String copyMsg = StringUtils.format(
                       "[s3://%s/%s] to [s3://%s/%s]", s3Bucket,
                       s3Path,
                       targetS3Bucket,

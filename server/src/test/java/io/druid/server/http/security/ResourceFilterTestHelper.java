@@ -32,6 +32,7 @@ import com.google.inject.Module;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ResourceFilter;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
@@ -216,7 +217,7 @@ public class ResourceFilterTestHelper
                           {
                             if (method.getAnnotation(Path.class) != null) {
                               return new Object[]{
-                                  String.format("%s%s", basepath, method.getAnnotation(Path.class).value()),
+                                  StringUtils.format("%s%s", basepath, method.getAnnotation(Path.class).value()),
                                   input.getAnnotation(GET.class) == null ? (method.getAnnotation(DELETE.class) == null
                                                                             ? "POST"
                                                                             : "DELETE") : "GET",

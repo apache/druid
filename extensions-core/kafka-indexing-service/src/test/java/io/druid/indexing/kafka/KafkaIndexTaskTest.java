@@ -1594,7 +1594,7 @@ public class KafkaIndexTaskTest
   private List<String> readSegmentDim1(final SegmentDescriptor descriptor) throws IOException
   {
     File indexZip = new File(
-        String.format(
+        StringUtils.format(
             "%s/%s/%s_%s/%s/%d/index.zip",
             getSegmentDirectory(),
             DATA_SCHEMA.getDataSource(),
@@ -1606,7 +1606,7 @@ public class KafkaIndexTaskTest
     );
     File outputLocation = new File(
         directory,
-        String.format(
+        StringUtils.format(
             "%s_%s_%s_%s",
             descriptor.getInterval().getStart(),
             descriptor.getInterval().getEnd(),

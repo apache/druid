@@ -163,7 +163,7 @@ public class SegmentChangeRequestHistory
       // Note: counter reset is requested when client ask for "maxSize" number of changes even if all those changes
       // are present in the history because one extra elements is needed to match the counter hash.
       return SegmentChangeRequestsSnapshot.fail(
-          StringUtils.safeFormat(
+          StringUtils.format(
               "can't serve request, not enough history is kept. given counter [%s] and current last counter [%s]",
               counter,
               lastCounter

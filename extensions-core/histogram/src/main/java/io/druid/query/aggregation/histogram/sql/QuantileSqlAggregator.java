@@ -21,6 +21,7 @@ package io.druid.query.aggregation.histogram.sql;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.histogram.ApproximateHistogram;
 import io.druid.query.aggregation.histogram.ApproximateHistogramAggregatorFactory;
@@ -87,7 +88,7 @@ public class QuantileSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String histogramName = String.format("%s:agg", name);
+    final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
         rowSignature,
         project,

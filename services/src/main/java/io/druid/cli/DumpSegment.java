@@ -47,6 +47,7 @@ import io.druid.guice.QueryableModule;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -172,7 +173,7 @@ public class DumpSegment extends GuiceRunnable
     final DumpType dumpType;
 
     try {
-      dumpType = DumpType.valueOf(dumpTypeString.toUpperCase());
+      dumpType = DumpType.valueOf(StringUtils.toUpperCase(dumpTypeString));
     }
     catch (Exception e) {
       throw new IAE("Not a valid dump type: %s", dumpTypeString);

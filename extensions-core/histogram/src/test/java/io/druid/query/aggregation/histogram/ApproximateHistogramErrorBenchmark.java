@@ -23,6 +23,7 @@ import com.google.common.primitives.Floats;
 import io.druid.query.aggregation.Histogram;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Random;
 
 public class ApproximateHistogramErrorBenchmark
@@ -104,10 +105,21 @@ public class ApproximateHistogramErrorBenchmark
       errs2[i] = tmp[1];
     }
 
-    System.out
-          .format("Number of histograms for folding                           : %s \n", Arrays.toString(numHistsArray));
-    System.out.format("Errors for approximate histogram                           : %s \n", Arrays.toString(errs1));
-    System.out.format("Errors for approximate histogram, ruleFold                 : %s \n", Arrays.toString(errs2));
+    System.out.printf(
+        Locale.ENGLISH,
+        "Number of histograms for folding                           : %s %n",
+        Arrays.toString(numHistsArray)
+    );
+    System.out.printf(
+        Locale.ENGLISH,
+        "Errors for approximate histogram                           : %s %n",
+        Arrays.toString(errs1)
+    );
+    System.out.printf(
+        Locale.ENGLISH,
+        "Errors for approximate histogram, ruleFold                 : %s %n",
+        Arrays.toString(errs2)
+    );
   }
 
   private float[] getErrors()
@@ -181,9 +193,9 @@ public class ApproximateHistogramErrorBenchmark
       System.out.println(ah1.toHistogram(breaks));
       System.out.println("Approximate Histogram Rule Fold:");
       System.out.println(ah2.toHistogram(breaks));
-      System.out.format("Error for approximate histogram: %s \n", err1);
-      System.out.format("Error for approximate histogram, ruleFold: %s \n", err2);
-      System.out.format("Error ratio for AHRF: %s \n", err2 / err1);
+      System.out.printf(Locale.ENGLISH, "Error for approximate histogram: %f %n", err1);
+      System.out.printf(Locale.ENGLISH, "Error for approximate histogram, ruleFold: %f %n", err2);
+      System.out.printf(Locale.ENGLISH, "Error ratio for AHRF: %f %n", err2 / err1);
     }
     return new float[]{err1, err2, err2 / err1};
   }

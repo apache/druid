@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
 
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
@@ -135,7 +136,7 @@ public class MySQLConnector extends SQLMetadataConnector
           public Void withHandle(Handle handle) throws Exception
           {
             handle.createStatement(
-                String.format(
+                StringUtils.format(
                     "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON DUPLICATE KEY UPDATE %3$s = :value",
                     tableName,
                     keyColumn,

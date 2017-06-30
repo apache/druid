@@ -20,6 +20,7 @@
 package io.druid.curator.discovery;
 
 import io.druid.client.selector.Server;
+import io.druid.java.util.common.StringUtils;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.easymock.EasyMock;
@@ -101,7 +102,7 @@ public class ServerDiscoverySelectorTest
         null
     );
     Assert.assertEquals(PORT, uri.getPort());
-    Assert.assertEquals(String.format("[%s]", ADDRESS), uri.getHost());
+    Assert.assertEquals(StringUtils.format("[%s]", ADDRESS), uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
   }
 

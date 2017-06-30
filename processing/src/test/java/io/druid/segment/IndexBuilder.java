@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -121,7 +122,7 @@ public class IndexBuilder
       return TestHelper.getTestIndexIO().loadIndex(
           indexMerger.persist(
               incrementalIndex,
-              new File(tmpDir, String.format("testIndex-%s", new Random().nextInt(Integer.MAX_VALUE))),
+              new File(tmpDir, StringUtils.format("testIndex-%s", new Random().nextInt(Integer.MAX_VALUE))),
               indexSpec
           )
       );
@@ -147,7 +148,7 @@ public class IndexBuilder
                         maxRows,
                         rows.subList(i, Math.min(rows.size(), i + ROWS_PER_INDEX_FOR_MERGING))
                     ),
-                    new File(tmpDir, String.format("testIndex-%s", UUID.randomUUID().toString())),
+                    new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID().toString())),
                     indexSpec
                 )
             )
@@ -181,7 +182,7 @@ public class IndexBuilder
                   ),
                   AggregatorFactory.class
               ),
-              new File(tmpDir, String.format("testIndex-%s", UUID.randomUUID())),
+              new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID())),
               indexSpec
           )
       );

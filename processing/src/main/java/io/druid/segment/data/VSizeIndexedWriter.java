@@ -27,6 +27,7 @@ import com.google.common.io.Closeables;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.Closeable;
@@ -64,9 +65,9 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
   )
   {
     this.ioPeon = ioPeon;
-    this.metaFileName = String.format("%s.meta", filenameBase);
-    this.headerFileName = String.format("%s.header", filenameBase);
-    this.valuesFileName = String.format("%s.values", filenameBase);
+    this.metaFileName = StringUtils.format("%s.meta", filenameBase);
+    this.headerFileName = StringUtils.format("%s.header", filenameBase);
+    this.valuesFileName = StringUtils.format("%s.values", filenameBase);
     this.maxId = maxId;
   }
 

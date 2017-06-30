@@ -65,13 +65,13 @@ public class OrderByColumnSpec
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static Direction fromString(String name)
     {
-      final String upperName = name.toUpperCase();
+      final String upperName = StringUtils.toUpperCase(name);
       Direction direction = stupidEnumMap.get(upperName);
 
       if (direction == null) {
