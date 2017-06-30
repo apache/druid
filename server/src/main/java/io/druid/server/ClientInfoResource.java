@@ -19,8 +19,6 @@
 
 package io.druid.server;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -35,18 +33,14 @@ import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
 import io.druid.common.utils.JodaUtils;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.LocatedSegmentDescriptor;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.server.http.security.DatasourceResourceFilter;
-import io.druid.server.security.Access;
-import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceType;
+import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizationUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
@@ -66,7 +60,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,13 +79,15 @@ public class ClientInfoResource
   private TimelineServerView timelineServerView;
   private SegmentMetadataQueryConfig segmentMetadataQueryConfig;
   private final AuthConfig authConfig;
+  private final AuthorizationManagerMapper authorizationManagerMapper;
 
   @Inject
   public ClientInfoResource(
       FilteredServerInventoryView serverInventoryView,
       TimelineServerView timelineServerView,
       SegmentMetadataQueryConfig segmentMetadataQueryConfig,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      AuthorizationManagerMapper authorizationManagerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -100,6 +95,7 @@ public class ClientInfoResource
     this.segmentMetadataQueryConfig = (segmentMetadataQueryConfig == null) ?
                                       new SegmentMetadataQueryConfig() : segmentMetadataQueryConfig;
     this.authConfig = authConfig;
+    this.authorizationManagerMapper = authorizationManagerMapper;
   }
 
   private Map<String, List<DataSegment>> getSegmentsForDatasources()
@@ -122,28 +118,11 @@ public class ClientInfoResource
   public Iterable<String> getDataSources(@Context final HttpServletRequest request)
   {
     if (authConfig.isEnabled()) {
-      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
-      final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
-      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-      return Collections2.filter(
+      return AuthorizationUtils.filterAuthorizedResources(
+          request,
           getSegmentsForDatasources().keySet(),
-          new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              Resource resource = new Resource(input, ResourceType.DATASOURCE);
-              Action action = Action.READ;
-              Pair<Resource, Action> key = new Pair<>(resource, action);
-              if (resourceAccessMap.containsKey(key)) {
-                return resourceAccessMap.get(key).isAllowed();
-              } else {
-                Access access = authorizationInfo.isAuthorized(key.lhs, key.rhs);
-                resourceAccessMap.put(key, access);
-                return access.isAllowed();
-              }
-            }
-          }
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+          authorizationManagerMapper
       );
     } else {
       return getSegmentsForDatasources().keySet();

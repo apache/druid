@@ -36,7 +36,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.AuthorizationManager;
+import io.druid.server.security.AuthorizationManagerMapper;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 
@@ -56,18 +57,19 @@ import java.util.List;
 public class ResourceFilterTestHelper
 {
   public HttpServletRequest req;
-  public AuthorizationInfo authorizationInfo;
+  public AuthorizationManagerMapper authorizationManagerMapper;
   public ContainerRequest request;
 
   public void setUp(ResourceFilter resourceFilter) throws Exception
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     request = EasyMock.createStrictMock(ContainerRequest.class);
-    authorizationInfo = EasyMock.createStrictMock(AuthorizationInfo.class);
+    authorizationManagerMapper = EasyMock.createStrictMock(AuthorizationManagerMapper.class);
 
     // Memory barrier
     synchronized (this) {
       ((AbstractResourceFilter) resourceFilter).setReq(req);
+      ((AbstractResourceFilter) resourceFilter).setAuthorizationManagerMapper(authorizationManagerMapper);
     }
   }
 
@@ -107,19 +109,39 @@ public class ResourceFilterTestHelper
         )
     ).anyTimes();
     EasyMock.expect(request.getMethod()).andReturn(requestMethod).anyTimes();
-    EasyMock.expect(req.getAttribute(EasyMock.anyString())).andReturn(authorizationInfo).atLeastOnce();
-    EasyMock.expect(authorizationInfo.isAuthorized(
-        EasyMock.anyObject(Resource.class),
-        EasyMock.anyObject(Action.class)
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").atLeastOnce();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)).andReturn("namespace").atLeastOnce();
+    req.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, authCheckResult);
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(authorizationManagerMapper.getAuthorizationManager(
+        EasyMock.anyString()
     )).andReturn(
-        new Access(authCheckResult)
-    ).atLeastOnce();
+        new AuthorizationManager()
+        {
+          @Override
+          public Access authorize(String identity, Resource resource, Action action)
+          {
+            return new Access(authCheckResult);
+          }
 
+          @Override
+          public String getNamespace()
+          {
+            return null;
+          }
+        }
+    ).atLeastOnce();
   }
 
   public static Collection<Object[]> getRequestPaths(final Class clazz)
   {
     return getRequestPaths(clazz, ImmutableList.<Class<?>>of(), ImmutableList.<Key<?>>of());
+  }
+
+  public static Collection<Object[]> getRequestPathsWithAuthorizationManager(final Class clazz)
+  {
+    return getRequestPaths(clazz, ImmutableList.<Class<?>>of(AuthorizationManagerMapper.class), ImmutableList.<Key<?>>of());
   }
 
   public static Collection<Object[]> getRequestPaths(
@@ -162,7 +184,7 @@ public class ResourceFilterTestHelper
             for (Key<?> key : mockableKeys) {
               binder.bind((Key<Object>) key).toInstance(EasyMock.createNiceMock(key.getTypeLiteral().getRawType()));
             }
-            binder.bind(AuthConfig.class).toInstance(new AuthConfig(true));
+            binder.bind(AuthConfig.class).toInstance(new AuthConfig(true, null, null, null));
           }
         }
     );

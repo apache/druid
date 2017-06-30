@@ -29,9 +29,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.calcite.avatica.MetaImpl;
@@ -63,6 +67,8 @@ public class DruidMeta extends MetaImpl
   private final PlannerFactory plannerFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
+  private final AuthConfig authConfig;
+  private final List<Authenticator> authenticators;
 
   // Used to track logical connections.
   private final Map<String, DruidConnection> connections = new ConcurrentHashMap<>();
@@ -72,17 +78,32 @@ public class DruidMeta extends MetaImpl
   private final AtomicInteger connectionCount = new AtomicInteger();
 
   @Inject
-  public DruidMeta(final PlannerFactory plannerFactory, final AvaticaServerConfig config)
+  public DruidMeta(
+      final PlannerFactory plannerFactory,
+      final AvaticaServerConfig config,
+      final AuthConfig authConfig,
+      final Injector injector
+  )
   {
     super(null);
     this.plannerFactory = Preconditions.checkNotNull(plannerFactory, "plannerFactory");
     this.config = config;
+    this.authConfig = authConfig;
     this.exec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
             .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
             .setDaemon(true)
             .build()
     );
+
+    if (authConfig.isEnabled()) {
+      this.authenticators = AuthenticationUtils.getAuthenticatorChainFromConfig(
+          authConfig.getAuthenticatorChain(),
+          injector
+      );
+    } else {
+      this.authenticators = null;
+    }
   }
 
   @Override
@@ -91,9 +112,9 @@ public class DruidMeta extends MetaImpl
     // Build connection context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
     for (Map.Entry<String, String> entry : info.entrySet()) {
-      if (!SKIP_PROPERTIES.contains(entry.getKey())) {
+      //if (!SKIP_PROPERTIES.contains(entry.getKey())) {
         context.put(entry);
-      }
+      //}
     }
     openDruidConnection(ch.id, context.build());
   }
@@ -132,7 +153,17 @@ public class DruidMeta extends MetaImpl
   {
     final StatementHandle statement = createStatement(ch);
     final DruidStatement druidStatement = getDruidStatement(statement);
-    statement.signature = druidStatement.prepare(plannerFactory, sql, maxRowCount).getSignature();
+    final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
+    String user = null;
+    String namespace = null;
+    if (authConfig.isEnabled()) {
+      if (!authenticateConnection(druidConnection)) {
+        throw new SecurityException("Authentication failed.");
+      }
+      user = getConnectionUser(druidConnection);
+      namespace = getConnectionNamespace(druidConnection);
+    }
+    statement.signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, user, namespace).getSignature();
     return statement;
   }
 
@@ -160,7 +191,18 @@ public class DruidMeta extends MetaImpl
   {
     // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
     final DruidStatement druidStatement = getDruidStatement(statement);
-    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount).getSignature();
+    final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
+    String user = null;
+    String namespace = null;
+    if (authConfig != null && authConfig.isEnabled()) {
+      if (!authenticateConnection(druidConnection)) {
+        throw new SecurityException("Authentication failed.");
+      }
+      ;
+      user = getConnectionUser(druidConnection);
+      namespace = getConnectionNamespace(druidConnection);
+    }
+    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, user, namespace).getSignature();
     final Frame firstFrame = druidStatement.execute()
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
@@ -485,6 +527,30 @@ public class DruidMeta extends MetaImpl
     for (String connectionId : ImmutableSet.copyOf(connections.keySet())) {
       closeConnection(new ConnectionHandle(connectionId));
     }
+  }
+
+  private boolean authenticateConnection(final DruidConnection connection)
+  {
+    Map<String, Object> context = connection.context();
+    for (Authenticator authenticator : authenticators) {
+      if (authenticator.authenticateJDBCContext(context)) {
+        context.put("namespace", authenticator.getNamespace());
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private String getConnectionUser(final DruidConnection connection)
+  {
+    Map<String, Object> context = connection.context();
+    return (String) context.get("user");
+  }
+
+  private String getConnectionNamespace(final DruidConnection connection)
+  {
+    Map<String, Object> context = connection.context();
+    return (String) context.get("namespace");
   }
 
   private DruidConnection openDruidConnection(final String connectionId, final Map<String, Object> context)

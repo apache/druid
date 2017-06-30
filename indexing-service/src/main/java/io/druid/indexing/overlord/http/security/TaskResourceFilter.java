@@ -32,8 +32,10 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.Resource;
+import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
 
 import javax.ws.rs.WebApplicationException;
@@ -52,9 +54,13 @@ public class TaskResourceFilter extends AbstractResourceFilter
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
 
   @Inject
-  public TaskResourceFilter(TaskStorageQueryAdapter taskStorageQueryAdapter, AuthConfig authConfig)
+  public TaskResourceFilter(
+      TaskStorageQueryAdapter taskStorageQueryAdapter,
+      AuthConfig authConfig,
+      AuthorizationManagerMapper authorizationManagerMapper
+  )
   {
-    super(authConfig);
+    super(authConfig, authorizationManagerMapper);
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
   }
 
@@ -62,7 +68,6 @@ public class TaskResourceFilter extends AbstractResourceFilter
   public ContainerRequest filter(ContainerRequest request)
   {
     if (getAuthConfig().isEnabled()) {
-      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
       final String taskId = Preconditions.checkNotNull(
           request.getPathSegments()
                  .get(
@@ -90,15 +95,17 @@ public class TaskResourceFilter extends AbstractResourceFilter
       }
       final String dataSourceName = Preconditions.checkNotNull(taskOptional.get().getDataSource());
 
-      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) getReq().getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-      Preconditions.checkNotNull(
-          authorizationInfo,
-          "Security is enabled but no authorization info found in the request"
-      );
-      final Access authResult = authorizationInfo.isAuthorized(
+      final ResourceAction resourceAction = new ResourceAction(
           new Resource(dataSourceName, ResourceType.DATASOURCE),
           getAction(request)
       );
+
+      final Access authResult = AuthorizationUtils.authorizeResourceAction(
+          getReq(),
+          resourceAction,
+          getAuthorizationManagerMapper()
+      );
+
       if (!authResult.isAllowed()) {
         throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
                                                   .entity(

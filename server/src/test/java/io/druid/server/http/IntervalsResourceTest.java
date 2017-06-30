@@ -110,7 +110,7 @@ public class IntervalsResourceTest
     List<Interval> expectedIntervals = new ArrayList<>();
     expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
     expectedIntervals.add(new Interval("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
+    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig(), null);
 
     Response response = intervalsResource.getIntervals(request);
     TreeMap<Interval, Map<String, Map<String, Object>>> actualIntervals = (TreeMap) response.getEntity();
@@ -136,7 +136,7 @@ public class IntervalsResourceTest
 
     List<Interval> expectedIntervals = new ArrayList<>();
     expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
+    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig(), null);
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", "simple", null, request);
     Map<Interval, Map<String, Object>> actualIntervals = (Map) response.getEntity();
@@ -157,7 +157,7 @@ public class IntervalsResourceTest
 
     List<Interval> expectedIntervals = new ArrayList<>();
     expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
+    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig(), null);
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, "full", request);
     TreeMap<Interval, Map<String, Map<String, Object>>> actualIntervals = (TreeMap) response.getEntity();
@@ -178,14 +178,13 @@ public class IntervalsResourceTest
     ).atLeastOnce();
     EasyMock.replay(inventoryView);
 
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
+    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig(), null);
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, null, request);
     Map<String, Object> actualIntervals = (Map) response.getEntity();
     Assert.assertEquals(2, actualIntervals.size());
     Assert.assertEquals(25L, actualIntervals.get("size"));
     Assert.assertEquals(2, actualIntervals.get("count"));
-
   }
 
   @After

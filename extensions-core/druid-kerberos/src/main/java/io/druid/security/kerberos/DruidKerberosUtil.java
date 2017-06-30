@@ -73,7 +73,7 @@ public class DruidKerberosUtil
       // Create a GSSContext for authentication with the service.
       // We're passing client credentials as null since we want them to be read from the Subject.
       GSSContext gssContext =
-        manager.createContext(serverName.canonicalize(mechOid), mechOid, null, GSSContext.DEFAULT_LIFETIME);
+          manager.createContext(serverName.canonicalize(mechOid), mechOid, null, GSSContext.DEFAULT_LIFETIME);
       gssContext.requestMutualAuth(true);
       gssContext.requestCredDeleg(true);
       // Establish context
@@ -92,7 +92,7 @@ public class DruidKerberosUtil
   }
 
   public static void authenticateIfRequired(AuthenticationKerberosConfig config)
-    throws IOException
+      throws IOException
   {
     String principal = config.getPrincipal();
     String keytab = config.getKeytab();

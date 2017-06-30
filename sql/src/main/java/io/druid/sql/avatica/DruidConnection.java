@@ -138,4 +138,9 @@ public class DruidConnection
     }
     return this;
   }
+
+  public Map<String, Object> context()
+  {
+    return context;
+  }
 }

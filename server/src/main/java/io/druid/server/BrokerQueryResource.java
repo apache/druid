@@ -27,9 +27,11 @@ import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizationManagerMapper;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -58,6 +60,8 @@ public class BrokerQueryResource extends QueryResource
       @Smile ObjectMapper smileMapper,
       QueryManager queryManager,
       AuthConfig authConfig,
+      AuthorizationManagerMapper authorizationManagerMapper,
+      GenericQueryMetricsFactory queryMetricsFactory,
       TimelineServerView brokerServerView
   )
   {
@@ -66,7 +70,9 @@ public class BrokerQueryResource extends QueryResource
         jsonMapper,
         smileMapper,
         queryManager,
-        authConfig
+        authConfig,
+        authorizationManagerMapper,
+        queryMetricsFactory
     );
     this.brokerServerView = brokerServerView;
   }

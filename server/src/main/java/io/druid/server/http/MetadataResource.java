@@ -22,22 +22,17 @@ package io.druid.server.http;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.DruidDataSource;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.java.util.common.Pair;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.http.security.DatasourceResourceFilter;
-import io.druid.server.security.Access;
-import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceType;
+import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizationUtils;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -52,9 +47,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -65,17 +58,20 @@ public class MetadataResource
   private final MetadataSegmentManager metadataSegmentManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthConfig authConfig;
+  private final AuthorizationManagerMapper authorizationManagerMapper;
 
   @Inject
   public MetadataResource(
       MetadataSegmentManager metadataSegmentManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      AuthorizationManagerMapper authorizationManagerMapper
   )
   {
     this.metadataSegmentManager = metadataSegmentManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authConfig = authConfig;
+    this.authorizationManagerMapper = authorizationManagerMapper;
   }
 
   @GET
@@ -109,31 +105,14 @@ public class MetadataResource
     final Set<String> dataSourceNamesPostAuth;
 
     if (authConfig.isEnabled()) {
-      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
-      final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
-      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-      dataSourceNamesPostAuth = ImmutableSet.copyOf(
-          Sets.filter(
-              dataSourceNamesPreAuth,
-              new Predicate<String>()
-              {
-                @Override
-                public boolean apply(String input)
-                {
-                  Resource resource = new Resource(input, ResourceType.DATASOURCE);
-                  Action action = Action.READ;
-                  Pair<Resource, Action> key = new Pair<>(resource, action);
-                  if (resourceAccessMap.containsKey(key)) {
-                    return resourceAccessMap.get(key).isAllowed();
-                  } else {
-                    Access access = authorizationInfo.isAuthorized(key.lhs, key.rhs);
-                    resourceAccessMap.put(key, access);
-                    return access.isAllowed();
-                  }
-                }
-              }
-          )
+      List<String> datasourceNamesList = AuthorizationUtils.filterAuthorizedResources(
+          req,
+          dataSourceNamesPreAuth,
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+          authorizationManagerMapper
       );
+
+      dataSourceNamesPostAuth = Sets.newTreeSet(datasourceNamesList);
     } else {
       dataSourceNamesPostAuth = dataSourceNamesPreAuth;
     }

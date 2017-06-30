@@ -27,9 +27,13 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.TypeLiteral;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
 
 import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
+import java.util.List;
 
 /**
  */
@@ -89,6 +93,19 @@ public abstract class AbstractHttpClientProvider<HttpClientType> implements Prov
   public Provider<Supplier<DruidHttpClientConfig>> getConfigProvider()
   {
     return injector.getProvider(configKey);
+  }
+
+  public AuthConfig getAuthConfig()
+  {
+    return injector.getInstance(AuthConfig.class);
+  }
+
+  public List<Authenticator> getAuthenticatorChain()
+  {
+    return AuthenticationUtils.getAuthenticatorChainFromConfig(
+        getAuthConfig().getAuthenticatorChain(),
+        injector
+    );
   }
 
   public Provider<Lifecycle> getLifecycleProvider()

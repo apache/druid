@@ -17,23 +17,30 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.server.initialization;
 
-/**
- * An AuthorizationInfo that is useful for actions generated internally by the system. It allows everything.
- */
-public class SystemAuthorizationInfo implements AuthorizationInfo
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.google.inject.name.Named;
+import io.druid.guice.ManageLifecycle;
+import io.druid.server.security.AuthorizationManager;
+import io.druid.server.security.NoopAuthorizationManager;
+
+public class NoopAuthorizationManagerModule implements Module
 {
-  public static final SystemAuthorizationInfo INSTANCE = new SystemAuthorizationInfo();
-
-  private SystemAuthorizationInfo()
-  {
-    // Singleton.
-  }
+  public static final String TYPE = "noop";
 
   @Override
-  public Access isAuthorized(final Resource resource, final Action action)
+  public void configure(Binder binder)
   {
-    return new Access(true);
+  }
+
+  @Provides
+  @ManageLifecycle
+  @Named(TYPE)
+  public AuthorizationManager makeAuthorizationManager()
+  {
+    return new NoopAuthorizationManager();
   }
 }

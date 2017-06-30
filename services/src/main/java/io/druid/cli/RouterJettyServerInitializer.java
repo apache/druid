@@ -19,13 +19,20 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
+import io.druid.guice.annotations.Json;
 import io.druid.guice.http.DruidHttpClientConfig;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -33,10 +40,14 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.util.List;
+
 /**
  */
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
+  private static Logger log = new Logger(RouterJettyServerInitializer.class);
+
   private final AsyncQueryForwardingServlet asyncQueryForwardingServlet;
   private final DruidHttpClientConfig httpClientConfig;
 
@@ -63,7 +74,31 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     sh.setInitParameter("maxThreads", Integer.toString(httpClientConfig.getNumMaxThreads()));
 
     root.addServlet(sh, "/druid/v2/*");
+
+    final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
+    final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    List<Authenticator> authenticators = null;
+    if (authConfig.isEnabled()) {
+      AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+      authenticators = AuthenticationUtils.getAuthenticatorChainFromConfig(
+          authConfig.getAuthenticatorChain(),
+          injector
+      );
+      AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+    }
+
     JettyServerInitUtils.addExtensionFilters(root, injector);
+
+    if (authConfig.isEnabled()) {
+      // Check that requests were authorized before sending responses
+      AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
+          root,
+          authenticators,
+          jsonMapper,
+          authConfig
+      );
+    }
+
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);
     root.addFilter(GuiceFilter.class, "/druid/router/*", null);

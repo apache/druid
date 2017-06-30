@@ -35,6 +35,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizationManagerMapper;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -125,13 +127,17 @@ public class DruidAvaticaHandlerTest
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
-            plannerConfig
+            plannerConfig,
+            new AuthConfig(),
+            new AuthorizationManagerMapper(null)
         ),
-        AVATICA_CONFIG
+        AVATICA_CONFIG,
+        new AuthConfig(),
+        null
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
+    new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 10000;
@@ -143,7 +149,7 @@ public class DruidAvaticaHandlerTest
         port,
         DruidAvaticaHandler.AVATICA_PATH
     );
-    client = DriverManager.getConnection(url);
+    client = DriverManager.getConnection(url, "admin", "druid");
 
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
@@ -564,9 +570,13 @@ public class DruidAvaticaHandlerTest
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
-            plannerConfig
+            plannerConfig,
+            new AuthConfig(),
+            new AuthorizationManagerMapper(null)
         ),
-        smallFrameConfig
+        smallFrameConfig,
+        new AuthConfig(),
+        null
     )
     {
       @Override

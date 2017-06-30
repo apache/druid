@@ -19,7 +19,9 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -44,6 +46,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ListProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
+import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
@@ -84,6 +87,9 @@ import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.tasklogs.TaskLogs;
 import org.eclipse.jetty.server.Handler;
@@ -106,6 +112,14 @@ import java.util.List;
 public class CliOverlord extends ServerRunnable
 {
   private static Logger log = new Logger(CliOverlord.class);
+
+  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+      "/",
+      "/console.html",
+      "/old-console/*",
+      "/images/*",
+      "/js/*"
+  );
 
   public CliOverlord()
   {
@@ -289,7 +303,34 @@ public class CliOverlord extends ServerRunnable
               }
           )
       );
+
+      final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
+      final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+      List<Authenticator> authenticators = null;
+      if (authConfig.isEnabled()) {
+        AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+        authenticators = AuthenticationUtils.getAuthenticatorChainFromConfig(
+            authConfig.getAuthenticatorChain(),
+            injector
+        );
+        AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
+      }
+
       JettyServerInitUtils.addExtensionFilters(root, injector);
+
+      if (authConfig.isEnabled()) {
+        // perform no-op authorization for these static resources
+        AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+
+        // Check that requests were authorized before sending responses
+        AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
+            root,
+            authenticators,
+            jsonMapper,
+            authConfig
+        );
+      }
 
       // /status should not redirect, so add first
       root.addFilter(GuiceFilter.class, "/status/*", null);

@@ -27,14 +27,23 @@ public class AuthenticationKerberosConfig
 {
   @JsonProperty
   private final String principal;
+
   @JsonProperty
   private final String keytab;
 
+  @JsonProperty
+  private final String namespace;
+
   @JsonCreator
-  public AuthenticationKerberosConfig(@JsonProperty("principal") String principal, @JsonProperty("keytab") String keytab)
+  public AuthenticationKerberosConfig(
+      @JsonProperty("principal") String principal,
+      @JsonProperty("keytab") String keytab,
+      @JsonProperty("namespace") String namespace
+  )
   {
     this.principal = principal;
     this.keytab = keytab;
+    this.namespace = namespace;
   }
 
   @JsonProperty
@@ -49,13 +58,19 @@ public class AuthenticationKerberosConfig
     return keytab;
   }
 
+  @JsonProperty
+  public String getNamespace()
+  {
+    return namespace;
+  }
+
   @Override
   public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof AuthenticationKerberosConfig)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
@@ -64,7 +79,10 @@ public class AuthenticationKerberosConfig
     if (getPrincipal() != null ? !getPrincipal().equals(that.getPrincipal()) : that.getPrincipal() != null) {
       return false;
     }
-    return getKeytab() != null ? getKeytab().equals(that.getKeytab()) : that.getKeytab() == null;
+    if (getKeytab() != null ? !getKeytab().equals(that.getKeytab()) : that.getKeytab() != null) {
+      return false;
+    }
+    return getNamespace() != null ? getNamespace().equals(that.getNamespace()) : that.getNamespace() == null;
 
   }
 
@@ -73,6 +91,7 @@ public class AuthenticationKerberosConfig
   {
     int result = getPrincipal() != null ? getPrincipal().hashCode() : 0;
     result = 31 * result + (getKeytab() != null ? getKeytab().hashCode() : 0);
+    result = 31 * result + (getNamespace() != null ? getNamespace().hashCode() : 0);
     return result;
   }
 }

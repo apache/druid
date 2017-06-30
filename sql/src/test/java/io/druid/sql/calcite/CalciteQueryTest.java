@@ -82,6 +82,7 @@ import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
+import io.druid.server.security.AuthConfig;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -5444,7 +5445,9 @@ public class CalciteQueryTest
         CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         macroTable,
-        plannerConfig
+        plannerConfig,
+        new AuthConfig(),
+        null
     );
 
     viewManager.createView(

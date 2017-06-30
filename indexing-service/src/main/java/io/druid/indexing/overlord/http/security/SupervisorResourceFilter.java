@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord.http.security;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -31,10 +32,11 @@ import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.security.Access;
+import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceType;
+import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ResourceAction;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.PathSegment;
@@ -46,9 +48,13 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
   private final SupervisorManager supervisorManager;
 
   @Inject
-  public SupervisorResourceFilter(AuthConfig authConfig, SupervisorManager supervisorManager)
+  public SupervisorResourceFilter(
+      AuthConfig authConfig,
+      AuthorizationManagerMapper authorizationManagerMapper,
+      SupervisorManager supervisorManager
+  )
   {
-    super(authConfig);
+    super(authConfig, authorizationManagerMapper);
     this.supervisorManager = supervisorManager;
   }
 
@@ -56,7 +62,6 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
   public ContainerRequest filter(ContainerRequest request)
   {
     if (getAuthConfig().isEnabled()) {
-      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
       final String supervisorId = Preconditions.checkNotNull(
           request.getPathSegments()
                  .get(
@@ -83,11 +88,6 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
         );
       }
 
-      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) getReq().getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-      Preconditions.checkNotNull(
-          authorizationInfo,
-          "Security is enabled but no authorization info found in the request"
-      );
 
       final SupervisorSpec spec = supervisorSpecOptional.get();
       Preconditions.checkArgument(
@@ -95,18 +95,23 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
           "No dataSources found to perform authorization checks"
       );
 
-      for (String dataSource : spec.getDataSources()) {
-        Access authResult = authorizationInfo.isAuthorized(
-            new Resource(dataSource, ResourceType.DATASOURCE),
-            getAction(request)
-        );
-        if (!authResult.isAllowed()) {
-          throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
-                                                    .entity(
-                                                        StringUtils.format("Access-Check-Result: %s", authResult.toString())
-                                                    )
-                                                    .build());
-        }
+      Function<String, ResourceAction> resourceActionFunction = getAction(request) == Action.READ ?
+                                                                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR :
+                                                                AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR;
+
+      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+          getReq(),
+          spec.getDataSources(),
+          resourceActionFunction,
+          getAuthorizationManagerMapper()
+      );
+
+      if (!authResult.isAllowed()) {
+        throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
+                                                  .entity(
+                                                      String.format("Access-Check-Result: %s", authResult.toString())
+                                                  )
+                                                  .build());
       }
     }
 

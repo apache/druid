@@ -211,7 +211,8 @@ public class OverlordTest
         null,
         null,
         null,
-        new AuthConfig()
+        new AuthConfig(),
+        null
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());

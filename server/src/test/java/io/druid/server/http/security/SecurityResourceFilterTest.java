@@ -56,20 +56,20 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     return ImmutableList.copyOf(
         Iterables.concat(
-            getRequestPaths(CoordinatorResource.class),
-            getRequestPaths(DatasourcesResource.class),
-            getRequestPaths(BrokerResource.class),
-            getRequestPaths(HistoricalResource.class),
-            getRequestPaths(IntervalsResource.class),
-            getRequestPaths(MetadataResource.class),
-            getRequestPaths(RulesResource.class),
-            getRequestPaths(ServersResource.class),
-            getRequestPaths(TiersResource.class),
-            getRequestPaths(ClientInfoResource.class),
-            getRequestPaths(CoordinatorDynamicConfigsResource.class),
-            getRequestPaths(QueryResource.class),
-            getRequestPaths(StatusResource.class),
-            getRequestPaths(BrokerQueryResource.class)
+            getRequestPathsWithAuthorizationManager(CoordinatorResource.class),
+            getRequestPathsWithAuthorizationManager(DatasourcesResource.class),
+            getRequestPathsWithAuthorizationManager(BrokerResource.class),
+            getRequestPathsWithAuthorizationManager(HistoricalResource.class),
+            getRequestPathsWithAuthorizationManager(IntervalsResource.class),
+            getRequestPathsWithAuthorizationManager(MetadataResource.class),
+            getRequestPathsWithAuthorizationManager(RulesResource.class),
+            getRequestPathsWithAuthorizationManager(ServersResource.class),
+            getRequestPathsWithAuthorizationManager(TiersResource.class),
+            getRequestPathsWithAuthorizationManager(ClientInfoResource.class),
+            getRequestPathsWithAuthorizationManager(CoordinatorDynamicConfigsResource.class),
+            getRequestPathsWithAuthorizationManager(QueryResource.class),
+            getRequestPathsWithAuthorizationManager(StatusResource.class),
+            getRequestPathsWithAuthorizationManager(BrokerQueryResource.class)
         )
     );
   }
@@ -102,17 +102,17 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   public void testResourcesFilteringAccess()
   {
     setUpMockExpectations(requestPath, true, requestMethod);
-    EasyMock.replay(req, request, authorizationInfo);
+    EasyMock.replay(req, request, authorizationManagerMapper);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     resourceFilter.getRequestFilter().filter(request);
-    EasyMock.verify(req, request, authorizationInfo);
+    EasyMock.verify(req, request, authorizationManagerMapper);
   }
 
   @Test(expected = WebApplicationException.class)
   public void testResourcesFilteringNoAccess()
   {
     setUpMockExpectations(requestPath, false, requestMethod);
-    EasyMock.replay(req, request, authorizationInfo);
+    EasyMock.replay(req, request, authorizationManagerMapper);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
       resourceFilter.getRequestFilter().filter(request);
@@ -121,16 +121,16 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
       Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), e.getResponse().getStatus());
       throw e;
     }
-    EasyMock.verify(req, request, authorizationInfo);
+    EasyMock.verify(req, request, authorizationManagerMapper);
   }
 
   @Test
   public void testResourcesFilteringBadPath()
   {
-    EasyMock.replay(req, request, authorizationInfo);
+    EasyMock.replay(req, request, authorizationManagerMapper);
     final String badRequestPath = requestPath.replaceAll("\\w+", "droid");
     Assert.assertFalse(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(badRequestPath));
-    EasyMock.verify(req, request, authorizationInfo);
+    EasyMock.verify(req, request, authorizationManagerMapper);
   }
 
 }

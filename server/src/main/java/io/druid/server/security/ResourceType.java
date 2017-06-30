@@ -19,9 +19,20 @@
 
 package io.druid.server.security;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 public enum ResourceType
 {
   DATASOURCE,
   CONFIG,
-  STATE
+  STATE;
+
+  @JsonCreator
+  public static ResourceType fromString(String name)
+  {
+    if (name == null) {
+      return null;
+    }
+    return valueOf(name.toUpperCase());
+  }
 }

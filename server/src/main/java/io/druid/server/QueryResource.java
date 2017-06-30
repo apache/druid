@@ -24,9 +24,9 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
@@ -38,16 +38,15 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
-import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceType;
+import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizationUtils;
 import org.joda.time.DateTime;
 
 import javax.servlet.http.HttpServletRequest;
@@ -92,6 +91,9 @@ public class QueryResource implements QueryCountStatsProvider
   protected final ObjectMapper serializeDateTimeAsLongSmileMapper;
   protected final QueryManager queryManager;
   protected final AuthConfig authConfig;
+  protected final AuthorizationManagerMapper authorizationManagerMapper;
+
+  private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -102,7 +104,9 @@ public class QueryResource implements QueryCountStatsProvider
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryManager queryManager,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      AuthorizationManagerMapper authorizationManagerMapper,
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
@@ -112,6 +116,8 @@ public class QueryResource implements QueryCountStatsProvider
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
     this.queryManager = queryManager;
     this.authConfig = authConfig;
+    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @DELETE
@@ -123,25 +129,21 @@ public class QueryResource implements QueryCountStatsProvider
       log.debug("Received cancel request for query [%s]", queryId);
     }
     if (authConfig.isEnabled()) {
-      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
-      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-      Preconditions.checkNotNull(
-          authorizationInfo,
-          "Security is enabled but no authorization info found in the request"
-      );
       Set<String> datasources = queryManager.getQueryDatasources(queryId);
       if (datasources == null) {
         log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
-      } else {
-        for (String dataSource : datasources) {
-          Access authResult = authorizationInfo.isAuthorized(
-              new Resource(dataSource, ResourceType.DATASOURCE),
-              Action.WRITE
-          );
-          if (!authResult.isAllowed()) {
-            return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
-          }
-        }
+        datasources = Sets.newTreeSet();
+      }
+
+      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+          req,
+          datasources,
+          AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+          authorizationManagerMapper
+      );
+
+      if (!authResult.isAllowed()) {
+        return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
       }
     }
     queryManager.cancelQuery(queryId);
@@ -174,7 +176,11 @@ public class QueryResource implements QueryCountStatsProvider
         log.debug("Got query [%s]", query);
       }
 
-      final Access authResult = queryLifecycle.authorize((AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN));
+      final Access authResult = queryLifecycle.authorize(
+          (String) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
+          (String) req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE),
+          req
+      );
       if (!authResult.isAllowed()) {
         return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
       }

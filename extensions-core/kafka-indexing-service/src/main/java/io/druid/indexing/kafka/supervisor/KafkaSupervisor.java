@@ -70,6 +70,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.EntryExistsException;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
+import io.druid.server.security.AuthConfig;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -191,6 +192,7 @@ public class KafkaSupervisor implements Supervisor
   private final KafkaSupervisorSpec spec;
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
+  private final AuthConfig authConfig;
   private final String dataSource;
   private final KafkaSupervisorIOConfig ioConfig;
   private final KafkaSupervisorTuningConfig tuningConfig;
@@ -224,7 +226,8 @@ public class KafkaSupervisor implements Supervisor
       final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       final KafkaIndexTaskClientFactory taskClientFactory,
       final ObjectMapper mapper,
-      final KafkaSupervisorSpec spec
+      final KafkaSupervisorSpec spec,
+      final AuthConfig authConfig
   )
   {
     this.taskStorage = taskStorage;
@@ -234,6 +237,7 @@ public class KafkaSupervisor implements Supervisor
     this.spec = spec;
     this.emitter = spec.getEmitter();
     this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
+    this.authConfig = spec.getAuthConfig();
 
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
@@ -1419,6 +1423,8 @@ public class KafkaSupervisor implements Supervisor
           taskTuningConfig,
           kafkaIOConfig,
           spec.getContext(),
+          null,
+          new AuthConfig(),
           null
       );
 

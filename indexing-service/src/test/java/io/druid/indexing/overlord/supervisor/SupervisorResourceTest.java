@@ -61,7 +61,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Before
   public void setUp() throws Exception
   {
-    supervisorResource = new SupervisorResource(taskMaster, new AuthConfig());
+    supervisorResource = new SupervisorResource(taskMaster, new AuthConfig(), null);
   }
 
   @Test

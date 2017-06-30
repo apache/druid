@@ -40,6 +40,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.security.AuthConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -74,6 +75,7 @@ public class BrokerServerView implements TimelineServerView
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
+  private final AuthConfig authConfig;
 
   private volatile boolean initialized = false;
 
@@ -86,7 +88,8 @@ public class BrokerServerView implements TimelineServerView
       FilteredServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
       ServiceEmitter emitter,
-      final BrokerSegmentWatcherConfig segmentWatcherConfig
+      final BrokerSegmentWatcherConfig segmentWatcherConfig,
+      AuthConfig authConfig
   )
   {
     this.warehouse = warehouse;
@@ -99,6 +102,7 @@ public class BrokerServerView implements TimelineServerView
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
+    this.authConfig = authConfig;
 
     this.segmentFilter = new Predicate<Pair<DruidServerMetadata, DataSegment>>()
     {

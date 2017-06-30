@@ -230,9 +230,8 @@ public class QueryMaker
   {
     Hook.QUERY_PLAN.run(query);
 
-    // Authorization really should be applied in planning. At this point the query has already begun to execute.
-    // So, use "null" authorizationInfo to force the query to fail if security is enabled.
-    return queryLifecycleFactory.factorize().runSimple(query, null, null);
+    // Authorization has already been checked during planning, skip authorization checks here.
+    return queryLifecycleFactory.factorize().runSimple(query, null, null, null, false);
   }
 
   private Sequence<Object[]> executeTimeseries(

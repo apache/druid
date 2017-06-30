@@ -29,6 +29,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.server.security.AuthConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -84,7 +85,9 @@ public class SqlResourceTest
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
-            plannerConfig
+            plannerConfig,
+            new AuthConfig(),
+            null
         )
     );
   }
@@ -237,7 +240,7 @@ public class SqlResourceTest
   // Returns either an error or a result.
   private Pair<QueryInterruptedException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
   {
-    final Response response = resource.doPost(query);
+    final Response response = resource.doPost(query, null);
     if (response.getStatus() == 200) {
       final StreamingOutput output = (StreamingOutput) response.getEntity();
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();

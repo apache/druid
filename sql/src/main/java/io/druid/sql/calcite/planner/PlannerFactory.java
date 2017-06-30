@@ -22,6 +22,8 @@ package io.druid.sql.calcite.planner;
 import com.google.inject.Inject;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.QueryLifecycleFactory;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizationManagerMapper;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
@@ -54,13 +56,18 @@ public class PlannerFactory
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
 
+  private final AuthConfig authConfig;
+  private final AuthorizationManagerMapper authorizationManagerMapper;
+
   @Inject
   public PlannerFactory(
       final DruidSchema druidSchema,
       final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
-      final PlannerConfig plannerConfig
+      final PlannerConfig plannerConfig,
+      final AuthConfig authConfig,
+      final AuthorizationManagerMapper authorizationManagerMapper
   )
   {
     this.druidSchema = druidSchema;
@@ -68,6 +75,8 @@ public class PlannerFactory
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = plannerConfig;
+    this.authConfig = authConfig;
+    this.authorizationManagerMapper = authorizationManagerMapper;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
@@ -89,6 +98,6 @@ public class PlannerFactory
         .typeSystem(DruidTypeSystem.INSTANCE)
         .build();
 
-    return new DruidPlanner(Frameworks.getPlanner(frameworkConfig), plannerContext);
+    return new DruidPlanner(Frameworks.getPlanner(frameworkConfig), plannerContext, authConfig, authorizationManagerMapper);
   }
 }
