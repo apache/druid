@@ -37,9 +37,10 @@ import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
+import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.overlord.SegmentPublishResult;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -543,7 +544,7 @@ public class IndexTaskTest
 
     for (int i = 0; i < 6; i++) {
       final DataSegment segment = segments.get(i);
-      final Interval expectedInterval = new Interval(String.format("2014-01-01T0%d/PT1H", (i / 2)));
+      final Interval expectedInterval = new Interval(StringUtils.format("2014-01-01T0%d/PT1H", (i / 2)));
       final int expectedPartitionNum = i % 2;
 
       Assert.assertEquals("test", segment.getDataSource());
