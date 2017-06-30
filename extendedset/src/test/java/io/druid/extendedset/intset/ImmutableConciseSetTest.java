@@ -17,6 +17,7 @@
 package io.druid.extendedset.intset;
 
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.StringUtils;
 import junit.framework.Assert;
 import org.junit.Test;
 
@@ -1338,7 +1339,7 @@ public class ImmutableConciseSetTest
       for (int i = 0; i < length; i++) {
         final int n = intIterator.next();
         if (i != n) {
-          Assert.assertEquals(String.format("Failure at bit [%d] on length [%d]", i, length), i, n);
+          Assert.assertEquals(StringUtils.format("Failure at bit [%d] on length [%d]", i, length), i, n);
         }
       }
       NoSuchElementException ex = null;

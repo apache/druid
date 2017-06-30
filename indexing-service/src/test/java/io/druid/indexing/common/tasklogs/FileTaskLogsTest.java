@@ -61,7 +61,7 @@ public class FileTaskLogsTest
       for (Map.Entry<Long, String> entry : expected.entrySet()) {
         final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get().getInput());
         final String string = StringUtils.fromUtf8(bytes);
-        Assert.assertEquals(String.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
+        Assert.assertEquals(StringUtils.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
       }
     }
     finally {

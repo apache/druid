@@ -26,6 +26,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.LazySingleton;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
@@ -151,7 +152,7 @@ public final class CacheScheduler
     {
       try {
         this.namespace = namespace;
-        this.asString = String.format("namespace [%s] : %s", namespace, super.toString());
+        this.asString = StringUtils.format("namespace [%s] : %s", namespace, super.toString());
         this.updaterFuture = schedule(namespace);
         this.entryCleaner = createCleaner(entry);
         this.cacheGenerator = cacheGenerator;

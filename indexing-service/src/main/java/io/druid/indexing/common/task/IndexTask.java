@@ -56,6 +56,7 @@ import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
@@ -115,7 +116,7 @@ public class IndexTask extends AbstractTask
 
   private static String makeId(String id, IndexIngestionSpec ingestionSchema)
   {
-    return id != null ? id : String.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime());
+    return id != null ? id : StringUtils.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime());
   }
 
   private static String makeDataSource(IndexIngestionSpec ingestionSchema)

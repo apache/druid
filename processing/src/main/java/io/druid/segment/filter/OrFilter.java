@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
@@ -181,6 +182,6 @@ public class OrFilter implements BooleanFilter
   @Override
   public String toString()
   {
-    return String.format("(%s)", OR_JOINER.join(filters));
+    return StringUtils.format("(%s)", OR_JOINER.join(filters));
   }
 }

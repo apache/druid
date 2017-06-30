@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.BufferedReader;
@@ -49,7 +50,7 @@ public class GuavaUtils
       @Override
       public String apply(@Nullable String input)
       {
-        return String.format(formatString, input);
+        return StringUtils.format(formatString, input);
       }
     };
   }

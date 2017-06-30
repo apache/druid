@@ -17,12 +17,19 @@
  * under the License.
  */
 
-package io.druid.initialization;
+package io.druid.guice;
 
-/**
- */
-public interface LogLevelAdjusterMBean
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import io.druid.query.DruidProcessingConfig;
+
+public class DruidProcessingConfigModule implements Module
 {
-  public String getLevel(String packageName);
-  public void setLevel(String packageName, String level);
+
+  @Override
+  public void configure(Binder binder)
+  {
+    ConfigProvider.bind(binder, DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
+  }
 }

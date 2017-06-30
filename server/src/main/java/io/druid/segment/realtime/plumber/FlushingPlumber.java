@@ -27,6 +27,7 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -164,7 +165,7 @@ public class FlushingPlumber extends RealtimePlumber
             ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                String.format(
+                StringUtils.format(
                     "%s-flusher-%d",
                     getSchema().getDataSource(),
                     getConfig().getShardSpec().getPartitionNum()

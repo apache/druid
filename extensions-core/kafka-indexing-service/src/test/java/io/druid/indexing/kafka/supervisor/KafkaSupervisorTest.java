@@ -97,7 +97,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
-import static java.lang.String.format;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
 import static org.easymock.EasyMock.capture;
@@ -166,7 +165,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ImmutableMap.of("num.partitions", String.valueOf(NUM_PARTITIONS))
     );
     kafkaServer.start();
-    kafkaHost = String.format("localhost:%d", kafkaServer.getPort());
+    kafkaHost = StringUtils.format("localhost:%d", kafkaServer.getPort());
 
     dataSchema = getDataSchema(DATASOURCE);
   }
@@ -1433,7 +1432,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     taskClient.close();
-    taskRunner.unregisterListener(String.format("KafkaSupervisor-%s", DATASOURCE));
+    taskRunner.unregisterListener(StringUtils.format("KafkaSupervisor-%s", DATASOURCE));
     replayAll();
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
@@ -1719,7 +1718,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                   topic,
                   i,
                   null,
-                  StringUtils.toUtf8(format("event-%d", j))
+                  StringUtils.toUtf8(StringUtils.format("event-%d", j))
               )
           ).get();
         }
@@ -1888,7 +1887,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     @Override
     protected String generateSequenceName(int groupId)
     {
-      return String.format("sequenceName-%d", groupId);
+      return StringUtils.format("sequenceName-%d", groupId);
     }
   }
 }

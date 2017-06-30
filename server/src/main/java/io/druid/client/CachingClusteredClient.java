@@ -50,6 +50,7 @@ import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.MergeSequence;
@@ -323,7 +324,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           // otherwise, if populating cache, add segment to list of segments to cache
           final String segmentIdentifier = segment.lhs.getSegment().getIdentifier();
           cachePopulatorMap.put(
-              String.format("%s_%s", segmentIdentifier, segmentQueryInterval),
+              StringUtils.format("%s_%s", segmentIdentifier, segmentQueryInterval),
               new CachePopulator(cache, objectMapper, segmentCacheKey)
           );
         }
@@ -486,7 +487,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                           {
                             final BySegmentResultValueClass<T> value = input.getValue();
                             final CachePopulator cachePopulator = cachePopulatorMap.get(
-                                String.format("%s_%s", value.getSegmentId(), value.getInterval())
+                                StringUtils.format("%s_%s", value.getSegmentId(), value.getInterval())
                             );
 
                             final Queue<ListenableFuture<Object>> cacheFutures = new ConcurrentLinkedQueue<>();

@@ -46,4 +46,10 @@ public class LoadQueuePeonTester extends LoadQueuePeon
   {
     return segmentsToLoad;
   }
+
+  @Override
+  public int getNumberOfSegmentsInQueue()
+  {
+    return segmentsToLoad.size();
+  }
 }

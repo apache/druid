@@ -21,6 +21,7 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.druid.java.util.common.StringUtils;
 
 /**
  * This enum represents types of druid services that hold segments.
@@ -79,13 +80,13 @@ public enum ServerType
   @JsonCreator
   public static ServerType fromString(String type)
   {
-    return ServerType.valueOf(type.toUpperCase().replace("-", "_"));
+    return ServerType.valueOf(StringUtils.toUpperCase(type).replace("-", "_"));
   }
 
   @Override
   @JsonValue
   public String toString()
   {
-    return name().toLowerCase().replace("_", "-");
+    return StringUtils.toLowerCase(name()).replace("_", "-");
   }
 }

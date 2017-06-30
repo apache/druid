@@ -19,18 +19,17 @@
 
 package io.druid.collections.bitmap;
 
-import java.util.BitSet;
-
+import com.carrotsearch.junitbenchmarks.annotation.BenchmarkHistoryChart;
+import com.carrotsearch.junitbenchmarks.annotation.LabelType;
+import io.druid.extendedset.intset.ConciseSet;
+import io.druid.extendedset.intset.ImmutableConciseSet;
+import io.druid.java.util.common.StringUtils;
+import io.druid.test.annotation.Benchmark;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
-import com.carrotsearch.junitbenchmarks.annotation.BenchmarkHistoryChart;
-import com.carrotsearch.junitbenchmarks.annotation.LabelType;
-
-import io.druid.test.annotation.Benchmark;
-import io.druid.extendedset.intset.ConciseSet;
-import io.druid.extendedset.intset.ImmutableConciseSet;
+import java.util.BitSet;
 
 @Category({Benchmark.class})
 @BenchmarkHistoryChart(labelWith = LabelType.CUSTOM_KEY, maxRuns = 20)
@@ -43,7 +42,7 @@ public class RangeBitmapBenchmarkTest extends BitmapBenchmark
   @BeforeClass
   public static void prepareRandomRanges() throws Exception
   {
-    System.setProperty("jub.customkey", String.format("%06.5f", DENSITY));
+    System.setProperty("jub.customkey", StringUtils.format("%06.5f", DENSITY));
     reset();
 
     final BitSet expectedUnion = new BitSet();

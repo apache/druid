@@ -63,7 +63,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   @Test
   public void testUnionQuery() throws Exception
   {
-    final int numTasks = 4;
+    final int numTasks = 3;
 
     try {
       // Load 4 datasources with same dimensions

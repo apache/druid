@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
@@ -62,7 +63,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       if (timestamp == null) {
         final String input = theMap.toString();
         throw new NullPointerException(
-            String.format(
+            StringUtils.format(
                 "Null timestamp in input: %s",
                 input.length() < 100 ? input : input.substring(0, 100) + "..."
             )

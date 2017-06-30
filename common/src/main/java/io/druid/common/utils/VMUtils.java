@@ -19,6 +19,8 @@
 
 package io.druid.common.utils;
 
+import io.druid.java.util.common.UOE;
+
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationTargetException;
@@ -63,12 +65,7 @@ public class VMUtils
       Object maxDirectMemoryObj = vmClass.getMethod("maxDirectMemory").invoke(null);
 
       if (maxDirectMemoryObj == null || !(maxDirectMemoryObj instanceof Number)) {
-        throw new UnsupportedOperationException(
-            String.format(
-                "Cannot determine maxDirectMemory from [%s]",
-                maxDirectMemoryObj
-            )
-        );
+        throw new UOE("Cannot determine maxDirectMemory from [%s]", maxDirectMemoryObj);
       } else {
         return ((Number) maxDirectMemoryObj).longValue();
       }

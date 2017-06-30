@@ -123,7 +123,7 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
   public VSizeIndexedInts get(int index)
   {
     if (index >= size) {
-      throw new IllegalArgumentException(String.format("Index[%s] >= size[%s]", index, size));
+      throw new IAE("Index[%d] >= size[%d]", index, size);
     }
 
     ByteBuffer myBuffer = theBuffer.asReadOnlyBuffer();

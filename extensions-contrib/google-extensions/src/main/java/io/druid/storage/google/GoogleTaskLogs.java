@@ -23,13 +23,14 @@ import com.google.api.client.http.InputStreamContent;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class GoogleTaskLogs implements TaskLogs {
   private static final Logger LOG = new Logger(GoogleTaskLogs.class);
@@ -93,7 +94,7 @@ public class GoogleTaskLogs implements TaskLogs {
           }
       );
     } catch (IOException e) {
-      throw new IOException(String.format("Failed to stream logs from: %s", taskKey), e);
+      throw new IOE(e, "Failed to stream logs from: %s", taskKey);
     }
   }
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -126,6 +127,6 @@ public class Appenderators
 
   public static String getSequenceName(Interval interval, String version, ShardSpec shardSpec)
   {
-    return String.format("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
+    return StringUtils.format("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
   }
 }

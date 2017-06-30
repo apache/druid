@@ -41,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -80,7 +81,8 @@ public class CacheDistributionTest
   @BeforeClass
   public static void header() {
     System.out.printf(
-        "%25s\t%5s\t%10s\t%10s\t%10s\t%10s\t%10s\t%7s\t%5s\n",
+        Locale.ENGLISH,
+        "%25s\t%5s\t%10s\t%10s\t%10s\t%10s\t%10s\t%7s\t%5s%n",
         "hash", "reps", "node 1", "node 2", "node 3", "node 4", "node 5", "min/max", "ns"
     );
   }
@@ -130,13 +132,13 @@ public class CacheDistributionTest
 
     long min = Long.MAX_VALUE;
     long max = 0;
-    System.out.printf("%25s\t%5d\t", hash, reps);
+    System.out.printf(Locale.ENGLISH, "%25s\t%5d\t", hash, reps);
     for(AtomicLong count : counter.values()) {
-      System.out.printf("%10d\t", count.get());
+      System.out.printf(Locale.ENGLISH, "%10d\t", count.get());
       min = Math.min(min, count.get());
       max = Math.max(max, count.get());
     }
-    System.out.printf("%7.2f\t%5.0f\n", (double) min / (double) max, (double)t / KEY_COUNT);
+    System.out.printf(Locale.ENGLISH, "%7.2f\t%5.0f%n", (double) min / (double) max, (double)t / KEY_COUNT);
   }
 
   private static MemcachedNode dummyNode(String host, int port) {

@@ -30,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerFactory;
@@ -78,7 +79,7 @@ public class DruidMeta extends MetaImpl
     this.config = config;
     this.exec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
-            .setNameFormat(String.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
+            .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
             .setDaemon(true)
             .build()
     );

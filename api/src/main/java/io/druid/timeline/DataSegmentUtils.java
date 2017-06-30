@@ -20,10 +20,9 @@
 package io.druid.timeline;
 
 import com.google.common.base.Function;
-
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
@@ -73,7 +72,7 @@ public class DataSegmentUtils
    */
   public static SegmentIdentifierParts valueOf(String dataSource, String identifier)
   {
-    if (!identifier.startsWith(String.format("%s_", dataSource))) {
+    if (!identifier.startsWith(StringUtils.format("%s_", dataSource))) {
       return null;
     }
 

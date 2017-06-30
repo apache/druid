@@ -32,10 +32,13 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.DefaultBlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -325,7 +328,7 @@ public class GroupByQueryRunnerTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
+    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByQueryEngine-bufferPool",
         new Supplier<ByteBuffer>()
         {
@@ -336,7 +339,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    final BlockingPool<ByteBuffer> mergeBufferPool = new BlockingPool<>(
+    final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
         new Supplier<ByteBuffer>()
         {
           @Override
@@ -381,7 +384,7 @@ public class GroupByQueryRunnerTest
     for (GroupByQueryConfig config : testConfigs()) {
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        final String testName = String.format(
+        final String testName = StringUtils.format(
             "config=%s, runner=%s",
             config.toString(),
             runner.toString()
@@ -2573,7 +2576,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
     );
   }
 
@@ -2620,7 +2623,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
     );
   }
 
@@ -2675,7 +2678,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
     );
   }
 

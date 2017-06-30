@@ -31,6 +31,7 @@ import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.http.security.StateResourceFilter;
@@ -180,7 +181,7 @@ public class WorkerResource
   {
     if (!(taskRunner instanceof TaskLogStreamer)) {
       return Response.status(501)
-                     .entity(String.format(
+                     .entity(StringUtils.format(
                          "Log streaming not supported by [%s]",
                          taskRunner.getClass().getCanonicalName()
                      ))

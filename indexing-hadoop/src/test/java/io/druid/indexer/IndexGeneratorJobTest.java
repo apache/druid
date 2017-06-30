@@ -31,6 +31,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -542,7 +543,7 @@ public class IndexGeneratorJobTest
         specs.add(new SingleDimensionShardSpec("host", shardInfo[0], shardInfo[1], partitionNum++));
       }
     } else {
-      throw new RuntimeException(String.format("Invalid partition type:[%s]", partitionType));
+      throw new RE("Invalid partition type:[%s]", partitionType);
     }
 
     return specs;
@@ -583,7 +584,7 @@ public class IndexGeneratorJobTest
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
       Object[][] shardInfo = shardInfoForEachSegment[segmentNum++];
       File segmentOutputFolder = new File(
-          String.format(
+          StringUtils.format(
               "%s/%s/%s_%s/%s",
               config.getSchema().getIOConfig().getSegmentOutputPath(),
               config.getSchema().getDataSchema().getDataSource(),
@@ -643,7 +644,7 @@ public class IndexGeneratorJobTest
           Assert.assertEquals(singleDimensionShardInfo[0], spec.getStart());
           Assert.assertEquals(singleDimensionShardInfo[1], spec.getEnd());
         } else {
-          throw new RuntimeException(String.format("Invalid partition type:[%s]", partitionType));
+          throw new RE("Invalid partition type:[%s]", partitionType);
         }
       }
     }

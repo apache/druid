@@ -22,6 +22,7 @@ package io.druid.server.lookup.jdbc;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.server.lookup.DataFetcher;
@@ -66,7 +67,7 @@ public class JdbcDataFetcherTest
     Assert.assertEquals(
         0,
         handle.createStatement(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %s (%s VARCHAR(64), %s VARCHAR(64))",
                 tableName,
                 keyColumn,
@@ -74,7 +75,7 @@ public class JdbcDataFetcherTest
             )
         ).setQueryTimeout(1).execute()
     );
-    handle.createStatement(String.format("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
+    handle.createStatement(StringUtils.format("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
 
     for (Map.Entry<String, String> entry : lookupMap.entrySet()) {
       insertValues(entry.getKey(), entry.getValue(), handle);
@@ -167,9 +168,9 @@ public class JdbcDataFetcherTest
   {
     final String query;
     handle.createStatement(
-        String.format("DELETE FROM %s WHERE %s='%s'", tableName, keyColumn, key)
+        StringUtils.format("DELETE FROM %s WHERE %s='%s'", tableName, keyColumn, key)
     ).setQueryTimeout(1).execute();
-    query = String.format(
+    query = StringUtils.format(
         "INSERT INTO %s (%s, %s) VALUES ('%s', '%s')",
         tableName,
         keyColumn, valueColumn,

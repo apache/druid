@@ -36,7 +36,10 @@ import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
@@ -211,7 +214,7 @@ public class IndexIO
   {
     final long fileSize = indexFile.length();
     if (fileSize > Integer.MAX_VALUE) {
-      throw new IOException(String.format("File[%s] too large[%s]", indexFile, fileSize));
+      throw new IOE("File[%s] too large[%d]", indexFile, fileSize);
     }
   }
 
@@ -311,7 +314,7 @@ public class IndexIO
         indexIn = new FileInputStream(new File(inDir, "index.drd"));
         byte theVersion = (byte) indexIn.read();
         if (theVersion != V8_VERSION) {
-          throw new IllegalArgumentException(String.format("Unknown version[%s]", theVersion));
+          throw new IAE("Unknown version[%d]", theVersion);
         }
       }
       finally {
@@ -407,7 +410,6 @@ public class IndexIO
 
       return retVal;
     }
-
   }
 
   static interface IndexLoader
@@ -536,7 +538,7 @@ public class IndexIO
 
       final int theVersion = Ints.fromByteArray(Files.toByteArray(new File(inDir, "version.bin")));
       if (theVersion != V9_VERSION) {
-        throw new IllegalArgumentException(String.format("Expected version[9], got[%s]", theVersion));
+        throw new IAE("Expected version[9], got[%d]", theVersion);
       }
 
       SmooshedFileMapper smooshedFiles = Smoosh.map(inDir);
@@ -618,21 +620,21 @@ public class IndexIO
 
   public static File makeDimFile(File dir, String dimension)
   {
-    return new File(dir, String.format("dim_%s.drd", dimension));
+    return new File(dir, StringUtils.format("dim_%s.drd", dimension));
   }
 
   public static File makeNumericDimFile(File dir, String dimension, ByteOrder order)
   {
-    return new File(dir, String.format("numeric_dim_%s_%s.drd", dimension, order));
+    return new File(dir, StringUtils.format("numeric_dim_%s_%s.drd", dimension, order));
   }
 
   public static File makeTimeFile(File dir, ByteOrder order)
   {
-    return new File(dir, String.format("time_%s.drd", order));
+    return new File(dir, StringUtils.format("time_%s.drd", order));
   }
 
   public static File makeMetricFile(File dir, String metricName, ByteOrder order)
   {
-    return new File(dir, String.format("met_%s_%s.drd", metricName, order));
+    return new File(dir, StringUtils.format("met_%s_%s.drd", metricName, order));
   }
 }

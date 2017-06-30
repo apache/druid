@@ -44,6 +44,7 @@ import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -93,7 +94,7 @@ public class HadoopIndexTask extends HadoopTask
   )
   {
     super(
-        id != null ? id : String.format("index_hadoop_%s_%s", getTheDataSource(spec), new DateTime()),
+        id != null ? id : StringUtils.format("index_hadoop_%s_%s", getTheDataSource(spec), new DateTime()),
         getTheDataSource(spec),
         hadoopDependencyCoordinates == null
         ? (hadoopCoordinates == null ? null : ImmutableList.of(hadoopCoordinates))

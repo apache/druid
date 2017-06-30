@@ -22,6 +22,7 @@ package io.druid.metadata.storage.derby;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
@@ -76,7 +77,7 @@ public class DerbyConnector extends SQLMetadataConnector
   public boolean tableExists(Handle handle, String tableName)
   {
     return !handle.createQuery("select * from SYS.SYSTABLES where tablename = :tableName")
-                  .bind("tableName", tableName.toUpperCase())
+                  .bind("tableName", StringUtils.toUpperCase(tableName))
                   .list()
                   .isEmpty();
   }
