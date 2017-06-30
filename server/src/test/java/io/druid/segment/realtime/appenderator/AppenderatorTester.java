@@ -67,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class AppenderatorTester implements AutoCloseable
 {
@@ -89,12 +90,21 @@ public class AppenderatorTester implements AutoCloseable
       final int maxRowsInMemory
   )
   {
-    this(maxRowsInMemory, null);
+    this(maxRowsInMemory, null, false);
   }
 
   public AppenderatorTester(
       final int maxRowsInMemory,
-      final File basePersistDirectory
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, null, enablePushFailure);
+  }
+
+  public AppenderatorTester(
+      final int maxRowsInMemory,
+      final File basePersistDirectory,
+      final boolean enablePushFailure
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -169,6 +179,8 @@ public class AppenderatorTester implements AutoCloseable
     EmittingLogger.registerEmitter(emitter);
     dataSegmentPusher = new DataSegmentPusher()
     {
+      private boolean mustFail = true;
+
       @Deprecated
       @Override
       public String getPathForHadoop(String dataSource)
@@ -185,6 +197,12 @@ public class AppenderatorTester implements AutoCloseable
       @Override
       public DataSegment push(File file, DataSegment segment) throws IOException
       {
+        if (enablePushFailure && mustFail) {
+          mustFail = false;
+          throw new IOException("Push failure test");
+        } else if (enablePushFailure) {
+          mustFail = true;
+        }
         pushedSegments.add(segment);
         return segment;
       }

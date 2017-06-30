@@ -48,6 +48,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RetryUtils;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -367,6 +368,9 @@ public class AppenderatorImpl implements Appenderator
     int numPersistedRows = 0;
     for (SegmentIdentifier identifier : identifiers) {
       final Sink sink = sinks.get(identifier);
+      if (sink == null) {
+        throw new NullPointerException("No sink for identifier: " + identifier);
+      }
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
       commitHydrants.put(identifier, hydrants.size());
       numPersistedRows += sink.getNumRowsInMemory();
@@ -590,9 +594,14 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getIndexSpec()
       );
 
-      DataSegment segment = dataSegmentPusher.push(
-          mergedFile,
-          sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
+      // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
+      final DataSegment segment = RetryUtils.retry(
+          () -> dataSegmentPusher.push(
+              mergedFile,
+              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
+          ),
+          exception -> exception instanceof Exception,
+          5
       );
 
       objectMapper.writeValue(descriptorFile, segment);
