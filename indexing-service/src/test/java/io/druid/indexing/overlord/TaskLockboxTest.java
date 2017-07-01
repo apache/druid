@@ -36,7 +36,9 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Map;
 
@@ -46,6 +48,9 @@ public class TaskLockboxTest
 
   private TaskLockbox lockbox;
 
+  @Rule
+  public final ExpectedException exception = ExpectedException.none();
+
   @Before
   public void setUp()
   {
@@ -54,7 +59,7 @@ public class TaskLockboxTest
     EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100));
     EasyMock.replay(serverConfig);
 
-    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    ServiceEmitter emitter  = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 
@@ -75,10 +80,11 @@ public class TaskLockboxTest
     lockbox.lock(NoopTask.create(), new Interval("2015-01-01/2015-01-02"));
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testLockAfterTaskComplete() throws InterruptedException
   {
     Task task = NoopTask.create();
+    exception.expect(IllegalStateException.class);
     lockbox.add(task);
     lockbox.remove(task);
     lockbox.lock(task, new Interval("2015-01-01/2015-01-02"));
@@ -112,6 +118,9 @@ public class TaskLockboxTest
     Assert.assertTrue(lock1.isPresent());
     Assert.assertEquals(new Interval("2015-01-01/2015-01-03"), lock1.get().getInterval());
 
+    // same task tries to take partially overlapping interval; should fail
+    Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-02/2015-01-04")).isPresent());
+
     // same task tries to take contained interval; should succeed and should match the original lock
     Optional<TaskLock> lock2 = lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02"));
     Assert.assertTrue(lock2.isPresent());
@@ -124,18 +133,6 @@ public class TaskLockboxTest
     );
   }
 
-  @Test(expected = ISE.class)
-  public void testOverlappingIntervalForSameTask() throws InterruptedException
-  {
-    Task task = NoopTask.create();
-    lockbox.add(task);
-    Optional<TaskLock> lock1 = lockbox.tryLock(task, new Interval("2015-01-01/2015-01-03"));
-    Assert.assertTrue(lock1.isPresent());
-    Assert.assertEquals(new Interval("2015-01-01/2015-01-03"), lock1.get().getInterval());
-
-    // same task tries to take partially overlapping interval; should throw exception
-    lockbox.tryLock(task, new Interval("2015-01-02/2015-01-04"));
-  }
 
   @Test(expected = IllegalStateException.class)
   public void testTryLockForInactiveTask() throws InterruptedException
@@ -143,16 +140,17 @@ public class TaskLockboxTest
     Assert.assertFalse(lockbox.tryLock(NoopTask.create(), new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testTryLockAfterTaskComplete() throws InterruptedException
   {
     Task task = NoopTask.create();
+    exception.expect(IllegalStateException.class);
     lockbox.add(task);
     lockbox.remove(task);
     Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
-  @Test(expected = InterruptedException.class)
+  @Test
   public void testTimeoutForLock() throws InterruptedException
   {
     Task task1 = NoopTask.create();
@@ -160,7 +158,7 @@ public class TaskLockboxTest
 
     lockbox.add(task1);
     lockbox.add(task2);
-
+    exception.expect(InterruptedException.class);
     lockbox.lock(task1, new Interval("2015-01-01/2015-01-02"));
     lockbox.lock(task2, new Interval("2015-01-01/2015-01-15"));
   }

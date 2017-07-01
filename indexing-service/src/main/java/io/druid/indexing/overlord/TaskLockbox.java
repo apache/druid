@@ -192,24 +192,36 @@ public class TaskLockbox
    */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {
-    long startTime = System.currentTimeMillis();
+    long timeout = lockTimeoutMillis;
     giant.lock();
     try {
       Optional<TaskLock> taskLock;
       while (!(taskLock = tryLock(task, interval)).isPresent()) {
-        lockReleaseCondition.await(lockTimeoutMillis, TimeUnit.MILLISECONDS);
-        if (System.currentTimeMillis() - startTime > lockTimeoutMillis) {
+        long startTime = System.currentTimeMillis();
+        lockReleaseCondition.await(timeout, TimeUnit.MILLISECONDS);
+        long timeDelta = System.currentTimeMillis() - startTime;
+        if (timeDelta >= timeout) {
+          log.error(
+              "Task [%s] can not acquire lock for interval [%s] within [%s] ms",
+              task.getId(),
+              interval,
+              lockTimeoutMillis
+          );
+
           throw new InterruptedException(String.format(
               "Task [%s] can not acquire lock for interval [%s] within [%s] ms",
               task.getId(),
               interval,
               lockTimeoutMillis
           ));
+        } else {
+          timeout -= timeDelta;
         }
       }
 
       return taskLock.get();
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -274,11 +286,6 @@ public class TaskLockbox
             log.makeAlert("Same Task is trying to acquire lock for overlapping interval")
                .addData("task", task.getId())
                .addData("interval", interval);
-            throw new ISE(
-                "Same Task [%s] is trying to acquire lock for overlapping interval [%s]",
-                task.getId(),
-                interval
-            );
           }
           return Optional.absent();
         }
