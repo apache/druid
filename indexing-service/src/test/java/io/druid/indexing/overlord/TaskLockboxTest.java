@@ -29,7 +29,6 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
-import io.druid.java.util.common.ISE;
 import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
