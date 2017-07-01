@@ -908,7 +908,7 @@ public class ApproximateHistogram
         final float mm0 = (m0 - m1) * w + m1;
 
         mergedPositions[currentIndex] = mm0;
-        //mergedPositions[nextIndex] = Float.MAX_VALUE; // for debugging
+        //mergedPositions[nextIndex] = Float.POSITIVE_INFINITY; // for debugging
 
         mergedBins[currentIndex] = sum | APPROX_FLAG_BIT;
         //mergedBins[nextIndex] = -1; // for debugging
@@ -918,7 +918,7 @@ public class ApproximateHistogram
           // merged bin is the last => remove the current bin delta from the heap
           heapSize = heapDelete(heap, reverseIndex, heapSize, reverseIndex[currentIndex], deltas);
 
-          //deltas[currentIndex] = Float.MAX_VALUE; // for debugging
+          //deltas[currentIndex] = Float.POSITIVE_INFINITY; // for debugging
         } else {
           // merged bin is not the last => remove the merged bin delta from the heap
           heapSize = heapDelete(heap, reverseIndex, heapSize, reverseIndex[nextIndex], deltas);
@@ -939,7 +939,7 @@ public class ApproximateHistogram
         }
 
         // mark the merged bin as invalid
-        // deltas[nextIndex] = Float.MAX_VALUE; // for debugging
+        // deltas[nextIndex] = Float.POSITIVE_INFINITY; // for debugging
 
         // update last valid index if we merged the last bin
         if (nextIndex == lastValidIndex) {
