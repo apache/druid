@@ -128,8 +128,8 @@ public class RTree
   {
     float[] initMinCoords = new float[numDims];
     float[] initMaxCoords = new float[numDims];
-    Arrays.fill(initMinCoords, Float.POSITIVE_INFINITY);
-    Arrays.fill(initMaxCoords, Float.NEGATIVE_INFINITY);
+    Arrays.fill(initMinCoords, Float.NEGATIVE_INFINITY);
+    Arrays.fill(initMaxCoords, Float.POSITIVE_INFINITY);
 
     return new Node(initMinCoords, initMaxCoords, isLeaf, bitmapFactory);
   }
