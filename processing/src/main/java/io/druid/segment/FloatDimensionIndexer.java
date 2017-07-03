@@ -107,14 +107,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public long get()
       {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0L;
-        }
-
-        float floatVal = (Float) dims[dimIndex];
-        return (long) floatVal;
+        return (long) getFloat(currEntry, dimIndex);
       }
 
       @Override
@@ -139,13 +132,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public float get()
       {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0L;
-        }
-
-        return (Float) dims[dimIndex];
+        return getFloat(currEntry, dimIndex);
       }
 
       @Override
@@ -156,6 +143,17 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     }
 
     return new IndexerFloatColumnSelector();
+  }
+
+  private static float getFloat(IncrementalIndexStorageAdapter.EntryHolder currEntry, int dimIndex)
+  {
+    final Object[] dims = currEntry.getKey().getDims();
+
+    if (dimIndex >= dims.length) {
+      return 0.0f;
+    }
+
+    return (Float) dims[dimIndex];
   }
 
   @Override
@@ -180,7 +178,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0L;
+          return 0.0f;
         }
 
         return dims[dimIndex];

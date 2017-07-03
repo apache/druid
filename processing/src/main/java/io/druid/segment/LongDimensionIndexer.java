@@ -107,13 +107,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public long get()
       {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0L;
-        }
-
-        return (Long) dims[dimIndex];
+        return getLong(currEntry, dimIndex);
       }
 
       @Override
@@ -124,6 +118,17 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
     }
 
     return new IndexerLongColumnSelector();
+  }
+
+  private static long getLong(IncrementalIndexStorageAdapter.EntryHolder currEntry, int dimIndex)
+  {
+    final Object[] dims = currEntry.getKey().getDims();
+
+    if (dimIndex >= dims.length) {
+      return 0L;
+    }
+
+    return (Long) dims[dimIndex];
   }
 
   @Override
@@ -138,14 +143,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public float get()
       {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0.0f;
-        }
-
-        long longVal = (Long) dims[dimIndex];
-        return (float) longVal;
+        return getLong(currEntry, dimIndex);
       }
 
       @Override
