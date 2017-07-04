@@ -38,6 +38,7 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DruidClusterTest
@@ -184,6 +185,9 @@ public class DruidClusterTest
   {
     cluster.add(newRealtime);
     cluster.add(newHistorical);
+    final Set<ServerHolder> expectedRealtimes = cluster.getRealtimes();
+    final Map<String, MinMaxPriorityQueue<ServerHolder>> expectedHistoricals = cluster.getHistoricals();
+
     final Collection<ServerHolder> allServers = cluster.getAllServers();
     Assert.assertEquals(4, allServers.size());
     Assert.assertTrue(allServers.containsAll(cluster.getRealtimes()));
@@ -192,6 +196,9 @@ public class DruidClusterTest
             cluster.getHistoricals().values().stream().flatMap(Collection::stream).collect(Collectors.toList())
         )
     );
+
+    Assert.assertEquals(expectedHistoricals, cluster.getHistoricals());
+    Assert.assertEquals(expectedRealtimes, cluster.getRealtimes());
   }
 
   @Test

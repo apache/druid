@@ -29,8 +29,10 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Contains a representation of the current state of the cluster by tier.
@@ -113,9 +115,11 @@ public class DruidCluster
 
   public Collection<ServerHolder> getAllServers()
   {
-    return historicals.values().stream()
-                      .flatMap(Collection::stream)
-                      .collect(() -> realtimes, Set::add, Set::addAll);
+    final List<ServerHolder> allServers = historicals.values().stream()
+                                                     .flatMap(Collection::stream)
+                                                     .collect(Collectors.toList());
+    allServers.addAll(realtimes);
+    return allServers;
   }
 
   public Iterable<MinMaxPriorityQueue<ServerHolder>> getSortedHistoricalsByTier()
