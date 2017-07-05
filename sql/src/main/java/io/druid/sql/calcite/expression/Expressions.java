@@ -138,7 +138,10 @@ public class Expressions
       builder.put(type, ExprType.STRING);
     }
 
+    // Booleans are treated as longs in Druid expressions, using two-value logic (positive = true, nonpositive = false).
     builder.put(SqlTypeName.BOOLEAN, ExprType.LONG);
+
+    // Timestamps are treated as longs (millis since the epoch) in Druid expressions.
     builder.put(SqlTypeName.TIMESTAMP, ExprType.LONG);
     builder.put(SqlTypeName.DATE, ExprType.LONG);
 
@@ -285,8 +288,9 @@ public class Expressions
         final DruidExpression typeCastExpression;
 
         if (fromExprType != toExprType) {
+          // Ignore casts for simple extractions (use Function.identity) since it is ok in many cases.
           typeCastExpression = operandExpression.map(
-              Function.identity(), // Ignore casts for simple extractions; it generally works OK.
+              Function.identity(),
               expression -> String.format("CAST(%s, '%s')", expression, toExprType.toString())
           );
         } else {

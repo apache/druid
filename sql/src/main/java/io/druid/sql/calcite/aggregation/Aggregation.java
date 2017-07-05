@@ -65,7 +65,8 @@ public class Aggregation
       }
     }
 
-    // Verify that all names are properly namespaced.
+    // Verify that all "internal" aggregator names are prefixed by the output name of this aggregation.
+    // This is a sanity check to make sure callers are behaving as they should be.
     final String name = postAggregator != null
                         ? postAggregator.getName()
                         : Iterables.getOnlyElement(aggregatorFactories).getName();

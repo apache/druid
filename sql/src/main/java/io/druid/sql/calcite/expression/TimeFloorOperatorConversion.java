@@ -101,7 +101,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
     } else if (operands.get(1).isA(SqlKind.LITERAL)
                && (operands.size() <= 2 || operands.get(2).isA(SqlKind.LITERAL))
                && (operands.size() <= 3 || operands.get(3).isA(SqlKind.LITERAL))) {
-      // Granularity is a literal
+      // Granularity is a literal. Special case since we can use an extractionFn here.
       final Period period = new Period(RexLiteral.stringValue(operands.get(1)));
       final DateTime origin =
           operands.size() > 2 && !RexLiteral.isNullLiteral(operands.get(2))

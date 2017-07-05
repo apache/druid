@@ -82,6 +82,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class GroupByRules
@@ -746,7 +747,7 @@ public class GroupByRules
           Iterables.getOnlyElement(call.getArgList())
       );
 
-      final DruidExpression input = Expressions.toDruidExpression(plannerContext, sourceRowSignature, rexNode);
+      final DruidExpression input = toDruidExpressionForAggregator(plannerContext, sourceRowSignature, rexNode);
       if (input == null) {
         return null;
       }
@@ -848,6 +849,27 @@ public class GroupByRules
       } else {
         return null;
       }
+    }
+  }
+
+  private static DruidExpression toDruidExpressionForAggregator(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode
+  )
+  {
+    final DruidExpression druidExpression = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
+    if (druidExpression == null) {
+      return null;
+    }
+
+    if (druidExpression.isSimpleExtraction() &&
+        (!druidExpression.isDirectColumnAccess()
+         || rowSignature.getColumnType(druidExpression.getDirectColumn()) == ValueType.STRING)) {
+      // Aggregators are unable to implicitly cast strings to numbers. So remove the simple extraction in this case.
+      return druidExpression.map(simpleExtraction -> null, Function.identity());
+    } else {
+      return druidExpression;
     }
   }
 

@@ -2595,6 +2595,64 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testSumOfString() throws Exception
+  {
+    // Perhaps should be 13, but dim1 has "1", "2" and "10.1"; and CAST('10.1' AS INTEGER) = 0 since parsing is strict.
+
+    testQuery(
+        "SELECT SUM(CAST(dim1 AS INTEGER)) FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(
+                      new LongSumAggregatorFactory(
+                          "a0",
+                          null,
+                          "CAST(\"dim1\", 'LONG')",
+                          CalciteTests.createExprMacroTable()
+                      )
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3}
+        )
+    );
+  }
+
+  @Test
+  public void testSumOfExtractionFn() throws Exception
+  {
+    // Perhaps should be 13, but dim1 has "1", "2" and "10.1"; and CAST('10.1' AS INTEGER) = 0 since parsing is strict.
+
+    testQuery(
+        "SELECT SUM(CAST(SUBSTRING(dim1, 1, 10) AS INTEGER)) FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(
+                      new LongSumAggregatorFactory(
+                          "a0",
+                          null,
+                          "CAST(substring(\"dim1\", 0, 10), 'LONG')",
+                          CalciteTests.createExprMacroTable()
+                      )
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3}
+        )
+    );
+  }
+
+  @Test
   public void testTimeseriesWithTimeFilterOnLongColumnUsingMillisToTimestamp() throws Exception
   {
     testQuery(

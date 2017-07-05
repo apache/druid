@@ -62,7 +62,8 @@ The HAVING clause refers to columns that are present after execution of GROUP BY
 grouping expressions or aggregated values. It can only be used together with GROUP BY.
 
 The ORDER BY clause refers to columns that are present after execution of GROUP BY. It can be used to order the results
-based on either grouping expressions or aggregated values. It can only be used together with GROUP BY.
+based on either grouping expressions or aggregated values. The ORDER BY expression can be a column name, alias, or
+ordinal position (like `ORDER BY 2` to order by the second column). ORDER BY can only be used together with GROUP BY.
 
 The LIMIT clause can be used to limit the number of rows returned. It can be used with any query type. It is pushed down
 to data nodes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
@@ -229,7 +230,9 @@ to FLOAT.
 The following table describes how SQL types map onto Druid types during query runtime. Casts between two SQL types
 that have the same Druid runtime type will have no effect, other than exceptions noted in the table. Casts between two
 SQL types that have different Druid runtime types will generate a runtime cast in Druid. If a value cannot be properly
-cast to another value, as in `CAST('foo' AS BIGINT)`, the runtime will substitute a default value.
+cast to another value, as in `CAST('foo' AS BIGINT)`, the runtime will substitute a default value. NULL values cast
+to non-nullable types will also be substitued with a default value (for example, nulls cast to numbers will be
+converted to zeroes).
 
 |SQL type|Druid runtime type|Default value|Notes|
 |--------|------------------|-------------|-----|

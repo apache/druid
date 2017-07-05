@@ -36,6 +36,10 @@ import org.joda.time.DateTime;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * A Calcite {@code RexExecutor} that reduces Calcite expressions by evaluating them using Druid's own built-in
+ * expressions. This ensures that constant reduction is done in a manner consistent with the query runtime.
+ */
 public class DruidRexExecutor implements RexExecutor
 {
   private static final RowSignature EMPTY_ROW_SIGNATURE = RowSignature.builder().build();

@@ -41,18 +41,21 @@ public class DruidConformance extends SqlAbstractConformance
   @Override
   public boolean isBangEqualAllowed()
   {
+    // For x != y (as an alternative to x <> y)
     return true;
   }
 
   @Override
   public boolean isSortByOrdinal()
   {
+    // For ORDER BY 1
     return true;
   }
 
   @Override
   public boolean isSortByAlias()
   {
+    // For ORDER BY columnAlias (where columnAlias is a "column AS columnAlias")
     return true;
   }
 }

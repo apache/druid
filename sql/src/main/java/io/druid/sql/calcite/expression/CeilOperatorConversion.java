@@ -71,6 +71,8 @@ public class CeilOperatorConversion implements SqlOperatorConversion
         return null;
       }
 
+      // Unlike FLOOR(expr TO timeUnit) there is no built-in extractionFn that can behave like timestamp_ceil.
+      // So there is no simple extraction for this operator.
       return DruidExpression.fromFunctionCall(
           "timestamp_ceil",
           ImmutableList.of(
