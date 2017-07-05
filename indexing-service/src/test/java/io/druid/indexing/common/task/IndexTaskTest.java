@@ -604,7 +604,7 @@ public class IndexTaskTest
 
     indexTask.run(
         new TaskToolbox(
-            null, null, new TaskActionClient()
+            null, new TaskActionClient()
         {
           @Override
           public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
