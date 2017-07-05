@@ -21,6 +21,7 @@ package io.druid.storage.hdfs;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
@@ -173,8 +174,8 @@ public class HdfsDataSegmentKillerTest
     Assert.assertTrue(fs.mkdirs(path));
     try (FSDataOutputStream os = fs.create(new Path(
         path,
-        String.format("%s_index.zip", partitionNumber)
-    )); FSDataOutputStream oos = fs.create(new Path(path, String.format("%s_descriptor.json", partitionNumber)))) {
+        StringUtils.format("%s_index.zip", partitionNumber)
+    )); FSDataOutputStream oos = fs.create(new Path(path, StringUtils.format("%s_descriptor.json", partitionNumber)))) {
     }
   }
 

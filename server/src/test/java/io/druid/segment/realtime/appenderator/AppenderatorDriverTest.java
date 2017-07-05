@@ -34,6 +34,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.SegmentDescriptor;
@@ -71,7 +72,7 @@ public class AppenderatorDriverTest
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
-  private static final long PUBLISH_TIMEOUT = 5000;
+  private static final long PUBLISH_TIMEOUT = 10000;
   private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
 
   private static final List<InputRow> ROWS = Arrays.<InputRow>asList(
@@ -165,7 +166,7 @@ public class AppenderatorDriverTest
           ImmutableList.of("dim2"),
           ImmutableMap.of(
               "dim2",
-              String.format("bar-%d", i),
+              StringUtils.format("bar-%d", i),
               "met1",
               2.0
           )
@@ -221,13 +222,12 @@ public class AppenderatorDriverTest
       committerSupplier.setMetadata(1);
       Assert.assertTrue(driver.add(ROWS.get(0), "dummy", committerSupplier).isOk());
 
-      final SegmentsAndMetadata published = driver.publish(
+      final SegmentsAndMetadata segmentsAndMetadata = driver.publishAndRegisterHandoff(
           makeOkPublisher(),
           committerSupplier.get(),
           ImmutableList.of("dummy")
       ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-      final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
-                                                            .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+
       Assert.assertEquals(
           ImmutableSet.of(
               new SegmentIdentifier(DATA_SOURCE, new Interval("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0))
@@ -243,13 +243,12 @@ public class AppenderatorDriverTest
       committerSupplier.setMetadata(i + 1);
       Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
 
-      final SegmentsAndMetadata published = driver.publish(
+      final SegmentsAndMetadata segmentsAndMetadata = driver.publishAndRegisterHandoff(
           makeOkPublisher(),
           committerSupplier.get(),
           ImmutableList.of("dummy")
       ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-      final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
-                                                            .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+
       Assert.assertEquals(
           ImmutableSet.of(
               // The second and third rows have the same dataSource, interval, and version, but different shardSpec of
@@ -265,13 +264,11 @@ public class AppenderatorDriverTest
     driver.persist(committerSupplier.get());
 
     // There is no remaining rows in the driver, and thus the result must be empty
-    final SegmentsAndMetadata published = driver.publish(
+    final SegmentsAndMetadata segmentsAndMetadata = driver.publishAndRegisterHandoff(
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-    final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
-                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(),

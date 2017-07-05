@@ -54,13 +54,14 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -108,14 +109,12 @@ import java.util.Set;
 public class IngestSegmentFirehoseFactoryTest
 {
   private static final ObjectMapper MAPPER;
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
-    INDEX_MERGER = testUtils.getTestIndexMerger();
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
   }
@@ -148,9 +147,9 @@ public class IngestSegmentFirehoseFactoryTest
     }
 
     if (!persistDir.mkdirs() && !persistDir.exists()) {
-      throw new IOException(String.format("Could not create directory at [%s]", persistDir.getAbsolutePath()));
+      throw new IOE("Could not create directory at [%s]", persistDir.getAbsolutePath());
     }
-    INDEX_MERGER.persist(index, persistDir, indexSpec);
+    INDEX_MERGER_V9.persist(index, persistDir, indexSpec);
 
     final TaskLockbox tl = new TaskLockbox(ts);
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
@@ -290,7 +289,6 @@ public class IngestSegmentFirehoseFactoryTest
             )
         ),
         MAPPER,
-        INDEX_MERGER,
         INDEX_IO,
         null,
         null,
@@ -337,7 +335,7 @@ public class IngestSegmentFirehoseFactoryTest
                       ),
                       INDEX_IO
                   ),
-                  String.format(
+                  StringUtils.format(
                       "DimNames[%s]MetricNames[%s]ParserDimNames[%s]",
                       dim_names == null ? "null" : "dims",
                       metric_names == null ? "null" : "metrics",

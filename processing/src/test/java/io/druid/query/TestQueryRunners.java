@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
@@ -41,7 +42,7 @@ import java.nio.ByteBuffer;
  */
 public class TestQueryRunners
 {
-  public static final StupidPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
+  public static final NonBlockingPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
       "TestQueryRunners-bufferPool",
       new Supplier<ByteBuffer>()
       {
@@ -54,7 +55,7 @@ public class TestQueryRunners
   );
   public static final TopNQueryConfig topNConfig = new TopNQueryConfig();
 
-  public static StupidPool<ByteBuffer> getPool()
+  public static NonBlockingPool<ByteBuffer> getPool()
   {
     return pool;
   }

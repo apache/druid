@@ -43,6 +43,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -73,7 +74,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   {
     super(
         // _not_ the version, just something uniqueish
-        id != null ? id : String.format(
+        id != null ? id : StringUtils.format(
             "merge_%s_%s", computeProcessingID(dataSource, segments), new DateTime().toString()
         ),
         dataSource,
@@ -265,7 +266,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
               @Override
               public String apply(DataSegment x)
               {
-                return String.format(
+                return StringUtils.format(
                     "%s_%s_%s_%s",
                     x.getInterval().getStart(),
                     x.getInterval().getEnd(),
@@ -277,7 +278,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
         )
     );
 
-    return String.format(
+    return StringUtils.format(
         "%s_%s",
         dataSource,
         Hashing.sha1().hashString(segmentIDs, Charsets.UTF_8).toString()

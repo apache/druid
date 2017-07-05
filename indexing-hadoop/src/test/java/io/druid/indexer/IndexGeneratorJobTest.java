@@ -31,6 +31,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -89,7 +90,7 @@ public class IndexGeneratorJobTest
 
   @Parameterized.Parameters(name = "useCombiner={0}, partitionType={1}, interval={2}, shardInfoForEachSegment={3}, " +
                                    "data={4}, inputFormatName={5}, inputRowParser={6}, maxRowsInMemory={7}, " +
-                                   "aggs={8}, datasourceName={9}, forceExtendableShardSpecs={10}, buildV9Directly={11}")
+                                   "aggs={8}, datasourceName={9}, forceExtendableShardSpecs={10}")
   public static Collection<Object[]> constructFeed()
   {
     final List<Object[]> baseConstructors = Arrays.asList(
@@ -371,17 +372,14 @@ public class IndexGeneratorJobTest
         }
     );
 
-    // Run each baseConstructor with/without buildV9Directly and forceExtendableShardSpecs.
+    // Run each baseConstructor with/without forceExtendableShardSpecs.
     final List<Object[]> constructors = Lists.newArrayList();
     for (Object[] baseConstructor : baseConstructors) {
-      for (int buildV9Directly = 0; buildV9Directly < 2; buildV9Directly++) {
-        for (int forceExtendableShardSpecs = 0; forceExtendableShardSpecs < 2 ; forceExtendableShardSpecs++) {
-          final Object[] fullConstructor = new Object[baseConstructor.length + 2];
-          System.arraycopy(baseConstructor, 0, fullConstructor, 0, baseConstructor.length);
-          fullConstructor[baseConstructor.length] = forceExtendableShardSpecs == 0;
-          fullConstructor[baseConstructor.length + 1] = buildV9Directly == 0;
-          constructors.add(fullConstructor);
-        }
+      for (int forceExtendableShardSpecs = 0; forceExtendableShardSpecs < 2 ; forceExtendableShardSpecs++) {
+        final Object[] fullConstructor = new Object[baseConstructor.length + 1];
+        System.arraycopy(baseConstructor, 0, fullConstructor, 0, baseConstructor.length);
+        fullConstructor[baseConstructor.length] = forceExtendableShardSpecs == 0;
+        constructors.add(fullConstructor);
       }
     }
 
@@ -402,7 +400,6 @@ public class IndexGeneratorJobTest
   private final AggregatorFactory[] aggs;
   private final String datasourceName;
   private final boolean forceExtendableShardSpecs;
-  private final boolean buildV9Directly;
 
   private ObjectMapper mapper;
   private HadoopDruidIndexerConfig config;
@@ -420,8 +417,7 @@ public class IndexGeneratorJobTest
       Integer maxRowsInMemory,
       AggregatorFactory[] aggs,
       String datasourceName,
-      boolean forceExtendableShardSpecs,
-      boolean buildV9Directly
+      boolean forceExtendableShardSpecs
   ) throws IOException
   {
     this.useCombiner = useCombiner;
@@ -435,7 +431,6 @@ public class IndexGeneratorJobTest
     this.aggs = aggs;
     this.datasourceName = datasourceName;
     this.forceExtendableShardSpecs = forceExtendableShardSpecs;
-    this.buildV9Directly = buildV9Directly;
   }
 
   private void writeDataToLocalSequenceFile(File outputFile, List<String> data) throws IOException
@@ -522,7 +517,7 @@ public class IndexGeneratorJobTest
                 false,
                 useCombiner,
                 null,
-                buildV9Directly,
+                true,
                 null,
                 forceExtendableShardSpecs,
                 false,
@@ -548,7 +543,7 @@ public class IndexGeneratorJobTest
         specs.add(new SingleDimensionShardSpec("host", shardInfo[0], shardInfo[1], partitionNum++));
       }
     } else {
-      throw new RuntimeException(String.format("Invalid partition type:[%s]", partitionType));
+      throw new RE("Invalid partition type:[%s]", partitionType);
     }
 
     return specs;
@@ -589,7 +584,7 @@ public class IndexGeneratorJobTest
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
       Object[][] shardInfo = shardInfoForEachSegment[segmentNum++];
       File segmentOutputFolder = new File(
-          String.format(
+          StringUtils.format(
               "%s/%s/%s_%s/%s",
               config.getSchema().getIOConfig().getSegmentOutputPath(),
               config.getSchema().getDataSchema().getDataSource(),
@@ -649,7 +644,7 @@ public class IndexGeneratorJobTest
           Assert.assertEquals(singleDimensionShardInfo[0], spec.getStart());
           Assert.assertEquals(singleDimensionShardInfo[1], spec.getEnd());
         } else {
-          throw new RuntimeException(String.format("Invalid partition type:[%s]", partitionType));
+          throw new RE("Invalid partition type:[%s]", partitionType);
         }
       }
     }

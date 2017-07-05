@@ -97,12 +97,12 @@ public class GenericIndexedWriter<T> implements Closeable
 
   public static String generateValueFileName(String fileNameBase, int fileNum)
   {
-    return String.format("%s_value_%d", fileNameBase, fileNum);
+    return StringUtils.format("%s_value_%d", fileNameBase, fileNum);
   }
 
   public static String generateHeaderFileName(String fileNameBase)
   {
-    return String.format("%s_header", fileNameBase);
+    return StringUtils.format("%s_header", fileNameBase);
   }
 
   private static void writeBytesIntoSmooshedChannel(
@@ -160,7 +160,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
   private String makeFilename(String suffix)
   {
-    return String.format("%s.%s", filenameBase, suffix);
+    return StringUtils.format("%s.%s", filenameBase, suffix);
   }
 
   @Override

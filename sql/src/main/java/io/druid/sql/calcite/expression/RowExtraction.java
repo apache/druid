@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
@@ -184,7 +185,7 @@ public class RowExtraction
   public String toString()
   {
     if (extractionFn != null) {
-      return String.format("%s(%s)", extractionFn, column);
+      return StringUtils.format("%s(%s)", extractionFn, column);
     } else {
       return column;
     }

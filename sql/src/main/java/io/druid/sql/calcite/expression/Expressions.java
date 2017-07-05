@@ -28,6 +28,7 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.math.expr.ExprType;
 import io.druid.query.aggregation.PostAggregator;
@@ -298,7 +299,7 @@ public class Expressions
         throw new ISE("WTF?! Expression referred to nonexistent index[%d]", ref.getIndex());
       }
 
-      return String.format("\"%s\"", escape(columnName));
+      return StringUtils.format("\"%s\"", escape(columnName));
     } else if (kind == SqlKind.CAST || kind == SqlKind.REINTERPRET) {
       // Translate casts.
       final RexNode operand = ((RexCall) expression).getOperands().get(0);
@@ -310,7 +311,7 @@ public class Expressions
       final ExprType fromType = MATH_TYPES.get(operand.getType().getSqlTypeName());
       final ExprType toType = MATH_TYPES.get(sqlTypeName);
       if (fromType != toType) {
-        return String.format("CAST(%s, '%s')", operandExpression, toType.toString());
+        return StringUtils.format("CAST(%s, '%s')", operandExpression, toType.toString());
       } else {
         return operandExpression;
       }
@@ -330,7 +331,7 @@ public class Expressions
           SqlKind.MINUS, "-"
       ).get(kind);
 
-      return String.format("(%s %s %s)", lhsExpression, op, rhsExpression);
+      return StringUtils.format("(%s %s %s)", lhsExpression, op, rhsExpression);
     } else if (kind == SqlKind.OTHER_FUNCTION) {
       final String calciteFunction = ((RexCall) expression).getOperator().getName();
       final String druidFunction = MATH_FUNCTIONS.get(calciteFunction);
@@ -347,14 +348,14 @@ public class Expressions
       if ("MOD".equals(calciteFunction)) {
         // Special handling for MOD, which is a function in Calcite but a binary operator in Druid.
         Preconditions.checkState(functionArgs.size() == 2, "WTF?! Expected 2 args for MOD.");
-        return String.format("(%s %s %s)", functionArgs.get(0), "%", functionArgs.get(1));
+        return StringUtils.format("(%s %s %s)", functionArgs.get(0), "%", functionArgs.get(1));
       }
 
       if (druidFunction == null) {
         return null;
       }
 
-      return String.format("%s(%s)", druidFunction, Joiner.on(", ").join(functionArgs));
+      return StringUtils.format("%s(%s)", druidFunction, Joiner.on(", ").join(functionArgs));
     } else if (kind == SqlKind.LITERAL) {
       // Translate literal.
       if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {

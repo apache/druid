@@ -96,6 +96,7 @@ public class TimestampSpec
   {
     DateTime extracted = missingValue;
     if (input != null) {
+      // Check if the input is equal to the last input, so we don't need to parse it again
       if (input.equals(parseCtx.lastTimeObject)) {
         extracted = parseCtx.lastDateTime;
       } else {

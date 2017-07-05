@@ -163,7 +163,6 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |useCombiner|Boolean|Use Hadoop combiner to merge rows at mapper if possible.|no (default == false)|
 |jobProperties|Object|A map of properties to add to the Hadoop job configuration, see below for details.|no (default == null)|
 |indexSpec|Object|Tune how data is indexed. See below for more information.|no|
-|buildV9Directly|Boolean|Whether to build a v9 index directly instead of first building a v8 index and then converting it to v9 format.|no (default == true)|
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 |forceExtendableShardSpecs|Boolean|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|no (default = false)|
 |useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|

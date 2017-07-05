@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
@@ -68,13 +69,13 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static AnalysisType fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
 
     public byte[] getCacheKey()

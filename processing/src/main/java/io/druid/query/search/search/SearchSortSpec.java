@@ -21,6 +21,7 @@ package io.druid.query.search.search;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 
@@ -73,7 +74,7 @@ public class SearchSortSpec
   @Override
   public String toString()
   {
-    return String.format("%sSort", ordering.toString());
+    return StringUtils.format("%sSort", ordering.toString());
   }
 
   @Override

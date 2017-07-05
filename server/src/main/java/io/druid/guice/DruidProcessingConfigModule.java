@@ -17,17 +17,19 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.guice;
 
-import java.io.File;
-import java.io.IOException;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import io.druid.query.DruidProcessingConfig;
 
-/**
- */
-public interface MetricColumnSerializer
+public class DruidProcessingConfigModule implements Module
 {
-  public void open() throws IOException;
-  public void serialize(Object aggs) throws IOException;
-  public void close() throws IOException;
-  public void closeFile(File outFile) throws IOException;
+
+  @Override
+  public void configure(Binder binder)
+  {
+    ConfigProvider.bind(binder, DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
+  }
 }

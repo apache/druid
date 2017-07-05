@@ -32,6 +32,7 @@ import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.ParseSpec;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.common.parsers.Parser;
 
@@ -139,7 +140,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
     if (desc == null) {
       throw new ParseException(
-          String.format(
+          StringUtils.format(
               "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
               protoMessageType,
               messageTypes

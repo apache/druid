@@ -67,6 +67,7 @@ import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.EntryExistsException;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -238,7 +239,7 @@ public class KafkaSupervisor implements Supervisor
     this.ioConfig = spec.getIoConfig();
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = KafkaTuningConfig.copyOf(this.tuningConfig);
-    this.supervisorId = String.format("KafkaSupervisor-%s", dataSource);
+    this.supervisorId = StringUtils.format("KafkaSupervisor-%s", dataSource);
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
@@ -697,7 +698,7 @@ public class KafkaSupervisor implements Supervisor
     Map<Integer, Long> startPartitions = taskGroups.get(groupId).partitionOffsets;
 
     for (Map.Entry<Integer, Long> entry : startPartitions.entrySet()) {
-      sb.append(String.format("+%d(%d)", entry.getKey(), entry.getValue()));
+      sb.append(StringUtils.format("+%d(%d)", entry.getKey(), entry.getValue()));
     }
     String partitionOffsetStr = sb.toString().substring(1);
 
@@ -733,7 +734,7 @@ public class KafkaSupervisor implements Supervisor
     final Properties props = new Properties();
 
     props.setProperty("metadata.max.age.ms", "10000");
-    props.setProperty("group.id", String.format("kafka-supervisor-%s", getRandomId()));
+    props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", getRandomId()));
 
     props.putAll(ioConfig.getConsumerProperties());
 

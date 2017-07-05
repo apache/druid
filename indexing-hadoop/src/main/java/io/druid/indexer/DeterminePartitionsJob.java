@@ -38,6 +38,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
@@ -123,7 +124,7 @@ public class DeterminePartitionsJob implements Jobby
       if (!config.getPartitionsSpec().isAssumeGrouped()) {
         final Job groupByJob = Job.getInstance(
             new Configuration(),
-            String.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
+            StringUtils.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
         );
 
         JobHelper.injectSystemProperties(groupByJob);
@@ -163,7 +164,7 @@ public class DeterminePartitionsJob implements Jobby
        */
       final Job dimSelectionJob = Job.getInstance(
           new Configuration(),
-          String.format("%s-determine_partitions_dimselection-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-determine_partitions_dimselection-%s", config.getDataSource(), config.getIntervals())
       );
 
       dimSelectionJob.getConfiguration().set("io.sort.record.percent", "0.19");

@@ -28,6 +28,8 @@ import com.google.inject.name.Names;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
+import io.druid.guice.ManageLifecycle;
+import io.druid.guice.QueryableModule;
 import io.druid.initialization.Initialization;
 import org.junit.Assert;
 import org.junit.Test;
@@ -73,11 +75,12 @@ public class LoggingRequestLoggerProviderTest
     return Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.<Module>of(
-            new Module()
+            new QueryableModule()
             {
               @Override
               public void configure(Binder binder)
               {
+                binder.bind(RequestLogger.class).toProvider(RequestLoggerProvider.class).in(ManageLifecycle.class);
                 binder.bind(Key.get(String.class, Names.named("serviceName"))).toInstance("some service");
                 binder.bind(Key.get(Integer.class, Names.named("servicePort"))).toInstance(0);
                 JsonConfigProvider.bind(binder, propertyPrefix, RequestLoggerProvider.class);

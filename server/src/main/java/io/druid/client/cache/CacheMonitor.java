@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
+import io.druid.java.util.common.StringUtils;
 
 public class CacheMonitor extends AbstractMonitor
 {
@@ -77,15 +78,15 @@ public class CacheMonitor extends AbstractMonitor
   )
   {
     if (cache != null) {
-      emitter.emit(builder.build(String.format("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
-      emitter.emit(builder.build(String.format("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
-      emitter.emit(builder.build(String.format("%s/hits", metricPrefix), cacheStats.getNumHits()));
-      emitter.emit(builder.build(String.format("%s/misses", metricPrefix), cacheStats.getNumMisses()));
-      emitter.emit(builder.build(String.format("%s/evictions", metricPrefix), cacheStats.getNumEvictions()));
-      emitter.emit(builder.build(String.format("%s/hitRate", metricPrefix), cacheStats.hitRate()));
-      emitter.emit(builder.build(String.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
-      emitter.emit(builder.build(String.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
-      emitter.emit(builder.build(String.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
+      emitter.emit(builder.build(StringUtils.format("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
+      emitter.emit(builder.build(StringUtils.format("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
+      emitter.emit(builder.build(StringUtils.format("%s/hits", metricPrefix), cacheStats.getNumHits()));
+      emitter.emit(builder.build(StringUtils.format("%s/misses", metricPrefix), cacheStats.getNumMisses()));
+      emitter.emit(builder.build(StringUtils.format("%s/evictions", metricPrefix), cacheStats.getNumEvictions()));
+      emitter.emit(builder.build(StringUtils.format("%s/hitRate", metricPrefix), cacheStats.hitRate()));
+      emitter.emit(builder.build(StringUtils.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
+      emitter.emit(builder.build(StringUtils.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
+      emitter.emit(builder.build(StringUtils.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
     }
   }
 }

@@ -37,6 +37,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.DruidMetrics;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -96,7 +97,7 @@ public class RealtimeIndexTask extends AbstractTask
     for (int i = 0; i < Ints.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
     }
-    return String.format(
+    return StringUtils.format(
         "index_realtime_%s_%d_%s_%s",
         dataSource,
         partitionNumber,
@@ -144,7 +145,7 @@ public class RealtimeIndexTask extends AbstractTask
   {
     super(
         id == null ? makeTaskId(fireDepartment) : id,
-        String.format("index_realtime_%s", makeDatasource(fireDepartment)),
+        StringUtils.format("index_realtime_%s", makeDatasource(fireDepartment)),
         taskResource,
         makeDatasource(fireDepartment),
         context
@@ -308,7 +309,6 @@ public class RealtimeIndexTask extends AbstractTask
         segmentPublisher,
         toolbox.getSegmentHandoffNotifierFactory(),
         toolbox.getQueryExecutorService(),
-        toolbox.getIndexMerger(),
         toolbox.getIndexMergerV9(),
         toolbox.getIndexIO(),
         toolbox.getCache(),

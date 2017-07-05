@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizationInfo;
@@ -83,7 +84,7 @@ public class DatasourceResourceFilter extends AbstractResourceFilter
       if (!authResult.isAllowed()) {
         throw new WebApplicationException(
             Response.status(Response.Status.FORBIDDEN)
-                    .entity(String.format("Access-Check-Result: %s", authResult.toString()))
+                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
                     .build()
         );
       }

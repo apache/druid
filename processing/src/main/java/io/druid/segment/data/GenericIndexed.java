@@ -63,8 +63,8 @@ import java.util.Iterator;
  * bytes 11-14 =>; columnNameLength
  * bytes 15-columnNameLength =>; columnName
  * <p>
- * Header file name is identified as:  String.format("%s_header", columnName)
- * value files are identified as: String.format("%s_value_%d", columnName, fileNumber)
+ * Header file name is identified as: StringUtils.format("%s_header", columnName)
+ * value files are identified as: StringUtils.format("%s_value_%d", columnName, fileNumber)
  * number of value files == numElements/numberOfElementsPerValueFile
  */
 public class GenericIndexed<T> implements Indexed<T>
@@ -236,7 +236,7 @@ public class GenericIndexed<T> implements Indexed<T>
       throw new IAE("Index[%s] < 0", index);
     }
     if (index >= size) {
-      throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
+      throw new IAE("Index[%d] >= size[%d]", index, size);
     }
   }
 

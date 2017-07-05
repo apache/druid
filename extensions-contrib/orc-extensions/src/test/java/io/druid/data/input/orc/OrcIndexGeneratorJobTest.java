@@ -252,7 +252,7 @@ public class OrcIndexGeneratorJobTest
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
       Integer[][] shardInfo = shardInfoForEachSegment[segmentNum++];
       File segmentOutputFolder = new File(
-          String.format(
+          StringUtils.format(
               "%s/%s/%s_%s/%s",
               config.getSchema().getIOConfig().getSegmentOutputPath(),
               config.getSchema().getDataSchema().getDataSource(),

@@ -58,6 +58,7 @@ import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
@@ -113,7 +114,7 @@ public class IndexTask extends AbstractTask
 
   private static String makeId(String id, IndexIngestionSpec ingestionSchema)
   {
-    return id != null ? id : String.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime());
+    return id != null ? id : StringUtils.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime());
   }
 
   private static String makeDataSource(IndexIngestionSpec ingestionSchema)
@@ -261,6 +262,7 @@ public class IndexTask extends AbstractTask
     // determine intervals containing data and prime HLL collectors
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = Maps.newHashMap();
     int thrownAway = 0;
+    int unparseable = 0;
 
     log.info("Determining intervals and shardSpecs");
     long determineShardSpecsStartMillis = System.currentTimeMillis();
@@ -269,48 +271,61 @@ public class IndexTask extends AbstractTask
         firehoseTempDir)
     ) {
       while (firehose.hasMore()) {
-        final InputRow inputRow = firehose.nextRow();
+        try {
+          final InputRow inputRow = firehose.nextRow();
 
-        // The null inputRow means the caller must skip this row.
-        if (inputRow == null) {
-          continue;
-        }
-
-        final Interval interval;
-        if (determineIntervals) {
-          interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
-        } else {
-          final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-          if (!optInterval.isPresent()) {
-            thrownAway++;
+          // The null inputRow means the caller must skip this row.
+          if (inputRow == null) {
             continue;
           }
-          interval = optInterval.get();
-        }
 
-        if (!determineNumPartitions) {
-          // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
-          // for the interval and don't instantiate a HLL collector
-          if (!hllCollectors.containsKey(interval)) {
-            hllCollectors.put(interval, Optional.<HyperLogLogCollector>absent());
+          final Interval interval;
+          if (determineIntervals) {
+            interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
+          } else {
+            final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+            if (!optInterval.isPresent()) {
+              thrownAway++;
+              continue;
+            }
+            interval = optInterval.get();
           }
-          continue;
-        }
 
-        if (!hllCollectors.containsKey(interval)) {
-          hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
-        }
+          if (!determineNumPartitions) {
+            // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
+            // for the interval and don't instantiate a HLL collector
+            if (!hllCollectors.containsKey(interval)) {
+              hllCollectors.put(interval, Optional.<HyperLogLogCollector>absent());
+            }
+            continue;
+          }
 
-        List<Object> groupKey = Rows.toGroupKey(
-            queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
-            inputRow
-        );
-        hllCollectors.get(interval).get().add(hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
+          if (!hllCollectors.containsKey(interval)) {
+            hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
+          }
+
+          List<Object> groupKey = Rows.toGroupKey(
+              queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
+              inputRow
+          );
+          hllCollectors.get(interval).get().add(hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
+        }
+        catch (ParseException e) {
+          if (ingestionSchema.getTuningConfig().isReportParseExceptions()) {
+            throw e;
+          } else {
+            unparseable++;
+          }
+        }
       }
     }
 
+    // These metrics are reported in generateAndPublishSegments()
     if (thrownAway > 0) {
-      log.warn("Unable to to find a matching interval for [%,d] events", thrownAway);
+      log.warn("Unable to find a matching interval for [%,d] events", thrownAway);
+    }
+    if (unparseable > 0) {
+      log.warn("Unable to parse [%,d] events", unparseable);
     }
 
     final ImmutableSortedMap<Interval, Optional<HyperLogLogCollector>> sortedMap = ImmutableSortedMap.copyOf(
@@ -442,7 +457,7 @@ public class IndexTask extends AbstractTask
             final ShardSpec shardSpec = shardSpecLookups.get(interval)
                                                         .getShardSpec(inputRow.getTimestampFromEpoch(), inputRow);
 
-            final String sequenceName = String.format("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
+            final String sequenceName = StringUtils.format("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
 
             if (!sequenceNameToShardSpecMap.containsKey(sequenceName)) {
               final ShardSpec shardSpecForPublishing = ingestionSchema.getTuningConfig().isForceExtendableShardSpecs()
@@ -539,7 +554,7 @@ public class IndexTask extends AbstractTask
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
         toolbox.getIndexIO(),
-        ingestionSchema.getTuningConfig().isBuildV9Directly() ? toolbox.getIndexMergerV9() : toolbox.getIndexMerger()
+        toolbox.getIndexMergerV9()
     );
   }
 
@@ -579,7 +594,7 @@ public class IndexTask extends AbstractTask
       this.ioConfig = ioConfig;
       this.tuningConfig = tuningConfig == null
                           ?
-                          new IndexTuningConfig(null, null, null, null, null, null, null, null, null, (File) null)
+                          new IndexTuningConfig(null, null, null, null, null, null, null, null, (File) null)
                           : tuningConfig;
     }
 
@@ -655,7 +670,6 @@ public class IndexTask extends AbstractTask
     private final IndexSpec indexSpec;
     private final File basePersistDirectory;
     private final int maxPendingPersists;
-    private final boolean buildV9Directly;
     private final boolean forceExtendableShardSpecs;
     private final boolean reportParseExceptions;
     private final long publishTimeout;
@@ -668,6 +682,7 @@ public class IndexTask extends AbstractTask
         @JsonProperty("numShards") @Nullable Integer numShards,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
+        // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
         @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
         @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
         @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
@@ -680,7 +695,6 @@ public class IndexTask extends AbstractTask
           numShards,
           indexSpec,
           maxPendingPersists,
-          buildV9Directly,
           forceExtendableShardSpecs,
           reportParseExceptions,
           publishTimeout,
@@ -694,7 +708,6 @@ public class IndexTask extends AbstractTask
         @Nullable Integer numShards,
         @Nullable IndexSpec indexSpec,
         @Nullable Integer maxPendingPersists,
-        @Nullable Boolean buildV9Directly,
         @Nullable Boolean forceExtendableShardSpecs,
         @Nullable Boolean reportParseExceptions,
         @Nullable Long publishTimeout,
@@ -715,7 +728,6 @@ public class IndexTask extends AbstractTask
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-      this.buildV9Directly = buildV9Directly == null ? DEFAULT_BUILD_V9_DIRECTLY : buildV9Directly;
       this.forceExtendableShardSpecs = forceExtendableShardSpecs == null
                                        ? DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS
                                        : forceExtendableShardSpecs;
@@ -734,7 +746,6 @@ public class IndexTask extends AbstractTask
           numShards,
           indexSpec,
           maxPendingPersists,
-          buildV9Directly,
           forceExtendableShardSpecs,
           reportParseExceptions,
           publishTimeout,
@@ -781,10 +792,14 @@ public class IndexTask extends AbstractTask
       return maxPendingPersists;
     }
 
+    /**
+     * Always returns true, doesn't affect the version being built.
+     */
+    @Deprecated
     @JsonProperty
     public boolean isBuildV9Directly()
     {
-      return buildV9Directly;
+      return true;
     }
 
     @JsonProperty

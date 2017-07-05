@@ -30,6 +30,7 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -100,7 +101,7 @@ public class IndexingServiceClient
       return client.go(
           new Request(
               HttpMethod.POST,
-              new URL(String.format("%s/task", baseUrl()))
+              new URL(StringUtils.format("%s/task", baseUrl()))
           ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject)),
           RESPONSE_HANDLER
       ).get();

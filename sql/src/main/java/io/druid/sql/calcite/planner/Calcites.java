@@ -21,6 +21,7 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
@@ -37,6 +38,7 @@ import org.joda.time.Days;
 
 import java.nio.charset.Charset;
 import java.util.Calendar;
+import java.util.Locale;
 
 /**
  * Utility functions for Calcite.
@@ -58,7 +60,7 @@ public class Calcites
     final String charset = ConversionUtil.NATIVE_UTF16_CHARSET_NAME;
     System.setProperty("saffron.default.charset", Calcites.defaultCharset().name());
     System.setProperty("saffron.default.nationalcharset", Calcites.defaultCharset().name());
-    System.setProperty("saffron.default.collation.name", String.format("%s$en_US", charset));
+    System.setProperty("saffron.default.collation.name", StringUtils.format("%s$en_US", charset));
   }
 
   public static Charset defaultCharset()
@@ -153,7 +155,7 @@ public class Calcites
    */
   public static Calendar jodaToCalciteCalendarLiteral(final DateTime dateTime, final DateTimeZone timeZone)
   {
-    final Calendar calendar = Calendar.getInstance();
+    final Calendar calendar = Calendar.getInstance(Locale.ENGLISH);
     calendar.setTimeInMillis(Calcites.jodaToCalciteTimestamp(dateTime, timeZone));
     return calendar;
   }

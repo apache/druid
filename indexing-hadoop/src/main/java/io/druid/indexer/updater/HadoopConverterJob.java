@@ -34,6 +34,7 @@ import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
@@ -85,7 +86,7 @@ public class HadoopConverterJob
     if (segments.size() == 1) {
       final DataSegment segment = segments.get(0);
       jobConf.setJobName(
-          String.format(
+          StringUtils.format(
               "druid-convert-%s-%s-%s",
               segment.getDataSource(),
               segment.getInterval(),
@@ -120,7 +121,7 @@ public class HadoopConverterJob
           )
       );
       jobConf.setJobName(
-          String.format(
+          StringUtils.format(
               "druid-convert-%s-%s",
               Arrays.toString(dataSources.toArray()),
               Arrays.toString(versions.toArray())
@@ -529,12 +530,18 @@ public class HadoopConverterJob
       context.progress();
       final File outDir = new File(tmpDir, "out");
       FileUtils.forceMkdir(outDir);
-      HadoopDruidConverterConfig.INDEX_MERGER.convert(
-          inDir,
-          outDir,
-          config.getIndexSpec(),
-          JobHelper.progressIndicatorForContext(context)
-      );
+      try {
+        HadoopDruidConverterConfig.INDEX_MERGER.convert(
+            inDir,
+            outDir,
+            config.getIndexSpec(),
+            JobHelper.progressIndicatorForContext(context)
+        );
+      }
+      catch (Exception e) {
+        log.error(e, "Conversion failed.");
+        throw e;
+      }
       if (config.isValidate()) {
         context.setStatus("Validating");
         HadoopDruidConverterConfig.INDEX_IO.validateTwoSegments(inDir, outDir);

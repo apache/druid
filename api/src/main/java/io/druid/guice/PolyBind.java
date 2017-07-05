@@ -31,6 +31,7 @@ import com.google.inject.binder.ScopedBindingBuilder;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.util.Types;
 import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.ParameterizedType;
@@ -190,7 +191,7 @@ public class PolyBind
       if (implName == null) {
         if (defaultPropertyValue == null) {
           if (defaultKey == null) {
-            throw new ProvisionException(String.format("Some value must be configured for [%s]", key));
+            throw new ProvisionException(StringUtils.format("Some value must be configured for [%s]", key));
           }
           return injector.getInstance(defaultKey);
         }
@@ -200,7 +201,7 @@ public class PolyBind
 
       if (provider == null) {
         throw new ProvisionException(
-            String.format("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
+            StringUtils.format("Unknown provider[%s] of %s, known options[%s]", implName, key, implsMap.keySet())
         );
       }
 

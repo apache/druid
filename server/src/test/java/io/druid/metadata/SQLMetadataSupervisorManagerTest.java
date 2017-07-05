@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -126,7 +127,7 @@ public class SQLMetadataSupervisorManagerTest
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format("DROP TABLE %s", tablesConfig.getSupervisorTable()))
+            handle.createStatement(StringUtils.format("DROP TABLE %s", tablesConfig.getSupervisorTable()))
                   .execute();
             return null;
           }

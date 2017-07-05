@@ -33,6 +33,7 @@ import com.google.inject.Inject;
 import io.druid.common.utils.UUIDUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -319,7 +320,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   private String makeServedSegmentPath(String zNode)
   {
-    return ZKPaths.makePath(liveSegmentLocation, String.format("%s%s", zNode, counter.getAndIncrement()));
+    return ZKPaths.makePath(liveSegmentLocation, StringUtils.format("%s%s", zNode, counter.getAndIncrement()));
   }
 
   private class SegmentZNode implements Comparable<SegmentZNode>

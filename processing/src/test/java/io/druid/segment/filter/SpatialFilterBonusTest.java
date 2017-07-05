@@ -28,6 +28,7 @@ import io.druid.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -81,7 +82,7 @@ public class SpatialFilterBonusTest
       new LongSumAggregatorFactory("val", "val")
   };
   private static List<String> DIMS = Lists.newArrayList("dim", "dim.geo");
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   private final Segment segment;
@@ -217,7 +218,7 @@ public class SpatialFilterBonusTest
     for (int i = 6; i < NUM_POINTS; i++) {
       String coord = null;
       while (coord == null) {
-        coord = String.format(
+        coord = StringUtils.format(
             "%s,%s",
             (float) (rand.nextFloat() * 10 + 10.0),
             (float) (rand.nextFloat() * 10 + 10.0)
@@ -412,7 +413,7 @@ public class SpatialFilterBonusTest
                 ImmutableMap.<String, Object>of(
                     "timestamp", new DateTime("2013-01-01").toString(),
                     "dim", "boo",
-                    "dim.geo", String.format(
+                    "dim.geo", StringUtils.format(
                         "%s,%s",
                         (float) (rand.nextFloat() * 10 + 10.0),
                         (float) (rand.nextFloat() * 10 + 10.0)

@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -237,7 +238,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     final boolean canAdd = size() < maxRowCount;
     if (!canAdd) {
-      outOfRowsReason = String.format("Maximum number of rows [%d] reached", maxRowCount);
+      outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
     }
     return canAdd;
   }

@@ -30,7 +30,6 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
@@ -78,7 +77,6 @@ public class TaskToolboxTest
   private ObjectMapper ObjectMapper = new ObjectMapper();
   private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
-  private IndexMerger mockIndexMerger = EasyMock.createMock(IndexMerger.class);
   private IndexMergerV9 mockIndexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
   private IndexIO mockIndexIO = EasyMock.createMock(IndexIO.class);
   private Cache mockCache = EasyMock.createMock(Cache.class);
@@ -110,7 +108,6 @@ public class TaskToolboxTest
         mockMonitorScheduler,
         new SegmentLoaderFactory(mockSegmentLoaderLocalCacheManager),
         ObjectMapper,
-        mockIndexMerger,
         mockIndexIO,
         mockCache,
         mockCacheConfig,

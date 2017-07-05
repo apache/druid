@@ -51,6 +51,7 @@ public class DimFilterUtils
   static final byte INTERVAL_CACHE_ID = 0xB;
   static final byte LIKE_CACHE_ID = 0xC;
   static final byte COLUMN_COMPARISON_CACHE_ID = 0xD;
+  static final byte EXPRESSION_CACHE_ID = 0xE;
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
 
   static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)

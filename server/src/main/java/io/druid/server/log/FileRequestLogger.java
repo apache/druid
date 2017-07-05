@@ -22,6 +22,7 @@ package io.druid.server.log;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -125,7 +126,7 @@ public class FileRequestLogger implements RequestLogger
   {
     synchronized (lock) {
       fileWriter.write(
-          String.format("%s%n", requestLogLine.getLine(objectMapper))
+          StringUtils.format("%s%n", requestLogLine.getLine(objectMapper))
       );
       fileWriter.flush();
     }

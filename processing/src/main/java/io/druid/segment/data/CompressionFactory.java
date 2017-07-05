@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.io.IOException;
@@ -137,13 +138,13 @@ public class CompressionFactory
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static LongEncodingStrategy fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
   }
 

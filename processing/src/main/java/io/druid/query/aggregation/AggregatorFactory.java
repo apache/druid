@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
+import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -81,10 +82,7 @@ public abstract class AggregatorFactory implements Cacheable
    */
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    throw new UnsupportedOperationException(String.format(
-        "[%s] does not implement getMergingFactory(..)",
-        this.getClass().getName()
-    ));
+    throw new UOE("[%s] does not implement getMergingFactory(..)", this.getClass().getName());
   }
 
   /**

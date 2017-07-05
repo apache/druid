@@ -17,12 +17,24 @@
  * under the License.
  */
 
-package io.druid.initialization;
+package io.druid.segment;
 
-/**
- */
-public interface LogLevelAdjusterMBean
+import io.druid.segment.data.CompressedObjectStrategy.CompressionStrategy;
+import io.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+@RunWith(Parameterized.class)
+public class ConciseBitmapIndexMergerV9Test extends IndexMergerTestBase
 {
-  public String getLevel(String packageName);
-  public void setLevel(String packageName, String level);
+  public ConciseBitmapIndexMergerV9Test(
+      CompressionStrategy compressionStrategy,
+      CompressionStrategy dimCompressionStrategy,
+      LongEncodingStrategy longEncodingStrategy
+  )
+  {
+    super(new ConciseBitmapSerdeFactory(), compressionStrategy, dimCompressionStrategy, longEncodingStrategy);
+    indexMerger = TestHelper.getTestIndexMergerV9();
+  }
 }
