@@ -31,6 +31,7 @@ public class LoggerTest
     log.warn(message);
   }
 
+  /** @noinspection MalformedFormatString */
   @Test
   public void testLegacyLogging()
   {
