@@ -21,11 +21,11 @@ package io.druid.emitter.ambari.metrics;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.metrics2.sink.timeline.AbstractTimelineMetricsSink;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetrics;
