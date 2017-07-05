@@ -29,6 +29,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.ISE;
 import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -83,14 +84,15 @@ public class TaskLockboxTest
   public void testLockAfterTaskComplete() throws InterruptedException
   {
     Task task = NoopTask.create();
-    exception.expect(IllegalStateException.class);
+    exception.expect(ISE.class);
+    exception.expectMessage("Unable to grant lock to inactive Task");
     lockbox.add(task);
     lockbox.remove(task);
     lockbox.lock(task, new Interval("2015-01-01/2015-01-02"));
   }
 
   @Test
-  public void testTryLock() throws InterruptedException
+  public void testTryLock()
   {
     Task task = NoopTask.create();
     lockbox.add(task);
@@ -109,7 +111,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTrySmallerLock() throws InterruptedException
+  public void testTrySmallerLock()
   {
     Task task = NoopTask.create();
     lockbox.add(task);
@@ -134,16 +136,17 @@ public class TaskLockboxTest
 
 
   @Test(expected = IllegalStateException.class)
-  public void testTryLockForInactiveTask() throws InterruptedException
+  public void testTryLockForInactiveTask()
   {
     Assert.assertFalse(lockbox.tryLock(NoopTask.create(), new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
   @Test
-  public void testTryLockAfterTaskComplete() throws InterruptedException
+  public void testTryLockAfterTaskComplete()
   {
     Task task = NoopTask.create();
-    exception.expect(IllegalStateException.class);
+    exception.expect(ISE.class);
+    exception.expectMessage("Unable to grant lock to inactive Task");
     lockbox.add(task);
     lockbox.remove(task);
     Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02")).isPresent());
@@ -158,6 +161,7 @@ public class TaskLockboxTest
     lockbox.add(task1);
     lockbox.add(task2);
     exception.expect(InterruptedException.class);
+    exception.expectMessage("can not acquire lock for interval");
     lockbox.lock(task1, new Interval("2015-01-01/2015-01-02"));
     lockbox.lock(task2, new Interval("2015-01-01/2015-01-15"));
   }

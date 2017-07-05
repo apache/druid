@@ -514,7 +514,7 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage, 300000);
+    taskLockbox = new TaskLockbox(taskStorage, 300);
     tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
         SupervisorManager.class)));
     File tmpDir = temporaryFolder.newFolder();
