@@ -26,9 +26,11 @@ import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -113,9 +115,13 @@ public class DruidCluster
 
   public Collection<ServerHolder> getAllServers()
   {
-    return historicals.values().stream()
-                      .flatMap(Collection::stream)
-                      .collect(() -> realtimes, Set::add, Set::addAll);
+    final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
+    final int realtimeSize = realtimes.size();
+    final List<ServerHolder> allServers = new ArrayList<>(historicalSize + realtimeSize);
+
+    historicals.values().forEach(allServers::addAll);
+    allServers.addAll(realtimes);
+    return allServers;
   }
 
   public Iterable<MinMaxPriorityQueue<ServerHolder>> getSortedHistoricalsByTier()
