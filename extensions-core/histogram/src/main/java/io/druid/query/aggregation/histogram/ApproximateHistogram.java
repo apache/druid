@@ -886,9 +886,6 @@ public class ApproximateHistogram
       while (i < numMerge) {
         // find the smallest delta within the range used for bins
 
-        // pick minimum delta by scanning array
-        //int currentIndex = minIndex(deltas, lastValidIndex);
-
         // pick minimum delta index using min-heap
         int currentIndex = heap[0];
 
@@ -908,17 +905,13 @@ public class ApproximateHistogram
         final float mm0 = (m0 - m1) * w + m1;
 
         mergedPositions[currentIndex] = mm0;
-        //mergedPositions[nextIndex] = Float.POSITIVE_INFINITY; // for debugging
 
         mergedBins[currentIndex] = sum | APPROX_FLAG_BIT;
-        //mergedBins[nextIndex] = -1; // for debugging
 
         // update deltas and min-heap
         if (nextIndex == lastValidIndex) {
           // merged bin is the last => remove the current bin delta from the heap
           heapSize = heapDelete(heap, reverseIndex, heapSize, reverseIndex[currentIndex], deltas);
-
-          //deltas[currentIndex] = Float.POSITIVE_INFINITY; // for debugging
         } else {
           // merged bin is not the last => remove the merged bin delta from the heap
           heapSize = heapDelete(heap, reverseIndex, heapSize, reverseIndex[nextIndex], deltas);
@@ -937,9 +930,6 @@ public class ApproximateHistogram
           // updated previous bin delta is necessarily larger than its existing value => push down the heap
           siftDown(heap, reverseIndex, reverseIndex[prevIndex], heapSize - 1, deltas);
         }
-
-        // mark the merged bin as invalid
-        // deltas[nextIndex] = Float.POSITIVE_INFINITY; // for debugging
 
         // update last valid index if we merged the last bin
         if (nextIndex == lastValidIndex) {
