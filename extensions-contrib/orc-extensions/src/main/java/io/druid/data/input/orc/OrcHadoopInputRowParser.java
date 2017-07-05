@@ -29,7 +29,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
-import org.apache.commons.lang.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.io.orc.OrcSerde;
 import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
@@ -107,13 +107,13 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     }
     TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromTypeString(typeString);
     Preconditions.checkArgument(typeInfo instanceof StructTypeInfo,
-        String.format("typeString should be struct type but not [%s]", typeString));
+        StringUtils.format("typeString should be struct type but not [%s]", typeString));
     Properties table = getTablePropertiesFromStructTypeInfo((StructTypeInfo)typeInfo);
     serde.initialize(new Configuration(), table);
     try {
       oip = (StructObjectInspector) serde.getObjectInspector();
     } catch (SerDeException e) {
-      e.printStackTrace();
+      throw new RuntimeException(e);
     }
   }
 
@@ -170,7 +170,8 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     builder.append(parseSpec.getTimestampSpec().getTimestampColumn()).append(":string");
     if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0) {
       builder.append(",");
-      builder.append(StringUtils.join(parseSpec.getDimensionsSpec().getDimensionNames(), ":string,")).append(":string");
+      builder.append(String.join(":string,", parseSpec.getDimensionsSpec().getDimensionNames()));
+      builder.append(":string");
     }
     builder.append(">");
 
@@ -180,17 +181,19 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   public static Properties getTablePropertiesFromStructTypeInfo(StructTypeInfo structTypeInfo)
   {
     Properties table = new Properties();
-    table.setProperty("columns", StringUtils.join(structTypeInfo.getAllStructFieldNames(), ","));
-    table.setProperty("columns.types", StringUtils.join(
-        Lists.transform(structTypeInfo.getAllStructFieldTypeInfos(),
+    table.setProperty("columns", String.join(",", structTypeInfo.getAllStructFieldNames()));
+    table.setProperty("columns.types", String.join(
+        ",",
+        Lists.transform(
+            structTypeInfo.getAllStructFieldTypeInfos(),
             new Function<TypeInfo, String>() {
               @Nullable
               @Override
               public String apply(@Nullable TypeInfo typeInfo) {
                 return typeInfo.getTypeName();
               }
-            }),
-        ","
+            }
+        )
     ));
 
     return table;

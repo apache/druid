@@ -37,6 +37,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.DelimitedParser;
@@ -360,7 +361,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     @Override
     public String toString()
     {
-      return String.format(
+      return StringUtils.format(
           "CSVFlatDataParser = { columns = %s, keyColumn = %s, valueColumn = %s }",
           Arrays.toString(columns.toArray()),
           keyColumn,
@@ -502,7 +503,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     @Override
     public String toString()
     {
-      return String.format(
+      return StringUtils.format(
           "TSVFlatDataParser = { columns = %s, delimiter = '%s', listDelimiter = '%s',keyColumn = %s, valueColumn = %s }",
           Arrays.toString(columns.toArray()),
           delimiter,
@@ -580,7 +581,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     @Override
     public String toString()
     {
-      return String.format(
+      return StringUtils.format(
           "JSONFlatDataParser = { keyFieldName = %s, valueFieldName = %s }",
           keyFieldName,
           valueFieldName

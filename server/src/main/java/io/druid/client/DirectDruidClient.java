@@ -192,8 +192,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     }
 
     final ListenableFuture<InputStream> future;
-    final String url = String.format("http://%s/druid/v2/", host);
-    final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
+    final String url = StringUtils.format("http://%s/druid/v2/", host);
+    final String cancelUrl = StringUtils.format("http://%s/druid/v2/%s", host, query.getId());
 
     try {
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
@@ -379,7 +379,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public void exceptionCaught(final ClientResponse<InputStream> clientResponse, final Throwable e)
         {
-          String msg = StringUtils.safeFormat(
+          String msg = StringUtils.format(
               "Query[%s] url[%s] failed with exception msg [%s]",
               query.getId(),
               url,
@@ -412,7 +412,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           long timeLeft = timeoutAt - System.currentTimeMillis();
           if (timeLeft <= 0) {
-            String msg = StringUtils.safeFormat("Query[%s] url[%s] timed out.", query.getId(), url);
+            String msg = StringUtils.format("Query[%s] url[%s] timed out.", query.getId(), url);
             setupResponseReadFailure(msg, null);
             throw new RE(msg);
           } else {
@@ -423,7 +423,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private void checkTotalBytesLimit(long bytes)
         {
           if (maxScatterGatherBytes < Long.MAX_VALUE && totalBytesGathered.addAndGet(bytes) > maxScatterGatherBytes) {
-            String msg = StringUtils.safeFormat(
+            String msg = StringUtils.format(
                 "Query[%s] url[%s] max scatter-gather bytes limit reached.",
                 query.getId(),
                 url

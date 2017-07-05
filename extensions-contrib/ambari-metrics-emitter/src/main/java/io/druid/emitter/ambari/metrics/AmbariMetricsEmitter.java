@@ -25,6 +25,7 @@ import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.metrics2.sink.timeline.AbstractTimelineMetricsSink;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
@@ -70,7 +71,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
     this.emitterList = emitterList;
     this.timelineMetricConverter = config.getDruidToTimelineEventConverter();
     this.eventsQueue = new LinkedBlockingQueue<>(config.getMaxQueueSize());
-    this.collectorURI = String.format(
+    this.collectorURI = StringUtils.format(
       "%s://%s:%s%s",
       config.getProtocol(),
       config.getHostname(),

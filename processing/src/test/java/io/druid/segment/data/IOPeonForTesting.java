@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.StringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -55,7 +56,7 @@ class IOPeonForTesting implements IOPeon
     ByteArrayOutputStream outStream = outStreams.get(filename);
 
     if (outStream == null) {
-      throw new FileNotFoundException(String.format("unknown file[%s]", filename));
+      throw new FileNotFoundException(StringUtils.format("unknown file[%s]", filename));
     }
 
     return new ByteArrayInputStream(outStream.toByteArray());

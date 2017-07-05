@@ -48,6 +48,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -372,7 +373,7 @@ public class AppenderatorImpl implements Appenderator
 
     log.info("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
-    final String threadName = String.format("%s-incremental-persist", schema.getDataSource());
+    final String threadName = StringUtils.format("%s-incremental-persist", schema.getDataSource());
     final Object commitMetadata = committer.getMetadata();
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
@@ -396,7 +397,7 @@ public class AppenderatorImpl implements Appenderator
                             @Override
                             public String apply(Map.Entry<SegmentIdentifier, Integer> entry)
                             {
-                              return String.format("%s:%d", entry.getKey().getIdentifierAsString(), entry.getValue());
+                              return StringUtils.format("%s:%d", entry.getKey().getIdentifierAsString(), entry.getValue());
                             }
                           }
                       )

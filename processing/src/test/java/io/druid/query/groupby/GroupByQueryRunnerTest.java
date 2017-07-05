@@ -30,12 +30,16 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.DefaultBlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -46,6 +50,7 @@ import io.druid.java.util.common.parsers.ParseException;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
+import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -56,6 +61,7 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
+import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -325,7 +331,7 @@ public class GroupByQueryRunnerTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
+    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByQueryEngine-bufferPool",
         new Supplier<ByteBuffer>()
         {
@@ -336,7 +342,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    final BlockingPool<ByteBuffer> mergeBufferPool = new BlockingPool<>(
+    final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
         new Supplier<ByteBuffer>()
         {
           @Override
@@ -381,7 +387,7 @@ public class GroupByQueryRunnerTest
     for (GroupByQueryConfig config : testConfigs()) {
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        final String testName = String.format(
+        final String testName = StringUtils.format(
             "config=%s, runner=%s",
             config.toString(),
             runner.toString()
@@ -2573,7 +2579,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
     );
   }
 
@@ -2620,7 +2626,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
     );
   }
 
@@ -2675,7 +2681,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
     );
   }
 
@@ -9125,6 +9131,60 @@ public class GroupByQueryRunnerTest
 
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testTypeConversionWithMergingChainedExecutionRunner()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(
+            new DefaultDimensionSpec("quality", "alias"),
+            new ExtractionDimensionSpec("quality", "qualityLen", ValueType.LONG, StrlenExtractionFn.instance())
+        ))
+        .setDimFilter(new SelectorDimFilter(
+            "quality",
+            "technology",
+            null
+        ))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "qualityLen", 10L, "rows", 2L, "idx", 156L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "qualityLen", 10L, "rows", 2L, "idx", 194L)
+    );
+
+    ChainedExecutionQueryRunner ceqr = new ChainedExecutionQueryRunner(
+        MoreExecutors.sameThreadExecutor(),
+        new QueryWatcher()
+        {
+          @Override
+          public void registerQuery(Query query, ListenableFuture future)
+          {
+            return;
+          }
+        },
+        ImmutableList.<QueryRunner<Row>>of(runner, runner)
+    );
+
+    QueryRunner<Row> mergingRunner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(ceqr));
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergingRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 }

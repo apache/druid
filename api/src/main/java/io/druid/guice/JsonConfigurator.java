@@ -34,6 +34,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.ProvisionException;
 import com.google.inject.spi.Message;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import javax.validation.ConstraintViolation;
@@ -102,7 +103,7 @@ public class JsonConfigurator
     }
     catch (IllegalArgumentException e) {
       throw new ProvisionException(
-          String.format("Problem parsing object at prefix[%s]: %s.", propertyPrefix, e.getMessage()), e
+          StringUtils.format("Problem parsing object at prefix[%s]: %s.", propertyPrefix, e.getMessage()), e
       );
     }
 
@@ -122,7 +123,7 @@ public class JsonConfigurator
               final Field theField = beanClazz.getDeclaredField(fieldName);
 
               if (theField.getAnnotation(JacksonInject.class) != null) {
-                path = String.format(" -- Injected field[%s] not bound!?", fieldName);
+                path = StringUtils.format(" -- Injected field[%s] not bound!?", fieldName);
                 break;
               }
 
@@ -142,7 +143,7 @@ public class JsonConfigurator
           throw Throwables.propagate(e);
         }
 
-        messages.add(String.format("%s - %s", path, violation.getMessage()));
+        messages.add(StringUtils.format("%s - %s", path, violation.getMessage()));
       }
 
       throw new ProvisionException(
@@ -153,7 +154,7 @@ public class JsonConfigurator
                 @Override
                 public Message apply(String input)
                 {
-                  return new Message(String.format("%s%s", propertyBase, input));
+                  return new Message(StringUtils.format("%s%s", propertyBase, input));
                 }
               }
           )
@@ -175,7 +176,7 @@ public class JsonConfigurator
       final AnnotatedField field = beanDef.getField();
       if (field == null || !field.hasAnnotation(JsonProperty.class)) {
         throw new ProvisionException(
-            String.format(
+            StringUtils.format(
                 "JsonConfigurator requires Jackson-annotated Config objects to have field annotations. %s doesn't",
                 clazz
             )

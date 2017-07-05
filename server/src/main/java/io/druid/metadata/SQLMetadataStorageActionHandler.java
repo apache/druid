@@ -105,7 +105,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format(
+                  StringUtils.format(
                       "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
                       entryTable
                   )
@@ -155,7 +155,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           public Boolean withHandle(Handle handle) throws Exception
           {
             return handle.createStatement(
-                String.format(
+                StringUtils.format(
                     "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE",
                     entryTable
                 )
@@ -179,7 +179,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           public Optional<EntryType> withHandle(Handle handle) throws Exception
           {
             byte[] res = handle.createQuery(
-                String.format("SELECT payload FROM %s WHERE id = :id", entryTable)
+                StringUtils.format("SELECT payload FROM %s WHERE id = :id", entryTable)
             )
                                .bind("id", entryId)
                                .map(ByteArrayMapper.FIRST)
@@ -204,7 +204,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           public Optional<StatusType> withHandle(Handle handle) throws Exception
           {
             byte[] res = handle.createQuery(
-                String.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
+                StringUtils.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
             )
                                .bind("id", entryId)
                                .map(ByteArrayMapper.FIRST)
@@ -229,7 +229,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           {
             return handle
                 .createQuery(
-                    String.format(
+                    StringUtils.format(
                         "SELECT id, payload, status_payload FROM %s WHERE active = TRUE ORDER BY created_date",
                         entryTable
                     )
@@ -277,7 +277,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           {
             return handle
                 .createQuery(
-                    String.format(
+                    StringUtils.format(
                         "SELECT id, status_payload FROM %s WHERE active = FALSE AND created_date >= :start ORDER BY created_date DESC",
                         entryTable
                     )
@@ -318,7 +318,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           public Boolean withHandle(Handle handle) throws Exception
           {
             return handle.createStatement(
-                String.format(
+                StringUtils.format(
                     "INSERT INTO %1$s (%2$s_id, lock_payload) VALUES (:entryId, :payload)",
                     lockTable, entryTypeName
                 )
@@ -340,7 +340,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format("DELETE FROM %s WHERE id = :id", lockTable))
+            handle.createStatement(StringUtils.format("DELETE FROM %s WHERE id = :id", lockTable))
                   .bind("id", lockId)
                   .execute();
 
@@ -360,7 +360,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           public Boolean withHandle(Handle handle) throws Exception
           {
             return handle.createStatement(
-                String.format(
+                StringUtils.format(
                     "INSERT INTO %1$s (%2$s_id, log_payload) VALUES (:entryId, :payload)",
                     logTable, entryTypeName
                 )
@@ -384,7 +384,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           {
             return handle
                 .createQuery(
-                    String.format(
+                    StringUtils.format(
                         "SELECT log_payload FROM %1$s WHERE %2$s_id = :entryId",
                         logTable, entryTypeName
                     )
@@ -433,7 +433,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           public Map<Long, LockType> withHandle(Handle handle) throws Exception
           {
             return handle.createQuery(
-                String.format(
+                StringUtils.format(
                     "SELECT id, lock_payload FROM %1$s WHERE %2$s_id = :entryId",
                     lockTable, entryTypeName
                 )

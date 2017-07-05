@@ -24,7 +24,8 @@ import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
-
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 
@@ -106,13 +107,13 @@ public class AzureTaskLogs implements TaskLogs {
           }
       );
     } catch (StorageException | URISyntaxException e) {
-      throw new IOException(String.format("Failed to stream logs from: %s", taskKey), e);
+      throw new IOE(e, "Failed to stream logs from: %s", taskKey);
     }
   }
 
 
   private String getTaskLogKey(String taskid) {
-    return String.format("%s/%s/log", config.getPrefix(), taskid);
+    return StringUtils.format("%s/%s/log", config.getPrefix(), taskid);
   }
 
   @Override

@@ -32,9 +32,9 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
-
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -121,12 +121,10 @@ public class RemoteTaskActionClient implements TaskActionClient
           return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
         } else {
           // Want to retry, so throw an IOException.
-          throw new IOException(
-              String.format(
-                  "Scary HTTP status returned: %s. Check your overlord[%s] logs for exceptions.",
-                  response.getStatus(),
-                  server.getHost()
-              )
+          throw new IOE(
+              "Scary HTTP status returned: %s. Check your overlord[%s] logs for exceptions.",
+              response.getStatus(),
+              server.getHost()
           );
         }
       }

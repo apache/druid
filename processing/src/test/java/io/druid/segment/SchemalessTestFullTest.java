@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
@@ -1358,19 +1359,19 @@ public class SchemalessTestFullTest
     return Arrays.asList(
         new Pair<>(
             SchemalessIndexTest.getIncrementalIndex(index1, index2),
-            String.format("Failed: II[%,d, %,d]", index1, index2)
+            StringUtils.format("Failed: II[%,d, %,d]", index1, index2)
         ),
         new Pair<>(
             SchemalessIndexTest.getIncrementalIndex(index2, index1),
-            String.format("Failed: II[%,d, %,d]", index2, index1)
+            StringUtils.format("Failed: II[%,d, %,d]", index2, index1)
         ),
         new Pair<>(
             SchemalessIndexTest.getMergedIncrementalIndex(index1, index2),
-            String.format("Failed: MII[%,d, %,d]", index1, index2)
+            StringUtils.format("Failed: MII[%,d, %,d]", index1, index2)
         ),
         new Pair<>(
             SchemalessIndexTest.getMergedIncrementalIndex(index2, index1),
-            String.format("Failed: MII[%,d, %,d]", index2, index1)
+            StringUtils.format("Failed: MII[%,d, %,d]", index2, index1)
         )
     );
   }

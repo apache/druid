@@ -30,7 +30,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -39,6 +39,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -143,7 +144,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
         final ObjectColumnSelector rawColumnSelector = baseSelectorFactory.makeObjectColumnSelector(column);
 
-        if ((Enums.getIfPresent(ValueType.class, typeName.toUpperCase()).isPresent() && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
+        if ((Enums.getIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)).isPresent() && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
             || !deserializeComplexMetrics) {
           return rawColumnSelector;
         } else {
@@ -377,7 +378,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       );
     }
 
-    public IncrementalIndex buildOffheap(final StupidPool<ByteBuffer> bufferPool)
+    public IncrementalIndex buildOffheap(final NonBlockingPool<ByteBuffer> bufferPool)
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
@@ -658,9 +659,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       case COMPLEX:
         return ComplexMetrics.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();
       case FLOAT:
-        return Float.TYPE;
+        return Float.class;
       case LONG:
-        return Long.TYPE;
+        return Long.class;
       case STRING:
         return String.class;
     }

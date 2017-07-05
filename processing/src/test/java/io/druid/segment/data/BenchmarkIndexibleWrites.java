@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -216,7 +217,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
       );
     }
     Futures.allAsList(futures).get();
-    Assert.assertTrue(String.format("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get()>=totalIndexSize);
+    Assert.assertTrue(StringUtils.format("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get() >= totalIndexSize);
     for(int i = 0; i < index.get(); ++i){
       Assert.assertEquals(i, concurrentIndexible.get(i).intValue());
     }
@@ -295,7 +296,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     Futures.allAsList(futures).get();
     executorService.shutdown();
 
-    Assert.assertTrue(String.format("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get()>=totalIndexSize);
+    Assert.assertTrue(StringUtils.format("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get() >= totalIndexSize);
     for(int i = 0; i < index.get(); ++i){
       Assert.assertEquals(i, concurrentIndexible.get(i).intValue());
     }

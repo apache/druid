@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import org.joda.time.Period;
 
@@ -108,7 +109,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   @Override
   public String toString()
   {
-    return String.format(
+    return StringUtils.format(
         "JdbcExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
         connectorConfig.toString(),
         table,

@@ -42,13 +42,13 @@ public class StringFormatExtractionFn extends DimExtractionFn
     @JsonCreator
     public static NullHandling forValue(String value)
     {
-      return value == null ? NULLSTRING : NullHandling.valueOf(value.toUpperCase());
+      return value == null ? NULLSTRING : NullHandling.valueOf(StringUtils.toUpperCase(value));
     }
 
     @JsonValue
     public String toValue()
     {
-      return name().toLowerCase();
+      return StringUtils.toLowerCase(name());
     }
   }
 
@@ -105,7 +105,7 @@ public class StringFormatExtractionFn extends DimExtractionFn
         value = "";
       }
     }
-    return Strings.emptyToNull(String.format(format, value));
+    return Strings.emptyToNull(StringUtils.format(format, value));
   }
 
   @Override

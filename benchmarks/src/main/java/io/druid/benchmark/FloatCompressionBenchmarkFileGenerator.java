@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSink;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
@@ -48,6 +49,7 @@ import java.util.Map;
 
 public class FloatCompressionBenchmarkFileGenerator
 {
+  private static final Logger log = new Logger(FloatCompressionBenchmarkFileGenerator.class);
   public static final int ROW_NUM = 5000000;
   public static final List<CompressedObjectStrategy.CompressionStrategy> compressions =
       ImmutableList.of(
@@ -143,7 +145,7 @@ public class FloatCompressionBenchmarkFileGenerator
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
       for (CompressedObjectStrategy.CompressionStrategy compression : compressions) {
         String name = entry.getKey() + "-" + compression.toString();
-        System.out.print(name + ": ");
+        log.info("%s: ", name);
         File compFile = new File(dir, name);
         compFile.delete();
         File dataFile = new File(dir, entry.getKey());
@@ -184,7 +186,7 @@ public class FloatCompressionBenchmarkFileGenerator
           iopeon.close();
           br.close();
         }
-        System.out.print(compFile.length() / 1024 + "\n");
+        log.info("%d", compFile.length() / 1024);
       }
     }
   }

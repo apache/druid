@@ -42,7 +42,9 @@ import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -111,7 +113,7 @@ public class KafkaIndexTaskClient
     this.executorService = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(
             numThreads,
-            String.format(
+            StringUtils.format(
                 "KafkaIndexTaskClient-%s-%%d",
                 dataSource
             )
@@ -174,7 +176,7 @@ public class KafkaIndexTaskClient
           id,
           HttpMethod.POST,
           "pause",
-          timeout > 0 ? String.format("timeout=%d", timeout) : null,
+          timeout > 0 ? StringUtils.format("timeout=%d", timeout) : null,
           true
       );
 
@@ -471,17 +473,17 @@ public class KafkaIndexTaskClient
       FullResponseHolder response = null;
       Request request = null;
       TaskLocation location = TaskLocation.unknown();
-      String path = String.format("%s/%s/%s", BASE_PATH, id, pathSuffix);
+      String path = StringUtils.format("%s/%s/%s", BASE_PATH, id, pathSuffix);
 
       Optional<TaskStatus> status = taskInfoProvider.getTaskStatus(id);
       if (!status.isPresent() || !status.get().isRunnable()) {
-        throw new TaskNotRunnableException(String.format("Aborting request because task [%s] is not runnable", id));
+        throw new TaskNotRunnableException(StringUtils.format("Aborting request because task [%s] is not runnable", id));
       }
 
       try {
         location = taskInfoProvider.getTaskLocation(id);
         if (location.equals(TaskLocation.unknown())) {
-          throw new NoTaskLocationException(String.format("No TaskLocation available for task [%s]", id));
+          throw new NoTaskLocationException(StringUtils.format("No TaskLocation available for task [%s]", id));
         }
 
         // Netty throws some annoying exceptions if a connection can't be opened, which happens relatively frequently
@@ -514,7 +516,7 @@ public class KafkaIndexTaskClient
         } else if (responseCode == 400) { // don't bother retrying if it's a bad request
           throw new IAE("Received 400 Bad Request with body: %s", response.getContent());
         } else {
-          throw new IOException(String.format("Received status [%d]", responseCode));
+          throw new IOE("Received status [%d]", responseCode);
         }
       }
       catch (IOException | ChannelException e) {
@@ -544,7 +546,7 @@ public class KafkaIndexTaskClient
 
         String urlForLog = (request != null
                             ? request.getUrl().toString()
-                            : String.format("http://%s:%d%s", location.getHost(), location.getPort(), path));
+                            : StringUtils.format("http://%s:%d%s", location.getHost(), location.getPort(), path));
         if (!retry) {
           // if retry=false, we probably aren't too concerned if the operation doesn't succeed (i.e. the request was
           // for informational purposes only) so don't log a scary stack trace

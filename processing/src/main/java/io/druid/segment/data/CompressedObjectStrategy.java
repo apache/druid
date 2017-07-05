@@ -26,6 +26,7 @@ import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
@@ -133,13 +134,13 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static CompressionStrategy fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
 
     static final Map<Byte, CompressionStrategy> idMap = Maps.newHashMap();

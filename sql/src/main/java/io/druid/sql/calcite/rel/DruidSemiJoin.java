@@ -22,6 +22,7 @@ package io.druid.sql.calcite.rel;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -225,7 +226,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
               values.add(stringValue);
               if (values.size() > maxSemiJoinRowsInMemory) {
                 throw new ResourceLimitExceededException(
-                    String.format("maxSemiJoinRowsInMemory[%,d] exceeded", maxSemiJoinRowsInMemory)
+                    StringUtils.format("maxSemiJoinRowsInMemory[%,d] exceeded", maxSemiJoinRowsInMemory)
                 );
               }
             }

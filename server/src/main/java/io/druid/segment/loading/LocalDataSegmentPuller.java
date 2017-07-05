@@ -24,6 +24,7 @@ import com.google.common.io.Files;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
@@ -211,7 +212,7 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   @Override
   public String getVersion(URI uri)
   {
-    return String.format("%d", buildFileObject(uri).getLastModified());
+    return StringUtils.format("%d", buildFileObject(uri).getLastModified());
   }
 
   @Override

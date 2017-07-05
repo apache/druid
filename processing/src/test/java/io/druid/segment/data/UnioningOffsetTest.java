@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -104,8 +105,8 @@ public class UnioningOffsetTest
     for (int i = 0; i < expectedValues.length; ++i) {
       for (int j = 0; j < offsets.size(); ++j) {
         Offset aClone = offsets.get(j);
-        Assert.assertTrue(String.format("Clone[%d] out of bounds", j), aClone.withinBounds());
-        Assert.assertEquals(String.format("Clone[%d] not right", j), expectedValues[i], aClone.getOffset());
+        Assert.assertTrue(StringUtils.format("Clone[%d] out of bounds", j), aClone.withinBounds());
+        Assert.assertEquals(StringUtils.format("Clone[%d] not right", j), expectedValues[i], aClone.getOffset());
         aClone.increment();
       }
       offsets.add(offsets.get(0).clone());
