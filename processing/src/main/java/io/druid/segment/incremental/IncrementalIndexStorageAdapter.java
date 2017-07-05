@@ -547,7 +547,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public Class classOfObject()
                     {
-                      return Long.TYPE;
+                      return Long.class;
                     }
 
                     @Override
