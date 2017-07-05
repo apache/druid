@@ -71,5 +71,10 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use Comparators.naturalNullsFirst() instead of Ordering.natural().nullsFirst()"/>
     </module>
+    <module name="Regexp">
+      <property name="format" value="(Byte|Character|Short|Integer|Long|Float|Double)\.TYPE"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use primitive.class instead. But check twice that you don't actually need BoxedPrimitive.class instead of BoxedPrimitive.TYPE"/>
+    </module>
   </module>
 </module>
