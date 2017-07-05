@@ -287,11 +287,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
     final IncrementalIndex incrementalIndex = this.incrementalIndex.getConstructor(
         IncrementalIndexSchema.class,
-        Boolean.TYPE,
-        Boolean.TYPE,
-        Boolean.TYPE,
-        Boolean.TYPE,
-        Integer.TYPE
+        boolean.class,
+        boolean.class,
+        boolean.class,
+        boolean.class,
+        int.class
     ).newInstance(
         new IncrementalIndexSchema.Builder().withMetrics(factories).build(),
         true,
