@@ -26,9 +26,12 @@ import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.function.IntFunction;
 
 public class ParserUtils
 {
+  private static final String DEFAULT_COLUMN_NAME_PREFIX = "column_";
+
   public static final Function<String, String> nullEmptyStringFunction = new Function<String, String>()
   {
     @Override
@@ -43,9 +46,10 @@ public class ParserUtils
 
   public static ArrayList<String> generateFieldNames(int length)
   {
-    ArrayList<String> names = new ArrayList<>(length);
+    final ArrayList<String> names = new ArrayList<>(length);
+    final IntFunction<String> columnNameGenerator = getDefaultColumnNameGenerator();
     for (int i = 0; i < length; ++i) {
-      names.add("column_" + (i + 1));
+      names.add(columnNameGenerator.apply(i));
     }
     return names;
   }
@@ -94,5 +98,16 @@ public class ParserUtils
       input = input.substring(1, input.length() - 1).trim();
     }
     return input;
+  }
+
+  /**
+   * Return a function to generate default column names.
+   * Note that the postfix for default column names starts from 1.
+   *
+   * @return column name generating function
+   */
+  public static IntFunction<String> getDefaultColumnNameGenerator()
+  {
+    return ordinal -> DEFAULT_COLUMN_NAME_PREFIX + (ordinal + 1);
   }
 }
