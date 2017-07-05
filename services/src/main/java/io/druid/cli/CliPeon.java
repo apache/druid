@@ -49,6 +49,7 @@ import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.PolyBind;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
+import io.druid.guice.QueryablePeonModule;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
@@ -86,13 +87,11 @@ import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
-import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.http.SegmentListerResource;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
-import io.druid.server.metrics.QueryCountStatsProvider;
 import org.eclipse.jetty.server.Server;
 
 import java.io.File;
@@ -209,10 +208,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
-            binder.bind(QueryCountStatsProvider.class).to(QueryResource.class).in(LazySingleton.class);
-            Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, SegmentListerResource.class);
-            LifecycleModule.register(binder, QueryResource.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.fromString(nodeType)));
             LifecycleModule.register(binder, Server.class);
           }
@@ -270,6 +266,7 @@ public class CliPeon extends GuiceRunnable
             return task.getId();
           }
         },
+        new QueryablePeonModule(),
         new IndexingServiceFirehoseModule(),
         new ChatHandlerServerModule(properties),
         new LookupModule()

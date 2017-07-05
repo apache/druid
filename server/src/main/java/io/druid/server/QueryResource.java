@@ -32,6 +32,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DirectDruidClient;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
@@ -85,6 +86,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
+@LazySingleton
 @Path("/druid/v2/")
 public class QueryResource implements QueryCountStatsProvider
 {
