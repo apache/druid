@@ -114,7 +114,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   public void announceSegment(DataSegment segment) throws IOException
   {
     if (segmentLookup.containsKey(segment)) {
-      log.info("Skipping announcement of segment [%s]. Announcement exists already.");
+      log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getIdentifier());
       return;
     }
 
@@ -222,7 +222,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       for (DataSegment ds : segments) {
 
         if (segmentLookup.containsKey(ds)) {
-          log.info("Skipping announcement of segment [%s]. Announcement exists already.");
+          log.info("Skipping announcement of segment [%s]. Announcement exists already.", ds.getIdentifier());
           return;
         }
 
