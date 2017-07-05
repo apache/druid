@@ -49,6 +49,7 @@ public class GuiceInjectors
           {
             binder.bind(DruidSecondaryModule.class);
             JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
+            JsonConfigProvider.bind(binder, "druid.modules", ModulesConfig.class);
           }
         }
     );
