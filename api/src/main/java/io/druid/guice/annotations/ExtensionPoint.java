@@ -25,7 +25,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Signifies that the annotated entity is an extension point. Extension points are interfaces or non-final classes that
+ * Signifies that the annotated type is an extension point. Extension points are interfaces or non-final classes that
  * may be subclassed in extensions in order to add functionality to Druid. Extension points may change in breaking ways
  * only between major Druid release lines (e.g. 0.10.x -> 0.11.0), but otherwise must remain stable. Extension points
  * may change at any time in non-breaking ways, however, such as by adding new default methods to an interface.
@@ -43,7 +43,7 @@ import java.lang.annotation.Target;
  *
  * @see PublicApi
  */
-@Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR})
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.SOURCE)
 public @interface ExtensionPoint
 {
