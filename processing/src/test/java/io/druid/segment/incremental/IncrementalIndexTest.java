@@ -28,6 +28,8 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
@@ -76,8 +78,8 @@ public class IncrementalIndexTest
     DimensionsSpec dimensions = new DimensionsSpec(
         Arrays.<DimensionSchema>asList(
             new StringDimensionSchema("string"),
-            new StringDimensionSchema("float"),
-            new StringDimensionSchema("long")
+            new FloatDimensionSchema("float"),
+            new LongDimensionSchema("long")
         ), null, null
     );
     AggregatorFactory[] metrics = {
@@ -213,9 +215,7 @@ public class IncrementalIndexTest
             new DateTime().minus(1).getMillis(),
             Lists.newArrayList("string", "float", "long"),
             ImmutableMap.<String, Object>of(
-                "string", Arrays.asList("A", null, ""),
-                "float", Arrays.asList(Float.MAX_VALUE, null, ""),
-                "long", Arrays.asList(Long.MIN_VALUE, null, "")
+                "string", Arrays.asList("A", null, "")
             )
         )
     );
@@ -223,8 +223,32 @@ public class IncrementalIndexTest
     Row row = index.iterator().next();
 
     Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.MAX_VALUE)}), row.getRaw("float"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}), row.getRaw("long"));
+    Assert.assertEquals(0.0f, row.getRaw("float"));
+    Assert.assertEquals(0L, row.getRaw("long"));
+  }
+
+
+  @Test
+  public void testUnparseableNumerics() throws IndexSizeExceededException
+  {
+    IncrementalIndex<?> index = closer.closeLater(indexCreator.createIndex());
+    index.add(
+        new MapBasedInputRow(
+            new DateTime().minus(1).getMillis(),
+            Lists.newArrayList("string", "float", "long"),
+            ImmutableMap.<String, Object>of(
+                "string", Arrays.asList("A", null, ""),
+                "float", "hello",
+                "long", "world"
+            )
+        )
+    );
+
+    Row row = index.iterator().next();
+
+    Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
+    Assert.assertEquals(0.0f, row.getRaw("float"));
+    Assert.assertEquals(0L, row.getRaw("long"));
   }
 
   @Test

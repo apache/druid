@@ -199,13 +199,16 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(Long lhs, Long rhs)
   {
+    if (lhs == null) {
+      return rhs == null;
+    }
     return lhs.equals(rhs);
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(Long key)
   {
-    return key.hashCode();
+    return key == null ? 0 : key.hashCode();
   }
 
   @Override

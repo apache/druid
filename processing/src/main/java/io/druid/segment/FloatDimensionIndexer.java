@@ -199,13 +199,16 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(Float lhs, Float rhs)
   {
+    if (lhs == null) {
+      return rhs == null;
+    }
     return lhs.equals(rhs);
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(Float key)
   {
-    return key.hashCode();
+    return key == null ? 0 : key.hashCode();
   }
 
   @Override

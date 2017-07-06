@@ -233,7 +233,8 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).longValue();
     } else if (valObj instanceof String) {
-      return DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
+      Long parsedVal = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
+      return parsedVal == null ? 0L : parsedVal;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -250,7 +251,8 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).floatValue();
     } else if (valObj instanceof String) {
-      return Floats.tryParse((String) valObj);
+      Float parsedVal = Floats.tryParse((String) valObj);
+      return parsedVal == null ? 0.0f : parsedVal;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
