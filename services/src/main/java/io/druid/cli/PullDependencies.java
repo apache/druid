@@ -136,8 +136,7 @@ public class PullDependencies implements Runnable
   );
 
   private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
-      "https://repo1.maven.org/maven2/",
-      "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
+      "https://repo1.maven.org/maven2/"
   );
 
   private TeslaAether aether;
@@ -180,7 +179,7 @@ public class PullDependencies implements Runnable
 
   @Option(
       name = {"-r", "--remoteRepository"},
-      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/ and https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local",
+      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, this will be used after https://repo1.maven.org/maven2/",
       required = false
   )
   List<String> remoteRepositories = Lists.newArrayList();
