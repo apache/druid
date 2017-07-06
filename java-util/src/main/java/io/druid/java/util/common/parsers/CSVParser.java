@@ -20,8 +20,8 @@
 package io.druid.java.util.common.parsers;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +31,7 @@ public class CSVParser extends AbstractFlatTextFormatParser
   private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
 
   public CSVParser(
-      final Optional<String> listDelimiter,
+      @Nullable final String listDelimiter,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
   )
@@ -40,7 +40,7 @@ public class CSVParser extends AbstractFlatTextFormatParser
   }
 
   public CSVParser(
-      final Optional<String> listDelimiter,
+      @Nullable final String listDelimiter,
       final Iterable<String> fieldNames,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
@@ -58,7 +58,7 @@ public class CSVParser extends AbstractFlatTextFormatParser
   }
 
   @VisibleForTesting
-  CSVParser(final Optional<String> listDelimiter, final String header)
+  CSVParser(@Nullable final String listDelimiter, final String header)
   {
     this(listDelimiter, false, 0);
 

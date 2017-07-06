@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common.parsers;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.IAE;
@@ -227,9 +226,9 @@ public class FlatTextFormatParserTest
     {
       switch (format) {
         case CSV:
-          return new CSVParser(Optional.absent(), hasHeaderRow, maxSkipHeaderRows);
+          return new CSVParser(null, hasHeaderRow, maxSkipHeaderRows);
         case DELIMITED:
-          return new DelimitedParser(Optional.of("\t"), Optional.absent(), hasHeaderRow, maxSkipHeaderRows);
+          return new DelimitedParser("\t", null, hasHeaderRow, maxSkipHeaderRows);
         default:
           throw new IAE("Unknown format[%s]", format);
       }
@@ -239,9 +238,9 @@ public class FlatTextFormatParserTest
     {
       switch (format) {
         case CSV:
-          return new CSVParser(Optional.absent(), header);
+          return new CSVParser(null, header);
         case DELIMITED:
-          return new DelimitedParser(Optional.of("\t"), Optional.absent(), header);
+          return new DelimitedParser("\t", null, header);
         default:
           throw new IAE("Unknown format[%s]", format);
       }

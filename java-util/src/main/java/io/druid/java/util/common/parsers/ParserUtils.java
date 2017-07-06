@@ -20,51 +20,43 @@
 package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.StringUtils;
-import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.function.IntFunction;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class ParserUtils
 {
   private static final String DEFAULT_COLUMN_NAME_PREFIX = "column_";
 
-  public static final Function<String, String> nullEmptyStringFunction = new Function<String, String>()
+  public static Function<String, Object> getMultiValueFunction(
+      final String listDelimiter,
+      final Splitter listSplitter
+  )
   {
-    @Override
-    public String apply(String input)
-    {
-      if (input == null || input.isEmpty()) {
-        return null;
+    return (input) -> {
+      if (input != null && input.contains(listDelimiter)) {
+        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
+                            .map(Strings::emptyToNull)
+                            .collect(Collectors.toList());
+      } else {
+        return Strings.emptyToNull(input);
       }
-      return input;
-    }
-  };
+    };
+  }
 
   public static ArrayList<String> generateFieldNames(int length)
   {
     final ArrayList<String> names = new ArrayList<>(length);
-    final IntFunction<String> columnNameGenerator = getDefaultColumnNameGenerator();
     for (int i = 0; i < length; ++i) {
-      names.add(columnNameGenerator.apply(i));
+      names.add(getDefaultColumnName(i));
     }
     return names;
-  }
-
-  /**
-   * Factored timestamp parsing into its own Parser class, but leaving this here
-   * for compatibility
-   *
-   * @param format
-   *
-   * @return
-   */
-  public static Function<String, DateTime> createTimestampParser(final String format)
-  {
-    return TimestampParser.createTimestampParser(format);
   }
 
   public static Set<String> findDuplicates(Iterable<String> fieldNames)
@@ -106,8 +98,8 @@ public class ParserUtils
    *
    * @return column name generating function
    */
-  public static IntFunction<String> getDefaultColumnNameGenerator()
+  public static String getDefaultColumnName(int ordinal)
   {
-    return ordinal -> DEFAULT_COLUMN_NAME_PREFIX + (ordinal + 1);
+    return DEFAULT_COLUMN_NAME_PREFIX + (ordinal + 1);
   }
 }

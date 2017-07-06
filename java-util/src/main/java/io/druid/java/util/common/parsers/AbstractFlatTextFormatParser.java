@@ -20,18 +20,17 @@
 package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.collect.Utils;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.IntFunction;
 
 public abstract class AbstractFlatTextFormatParser implements Parser<String, Object>
 {
@@ -58,41 +57,21 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   private final Function<String, Object> valueFunction;
   private final boolean hasHeaderRow;
   private final int maxSkipHeaderRows;
-  private final IntFunction<String> defaultColumnNameGenerator = ParserUtils.getDefaultColumnNameGenerator();
 
   private List<String> fieldNames = null;
   private boolean hasParsedHeader = false;
   private int skippedHeaderRows;
   private boolean supportSkipHeaderRows;
 
-  static Function<String, Object> getValueFunction(
-      final String listDelimiter,
-      final Splitter listSplitter
-  )
-  {
-    return (input) -> {
-      if (input.contains(listDelimiter)) {
-        return Lists.newArrayList(
-            Iterables.transform(
-                listSplitter.split(input),
-                ParserUtils.nullEmptyStringFunction
-            )
-        );
-      } else {
-        return ParserUtils.nullEmptyStringFunction.apply(input);
-      }
-    };
-  }
-
   public AbstractFlatTextFormatParser(
-      final Optional<String> listDelimiter,
+      @Nullable final String listDelimiter,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
   )
   {
-    this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
+    this.listDelimiter = listDelimiter != null ? listDelimiter : Parsers.DEFAULT_LIST_DELIMITER;
     this.listSplitter = Splitter.on(this.listDelimiter);
-    this.valueFunction = getValueFunction(this.listDelimiter, this.listSplitter);
+    this.valueFunction = ParserUtils.getMultiValueFunction(this.listDelimiter, this.listSplitter);
 
     this.hasHeaderRow = hasHeaderRow;
     this.maxSkipHeaderRows = maxSkipHeaderRows;
@@ -128,7 +107,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
       this.fieldNames = new ArrayList<>(fieldsList.size());
       for (int i = 0; i < fieldsList.size(); i++) {
         if (Strings.isNullOrEmpty(fieldsList.get(i))) {
-          this.fieldNames.add(defaultColumnNameGenerator.apply(i));
+          this.fieldNames.add(ParserUtils.getDefaultColumnName(i));
         } else {
           this.fieldNames.add(fieldsList.get(i));
         }

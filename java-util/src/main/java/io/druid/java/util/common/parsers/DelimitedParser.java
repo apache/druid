@@ -20,10 +20,10 @@
 package io.druid.java.util.common.parsers;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 
@@ -33,14 +33,14 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
   private final Splitter splitter;
 
   public DelimitedParser(
-      final Optional<String> delimiter,
-      final Optional<String> listDelimiter,
+      @Nullable final String delimiter,
+      @Nullable final String listDelimiter,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
   )
   {
     super(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
-    this.delimiter = delimiter.isPresent() ? delimiter.get() : FlatTextFormat.DELIMITED.getDefaultDelimiter();
+    this.delimiter = delimiter != null ? delimiter : FlatTextFormat.DELIMITED.getDefaultDelimiter();
 
     Preconditions.checkState(
         !this.delimiter.equals(getListDelimiter()),
@@ -52,8 +52,8 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
   }
 
   public DelimitedParser(
-      final Optional<String> delimiter,
-      final Optional<String> listDelimiter,
+      @Nullable final String delimiter,
+      @Nullable final String listDelimiter,
       final Iterable<String> fieldNames,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
@@ -65,7 +65,7 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
   }
 
   @VisibleForTesting
-  DelimitedParser(final Optional<String> delimiter, final Optional<String> listDelimiter, final String header)
+  DelimitedParser(@Nullable final String delimiter, @Nullable final String listDelimiter, final String header)
   {
     this(delimiter, listDelimiter, false, 0);
 
