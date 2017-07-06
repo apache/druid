@@ -179,7 +179,7 @@ public class PullDependencies implements Runnable
 
   @Option(
       name = {"-r", "--remoteRepository"},
-      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, this will be used after https://repo1.maven.org/maven2/",
+      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/",
       required = false
   )
   List<String> remoteRepositories = Lists.newArrayList();
