@@ -108,6 +108,7 @@ public class StringUtilsTest
     Assert.assertNotNull(StringUtils.UTF8_CHARSET);
   }
 
+  @SuppressWarnings("MalformedFormatString")
   @Test
   public void testNonStrictFormat()
   {

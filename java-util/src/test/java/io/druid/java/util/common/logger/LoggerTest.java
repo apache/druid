@@ -23,6 +23,7 @@ import org.junit.Test;
 
 public class LoggerTest
 {
+  @SuppressWarnings("MalformedFormatString")
   @Test
   public void testLogWithCrazyMessages()
   {
@@ -32,6 +33,7 @@ public class LoggerTest
   }
 
   @SuppressWarnings("MalformedFormatString")
+  @Test
   public void testLegacyLogging()
   {
     final Logger log = new Logger(LoggerTest.class);
