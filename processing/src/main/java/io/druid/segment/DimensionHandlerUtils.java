@@ -40,6 +40,11 @@ import java.util.List;
 
 public final class DimensionHandlerUtils
 {
+  // use these values to ensure that convertObjectToLong() and convertObjectToFloat() return the same
+  // boxed object when returning a constant zero
+  private final static Long LONG_ZERO = 0L;
+  private final static Float FLOAT_ZERO = 0.0f;
+
   private DimensionHandlerUtils() {}
 
   public final static ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
@@ -225,7 +230,7 @@ public final class DimensionHandlerUtils
   public static Long convertObjectToLong(Object valObj)
   {
     if (valObj == null) {
-      return 0L;
+      return LONG_ZERO;
     }
 
     if (valObj instanceof Long) {
@@ -234,7 +239,7 @@ public final class DimensionHandlerUtils
       return ((Number) valObj).longValue();
     } else if (valObj instanceof String) {
       Long parsedVal = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
-      return parsedVal == null ? 0L : parsedVal;
+      return parsedVal == null ? LONG_ZERO : parsedVal;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -243,7 +248,7 @@ public final class DimensionHandlerUtils
   public static Float convertObjectToFloat(Object valObj)
   {
     if (valObj == null) {
-      return 0.0f;
+      return FLOAT_ZERO;
     }
 
     if (valObj instanceof Float) {
@@ -252,7 +257,7 @@ public final class DimensionHandlerUtils
       return ((Number) valObj).floatValue();
     } else if (valObj instanceof String) {
       Float parsedVal = Floats.tryParse((String) valObj);
-      return parsedVal == null ? 0.0f : parsedVal;
+      return parsedVal == null ? FLOAT_ZERO : parsedVal;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
