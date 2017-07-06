@@ -658,9 +658,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       case COMPLEX:
         return ComplexMetrics.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();
       case FLOAT:
-        return Float.TYPE;
+        return Float.class;
       case LONG:
-        return Long.TYPE;
+        return Long.class;
       case STRING:
         return String.class;
     }
