@@ -69,13 +69,13 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public Float getMinValue()
   {
-    return Float.MIN_VALUE;
+    return Float.NEGATIVE_INFINITY;
   }
 
   @Override
   public Float getMaxValue()
   {
-    return Float.MAX_VALUE;
+    return Float.POSITIVE_INFINITY;
   }
 
   @Override

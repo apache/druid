@@ -214,7 +214,7 @@ public class IncrementalIndexTest
             Lists.newArrayList("string", "float", "long"),
             ImmutableMap.<String, Object>of(
                 "string", Arrays.asList("A", null, ""),
-                "float", Arrays.asList(Float.MAX_VALUE, null, ""),
+                "float", Arrays.asList(Float.POSITIVE_INFINITY, null, ""),
                 "long", Arrays.asList(Long.MIN_VALUE, null, "")
             )
         )
@@ -223,7 +223,7 @@ public class IncrementalIndexTest
     Row row = index.iterator().next();
 
     Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.MAX_VALUE)}), row.getRaw("float"));
+    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.POSITIVE_INFINITY)}), row.getRaw("float"));
     Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}), row.getRaw("long"));
   }
 
