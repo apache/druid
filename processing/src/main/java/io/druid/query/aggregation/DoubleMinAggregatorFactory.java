@@ -41,8 +41,6 @@ import java.util.Objects;
  */
 public class DoubleMinAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x4;
-
   private final String name;
   private final String fieldName;
   private final String expression;
@@ -87,7 +85,13 @@ public class DoubleMinAggregatorFactory extends AggregatorFactory
 
   private DoubleColumnSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, Double.POSITIVE_INFINITY);
+    return AggregatorUtil.getDoubleColumnSelector(
+        metricFactory,
+        macroTable,
+        fieldName,
+        expression,
+        Double.POSITIVE_INFINITY
+    );
   }
 
   @Override
@@ -179,7 +183,7 @@ public class DoubleMinAggregatorFactory extends AggregatorFactory
     byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.DOUBLE_MIN_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)

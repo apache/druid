@@ -27,6 +27,7 @@ import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
@@ -44,8 +45,6 @@ import java.util.Objects;
 
 public class LongLastAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 19;
-
   private final String fieldName;
   private final String name;
 
@@ -197,7 +196,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
     return ByteBuffer.allocate(1 + fieldNameBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.LONG_LAST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .array();
   }

@@ -41,8 +41,6 @@ import java.util.Objects;
  */
 public class FloatMinAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0xE;
-
   private final String name;
   private final String fieldName;
   private final String expression;
@@ -179,7 +177,7 @@ public class FloatMinAggregatorFactory extends AggregatorFactory
     byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.FLOAT_MIN_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)
@@ -236,9 +234,6 @@ public class FloatMinAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (expression != null ? expression.hashCode() : 0);
-    result = 31 * result + (name != null ? name.hashCode() : 0);
-    return result;
+    return Objects.hash(fieldName, expression, name);
   }
 }

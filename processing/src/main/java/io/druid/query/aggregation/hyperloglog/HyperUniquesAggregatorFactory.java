@@ -28,6 +28,7 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
@@ -54,8 +55,6 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
 
     return ((HyperLogLogCollector) object).estimateCardinality();
   }
-
-  private static final byte CACHE_TYPE_ID = 0x5;
 
   private final String name;
   private final String fieldName;
@@ -214,7 +213,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(AggregatorUtil.HYPER_UNIQUE_CACHE_TYPE_ID).put(fieldNameBytes).array();
   }
 
   @Override

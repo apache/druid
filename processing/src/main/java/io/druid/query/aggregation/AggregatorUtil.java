@@ -37,6 +37,33 @@ import java.util.Set;
 public class AggregatorUtil
 {
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
+  public static final byte COUNT_CACHE_TYPE_ID = 0x0;
+  public static final byte LONG_SUM_CACHE_TYPE_ID = 0x1;
+  public static final byte DOUBLE_SUM_CACHE_TYPE_ID = 0x2;
+  public static final byte DOUBLE_MAX_CACHE_TYPE_ID = 0x3;
+  public static final byte DOUBLE_MIN_CACHE_TYPE_ID = 0x4;
+  public static final byte HYPER_UNIQUE_CACHE_TYPE_ID = 0x5;
+  public static final byte JS_CACHE_TYPE_ID = 0x6;
+  public static final byte HIST_CACHE_TYPE_ID = 0x7;
+  public static final byte CARD_CACHE_TYPE_ID = 0x8;
+  public static final byte FILTERED_AGG_CACHE_TYPE_ID = 0x9;
+  public static final byte LONG_MAX_CACHE_TYPE_ID = 0xA;
+  public static final byte LONG_MIN_CACHE_TYPE_ID = 0xB;
+  public static final byte FLOAT_SUM_CACHE_TYPE_ID = 0xC;
+  public static final byte FLOAT_MAX_CACHE_TYPE_ID = 0xD;
+  public static final byte FLOAT_MIN_CACHE_TYPE_ID = 0xE;
+  public static final byte SKETCH_MERGE_CACHE_TYPE_ID = 0xF;
+  public static final byte DISTINCT_COUNT_CACHE_KEY = 0x10;
+  public static final byte FLOAT_LAST_CACHE_TYPE_ID = 0x11;
+  public static final byte APPROX_HIST_CACHE_TYPE_ID = 0x12;
+  public static final byte APPROX_HIST_FOLDING_CACHE_TYPE_ID = 0x13;
+  public static final byte DOUBLE_FIRST_CACHE_TYPE_ID = 0x14;
+  public static final byte DOUBLE_LAST_CACHE_TYPE_ID = 0x15;
+  public static final byte FLOAT_FIRST_CACHE_TYPE_ID = 0x16;
+  public static final byte LONG_FIRST_CACHE_TYPE_ID = 0x17;
+  public static final byte LONG_LAST_CACHE_TYPE_ID = 0x18;
+  public static final byte TIMESTAMP_CACHE_TYPE_ID = 0x19;
+  public static final byte VARIANCE_CACHE_TYPE_ID = 0x1A;
 
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
