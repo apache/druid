@@ -85,7 +85,7 @@ public class FloatMinAggregatorFactory extends AggregatorFactory
 
   private FloatColumnSelector getFloatColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getFloatColumnSelector(metricFactory, macroTable, fieldName, expression, Float.MAX_VALUE);
+    return AggregatorUtil.getFloatColumnSelector(metricFactory, macroTable, fieldName, expression, Float.POSITIVE_INFINITY);
   }
 
   @Override

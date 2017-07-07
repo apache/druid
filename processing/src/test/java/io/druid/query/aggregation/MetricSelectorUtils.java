@@ -50,7 +50,7 @@ public class MetricSelectorUtils
       @Override
       public Class<Double> classOfObject()
       {
-        return Double.TYPE;
+        return Double.class;
       }
 
       @Override

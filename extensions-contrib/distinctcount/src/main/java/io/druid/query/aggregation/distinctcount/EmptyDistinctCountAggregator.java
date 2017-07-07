@@ -51,13 +51,19 @@ public class EmptyDistinctCountAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-  }
-
-  @Override
   public long getLong()
   {
     return (long) 0;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return (float) 0;
+  }
+
+  @Override
+  public void close()
+  {
   }
 }

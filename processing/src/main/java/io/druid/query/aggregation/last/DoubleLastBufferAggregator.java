@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation.last;
 
-import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;

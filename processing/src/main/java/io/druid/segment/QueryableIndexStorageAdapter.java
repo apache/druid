@@ -733,7 +733,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             @Override
                             public Class classOfObject()
                             {
-                              return Double.TYPE;
+                              return Double.class;
                             }
 
                             @Override
