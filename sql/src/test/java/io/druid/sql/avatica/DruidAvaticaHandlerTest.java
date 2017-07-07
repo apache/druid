@@ -255,7 +255,7 @@ public class DruidAvaticaHandlerTest
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
+                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{virtualColumns=[], aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null}]])\n"
             )
         ),
         getRows(resultSet)
@@ -340,7 +340,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "dim1"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -348,7 +348,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "dim2"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),

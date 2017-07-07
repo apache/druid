@@ -17,28 +17,45 @@
  * under the License.
  */
 
-package io.druid.sql.guice;
+package io.druid.sql.calcite.planner;
 
-import com.google.inject.Binder;
-import com.google.inject.multibindings.Multibinder;
-import io.druid.sql.calcite.aggregation.SqlAggregator;
-import io.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.calcite.sql.validate.SqlAbstractConformance;
 
-public class SqlBindings
+/**
+ * Implementation of Calcite {@code SqlConformance} for Druid.
+ */
+public class DruidConformance extends SqlAbstractConformance
 {
-  public static void addAggregator(
-      final Binder binder,
-      final Class<? extends SqlAggregator> aggregatorClass
-  )
+  private static final DruidConformance INSTANCE = new DruidConformance();
+
+  private DruidConformance()
   {
-    Multibinder.newSetBinder(binder, SqlAggregator.class).addBinding().to(aggregatorClass);
+    // Singleton.
   }
 
-  public static void addOperatorConversion(
-      final Binder binder,
-      final Class<? extends SqlOperatorConversion> clazz
-  )
+  public static DruidConformance instance()
   {
-    Multibinder.newSetBinder(binder, SqlOperatorConversion.class).addBinding().to(clazz);
+    return INSTANCE;
+  }
+
+  @Override
+  public boolean isBangEqualAllowed()
+  {
+    // For x != y (as an alternative to x <> y)
+    return true;
+  }
+
+  @Override
+  public boolean isSortByOrdinal()
+  {
+    // For ORDER BY 1
+    return true;
+  }
+
+  @Override
+  public boolean isSortByAlias()
+  {
+    // For ORDER BY columnAlias (where columnAlias is a "column AS columnAlias")
+    return true;
   }
 }

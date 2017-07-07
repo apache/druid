@@ -24,10 +24,10 @@ import com.google.inject.Inject;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
-import io.druid.sql.calcite.expression.SqlExtractionOperator;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSyntax;
@@ -43,12 +43,12 @@ public class DruidOperatorTable implements SqlOperatorTable
   private static final SqlStdOperatorTable STANDARD_TABLE = SqlStdOperatorTable.instance();
 
   private final Map<String, SqlAggregator> aggregators;
-  private final Map<String, SqlExtractionOperator> extractionOperators;
+  private final Map<String, SqlOperatorConversion> extractionOperators;
 
   @Inject
   public DruidOperatorTable(
       final Set<SqlAggregator> aggregators,
-      final Set<SqlExtractionOperator> extractionOperators
+      final Set<SqlOperatorConversion> extractionOperators
   )
   {
     this.aggregators = Maps.newHashMap();
@@ -61,24 +61,29 @@ public class DruidOperatorTable implements SqlOperatorTable
       }
     }
 
-    for (SqlExtractionOperator extractionFunction : extractionOperators) {
-      final String lcname = StringUtils.toLowerCase(extractionFunction.calciteFunction().getName());
+    for (SqlOperatorConversion extractionFunction : extractionOperators) {
+      final String lcname = StringUtils.toLowerCase(extractionFunction.calciteOperator().getName());
       if (this.aggregators.containsKey(lcname) || this.extractionOperators.put(lcname, extractionFunction) != null) {
         throw new ISE("Cannot have two operators with name[%s]", lcname);
       }
     }
   }
 
-  public SqlAggregator lookupAggregator(final String opName)
+  public SqlAggregator lookupAggregator(final SqlAggFunction aggFunction)
   {
-    return aggregators.get(StringUtils.toLowerCase(opName));
+    final SqlAggregator sqlAggregator = aggregators.get(StringUtils.toLowerCase(aggFunction.getName()));
+    if (sqlAggregator != null && sqlAggregator.calciteFunction().equals(aggFunction)) {
+      return sqlAggregator;
+    } else {
+      return null;
+    }
   }
 
-  public SqlExtractionOperator lookupExtractionOperator(final SqlKind kind, final String opName)
+  public SqlOperatorConversion lookupOperatorConversion(final SqlOperator operator)
   {
-    final SqlExtractionOperator extractionOperator = extractionOperators.get(StringUtils.toLowerCase(opName));
-    if (extractionOperator != null && extractionOperator.calciteFunction().getKind() == kind) {
-      return extractionOperator;
+    final SqlOperatorConversion operatorConversion = extractionOperators.get(StringUtils.toLowerCase(operator.getName()));
+    if (operatorConversion != null && operatorConversion.calciteOperator().equals(operator)) {
+      return operatorConversion;
     } else {
       return null;
     }
@@ -98,10 +103,9 @@ public class DruidOperatorTable implements SqlOperatorTable
         operatorList.add(aggregator.calciteFunction());
       }
 
-      final SqlExtractionOperator extractionFunction =
-          extractionOperators.get(StringUtils.toLowerCase(opName.getSimple()));
+      final SqlOperatorConversion extractionFunction = extractionOperators.get(StringUtils.toLowerCase(opName.getSimple()));
       if (extractionFunction != null) {
-        operatorList.add(extractionFunction.calciteFunction());
+        operatorList.add(extractionFunction.calciteOperator());
       }
     }
 
@@ -115,8 +119,8 @@ public class DruidOperatorTable implements SqlOperatorTable
     for (SqlAggregator aggregator : aggregators.values()) {
       retVal.add(aggregator.calciteFunction());
     }
-    for (SqlExtractionOperator extractionFunction : extractionOperators.values()) {
-      retVal.add(extractionFunction.calciteFunction());
+    for (SqlOperatorConversion extractionFunction : extractionOperators.values()) {
+      retVal.add(extractionFunction.calciteOperator());
     }
     retVal.addAll(STANDARD_TABLE.getOperatorList());
     return retVal;
