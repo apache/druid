@@ -34,7 +34,10 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
 {
   private final String dimensionName;
 
-  public DoubleDimensionHandler(String dimensionName) {this.dimensionName = dimensionName;}
+  public DoubleDimensionHandler(String dimensionName)
+  {
+    this.dimensionName = dimensionName;
+  }
 
   @Override
   public String getDimensionName()
@@ -81,7 +84,12 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   ) throws SegmentValidationException
   {
     if (!lhs.equals(rhs)) {
-      throw new SegmentValidationException("Dim [%s] value not equal. Expected [%s] found [%s]", lhs, rhs);
+      throw new SegmentValidationException(
+          "Dim [%s] value not equal. Expected [%s] found [%s]",
+          dimensionName,
+          lhs,
+          rhs
+      );
     }
   }
 
@@ -94,6 +102,6 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   @Override
   public Double getEncodedKeyComponentFromColumn(Closeable column, int currRow)
   {
-    return ((GenericColumn)column).getDoubleSingleValueRow(currRow);
+    return ((GenericColumn) column).getDoubleSingleValueRow(currRow);
   }
 }

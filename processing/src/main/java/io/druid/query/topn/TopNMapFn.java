@@ -33,6 +33,10 @@ import java.util.Objects;
 
 public class TopNMapFn
 {
+  public static final long ZERO_LONG = 0L;
+  public static final double ZERO_DOUBLE = 0.0d;
+  public static final float ZERO_FLOAT = 0.0f;
+
   public static Function<Object, Object> getValueTransformer(ValueType outputType)
   {
     switch (outputType) {
@@ -53,17 +57,16 @@ public class TopNMapFn
 
   private static Function<Object, Object> LONG_TRANSFORMER = input -> {
     final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
-    return longVal == null ? 0L : longVal;
+    return longVal == null ? ZERO_LONG : longVal;
   };
 
   private static Function<Object, Object> FLOAT_TRANSFORMER = input -> {
     final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
-    return floatVal == null ? 0.0f : floatVal;
+    return floatVal == null ? ZERO_FLOAT : floatVal;
   };
-
   private static Function<Object, Object> DOUBLE_TRANSFORMER = input -> {
-    final Double aDouble = DimensionHandlerUtils.convertObjectToDouble(input);
-    return aDouble == null ? 0.0d : aDouble;
+    final Double doubleValue = DimensionHandlerUtils.convertObjectToDouble(input);
+    return doubleValue == null ? ZERO_DOUBLE : doubleValue;
   };
 
   private static final TopNColumnSelectorStrategyFactory STRATEGY_FACTORY = new TopNColumnSelectorStrategyFactory();

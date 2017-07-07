@@ -84,6 +84,12 @@ public class FloatSumAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) sum;
+  }
+
+  @Override
   public Aggregator clone()
   {
     return new FloatSumAggregator(selector);
@@ -93,11 +99,5 @@ public class FloatSumAggregator implements Aggregator
   public void close()
   {
     // no resources to cleanup
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return (double) sum;
   }
 }

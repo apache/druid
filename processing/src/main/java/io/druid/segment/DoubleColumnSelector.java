@@ -19,10 +19,12 @@
 
 package io.druid.segment;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
 
-public interface DoubleColumnSelector  extends ColumnValueSelector, HotLoopCallee
+public interface DoubleColumnSelector extends ColumnValueSelector, HotLoopCallee
 {
+  @CalledFromHotLoop
   double get();
 }

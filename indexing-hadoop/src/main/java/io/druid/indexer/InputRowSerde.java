@@ -216,8 +216,7 @@ public class InputRowSerde
           event.put(metric, WritableUtils.readVLong(in));
         } else if (type.equals("double")) {
           event.put(metric, in.readDouble());
-        }
-        else {
+        } else {
           ComplexMetricSerde serde = getComplexMetricSerde(type);
           byte[] value = readBytes(in);
           event.put(metric, serde.fromBytes(value, 0, value.length));

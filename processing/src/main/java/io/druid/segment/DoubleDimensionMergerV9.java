@@ -91,7 +91,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   @Override
   public void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException
   {
-
+    // double columns do not have additional metadata
   }
 
   @Override
@@ -109,12 +109,13 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
   {
-
+    // double columns do not have indexes
   }
 
   @Override
   public boolean canSkip()
   {
+    // can not be all null
     return false;
   }
 }

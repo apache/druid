@@ -136,29 +136,6 @@ public class MapBasedRow implements Row
   }
 
   @Override
-  public double getDoubleMetric(String metric)
-  {
-    Object metricValue = event.get(metric);
-
-    if (metricValue == null) {
-      return 0.0d;
-    }
-
-    if (metricValue instanceof Number) {
-      return ((Number) metricValue).doubleValue();
-    } else if (metricValue instanceof String) {
-      try {
-        return Double.valueOf(((String) metricValue).replace(",", ""));
-      }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
-      }
-    } else {
-      throw new ParseException("Unknown type[%s]", metricValue.getClass());
-    }
-  }
-
-  @Override
   public long getLongMetric(String metric)
   {
     Object metricValue = event.get(metric);
@@ -173,6 +150,29 @@ public class MapBasedRow implements Row
       try {
         String s = ((String) metricValue).replace(",", "");
         return LONG_PAT.matcher(s).matches() ? Long.valueOf(s) : Double.valueOf(s).longValue();
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s]", metricValue.getClass());
+    }
+  }
+
+  @Override
+  public double getDoubleMetric(String metric)
+  {
+    Object metricValue = event.get(metric);
+
+    if (metricValue == null) {
+      return 0.0d;
+    }
+
+    if (metricValue instanceof Number) {
+      return ((Number) metricValue).doubleValue();
+    } else if (metricValue instanceof String) {
+      try {
+        return Double.valueOf(((String) metricValue).replace(",", ""));
       }
       catch (Exception e) {
         throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);

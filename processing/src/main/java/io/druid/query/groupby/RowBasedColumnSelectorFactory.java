@@ -460,21 +460,6 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
     }
   }
 
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String columnName)
-  {
-    if (Column.TIME_COLUMN_NAME.equals(columnName)) {
-      // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
-    } else {
-      final ValueType valueType = rowSignature.get(columnName);
-
-      // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
-      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType) : null;
-    }
-  }
-
   @Override
   public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
   {
@@ -505,6 +490,21 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
           return row.get().getDoubleMetric(columnName);
         }
       };
+    }
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String columnName)
+  {
+    if (Column.TIME_COLUMN_NAME.equals(columnName)) {
+      // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
+      return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
+    } else {
+      final ValueType valueType = rowSignature.get(columnName);
+
+      // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
+      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType) : null;
     }
   }
 }

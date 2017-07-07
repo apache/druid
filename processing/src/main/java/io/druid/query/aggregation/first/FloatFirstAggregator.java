@@ -83,15 +83,15 @@ public class FloatFirstAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-
-  }
-
-  @Override
   public long getLong()
   {
     return (long) firstValue;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }
 

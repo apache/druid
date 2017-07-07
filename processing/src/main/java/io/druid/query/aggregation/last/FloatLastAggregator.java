@@ -75,12 +75,6 @@ public class FloatLastAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-
-  }
-
-  @Override
   public long getLong()
   {
     return (long) lastValue;
@@ -90,5 +84,11 @@ public class FloatLastAggregator implements Aggregator
   public double getDouble()
   {
     return (double) lastValue;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }

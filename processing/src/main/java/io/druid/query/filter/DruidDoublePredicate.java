@@ -22,9 +22,9 @@ package io.druid.query.filter;
 
 public interface DruidDoublePredicate
 {
-  DruidDoublePredicate ALWAYS_FALSE = input -> {return false;};
+  DruidDoublePredicate ALWAYS_FALSE = input -> false;
 
-  DruidDoublePredicate ALWAYS_TRUE = input -> {return true;};
+  DruidDoublePredicate ALWAYS_TRUE = input -> true;
 
   boolean applyDouble(double input);
 }

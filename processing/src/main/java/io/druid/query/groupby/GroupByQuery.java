@@ -411,7 +411,7 @@ public class GroupByQuery extends BaseQuery<Row>
         dimsInOrderBy.add(dimIndex);
         needsReverseList.add(needsReverse);
         final ValueType type = dimensions.get(dimIndex).getOutputType();
-        isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE);
+        isNumericField.add(ValueType.isNumeric(type));
         comparators.add(orderSpec.getDimensionComparator());
       }
     }
@@ -421,7 +421,7 @@ public class GroupByQuery extends BaseQuery<Row>
         orderedFieldNames.add(dimensions.get(i).getOutputName());
         needsReverseList.add(false);
         final ValueType type = dimensions.get(i).getOutputType();
-        isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE);
+        isNumericField.add(ValueType.isNumeric(type));
         comparators.add(StringComparators.LEXICOGRAPHIC);
       }
     }

@@ -27,10 +27,7 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
-/**
- * Created by sbouguerra on 6/20/17.
- */
-public class DoubleDimensionIndexer<EncodedType extends Comparable<EncodedType>, EncodedKeyComponentType, ActualType extends Comparable<ActualType>> implements DimensionIndexer<Double, Double, Double>
+public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
   @Override
   public ValueType getValueType()

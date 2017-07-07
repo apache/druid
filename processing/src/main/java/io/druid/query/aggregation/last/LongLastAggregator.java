@@ -81,14 +81,14 @@ public class LongLastAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-
-  }
-
-  @Override
   public long getLong()
   {
     return lastValue;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }

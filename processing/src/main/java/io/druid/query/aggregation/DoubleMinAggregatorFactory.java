@@ -87,7 +87,7 @@ public class DoubleMinAggregatorFactory extends AggregatorFactory
 
   private DoubleColumnSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, Float.MAX_VALUE);
+    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, Double.MAX_VALUE);
   }
 
   @Override
@@ -236,9 +236,6 @@ public class DoubleMinAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (expression != null ? expression.hashCode() : 0);
-    result = 31 * result + (name != null ? name.hashCode() : 0);
-    return result;
+    return Objects.hash(fieldName, expression, name);
   }
 }

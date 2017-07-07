@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
@@ -65,7 +66,7 @@ public class DoubleColumnSerializer implements GenericColumnSerializer
   {
     writer = CompressionFactory.getDoubleSerializer(
         ioPeon,
-        String.format("%s.double_column", filenameBase),
+        StringUtils.format("%s.double_column", filenameBase),
         byteOrder,
         compression
     );

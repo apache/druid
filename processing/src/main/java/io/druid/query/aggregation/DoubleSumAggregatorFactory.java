@@ -87,7 +87,7 @@ public class DoubleSumAggregatorFactory extends AggregatorFactory
 
   private DoubleColumnSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, 0f);
+    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, 0.0);
   }
 
   @Override

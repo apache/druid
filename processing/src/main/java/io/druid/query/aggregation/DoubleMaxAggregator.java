@@ -76,6 +76,12 @@ public class DoubleMaxAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return max;
+  }
+
+  @Override
   public Aggregator clone()
   {
     return new DoubleMaxAggregator(selector);
@@ -87,9 +93,4 @@ public class DoubleMaxAggregator implements Aggregator
     // no resources to cleanup
   }
 
-  @Override
-  public double getDouble()
-  {
-    return max;
-  }
 }

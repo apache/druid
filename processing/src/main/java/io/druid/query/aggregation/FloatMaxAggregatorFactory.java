@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Floats;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
@@ -86,7 +85,7 @@ public class FloatMaxAggregatorFactory extends AggregatorFactory
 
   private FloatColumnSelector getFloatColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getFloatColumnSelector(metricFactory, macroTable, fieldName, expression, Float.MIN_VALUE);
+    return AggregatorUtil.getFloatColumnSelector(metricFactory, macroTable, fieldName, expression, Float.NEGATIVE_INFINITY);
   }
 
   @Override
@@ -189,7 +188,7 @@ public class FloatMaxAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Floats.BYTES;
+    return Float.BYTES;
   }
 
   @Override
@@ -230,9 +229,6 @@ public class FloatMaxAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (expression != null ? expression.hashCode() : 0);
-    result = 31 * result + (name != null ? name.hashCode() : 0);
-    return result;
+    return Objects.hash(fieldName, expression, name);
   }
 }

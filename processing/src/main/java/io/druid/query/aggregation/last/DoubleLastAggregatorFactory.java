@@ -22,7 +22,6 @@ package io.druid.query.aggregation.last;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
@@ -42,6 +41,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class DoubleLastAggregatorFactory extends AggregatorFactory
 {
@@ -196,10 +196,9 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(2 + fieldNameBytes.length)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(fieldNameBytes)
-                     .put((byte)0xff)
                      .array();
   }
 
@@ -212,7 +211,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES + Doubles.BYTES;
+    return Long.BYTES + Double.BYTES;
   }
 
   @Override
@@ -233,9 +232,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    int result = name.hashCode();
-    result = 31 * result + fieldName.hashCode();
-    return result;
+    return Objects.hash(name, fieldName);
   }
 
   @Override

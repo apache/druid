@@ -86,7 +86,7 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
 
   private DoubleColumnSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, Float.MIN_VALUE);
+    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, Double.NEGATIVE_INFINITY);
   }
 
   @Override

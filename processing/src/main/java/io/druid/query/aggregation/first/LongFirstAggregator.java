@@ -82,14 +82,14 @@ public class LongFirstAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-
-  }
-
-  @Override
   public long getLong()
   {
     return firstValue;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }

@@ -20,7 +20,6 @@
 package io.druid.query.groupby.epinephelinae.column;
 
 
-import com.google.common.primitives.Doubles;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DoubleColumnSelector;
 
@@ -32,7 +31,7 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public int getGroupingKeySize()
   {
-    return Doubles.BYTES;
+    return Double.BYTES;
   }
 
   @Override

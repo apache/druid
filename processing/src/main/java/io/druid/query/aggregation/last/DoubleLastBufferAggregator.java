@@ -43,7 +43,7 @@ public class DoubleLastBufferAggregator implements BufferAggregator
   public void init(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MIN_VALUE);
-    buf.putDouble(position + Longs.BYTES, 0);
+    buf.putDouble(position + Long.BYTES, 0);
   }
 
   @Override
@@ -53,32 +53,32 @@ public class DoubleLastBufferAggregator implements BufferAggregator
     long lastTime = buf.getLong(position);
     if (time >= lastTime) {
       buf.putLong(position, time);
-      buf.putDouble(position + Longs.BYTES, valueSelector.get());
+      buf.putDouble(position + Long.BYTES, valueSelector.get());
     }
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(buf.getLong(position), buf.getDouble(position + Longs.BYTES));
+    return new SerializablePair<>(buf.getLong(position), buf.getDouble(position + Long.BYTES));
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getDouble(position + Longs.BYTES);
+    return (float) buf.getDouble(position + Long.BYTES);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.getDouble(position + Longs.BYTES);
+    return (long) buf.getDouble(position + Long.BYTES);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return buf.getDouble(position + Longs.BYTES);
+    return buf.getDouble(position + Long.BYTES);
   }
 
   @Override

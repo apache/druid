@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation.first;
 
-import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -43,7 +42,7 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   public void init(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MAX_VALUE);
-    buf.putDouble(position + Longs.BYTES, 0);
+    buf.putDouble(position + Long.BYTES, 0);
   }
 
   @Override
@@ -53,32 +52,32 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
     long firstTime = buf.getLong(position);
     if (time < firstTime) {
       buf.putLong(position, time);
-      buf.putDouble(position + Longs.BYTES, valueSelector.get());
+      buf.putDouble(position + Long.BYTES, valueSelector.get());
     }
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(buf.getLong(position), buf.getDouble(position + Longs.BYTES));
+    return new SerializablePair<>(buf.getLong(position), buf.getDouble(position + Long.BYTES));
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getDouble(position + Longs.BYTES);
+    return (float) buf.getDouble(position + Long.BYTES);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.getDouble(position + Longs.BYTES);
+    return (long) buf.getDouble(position + Long.BYTES);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return buf.getDouble(position + Longs.BYTES);
+    return buf.getDouble(position + Long.BYTES);
   }
 
   @Override

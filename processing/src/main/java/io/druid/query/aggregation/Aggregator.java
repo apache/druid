@@ -40,13 +40,9 @@ public interface Aggregator extends Closeable
   void reset();
   Object get();
   float getFloat();
+  long getLong();
+  double getDouble();
 
   @Override
   void close();
-
-  long getLong();
-
-  default double getDouble() {
-    throw new UnsupportedOperationException();
-  }
 }

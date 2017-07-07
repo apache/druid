@@ -33,9 +33,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 
-public class DoubleTopNColumnSelectorStrategy implements TopNColumnSelectorStrategy <DoubleColumnSelector, Long2ObjectMap<Aggregator[]>>
+public class DoubleTopNColumnSelectorStrategy
+    implements TopNColumnSelectorStrategy<DoubleColumnSelector, Long2ObjectMap<Aggregator[]>>
 {
 
   @Override
@@ -55,7 +55,7 @@ public class DoubleTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
       TopNQuery query, TopNParams params, Capabilities capabilities
   )
   {
-    return new Aggregator[0][];
+    return null;
   }
 
   @Override
@@ -81,9 +81,12 @@ public class DoubleTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
         aggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
         aggregatesStore.put(key, aggregators);
       }
-      Arrays.stream(aggregators).forEach(aggregator -> aggregator.aggregate());
+      for (Aggregator aggregator:
+           aggregators) {
+        aggregator.aggregate();
+      }
       cursor.advance();
-      processedRows ++;
+      processedRows++;
     }
     return processedRows;
   }

@@ -92,15 +92,15 @@ public class TimestampAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-    // no resource to cleanup
-  }
-
-  @Override
   public long getLong()
   {
     return most;
+  }
+
+  @Override
+  public void close()
+  {
+    // no resource to cleanup
   }
 
   @Override

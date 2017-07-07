@@ -65,7 +65,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -475,33 +474,6 @@ public class RowBasedGrouperHelper
     }
   }
 
-  private static class LongInputRawSupplierColumnSelectorStrategy
-      implements InputRawSupplierColumnSelectorStrategy<LongColumnSelector>
-  {
-    @Override
-    public Supplier<Comparable> makeInputRawSupplier(LongColumnSelector selector)
-    {
-      return () -> selector.get();
-    }
-  }
-
-  private static class FloatInputRawSupplierColumnSelectorStrategy
-      implements InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>
-  {
-    @Override
-    public Supplier<Comparable> makeInputRawSupplier(FloatColumnSelector selector)
-    {
-      return () -> selector.get();
-    }
-  }
-  private static class DoubleInputRawSupplierColumnSelectorStrategy implements InputRawSupplierColumnSelectorStrategy<DoubleColumnSelector> {
-    @Override
-    public Supplier<Comparable> makeInputRawSupplier(DoubleColumnSelector selector)
-    {
-      return ()-> selector.get();
-    }
-  }
-
   private static class InputRawSupplierColumnSelectorStrategyFactory
     implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
@@ -515,11 +487,11 @@ public class RowBasedGrouperHelper
         case STRING:
           return new StringInputRawSupplierColumnSelectorStrategy();
         case LONG:
-          return new LongInputRawSupplierColumnSelectorStrategy();
+          return (InputRawSupplierColumnSelectorStrategy<LongColumnSelector>) columnSelector -> columnSelector::get;
         case FLOAT:
-          return new FloatInputRawSupplierColumnSelectorStrategy();
+          return (InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>) columnSelector -> columnSelector::get;
         case DOUBLE:
-          return new DoubleInputRawSupplierColumnSelectorStrategy();
+          return (InputRawSupplierColumnSelectorStrategy<DoubleColumnSelector>) columnSelector -> columnSelector::get;
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -561,40 +533,28 @@ public class RowBasedGrouperHelper
       type = type == null ? ValueType.STRING : type;
       switch (type) {
         case STRING:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              return input == null ? "" : input.toString();
-            }
-          };
+          functions[i] = input -> input == null ? "" : input.toString();
           break;
 
         case LONG:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              final Long val = DimensionHandlerUtils.convertObjectToLong(input);
-              return val == null ? 0L : val;
-            }
+          functions[i] = input -> {
+            final Long val = DimensionHandlerUtils.convertObjectToLong(input);
+            return val == null ? 0L : val;
           };
           break;
 
         case FLOAT:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
-              return val == null ? 0.f : val;
-            }
+          functions[i] = input -> {
+            final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
+            return val == null ? 0.f : val;
           };
           break;
 
+        case DOUBLE:
+          functions[i] = input -> {
+            Double val = DimensionHandlerUtils.convertObjectToDouble(input);
+            return val == null ? 0.0 : val;
+          };
         default:
           throw new IAE("invalid type: [%s]", type);
       }
@@ -727,7 +687,7 @@ public class RowBasedGrouperHelper
             needsReverses.add(needsReverse);
             aggFlags.add(true);
             final String typeName = aggregatorFactories[aggIndex].getTypeName();
-            isNumericField.add(typeName.equals("long") || typeName.equals("float") || typeName.equals("double"));
+            isNumericField.add(ValueType.isNumeric(ValueType.fromString(typeName)));
             comparators.add(orderSpec.getDimensionComparator());
           }
         }
@@ -739,7 +699,7 @@ public class RowBasedGrouperHelper
           aggFlags.add(false);
           needsReverses.add(false);
           final ValueType type = dimensions.get(i).getOutputType();
-          isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE);
+          isNumericField.add(ValueType.isNumeric(type));
           comparators.add(StringComparators.LEXICOGRAPHIC);
         }
       }

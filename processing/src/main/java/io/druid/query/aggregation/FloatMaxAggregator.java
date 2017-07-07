@@ -76,6 +76,12 @@ public class FloatMaxAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) max;
+  }
+
+  @Override
   public Aggregator clone()
   {
     return new FloatMaxAggregator(selector);
@@ -85,11 +91,5 @@ public class FloatMaxAggregator implements Aggregator
   public void close()
   {
     // no resources to cleanup
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return (double) max;
   }
 }

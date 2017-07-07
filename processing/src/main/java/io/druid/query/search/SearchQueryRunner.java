@@ -192,14 +192,14 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     @Override
     public void updateSearchResultSet(
         String outputName,
-        DoubleColumnSelector dimSelector,
+        DoubleColumnSelector selector,
         SearchQuerySpec searchQuerySpec,
         int limit,
         Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (dimSelector != null) {
-        final String dimVal = String.valueOf(dimSelector.get());
+      if (selector != null) {
+        final String dimVal = String.valueOf(selector.get());
         if (searchQuerySpec.accept(dimVal)) {
           set.addTo(new SearchHit(outputName, dimVal), 1);
         }

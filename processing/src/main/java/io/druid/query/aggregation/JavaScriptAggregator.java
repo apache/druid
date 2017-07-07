@@ -81,14 +81,14 @@ public class JavaScriptAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-    script.close();
-  }
-
-  @Override
   public double getDouble()
   {
     return current;
+  }
+
+  @Override
+  public void close()
+  {
+    script.close();
   }
 }

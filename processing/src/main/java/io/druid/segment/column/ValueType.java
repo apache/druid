@@ -40,4 +40,12 @@ public enum ValueType
     }
     return valueOf(StringUtils.toUpperCase(name));
   }
+
+  public static boolean isNumeric(ValueType type)
+  {
+    if (type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE) {
+      return true;
+    }
+    return false;
+  }
 }

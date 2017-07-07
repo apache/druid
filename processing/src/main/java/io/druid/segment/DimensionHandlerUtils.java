@@ -41,6 +41,11 @@ import java.util.List;
 
 public final class DimensionHandlerUtils
 {
+
+  public static final double ZERO_DOUBLE = 0.0d;
+  public static final float ZERO_FLOAT = 0.0f;
+  public static final long ZERO_LONG = 0L;
+
   private DimensionHandlerUtils() {}
 
   public final static ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
@@ -234,7 +239,7 @@ public final class DimensionHandlerUtils
   public static Long convertObjectToLong(Object valObj)
   {
     if (valObj == null) {
-      return 0L;
+      return ZERO_LONG;
     }
 
     if (valObj instanceof Long) {
@@ -251,7 +256,7 @@ public final class DimensionHandlerUtils
   public static Float convertObjectToFloat(Object valObj)
   {
     if (valObj == null) {
-      return 0.0f;
+      return ZERO_FLOAT;
     }
 
     if (valObj instanceof Float) {
@@ -304,7 +309,7 @@ public final class DimensionHandlerUtils
   public static Double convertObjectToDouble(Object valObj)
   {
     if (valObj == null) {
-      return 0.0d;
+      return ZERO_DOUBLE;
     }
 
     if (valObj instanceof Double) {
