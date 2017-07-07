@@ -1988,7 +1988,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{18L, 3.295836866004329, 2, 12, 3f + (double) ((float) Math.log(5.0))}
+            new Object[]{18L, 3.295836866004329, 2, 12, 3f + (Math.log(5.0))}
         )
     );
   }
