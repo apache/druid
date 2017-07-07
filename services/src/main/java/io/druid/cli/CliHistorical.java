@@ -82,6 +82,7 @@ public class CliHistorical extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8283);
 
             // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
             LifecycleModule.register(binder, Server.class);

@@ -153,6 +153,7 @@ public class MemcachedCacheTest
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
                 binder.bind(MemcachedCacheConfig.class).toInstance(config);
                 binder.bind(Cache.class).toProvider(MemcachedProviderWithConfig.class).in(ManageLifecycle.class);
@@ -186,6 +187,7 @@ public class MemcachedCacheTest
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
                 binder.bind(Cache.class).toProvider(CacheProvider.class);
                 JsonConfigProvider.bind(binder, uuid, CacheProvider.class);

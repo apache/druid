@@ -68,7 +68,7 @@ public class OverlordRedirectInfoTest
   {
     EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(null).anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("query", "/request");
+    URL url = redirectInfo.getRedirectURL("http","query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(taskMaster);
   }
@@ -78,7 +78,7 @@ public class OverlordRedirectInfoTest
   {
     EasyMock.expect(taskMaster.getCurrentLeader()).andReturn("").anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("query", "/request");
+    URL url = redirectInfo.getRedirectURL("http", "query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(taskMaster);
   }
@@ -91,7 +91,7 @@ public class OverlordRedirectInfoTest
     String request = "/request";
     EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL(query, request);
+    URL url = redirectInfo.getRedirectURL("http", query, request);
     Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
     EasyMock.verify(taskMaster);
   }

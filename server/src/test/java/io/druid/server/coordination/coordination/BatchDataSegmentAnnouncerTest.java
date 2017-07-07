@@ -106,6 +106,7 @@ public class BatchDataSegmentAnnouncerTest
         new DruidServerMetadata(
             "id",
             "host",
+            null,
             Long.MAX_VALUE,
             ServerType.HISTORICAL,
             "tier",

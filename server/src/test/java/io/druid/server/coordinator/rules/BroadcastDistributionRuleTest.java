@@ -107,6 +107,7 @@ public class BroadcastDistributionRuleTest
         new DruidServer(
             "serverHot2",
             "hostHot2",
+            null,
             1000,
             ServerType.HISTORICAL,
             "hot",
@@ -121,6 +122,7 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverHot1",
                 "hostHot1",
+                null,
                 1000,
                 ServerType.HISTORICAL,
                 "hot",
@@ -135,6 +137,7 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverNorm1",
                 "hostNorm1",
+                null,
                 1000,
                 ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
@@ -149,6 +152,7 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverNorm2",
                 "hostNorm2",
+                null,
                 100,
                 ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
@@ -164,6 +168,7 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverHot3",
                 "hostHot3",
+                null,
                 1000,
                 ServerType.HISTORICAL,
                 "hot",
@@ -178,6 +183,7 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverNorm3",
                 "hostNorm3",
+                null,
                 100,
                 ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,

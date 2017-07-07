@@ -82,6 +82,7 @@ public abstract class JsonConfigTesterBase<T>
     {
       binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
       binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+      binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
       JsonConfigProvider.bind(binder, configPrefix, clazz);
     }
   };

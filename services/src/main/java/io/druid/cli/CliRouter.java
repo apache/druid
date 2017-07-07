@@ -84,6 +84,7 @@ public class CliRouter extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9088);
 
             JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
 

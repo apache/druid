@@ -71,6 +71,7 @@ public class WorkerResourceTest
     cf.create().creatingParentsIfNeeded().forPath(basePath);
 
     worker = new Worker(
+        "http",
         "host",
         "ip",
         3,

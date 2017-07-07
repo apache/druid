@@ -72,6 +72,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   private static final List<String> TEST_IDS = Lists.newArrayList("test-id1", "test-id2", "test-id3", "test-id4");
   private static final String TEST_HOST = "test-host";
   private static final int TEST_PORT = 1234;
+  private static final int TEST_TLS_PORT = -1;
   private static final String TEST_DATASOURCE = "test-datasource";
   private static final Duration TEST_HTTP_TIMEOUT = new Duration(5000);
   private static final long TEST_NUM_RETRIES = 0;
@@ -106,11 +107,11 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     headers = createMock(HttpHeaders.class);
 
     client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider);
-    expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT)).anyTimes();
+    expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT)).anyTimes();
     expect(taskInfoProvider.getTaskStatus(TEST_ID)).andReturn(Optional.of(TaskStatus.running(TEST_ID))).anyTimes();
 
     for (int i = 0; i < TEST_IDS.size(); i++) {
-      expect(taskInfoProvider.getTaskLocation(TEST_IDS.get(i))).andReturn(new TaskLocation(TEST_HOST, TEST_PORT))
+      expect(taskInfoProvider.getTaskLocation(TEST_IDS.get(i))).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
                                                                .anyTimes();
       expect(taskInfoProvider.getTaskStatus(TEST_IDS.get(i))).andReturn(Optional.of(TaskStatus.running(TEST_IDS.get(i))))
                                                              .anyTimes();
@@ -149,7 +150,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   public void testTaskNotRunnableException() throws Exception
   {
     reset(taskInfoProvider);
-    expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT)).anyTimes();
+    expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT)).anyTimes();
     expect(taskInfoProvider.getTaskStatus(TEST_ID)).andReturn(Optional.of(TaskStatus.failure(TEST_ID))).anyTimes();
     replayAll();
 

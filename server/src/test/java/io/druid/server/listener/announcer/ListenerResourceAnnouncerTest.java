@@ -19,12 +19,12 @@
 
 package io.druid.server.listener.announcer;
 
-import com.google.common.net.HostAndPort;
 import com.google.common.primitives.Longs;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
 import io.druid.segment.CloserRule;
+import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 import org.easymock.EasyMock;
@@ -70,7 +70,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
     Assert.assertNotNull(curator.create().forPath("/druid"));
     Assert.assertTrue(curator.blockUntilConnected(10, TimeUnit.SECONDS));
     final Announcer announcer = new Announcer(curator, executorService);
-    final HostAndPort node = HostAndPort.fromString("localhost");
+    final HostAndPortWithScheme node = HostAndPortWithScheme.fromString("localhost");
     final ListenerResourceAnnouncer listenerResourceAnnouncer = new ListenerResourceAnnouncer(
         announcer,
         listeningAnnouncerConfig,
@@ -90,7 +90,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
       }
     });
     Assert.assertNotNull(curator.checkExists().forPath(announcePath));
-    final String nodePath = ZKPaths.makePath(announcePath, node.getHostText());
+    final String nodePath = ZKPaths.makePath(announcePath, String.format("%s:%s", node.getScheme(), node.getHostText()));
     Assert.assertNotNull(curator.checkExists().forPath(nodePath));
     Assert.assertEquals(Longs.BYTES, curator.getData().decompressed().forPath(nodePath).length);
     Assert.assertNull(curator.checkExists()
@@ -111,7 +111,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
   public void testStartCorrect() throws Exception
   {
     final Announcer announcer = EasyMock.createStrictMock(Announcer.class);
-    final HostAndPort node = HostAndPort.fromString("some_host");
+    final HostAndPortWithScheme node = HostAndPortWithScheme.fromString("some_host");
 
     final ListenerResourceAnnouncer resourceAnnouncer = new ListenerResourceAnnouncer(
         announcer,
@@ -124,7 +124,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
 
 
     announcer.announce(
-        EasyMock.eq(ZKPaths.makePath(announcePath, node.getHostText())),
+        EasyMock.eq(ZKPaths.makePath(announcePath, String.format("%s:%s", node.getScheme(), node.getHostText()))),
         EasyMock.aryEq(resourceAnnouncer.getAnnounceBytes())
     );
     EasyMock.expectLastCall().once();
