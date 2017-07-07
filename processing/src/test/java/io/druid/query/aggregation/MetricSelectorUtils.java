@@ -32,7 +32,7 @@ public class MetricSelectorUtils
       @Override
       public Class<Float> classOfObject()
       {
-        return Float.TYPE;
+        return Float.class;
       }
 
       @Override

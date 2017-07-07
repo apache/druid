@@ -20,34 +20,33 @@
 package io.druid.sql.calcite.expression;
 
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlOperator;
 
-import java.util.List;
-
-public interface SqlExtractionOperator
+public interface SqlOperatorConversion
 {
   /**
-   * Returns the SQL operator corresponding to this aggregation function. Should be a singleton.
+   * Returns the SQL operator corresponding to this function. Should be a singleton.
    *
    * @return operator
    */
-  SqlFunction calciteFunction();
+  SqlOperator calciteOperator();
 
   /**
-   * Returns the Druid {@link RowExtraction} corresponding to a SQL {@code RexNode}.
+   * Translate a Calcite {@code RexNode} to a Druid expression.
    *
    * @param plannerContext SQL planner context
-   * @param rowOrder       order of fields in the Druid rows to be extracted from
-   * @param expression     expression meant to be applied on top of the table
+   * @param rowSignature   signature of the rows to be extracted from
+   * @param rexNode        expression meant to be applied on top of the rows
    *
-   * @return (columnName, extractionFn) or null
+   * @return Druid expression, or null if translation is not possible
    *
-   * @see Expressions#toRowExtraction(PlannerContext, List, RexNode)
+   * @see Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)
    */
-  RowExtraction convert(
+  DruidExpression toDruidExpression(
       PlannerContext plannerContext,
-      List<String> rowOrder,
-      RexNode expression
+      RowSignature rowSignature,
+      RexNode rexNode
   );
 }

@@ -97,7 +97,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
     this.taskConfig = taskConfig;
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
-    this.location = TaskLocation.create(node.getHost(), node.getPort());
+    this.location = TaskLocation.create(node.getHost(), node.getPlaintextPort(), node.getTlsPort());
   }
 
   @Override

@@ -668,12 +668,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     switch (metricDesc.getCapabilities().getType()) {
       case COMPLEX:
         return ComplexMetrics.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();
-      case FLOAT:
-        return Float.TYPE;
       case DOUBLE:
-        return Double.TYPE;
+        return Double.class;
+      case FLOAT:
+        return Float.class;
       case LONG:
-        return Long.TYPE;
+        return Long.class;
       case STRING:
         return String.class;
     }

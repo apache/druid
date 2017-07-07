@@ -36,13 +36,21 @@ import io.druid.sql.avatica.AvaticaServerConfig;
 import io.druid.sql.avatica.DruidAvaticaHandler;
 import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
-import io.druid.sql.calcite.expression.CharacterLengthExtractionOperator;
-import io.druid.sql.calcite.expression.ExtractExtractionOperator;
-import io.druid.sql.calcite.expression.FloorExtractionOperator;
-import io.druid.sql.calcite.expression.LookupExtractionOperator;
-import io.druid.sql.calcite.expression.RegexpExtractExtractionOperator;
-import io.druid.sql.calcite.expression.SqlExtractionOperator;
-import io.druid.sql.calcite.expression.SubstringExtractionOperator;
+import io.druid.sql.calcite.expression.CeilOperatorConversion;
+import io.druid.sql.calcite.expression.ExtractOperatorConversion;
+import io.druid.sql.calcite.expression.FloorOperatorConversion;
+import io.druid.sql.calcite.expression.LookupOperatorConversion;
+import io.druid.sql.calcite.expression.MillisToTimestampOperatorConversion;
+import io.druid.sql.calcite.expression.RegexpExtractOperatorConversion;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
+import io.druid.sql.calcite.expression.SubstringOperatorConversion;
+import io.druid.sql.calcite.expression.TimeArithmeticOperatorConversion;
+import io.druid.sql.calcite.expression.TimeExtractOperatorConversion;
+import io.druid.sql.calcite.expression.TimeFloorOperatorConversion;
+import io.druid.sql.calcite.expression.TimeFormatOperatorConversion;
+import io.druid.sql.calcite.expression.TimeParseOperatorConversion;
+import io.druid.sql.calcite.expression.TimeShiftOperatorConversion;
+import io.druid.sql.calcite.expression.TimestampToMillisOperatorConversion;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
@@ -60,14 +68,23 @@ public class SqlModule implements Module
       ApproxCountDistinctSqlAggregator.class
   );
 
-  public static final List<Class<? extends SqlExtractionOperator>> DEFAULT_EXTRACTION_OPERATOR_CLASSES = ImmutableList.<Class<? extends SqlExtractionOperator>>of(
-      CharacterLengthExtractionOperator.class,
-      ExtractExtractionOperator.class,
-      FloorExtractionOperator.class,
-      LookupExtractionOperator.class,
-      SubstringExtractionOperator.class,
-      RegexpExtractExtractionOperator.class
-  );
+  public static final List<Class<? extends SqlOperatorConversion>> DEFAULT_OPERATOR_CONVERSION_CLASSES = ImmutableList.<Class<? extends SqlOperatorConversion>>builder()
+      .add(CeilOperatorConversion.class)
+      .add(ExtractOperatorConversion.class)
+      .add(FloorOperatorConversion.class)
+      .add(LookupOperatorConversion.class)
+      .add(MillisToTimestampOperatorConversion.class)
+      .add(RegexpExtractOperatorConversion.class)
+      .add(SubstringOperatorConversion.class)
+      .add(TimeArithmeticOperatorConversion.TimeMinusIntervalOperatorConversion.class)
+      .add(TimeArithmeticOperatorConversion.TimePlusIntervalOperatorConversion.class)
+      .add(TimeExtractOperatorConversion.class)
+      .add(TimeFloorOperatorConversion.class)
+      .add(TimeFormatOperatorConversion.class)
+      .add(TimeParseOperatorConversion.class)
+      .add(TimeShiftOperatorConversion.class)
+      .add(TimestampToMillisOperatorConversion.class)
+      .build();
 
   private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
   private static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.http.enable";
@@ -96,8 +113,8 @@ public class SqlModule implements Module
         SqlBindings.addAggregator(binder, clazz);
       }
 
-      for (Class<? extends SqlExtractionOperator> clazz : DEFAULT_EXTRACTION_OPERATOR_CLASSES) {
-        SqlBindings.addExtractionOperator(binder, clazz);
+      for (Class<? extends SqlOperatorConversion> clazz : DEFAULT_OPERATOR_CONVERSION_CLASSES) {
+        SqlBindings.addOperatorConversion(binder, clazz);
       }
 
       if (isJsonOverHttpEnabled()) {

@@ -19,62 +19,46 @@
 
 package io.druid.sql.calcite.rel;
 
-import com.google.common.collect.Sets;
-import io.druid.java.util.common.ISE;
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.column.Column;
+import io.druid.segment.VirtualColumn;
 import org.apache.calcite.rel.core.Project;
 
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
 
 public class SelectProjection
 {
-  private final Project project;
-  private final List<DimensionSpec> dimensions;
-  private final List<String> metrics;
+  private final Project calciteProject;
+  private final List<String> directColumns;
+  private final List<VirtualColumn> virtualColumns;
 
   public SelectProjection(
-      final Project project,
-      final List<DimensionSpec> dimensions,
-      final List<String> metrics
+      final Project calciteProject,
+      final List<String> directColumns,
+      final List<VirtualColumn> virtualColumns
   )
   {
-    this.project = project;
-    this.dimensions = dimensions;
-    this.metrics = metrics;
-
-    // Verify no collisions. Start with TIME_COLUMN_NAME because QueryMaker.executeSelect hard-codes it.
-    final Set<String> seen = Sets.newHashSet(Column.TIME_COLUMN_NAME);
-    for (DimensionSpec dimensionSpec : dimensions) {
-      if (!seen.add(dimensionSpec.getOutputName())) {
-        throw new ISE("Duplicate field name: %s", dimensionSpec.getOutputName());
-      }
-    }
-    for (String fieldName : metrics) {
-      if (!seen.add(fieldName)) {
-        throw new ISE("Duplicate field name: %s", fieldName);
-      }
-    }
+    this.calciteProject = calciteProject;
+    this.directColumns = directColumns;
+    this.virtualColumns = virtualColumns;
   }
 
-  public Project getProject()
+  public Project getCalciteProject()
   {
-    return project;
+    return calciteProject;
   }
 
-  public List<DimensionSpec> getDimensions()
+  public List<String> getDirectColumns()
   {
-    return dimensions;
+    return directColumns;
   }
 
-  public List<String> getMetrics()
+  public List<VirtualColumn> getVirtualColumns()
   {
-    return metrics;
+    return virtualColumns;
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -82,35 +66,25 @@ public class SelectProjection
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    SelectProjection that = (SelectProjection) o;
-
-    if (project != null ? !project.equals(that.project) : that.project != null) {
-      return false;
-    }
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
-      return false;
-    }
-    return metrics != null ? metrics.equals(that.metrics) : that.metrics == null;
-
+    final SelectProjection that = (SelectProjection) o;
+    return Objects.equals(calciteProject, that.calciteProject) &&
+           Objects.equals(directColumns, that.directColumns) &&
+           Objects.equals(virtualColumns, that.virtualColumns);
   }
 
   @Override
   public int hashCode()
   {
-    int result = project != null ? project.hashCode() : 0;
-    result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
-    result = 31 * result + (metrics != null ? metrics.hashCode() : 0);
-    return result;
+    return Objects.hash(calciteProject, directColumns, virtualColumns);
   }
 
   @Override
   public String toString()
   {
     return "SelectProjection{" +
-           "project=" + project +
-           ", dimensions=" + dimensions +
-           ", metrics=" + metrics +
+           "calciteProject=" + calciteProject +
+           ", directColumns=" + directColumns +
+           ", virtualColumns=" + virtualColumns +
            '}';
   }
 }

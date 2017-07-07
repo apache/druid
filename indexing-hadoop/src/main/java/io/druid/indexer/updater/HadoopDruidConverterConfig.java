@@ -39,6 +39,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -65,7 +66,7 @@ public class HadoopDruidConverterConfig
             public void configure(Binder binder)
             {
               JsonConfigProvider.bindInstance(
-                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-converter", null, null)
+                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-converter", null, null, null, new ServerConfig())
               );
             }
           }

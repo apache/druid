@@ -717,7 +717,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             @Override
                             public Class classOfObject()
                             {
-                              return Float.TYPE;
+                              return Float.class;
                             }
 
                             @Override
@@ -749,7 +749,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             @Override
                             public Class classOfObject()
                             {
-                              return Long.TYPE;
+                              return Long.class;
                             }
 
                             @Override

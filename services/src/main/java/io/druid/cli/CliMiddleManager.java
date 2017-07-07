@@ -78,6 +78,7 @@ public class CliMiddleManager extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/middlemanager");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
@@ -104,7 +105,8 @@ public class CliMiddleManager extends ServerRunnable
           public Worker getWorker(@Self DruidNode node, WorkerConfig config)
           {
             return new Worker(
-                node.getHostAndPort(),
+                node.getServiceScheme(),
+                node.getHostAndPortToUse(),
                 config.getIp(),
                 config.getCapacity(),
                 config.getVersion()
