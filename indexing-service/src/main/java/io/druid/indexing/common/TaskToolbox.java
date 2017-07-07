@@ -74,7 +74,7 @@ public class TaskToolbox
   /**
    * Using Provider, not {@link QueryRunnerFactoryConglomerate} directly, to not require {@link
    * io.druid.indexing.overlord.TaskRunner} implementations that create TaskToolboxes to inject query stuff eagerly,
-   * because it may not be available, e. g. for batch tasks running in Spark or Hadooop.
+   * because it may be unavailable, e. g. for batch tasks running in Spark or Hadoop.
    */
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   private final MonitorScheduler monitorScheduler;
