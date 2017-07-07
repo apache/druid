@@ -69,8 +69,8 @@ public class CompressedFloatsSerdeTest
   private final float values5[] = {123.16f, 1.12f, 62.00f, 462.12f, 517.71f, 56.54f, 971.32f, 824.22f, 472.12f, 625.26f};
   private final float values6[] = {1000000f, 1000001f, 1000002f, 1000003f, 1000004f, 1000005f, 1000006f, 1000007f, 1000008f};
   private final float values7[] = {
-      Float.MAX_VALUE, Float.MIN_VALUE, 12378.5734f, -12718243.7496f, -93653653.1f, 12743153.385534f, 21431.414538f,
-      65487435436632.123f, -43734526234564.65f
+      Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, 12378.5734f, -12718243.7496f, -93653653.1f, 12743153.385534f,
+      21431.414538f, 65487435436632.123f, -43734526234564.65f
   };
 
   public CompressedFloatsSerdeTest(

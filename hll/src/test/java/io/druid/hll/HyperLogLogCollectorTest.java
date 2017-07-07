@@ -693,7 +693,7 @@ public class HyperLogLogCollectorTest
     fillBuckets(collector, (byte) 0, (byte) 63);
     collector.add(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-    Assert.assertEquals(Double.MAX_VALUE, collector.estimateCardinality(), 1000);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, collector.estimateCardinality(), 1000);
   }
 
   @Test
