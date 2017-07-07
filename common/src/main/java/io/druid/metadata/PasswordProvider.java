@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 
 /**
- * Implement this for different ways to (optionally securely) access db passwords.
+ * Implement this for different ways to (optionally securely) access secrets.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultPasswordProvider.class)
 @JsonSubTypes(value = {

@@ -76,6 +76,7 @@ public class CaffeineCacheTest
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
               binder.bind(CaffeineCacheConfig.class).toInstance(config);
               binder.bind(Cache.class).toProvider(CaffeineCacheProviderWithConfig.class).in(ManageLifecycle.class);
@@ -103,6 +104,7 @@ public class CaffeineCacheTest
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
               binder.bind(Cache.class).toProvider(CacheProvider.class);
               JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
@@ -387,6 +389,7 @@ public class CaffeineCacheTest
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
               JsonConfigProvider.bind(binder, keyPrefix, CaffeineCacheConfig.class);
             }
         )
@@ -417,6 +420,7 @@ public class CaffeineCacheTest
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
               JsonConfigProvider.bind(binder, keyPrefix, CaffeineCacheConfig.class);
             }
         )
@@ -444,6 +448,7 @@ public class CaffeineCacheTest
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
               JsonConfigProvider.bind(binder, keyPrefix, CaffeineCacheConfig.class);
             }
         )

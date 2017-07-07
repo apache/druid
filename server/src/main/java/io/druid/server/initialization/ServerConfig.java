@@ -45,6 +45,12 @@ public class ServerConfig
   @Min(1)
   private long maxScatterGatherBytes = Long.MAX_VALUE;
 
+  @JsonProperty
+  private boolean plaintext = true;
+
+  @JsonProperty
+  private boolean tls = false;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -65,6 +71,16 @@ public class ServerConfig
     return maxScatterGatherBytes;
   }
 
+  public boolean isPlaintext()
+  {
+    return plaintext;
+  }
+
+  public boolean isTls()
+  {
+    return tls;
+  }
+
   @Override
   public String toString()
   {
@@ -73,6 +89,8 @@ public class ServerConfig
            ", maxIdleTime=" + maxIdleTime +
            ", defaultQueryTimeout=" + defaultQueryTimeout +
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
+           ", plaintext=" + plaintext +
+           ", tls=" + tls +
            '}';
   }
 }

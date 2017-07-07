@@ -90,6 +90,7 @@ public class CliBroker extends ServerRunnable
                 TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
             );
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
 
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(BrokerServerView.class).in(LazySingleton.class);

@@ -439,6 +439,7 @@ public class DumpSegment extends GuiceRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(DruidProcessingConfig.class).toInstance(
                 new DruidProcessingConfig()
                 {

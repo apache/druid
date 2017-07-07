@@ -47,6 +47,7 @@ import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
@@ -70,7 +71,7 @@ public class WorkerTaskMonitorTest
   private static final String basePath = "/test/druid";
   private static final String tasksPath = StringUtils.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = StringUtils.format("%s/indexer/status/worker", basePath);
-  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000);
+  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000, null, new ServerConfig());
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -108,6 +109,7 @@ public class WorkerTaskMonitorTest
     cf.create().creatingParentsIfNeeded().forPath(basePath);
 
     worker = new Worker(
+        "http",
         "worker",
         "localhost",
         3,
@@ -294,7 +296,7 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(task.getId(), announcements.get(0).getTaskStatus().getId());
     Assert.assertEquals(TaskStatus.Status.SUCCESS, announcements.get(0).getTaskStatus().getStatusCode());
     Assert.assertEquals(DUMMY_NODE.getHost(), announcements.get(0).getTaskLocation().getHost());
-    Assert.assertEquals(DUMMY_NODE.getPort(), announcements.get(0).getTaskLocation().getPort());
+    Assert.assertEquals(DUMMY_NODE.getPlaintextPort(), announcements.get(0).getTaskLocation().getPort());
   }
 
   @Test(timeout = 30_000L)

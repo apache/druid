@@ -20,15 +20,14 @@
 package io.druid.curator.discovery;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Collections2;
 import com.google.common.net.HostAndPort;
-
 import io.druid.client.selector.DiscoverySelector;
 import io.druid.client.selector.Server;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
-
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 
@@ -54,6 +53,12 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
     @Override
     public Server apply(final ServiceInstance instance)
     {
+      Preconditions.checkState(
+          instance.getPort() >= 0  || instance.getSslPort() >= 0,
+          "WTH?! Both port and sslPort not set"
+      );
+      final int port = instance.getSslPort() >= 0 ? instance.getSslPort() : instance.getPort();
+      final String scheme = instance.getSslPort() >= 0 ? "https" : "http";
       return new Server()
       {
         @Override
@@ -71,13 +76,13 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
         @Override
         public int getPort()
         {
-          return instance.getPort();
+          return port;
         }
 
         @Override
         public String getScheme()
         {
-          return "http";
+          return scheme;
         }
       };
     }

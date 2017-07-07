@@ -124,6 +124,7 @@ public class BatchServerInventoryViewTest
     DruidServerMetadata serverMetadata = new DruidServerMetadata(
         "id",
         "host",
+        null,
         Long.MAX_VALUE,
         ServerType.HISTORICAL,
         "tier",
@@ -443,6 +444,7 @@ public class BatchServerInventoryViewTest
                       new DruidServerMetadata(
                           "id",
                           "host",
+                          null,
                           Long.MAX_VALUE,
                           ServerType.HISTORICAL,
                           "tier",
