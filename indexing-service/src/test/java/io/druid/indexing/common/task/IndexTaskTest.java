@@ -804,11 +804,8 @@ public class IndexTaskTest
             0
         ),
         null,
-        2,
-        null,
-        false,
-        false,
-        true // report parse exception
+        createTuningConfig(2, null, null, null, false, false, true), // report parse exception
+        false
     );
 
     IndexTask indexTask = new IndexTask(
@@ -874,11 +871,8 @@ public class IndexTaskTest
             0
         ),
         null,
-        2,
-        null,
-        false,
-        false,
-        true // report parse exception
+        createTuningConfig(2, null, null, null, false, false, true), // report parse exception
+        false
     );
 
     IndexTask indexTask = new IndexTask(
