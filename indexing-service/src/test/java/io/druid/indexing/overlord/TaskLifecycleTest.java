@@ -104,6 +104,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -609,7 +610,7 @@ public class TaskLifecycleTest
         tb,
         taskConfig,
         emitter,
-        new DruidNode("dummy", "dummy", 10000)
+        new DruidNode("dummy", "dummy", 10000, null, new ServerConfig())
     );
   }
 

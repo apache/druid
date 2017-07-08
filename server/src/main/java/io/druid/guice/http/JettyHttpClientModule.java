@@ -22,12 +22,10 @@ package io.druid.guice.http;
 import com.google.common.base.Throwables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;

@@ -69,14 +69,14 @@ public class ExtractionFns
   }
 
   /**
-   * Compose f and g, returning an ExtractionFn that computes f(g(x)). Null f or g are treated like identity functions.
+   * Cascade f and g, returning an ExtractionFn that computes g(f(x)). Null f or g are treated like identity functions.
    *
    * @param f function
    * @param g function
    *
    * @return composed function, or null if both f and g were null
    */
-  public static ExtractionFn compose(final ExtractionFn f, final ExtractionFn g)
+  public static ExtractionFn cascade(final ExtractionFn f, final ExtractionFn g)
   {
     if (f == null) {
       // Treat null like identity.
@@ -88,16 +88,16 @@ public class ExtractionFns
 
       // Apply g, then f, unwrapping if they are already cascades.
 
-      if (g instanceof CascadeExtractionFn) {
-        extractionFns.addAll(Arrays.asList(((CascadeExtractionFn) g).getExtractionFns()));
-      } else {
-        extractionFns.add(g);
-      }
-
       if (f instanceof CascadeExtractionFn) {
         extractionFns.addAll(Arrays.asList(((CascadeExtractionFn) f).getExtractionFns()));
       } else {
         extractionFns.add(f);
+      }
+
+      if (g instanceof CascadeExtractionFn) {
+        extractionFns.addAll(Arrays.asList(((CascadeExtractionFn) g).getExtractionFns()));
+      } else {
+        extractionFns.add(g);
       }
 
       return new CascadeExtractionFn(extractionFns.toArray(new ExtractionFn[extractionFns.size()]));

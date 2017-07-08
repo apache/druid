@@ -38,6 +38,7 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DruidClusterTest
@@ -86,7 +87,7 @@ public class DruidClusterTest
 
   private static final ServerHolder newRealtime = new ServerHolder(
       new ImmutableDruidServer(
-          new DruidServerMetadata("name1", "host2", 100L, ServerType.REALTIME, "tier1", 0),
+          new DruidServerMetadata("name1", "host2", null, 100L, ServerType.REALTIME, "tier1", 0),
           0L,
           ImmutableMap.of(
               "src1",
@@ -102,7 +103,7 @@ public class DruidClusterTest
 
   private static final ServerHolder newHistorical = new ServerHolder(
       new ImmutableDruidServer(
-          new DruidServerMetadata("name1", "host2", 100L, ServerType.HISTORICAL, "tier1", 0),
+          new DruidServerMetadata("name1", "host2", null, 100L, ServerType.HISTORICAL, "tier1", 0),
           0L,
           ImmutableMap.of(
               "src1",
@@ -125,7 +126,7 @@ public class DruidClusterTest
         ImmutableSet.of(
             new ServerHolder(
                 new ImmutableDruidServer(
-                    new DruidServerMetadata("name1", "host1", 100L, ServerType.REALTIME, "tier1", 0),
+                    new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0),
                     0L,
                     ImmutableMap.of(
                         "src1",
@@ -145,7 +146,7 @@ public class DruidClusterTest
                 ImmutableList.of(
                     new ServerHolder(
                         new ImmutableDruidServer(
-                            new DruidServerMetadata("name1", "host1", 100L, ServerType.HISTORICAL, "tier1", 0),
+                            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
                             0L,
                             ImmutableMap.of(
                                 "src1",
@@ -184,6 +185,9 @@ public class DruidClusterTest
   {
     cluster.add(newRealtime);
     cluster.add(newHistorical);
+    final Set<ServerHolder> expectedRealtimes = cluster.getRealtimes();
+    final Map<String, MinMaxPriorityQueue<ServerHolder>> expectedHistoricals = cluster.getHistoricals();
+
     final Collection<ServerHolder> allServers = cluster.getAllServers();
     Assert.assertEquals(4, allServers.size());
     Assert.assertTrue(allServers.containsAll(cluster.getRealtimes()));
@@ -192,6 +196,9 @@ public class DruidClusterTest
             cluster.getHistoricals().values().stream().flatMap(Collection::stream).collect(Collectors.toList())
         )
     );
+
+    Assert.assertEquals(expectedHistoricals, cluster.getHistoricals());
+    Assert.assertEquals(expectedRealtimes, cluster.getRealtimes());
   }
 
   @Test

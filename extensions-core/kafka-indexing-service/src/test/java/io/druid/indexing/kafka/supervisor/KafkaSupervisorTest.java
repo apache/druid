@@ -878,7 +878,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testBeginPublishAndQueueNextTasks() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(2, 2, true, "PT1M", null, false);
     addSomeEvents(100);
@@ -961,7 +961,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingTask() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
     addSomeEvents(1);
@@ -1051,7 +1051,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
     addSomeEvents(1);
@@ -1141,8 +1141,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingAndReadingTask() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145);
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = new DateTime();
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
@@ -1281,7 +1281,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhilePausing() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(2, 2, true, "PT1M", null, false);
     addSomeEvents(100);
@@ -1348,7 +1348,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhileSettingEndOffsets() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(2, 2, true, "PT1M", null, false);
     addSomeEvents(100);
@@ -1445,8 +1445,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testStopGracefully() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145);
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = new DateTime();
 
     supervisor = getSupervisor(2, 1, true, "PT1H", null, false);
@@ -1631,8 +1631,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResetRunningTasks() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145);
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = new DateTime();
 
     supervisor = getSupervisor(2, 1, true, "PT1H", null, false);

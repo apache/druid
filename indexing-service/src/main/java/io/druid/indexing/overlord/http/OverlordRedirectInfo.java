@@ -53,14 +53,14 @@ public class OverlordRedirectInfo implements RedirectInfo
   }
 
   @Override
-  public URL getRedirectURL(String queryString, String requestURI)
+  public URL getRedirectURL(String scheme, String queryString, String requestURI)
   {
     try {
       final String leader = taskMaster.getCurrentLeader();
       if (leader == null || leader.isEmpty()) {
         return null;
       } else {
-        return new URI("http", leader, requestURI, queryString, null).toURL();
+        return new URI(scheme, leader, requestURI, queryString, null).toURL();
       }
     }
     catch (Exception e) {

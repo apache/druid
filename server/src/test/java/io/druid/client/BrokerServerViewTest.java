@@ -98,6 +98,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     final DruidServer druidServer = new DruidServer(
         "localhost:1234",
         "localhost:1234",
+        null,
         10000000L,
         ServerType.HISTORICAL,
         "default_tier",
@@ -164,6 +165,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             return new DruidServer(
                 input,
                 input,
+                null,
                 10000000L,
                 ServerType.HISTORICAL,
                 "default_tier",

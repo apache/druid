@@ -21,6 +21,7 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -75,8 +76,10 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class IndexTaskTest
 {
@@ -743,6 +746,139 @@ public class IndexTaskTest
         null,
         createTuningConfig(2, null, null, null, false, false, true), // report parse exception
         false
+    );
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        parseExceptionIgnoreSpec,
+        null,
+        jsonMapper
+    );
+
+    runTask(indexTask);
+  }
+
+  @Test
+  public void testCsvWithHeaderOfEmptyColumns() throws Exception
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("time,,\n");
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+    }
+
+    tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("time,dim,\n");
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+    }
+
+    tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("time,,val\n");
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+    }
+
+    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        tmpDir,
+        new CSVParseSpec(
+            new TimestampSpec(
+                "time",
+                "auto",
+                null
+            ),
+            new DimensionsSpec(
+                null,
+                null,
+                null
+            ),
+            null,
+            null,
+            true,
+            0
+        ),
+        null,
+        2,
+        null,
+        false,
+        false,
+        true // report parse exception
+    );
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        parseExceptionIgnoreSpec,
+        null,
+        jsonMapper
+    );
+
+    final List<DataSegment> segments = runTask(indexTask);
+    // the order of result segments can be changed because hash shardSpec is used.
+    // the below loop is to make this test deterministic.
+    Assert.assertEquals(2, segments.size());
+    Assert.assertNotEquals(segments.get(0), segments.get(1));
+
+    for (int i = 0; i < 2; i++) {
+      final DataSegment segment = segments.get(i);
+      final Set<String> dimensions = new HashSet<>(segment.getDimensions());
+
+      Assert.assertTrue(
+          StringUtils.format("Actual dimensions: %s", dimensions),
+          dimensions.equals(Sets.newHashSet("dim", "column_3")) ||
+          dimensions.equals(Sets.newHashSet("column_2", "column_3"))
+      );
+
+      Assert.assertEquals(Arrays.asList("val"), segment.getMetrics());
+      Assert.assertEquals(new Interval("2014/P1D"), segment.getInterval());
+    }
+  }
+
+  @Test
+  public void testCsvWithHeaderOfEmptyTimestamp() throws Exception
+  {
+    expectedException.expect(ParseException.class);
+    expectedException.expectMessage("Unparseable timestamp found!");
+
+    final File tmpDir = temporaryFolder.newFolder();
+
+    final File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write(",,\n");
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+    }
+
+    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        tmpDir,
+        new CSVParseSpec(
+            new TimestampSpec(
+                "time",
+                "auto",
+                null
+            ),
+            new DimensionsSpec(
+                null,
+                Lists.<String>newArrayList(),
+                Lists.<SpatialDimensionSchema>newArrayList()
+            ),
+            null,
+            Arrays.asList("time", "", ""),
+            true,
+            0
+        ),
+        null,
+        2,
+        null,
+        false,
+        false,
+        true // report parse exception
     );
 
     IndexTask indexTask = new IndexTask(

@@ -19,54 +19,41 @@
 
 package io.druid.sql.calcite.expression;
 
-import io.druid.query.extraction.SubstringDimExtractionFn;
+import com.google.common.collect.Iterables;
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 
-import java.util.List;
-
-public class SubstringExtractionOperator implements SqlExtractionOperator
+public class TimestampToMillisOperatorConversion implements SqlOperatorConversion
 {
+  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+      .operatorBuilder("TIMESTAMP_TO_MILLIS")
+      .operandTypes(SqlTypeFamily.TIMESTAMP)
+      .returnType(SqlTypeName.BIGINT)
+      .functionCategory(SqlFunctionCategory.TIMEDATE)
+      .build();
+
   @Override
-  public SqlFunction calciteFunction()
+  public SqlOperator calciteOperator()
   {
-    return SqlStdOperatorTable.SUBSTRING;
+    return SQL_FUNCTION;
   }
 
   @Override
-  public RowExtraction convert(
+  public DruidExpression toDruidExpression(
       final PlannerContext plannerContext,
-      final List<String> rowOrder,
-      final RexNode expression
+      final RowSignature rowSignature,
+      final RexNode rexNode
   )
   {
-    final RexCall call = (RexCall) expression;
-    final RowExtraction arg = Expressions.toRowExtraction(
-        plannerContext,
-        rowOrder,
-        call.getOperands().get(0)
-    );
-    if (arg == null) {
-      return null;
-    }
-    final int index = RexLiteral.intValue(call.getOperands().get(1)) - 1;
-    final Integer length;
-    if (call.getOperands().size() > 2) {
-      length = RexLiteral.intValue(call.getOperands().get(2));
-    } else {
-      length = null;
-    }
-
-    return RowExtraction.of(
-        arg.getColumn(),
-        ExtractionFns.compose(
-            new SubstringDimExtractionFn(index, length),
-            arg.getExtractionFn()
-        )
-    );
+    // Nothing to do, just leave the operand unchanged. Druid treats millis and timestamps the same internally.
+    final RexCall call = (RexCall) rexNode;
+    return Expressions.toDruidExpression(plannerContext, rowSignature, Iterables.getOnlyElement(call.getOperands()));
   }
 }

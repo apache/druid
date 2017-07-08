@@ -36,6 +36,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
@@ -360,6 +361,8 @@ outer:
                 );
               }
 
+              convertRowTypesToOutputTypes(query.getDimensions(), theMap);
+
               // Add aggregations.
               for (int i = 0; i < entry.getValues().length; i++) {
                 theMap.put(query.getAggregatorSpecs().get(i).getName(), entry.getValues()[i]);
@@ -399,6 +402,34 @@ outer:
       if (delegate != null) {
         delegate.close();
       }
+    }
+  }
+
+  private static void convertRowTypesToOutputTypes(List<DimensionSpec> dimensionSpecs, Map<String, Object> rowMap)
+  {
+    for (DimensionSpec dimSpec : dimensionSpecs) {
+      final ValueType outputType = dimSpec.getOutputType();
+      rowMap.compute(
+          dimSpec.getOutputName(),
+          (dimName, baseVal) -> {
+            switch (outputType) {
+              case STRING:
+                baseVal = baseVal == null ? "" : baseVal.toString();
+                break;
+              case LONG:
+                baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
+                baseVal = baseVal == null ? 0L : baseVal;
+                break;
+              case FLOAT:
+                baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
+                baseVal = baseVal == null ? 0.f : baseVal;
+                break;
+              default:
+                throw new IAE("Unsupported type: " + outputType);
+            }
+            return baseVal;
+          }
+      );
     }
   }
 

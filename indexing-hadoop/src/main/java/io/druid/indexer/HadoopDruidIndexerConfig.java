@@ -56,6 +56,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
@@ -108,7 +109,7 @@ public class HadoopDruidIndexerConfig
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null, null, new ServerConfig())
                 );
                 JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
               }

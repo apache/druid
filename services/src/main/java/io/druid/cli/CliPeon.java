@@ -141,6 +141,7 @@ public class CliPeon extends GuiceRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(-1);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
             PolyBind.createChoice(
                 binder,

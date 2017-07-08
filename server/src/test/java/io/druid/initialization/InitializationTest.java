@@ -34,6 +34,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.ISE;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
@@ -140,7 +141,7 @@ public class InitializationTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
+                    binder, Key.get(DruidNode.class, Self.class),  new DruidNode("test-inject", null, null, null, new ServerConfig())
                 );
               }
             }
