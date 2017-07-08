@@ -319,22 +319,20 @@ public class AppenderatorImpl implements Appenderator
     // Drop commit metadata, then abandon all segments.
 
     try {
-      if (persistExecutor != null) {
-        final ListenableFuture<?> uncommitFuture = persistExecutor.submit(
-            new Callable<Object>()
+      final ListenableFuture<?> uncommitFuture = persistExecutor.submit(
+          new Callable<Object>()
+          {
+            @Override
+            public Object call() throws Exception
             {
-              @Override
-              public Object call() throws Exception
-              {
-                objectMapper.writeValue(computeCommitFile(), Committed.nil());
-                return null;
-              }
+              objectMapper.writeValue(computeCommitFile(), Committed.nil());
+              return null;
             }
-        );
+          }
+      );
 
-        // Await uncommit.
-        uncommitFuture.get();
-      }
+      // Await uncommit.
+      uncommitFuture.get();
 
       // Drop everything.
       final List<ListenableFuture<?>> futures = Lists.newArrayList();
@@ -370,7 +368,7 @@ public class AppenderatorImpl implements Appenderator
     for (SegmentIdentifier identifier : identifiers) {
       final Sink sink = sinks.get(identifier);
       if (sink == null) {
-        throw new NullPointerException("No sink for identifier: " + identifier);
+        throw new ISE("No sink for identifier: %s", identifier);
       }
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
       commitHydrants.put(identifier, hydrants.size());
@@ -472,7 +470,7 @@ public class AppenderatorImpl implements Appenderator
     for (final SegmentIdentifier identifier : identifiers) {
       final Sink sink = sinks.get(identifier);
       if (sink == null) {
-        throw new NullPointerException("No sink for identifier: " + identifier);
+        throw new ISE("No sink for identifier: %s", identifier);
       }
       theSinks.put(identifier, sink);
       sink.finishWriting();
