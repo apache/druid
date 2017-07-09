@@ -555,6 +555,7 @@ public class RowBasedGrouperHelper
             Double val = DimensionHandlerUtils.convertObjectToDouble(input);
             return val == null ? 0.0 : val;
           };
+          break;
         default:
           throw new IAE("invalid type: [%s]", type);
       }
