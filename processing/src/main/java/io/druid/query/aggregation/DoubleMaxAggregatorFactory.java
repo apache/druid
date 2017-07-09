@@ -22,28 +22,19 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DoubleColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
 /**
  */
-public class DoubleMaxAggregatorFactory extends AggregatorFactory
+public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
 {
-  private final String name;
-  private final String fieldName;
-  private final String expression;
-  private final ExprMacroTable macroTable;
 
   @JsonCreator
   public DoubleMaxAggregatorFactory(
@@ -53,16 +44,7 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkArgument(
-        fieldName == null ^ expression == null,
-        "Must have a valid, non-null fieldName or expression"
-    );
-
-    this.name = name;
-    this.fieldName = fieldName;
-    this.expression = expression;
-    this.macroTable = macroTable;
+    super(macroTable, fieldName, name, expression);
   }
 
   public DoubleMaxAggregatorFactory(String name, String fieldName)
@@ -73,24 +55,13 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxAggregator(getDoubleColumnSelector(metricFactory));
+    return new DoubleMaxAggregator(getDoubleColumnSelector(metricFactory, Double.NEGATIVE_INFINITY));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxBufferAggregator(getDoubleColumnSelector(metricFactory));
-  }
-
-  private DoubleColumnSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory)
-  {
-    return AggregatorUtil.getDoubleColumnSelector(metricFactory, macroTable, fieldName, expression, Double.NEGATIVE_INFINITY);
-  }
-
-  @Override
-  public Comparator getComparator()
-  {
-    return DoubleMaxAggregator.COMPARATOR;
+    return new DoubleMaxBufferAggregator(getDoubleColumnSelector(metricFactory, Double.NEGATIVE_INFINITY));
   }
 
   @Override
@@ -105,15 +76,6 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
     return new DoubleMaxAggregatorFactory(name, name, null, macroTable);
   }
 
-  @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
-      return getCombiningFactory();
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
-    }
-  }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
@@ -122,46 +84,9 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object deserialize(Object object)
-  {
-    // handle "NaN" / "Infinity" values serialized as strings in JSON
-    if (object instanceof String) {
-      return Double.parseDouble((String) object);
-    }
-    return object;
-  }
-
-  @Override
   public Object finalizeComputation(Object object)
   {
     return object;
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
-  public List<String> requiredFields()
-  {
-    return fieldName != null
-           ? Collections.singletonList(fieldName)
-           : Parser.findRequiredBindings(Parser.parse(expression, macroTable));
   }
 
   @Override
@@ -176,18 +101,6 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)
                      .array();
-  }
-
-  @Override
-  public String getTypeName()
-  {
-    return "double";
-  }
-
-  @Override
-  public int getMaxIntermediateSize()
-  {
-    return Doubles.BYTES;
   }
 
   @Override
@@ -223,14 +136,5 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
     }
 
     return true;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (expression != null ? expression.hashCode() : 0);
-    result = 31 * result + (name != null ? name.hashCode() : 0);
-    return result;
   }
 }
