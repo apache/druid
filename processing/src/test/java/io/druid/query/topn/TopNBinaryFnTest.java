@@ -144,7 +144,6 @@ public class TopNBinaryFnTest
     );
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
-        TopNResultMerger.identity,
         Granularities.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
@@ -226,7 +225,6 @@ public class TopNBinaryFnTest
     );
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
-        TopNResultMerger.identity,
         Granularities.DAY,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
@@ -271,7 +269,6 @@ public class TopNBinaryFnTest
     Result<TopNResultValue> expected = result1;
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
-        TopNResultMerger.identity,
         Granularities.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
@@ -367,7 +364,6 @@ public class TopNBinaryFnTest
     );
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
-        TopNResultMerger.identity,
         Granularities.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("addrowsindexconstant"),
@@ -449,7 +445,6 @@ public class TopNBinaryFnTest
     );
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
-        TopNResultMerger.identity,
         Granularities.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
@@ -507,7 +502,6 @@ public class TopNBinaryFnTest
     );
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
-        TopNResultMerger.identity,
         Granularities.ALL,
         new DefaultDimensionSpec("INVALID_DIM_NAME", null),
         new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC),
