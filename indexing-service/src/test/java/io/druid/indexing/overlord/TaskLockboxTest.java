@@ -19,27 +19,57 @@
 
 package io.druid.indexing.overlord;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
+import io.druid.metadata.EntryExistsException;
+import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
+import io.druid.metadata.TestDerbyConnector;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class TaskLockboxTest
 {
-  private TaskStorage taskStorage;
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
+  private final ObjectMapper objectMapper = new DefaultObjectMapper();
+  private TaskStorage taskStorage;
   private TaskLockbox lockbox;
 
   @Before
-  public void setUp()
+  public void setup()
   {
-    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    final TestDerbyConnector derbyConnector = derby.getConnector();
+    derbyConnector.createDataSourceTable();
+    derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createSegmentTable();
+    derbyConnector.createRulesTable();
+    derbyConnector.createConfigTable();
+    derbyConnector.createTaskTables();
+    derbyConnector.createAuditTable();
+    taskStorage = new MetadataTaskStorage(
+        derbyConnector,
+        new TaskStorageConfig(null),
+        new SQLMetadataStorageActionHandlerFactory(
+            derbyConnector,
+            derby.metadataTablesConfigSupplier().get(),
+            objectMapper
+        )
+    );
     lockbox = new TaskLockbox(taskStorage);
   }
 
@@ -124,5 +154,34 @@ public class TaskLockboxTest
     Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
+  @Test
+  public void testSyncFromStorage() throws EntryExistsException
+  {
+    final TaskLockbox originalBox = new TaskLockbox(taskStorage);
+    for (int i = 0; i < 5; i++) {
+      final Task task = NoopTask.create();
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
+      originalBox.add(task);
+      Assert.assertTrue(
+          originalBox.tryLock(task, new Interval(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2))))
+                     .isPresent()
+      );
+    }
 
+    final List<TaskLock> beforeLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                           .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                                                           .collect(Collectors.toList());
+
+    final TaskLockbox newBox = new TaskLockbox(taskStorage);
+    newBox.syncFromStorage();
+
+    Assert.assertEquals(originalBox.getAllLocks(), newBox.getAllLocks());
+    Assert.assertEquals(originalBox.getActiveTasks(), newBox.getActiveTasks());
+
+    final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                         .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                                                         .collect(Collectors.toList());
+
+    Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
+  }
 }
