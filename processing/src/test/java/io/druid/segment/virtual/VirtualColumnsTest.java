@@ -402,6 +402,22 @@ public class VirtualColumnsTest
     }
 
     @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(
+        String columnName, ColumnSelectorFactory factory
+    )
+    {
+      final LongColumnSelector selector = makeLongColumnSelector(columnName, factory);
+      return new TestDoubleColumnSelector() {
+
+        @Override
+        public double get()
+        {
+          return selector.get();
+        }
+      };
+    }
+
+    @Override
     public ColumnCapabilities capabilities(String columnName)
     {
       return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
@@ -417,22 +433,6 @@ public class VirtualColumnsTest
     public boolean usesDotNotation()
     {
       return true;
-    }
-
-    @Override
-    public DoubleColumnSelector makeDoubleColumnSelector(
-        String columnName, ColumnSelectorFactory factory
-    )
-    {
-      final DoubleColumnSelector selector = makeDoubleColumnSelector(columnName, factory);
-      return new TestDoubleColumnSelector() {
-
-        @Override
-        public double get()
-        {
-          return selector.get();
-        }
-      };
     }
 
     @Override
