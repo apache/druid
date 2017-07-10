@@ -804,7 +804,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, false, false, true), // report parse exception
+        createTuningConfig(2, 1, null, null, false, true, true), // report parse exception
         false
     );
 
@@ -821,6 +821,10 @@ public class IndexTaskTest
     // the below loop is to make this test deterministic.
     Assert.assertEquals(2, segments.size());
     Assert.assertNotEquals(segments.get(0), segments.get(1));
+
+    for (DataSegment segment : segments) {
+      System.out.println(segment.getDimensions());
+    }
 
     for (int i = 0; i < 2; i++) {
       final DataSegment segment = segments.get(i);
