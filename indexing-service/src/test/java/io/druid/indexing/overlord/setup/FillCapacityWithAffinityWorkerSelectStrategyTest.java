@@ -19,7 +19,6 @@
 
 package io.druid.indexing.overlord.setup;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.NoopTask;
@@ -38,10 +37,10 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   public void testFindWorkerForTask() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")))
+        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
     );
 
-    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
@@ -68,7 +67,6 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
           }
         }
     );
-    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("localhost", worker.getWorker().getHost());
   }
 
@@ -76,10 +74,10 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   public void testFindWorkerForTaskWithNulls() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")))
+        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
     );
 
-    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
@@ -99,7 +97,6 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ),
         new NoopTask(null, 1, 0, null, null, null)
     );
-    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
 
@@ -107,10 +104,10 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   public void testIsolation() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")))
+        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
     );
 
-    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "localhost",
@@ -123,6 +120,6 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ),
         new NoopTask(null, 1, 0, null, null, null)
     );
-    Assert.assertFalse(optional.isPresent());
+    Assert.assertNull(worker);
   }
 }

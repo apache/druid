@@ -86,7 +86,7 @@ public class PendingTaskBasedResourceManagementStrategyTest
 
     workerConfig = new AtomicReference<>(
         new WorkerBehaviorConfig(
-            new FillCapacityWorkerSelectStrategy(),
+            new FillCapacityWorkerSelectStrategy(null),
             autoScaler
         )
     );

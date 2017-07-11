@@ -19,7 +19,7 @@
 
 package io.druid.indexing.overlord.setup;
 
-import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.NoopTask;
@@ -32,13 +32,44 @@ import org.junit.Test;
 
 public class EqualDistributionWorkerSelectStrategyTest
 {
+  private static final ImmutableMap<String, ImmutableWorkerInfo> WORKERS_FOR_AFFINITY_TESTS =
+      ImmutableMap.of(
+          "localhost0",
+          new ImmutableWorkerInfo(
+              new Worker("http", "localhost0", "localhost0", 2, "v1"), 0,
+              Sets.<String>newHashSet(),
+              Sets.<String>newHashSet(),
+              DateTime.now()
+          ),
+          "localhost1",
+          new ImmutableWorkerInfo(
+              new Worker("http", "localhost1", "localhost1", 2, "v1"), 0,
+              Sets.<String>newHashSet(),
+              Sets.<String>newHashSet(),
+              DateTime.now()
+          ),
+          "localhost2",
+          new ImmutableWorkerInfo(
+              new Worker("http", "localhost2", "localhost2", 2, "v1"), 1,
+              Sets.<String>newHashSet(),
+              Sets.<String>newHashSet(),
+              DateTime.now()
+          ),
+          "localhost3",
+          new ImmutableWorkerInfo(
+              new Worker("http", "localhost3", "localhost3", 2, "v1"), 1,
+              Sets.<String>newHashSet(),
+              Sets.<String>newHashSet(),
+              DateTime.now()
+          )
+      );
 
   @Test
   public void testFindWorkerForTask() throws Exception
   {
-    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
 
-    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
@@ -65,28 +96,27 @@ public class EqualDistributionWorkerSelectStrategyTest
           }
         }
     );
-    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
 
   @Test
   public void testFindWorkerForTaskWhenSameCurrCapacityUsed() throws Exception
   {
-    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
 
-    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http","lhost", "lhost", 5, "v1"), 5,
+                new Worker("http", "lhost", "lhost", 5, "v1"), 5,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
                 DateTime.now()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http","localhost", "localhost", 10, "v1"), 5,
+                new Worker("http", "localhost", "localhost", 10, "v1"), 5,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
                 DateTime.now()
@@ -101,7 +131,6 @@ public class EqualDistributionWorkerSelectStrategyTest
           }
         }
     );
-    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("localhost", worker.getWorker().getHost());
   }
 
@@ -109,21 +138,21 @@ public class EqualDistributionWorkerSelectStrategyTest
   public void testOneDisableWorkerDifferentUsedCapacity() throws Exception
   {
     String DISABLED_VERSION = "";
-    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
 
-    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http","disableHost", "disableHost", 10, DISABLED_VERSION), 2,
+                new Worker("http", "disableHost", "disableHost", 10, DISABLED_VERSION), 2,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
                 DateTime.now()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http","enableHost", "enableHost", 10, "v1"), 5,
+                new Worker("http", "enableHost", "enableHost", 10, "v1"), 5,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
                 DateTime.now()
@@ -138,7 +167,6 @@ public class EqualDistributionWorkerSelectStrategyTest
           }
         }
     );
-    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("enableHost", worker.getWorker().getHost());
   }
 
@@ -146,21 +174,21 @@ public class EqualDistributionWorkerSelectStrategyTest
   public void testOneDisableWorkerSameUsedCapacity() throws Exception
   {
     String DISABLED_VERSION = "";
-    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
 
-    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http","disableHost", "disableHost", 10, DISABLED_VERSION), 5,
+                new Worker("http", "disableHost", "disableHost", 10, DISABLED_VERSION), 5,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
                 DateTime.now()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http","enableHost", "enableHost", 10, "v1"), 5,
+                new Worker("http", "enableHost", "enableHost", 10, "v1"), 5,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
                 DateTime.now()
@@ -175,7 +203,90 @@ public class EqualDistributionWorkerSelectStrategyTest
           }
         }
     );
-    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("enableHost", worker.getWorker().getHost());
+  }
+
+  @Test
+  public void testWeakAffinity()
+  {
+    EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(
+        new AffinityConfig(
+            ImmutableMap.of(
+                "foo", ImmutableList.of("localhost1", "localhost2", "localhost3"),
+                "bar", ImmutableList.of("nonexistent-worker")
+            ),
+            false
+        )
+    );
+
+    ImmutableWorkerInfo workerFoo = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_AFFINITY_TESTS,
+        createDummyTask("foo")
+    );
+    Assert.assertEquals("localhost1", workerFoo.getWorker().getHost());
+
+    // With weak affinity, bar (which has no affinity workers available) can use a non-affinity worker.
+    ImmutableWorkerInfo workerBar = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_AFFINITY_TESTS,
+        createDummyTask("bar")
+    );
+    Assert.assertEquals("localhost0", workerBar.getWorker().getHost());
+
+    ImmutableWorkerInfo workerBaz = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_AFFINITY_TESTS,
+        createDummyTask("baz")
+    );
+    Assert.assertEquals("localhost0", workerBaz.getWorker().getHost());
+  }
+
+  @Test
+  public void testStrongAffinity()
+  {
+    EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(
+        new AffinityConfig(
+            ImmutableMap.of(
+                "foo", ImmutableList.of("localhost1", "localhost2", "localhost3"),
+                "bar", ImmutableList.of("nonexistent-worker")
+            ),
+            true
+        )
+    );
+
+    ImmutableWorkerInfo workerFoo = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_AFFINITY_TESTS,
+        createDummyTask("foo")
+    );
+    Assert.assertEquals("localhost1", workerFoo.getWorker().getHost());
+
+    // With strong affinity, no workers can be found for bar.
+    ImmutableWorkerInfo workerBar = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_AFFINITY_TESTS,
+        createDummyTask("bar")
+    );
+    Assert.assertNull(workerBar);
+
+    ImmutableWorkerInfo workerBaz = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_AFFINITY_TESTS,
+        createDummyTask("baz")
+    );
+    Assert.assertEquals("localhost0", workerBaz.getWorker().getHost());
+  }
+
+  private static NoopTask createDummyTask(final String dataSource)
+  {
+    return new NoopTask(null, 1, 0, null, null, null)
+    {
+      @Override
+      public String getDataSource()
+      {
+        return dataSource;
+      }
+    };
   }
 }

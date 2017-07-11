@@ -42,7 +42,8 @@ public class WorkerBehaviorConfigTest
     WorkerBehaviorConfig config = new WorkerBehaviorConfig(
         new FillCapacityWithAffinityWorkerSelectStrategy(
             new AffinityConfig(
-                ImmutableMap.of("foo", Arrays.asList("localhost"))
+                ImmutableMap.of("foo", Arrays.asList("localhost")),
+                false
             )
         ),
         new EC2AutoScaler(
