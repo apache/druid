@@ -134,7 +134,8 @@ public class TestQueryHelper
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory("rows", "count")
                                       )
-                                  ).granularity(Granularities.ALL)
+                                  )
+                                  .granularity(Granularities.ALL)
                                   .intervals(interval)
                                   .build();
 
