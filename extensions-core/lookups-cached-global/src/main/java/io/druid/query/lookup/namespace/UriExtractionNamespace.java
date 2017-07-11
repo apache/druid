@@ -29,7 +29,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -295,7 +294,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       );
 
       this.parser = new DelegateParser(
-          new CSVParser(Optional.absent(), columns, hasHeaderRow, skipHeaderRows),
+          new CSVParser(null, columns, hasHeaderRow, skipHeaderRows),
           this.keyColumn,
           this.valueColumn
       );
@@ -395,8 +394,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
           "Must specify more than one column to have a key value pair"
       );
       final DelimitedParser delegate = new DelimitedParser(
-          Optional.fromNullable(Strings.emptyToNull(delimiter)),
-          Optional.fromNullable(Strings.emptyToNull(listDelimiter)),
+          Strings.emptyToNull(delimiter),
+          Strings.emptyToNull(listDelimiter),
           hasHeaderRow,
           skipHeaderRows
       );
