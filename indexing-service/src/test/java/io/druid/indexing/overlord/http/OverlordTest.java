@@ -55,6 +55,7 @@ import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.initialization.IndexerZkConfig;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.AuthConfig;
@@ -84,7 +85,7 @@ import java.util.concurrent.Executor;
 
 public class OverlordTest
 {
-  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000);
+  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000, -1);
 
   private TestingServer server;
   private Timing timing;
@@ -158,7 +159,7 @@ public class OverlordTest
     curator.start();
     curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(indexerZkConfig.getLeaderLatchPath());
-    druidNode = new DruidNode("hey", "what", 1234);
+    druidNode = new DruidNode("hey", "what", 1234, null, new ServerConfig());
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
     taskMaster = new TaskMaster(
         new TaskQueueConfig(null, new Period(1), null, new Period(10)),

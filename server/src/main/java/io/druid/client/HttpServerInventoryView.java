@@ -520,7 +520,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               config.getServerTimeout()
           );
         }
-        URL url = new URL("http", serverHostAndPort.getHostText(), serverHostAndPort.getPort(), req);
+        URL url = new URL(druidServer.getScheme(), serverHostAndPort.getHostText(), serverHostAndPort.getPort(), req);
 
         BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
 

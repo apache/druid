@@ -161,6 +161,7 @@ public class LoadRuleTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -177,6 +178,7 @@ public class LoadRuleTest
                         new DruidServer(
                             "serverNorm",
                             "hostNorm",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             DruidServer.DEFAULT_TIER,
@@ -262,6 +264,7 @@ public class LoadRuleTest
     DruidServer server1 = new DruidServer(
         "serverHot",
         "hostHot",
+        null,
         1000,
         ServerType.HISTORICAL,
         "hot",
@@ -271,6 +274,7 @@ public class LoadRuleTest
     DruidServer server2 = new DruidServer(
         "serverNorm",
         "hostNorm",
+        null,
         1000,
         ServerType.HISTORICAL,
         DruidServer.DEFAULT_TIER,
@@ -381,6 +385,7 @@ public class LoadRuleTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -465,6 +470,7 @@ public class LoadRuleTest
     DruidServer server1 = new DruidServer(
         "serverHot",
         "hostHot",
+        null,
         1000,
         ServerType.HISTORICAL,
         "hot",
@@ -473,6 +479,7 @@ public class LoadRuleTest
     DruidServer server2 = new DruidServer(
         "serverHo2t",
         "hostHot2",
+        null,
         1000,
         ServerType.HISTORICAL,
         "hot",
@@ -574,6 +581,7 @@ public class LoadRuleTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",

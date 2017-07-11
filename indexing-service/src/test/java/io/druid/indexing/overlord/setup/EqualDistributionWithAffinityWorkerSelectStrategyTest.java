@@ -46,28 +46,28 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "localhost0",
                     new ImmutableWorkerInfo(
-                            new Worker("localhost0", "localhost0", 2, "v1"), 0,
+                            new Worker("http", "localhost0", "localhost0", 2, "v1"), 0,
                             Sets.<String>newHashSet(),
                             Sets.<String>newHashSet(),
                             DateTime.now()
                     ),
                     "localhost1",
                     new ImmutableWorkerInfo(
-                            new Worker("localhost1", "localhost1", 2, "v1"), 0,
+                            new Worker("http", "localhost1", "localhost1", 2, "v1"), 0,
                             Sets.<String>newHashSet(),
                             Sets.<String>newHashSet(),
                             DateTime.now()
                     ),
                     "localhost2",
                     new ImmutableWorkerInfo(
-                            new Worker("localhost2", "localhost2", 2, "v1"), 1,
+                            new Worker("http", "localhost2", "localhost2", 2, "v1"), 1,
                             Sets.<String>newHashSet(),
                             Sets.<String>newHashSet(),
                             DateTime.now()
                     ),
                     "localhost3",
                     new ImmutableWorkerInfo(
-                            new Worker("localhost3", "localhost3", 2, "v1"), 1,
+                            new Worker("http", "localhost3", "localhost3", 2, "v1"), 1,
                             Sets.<String>newHashSet(),
                             Sets.<String>newHashSet(),
                             DateTime.now()
@@ -98,14 +98,14 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "lhost",
                     new ImmutableWorkerInfo(
-                            new Worker("lhost", "lhost", 1, "v1"), 0,
+                            new Worker("http", "lhost", "lhost", 1, "v1"), 0,
                             Sets.<String>newHashSet(),
                             Sets.<String>newHashSet(),
                             DateTime.now()
                     ),
                     "localhost",
                     new ImmutableWorkerInfo(
-                            new Worker("localhost", "localhost", 1, "v1"), 0,
+                            new Worker("http", "localhost", "localhost", 1, "v1"), 0,
                             Sets.<String>newHashSet(),
                             Sets.<String>newHashSet(),
                             DateTime.now()
@@ -129,7 +129,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "localhost",
                     new ImmutableWorkerInfo(
-                            new Worker("localhost", "localhost", 1, "v1"), 0,
+                            new Worker("http", "localhost", "localhost", 1, "v1"), 0,
                             Sets.<String>newHashSet(),
                             Sets.<String>newHashSet(),
                             DateTime.now()

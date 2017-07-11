@@ -19,12 +19,12 @@
 
 package io.druid.indexing.appenderator;
 
+import io.druid.data.input.InputRow;
 import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
-import org.joda.time.DateTime;
 
 import java.io.IOException;
 
@@ -44,7 +44,7 @@ public class ActionBasedSegmentAllocator implements SegmentAllocator
 
   @Override
   public SegmentIdentifier allocate(
-      final DateTime timestamp,
+      final InputRow row,
       final String sequenceName,
       final String previousSegmentId
   ) throws IOException
@@ -52,7 +52,7 @@ public class ActionBasedSegmentAllocator implements SegmentAllocator
     return taskActionClient.submit(
         new SegmentAllocateAction(
             dataSchema.getDataSource(),
-            timestamp,
+            row.getTimestamp(),
             dataSchema.getGranularitySpec().getQueryGranularity(),
             dataSchema.getGranularitySpec().getSegmentGranularity(),
             sequenceName,

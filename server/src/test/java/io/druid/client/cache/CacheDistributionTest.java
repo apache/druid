@@ -32,6 +32,7 @@ import net.spy.memcached.util.DefaultKetamaNodeLocatorConfiguration;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.easymock.EasyMock;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -93,7 +94,10 @@ public class CacheDistributionTest
     this.reps = reps;
   }
 
-  // run to get a sense of cache key distribution for different ketama reps / hash functions
+  // Run to get a sense of cache key distribution for different ketama reps / hash functions
+  // This test is disabled by default because it's a qualitative test not an unit test and thus it have a meaning only
+  // when being run and checked by humans.
+  @Ignore
   @Test
   public void testDistribution() throws Exception
   {

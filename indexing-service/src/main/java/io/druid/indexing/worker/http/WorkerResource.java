@@ -82,6 +82,7 @@ public class WorkerResource
   {
     try {
       final Worker disabledWorker = new Worker(
+          enabledWorker.getScheme(),
           enabledWorker.getHost(),
           enabledWorker.getIp(),
           enabledWorker.getCapacity(),

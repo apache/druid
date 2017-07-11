@@ -151,7 +151,7 @@ public class IngestSegmentFirehoseFactoryTest
     }
     INDEX_MERGER_V9.persist(index, persistDir, indexSpec);
 
-    final TaskLockbox tl = new TaskLockbox(ts);
+    final TaskLockbox tl = new TaskLockbox(ts, 300);
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {
       final private Set<DataSegment> published = Sets.newHashSet();

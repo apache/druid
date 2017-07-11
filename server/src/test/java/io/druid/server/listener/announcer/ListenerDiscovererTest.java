@@ -20,11 +20,11 @@
 package io.druid.server.listener.announcer;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.net.HostAndPort;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
 import io.druid.segment.CloserRule;
+import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 import org.junit.Assert;
@@ -86,7 +86,7 @@ public class ListenerDiscovererTest extends CuratorTestBase
     });
     Assert.assertTrue(listenerDiscoverer.getNodes(listenerKey).isEmpty());
 
-    final HostAndPort node = HostAndPort.fromParts("someHost", 8888);
+    final HostAndPortWithScheme node = HostAndPortWithScheme.fromParts("http", "someHost", 8888);
     final ListenerResourceAnnouncer listenerResourceAnnouncer = new ListenerResourceAnnouncer(
         announcer,
         config,
@@ -132,7 +132,7 @@ public class ListenerDiscovererTest extends CuratorTestBase
       Thread.sleep(1);
     }
     Assert.assertEquals(
-        ImmutableSet.of(HostAndPort.fromString(node.toString())),
+        ImmutableSet.of(HostAndPortWithScheme.fromString(node.toString())),
         listenerDiscoverer.getNodes(listenerKey)
     );
     // 2nd call of two concurrent getNewNodes should return no entry collection

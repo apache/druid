@@ -62,6 +62,7 @@ public class IndexerZkConfigTest
     {
       binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
       binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+      binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
       // See IndexingServiceModuleHelper
       JsonConfigProvider.bind(binder, indexerPropertyString, IndexerZkConfig.class);
       JsonConfigProvider.bind(
