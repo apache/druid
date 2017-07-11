@@ -596,7 +596,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
 
     toolbox.getDataSegmentServerAnnouncer().unannounce();
-    
+
     return success();
   }
 

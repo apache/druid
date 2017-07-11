@@ -57,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -142,9 +141,9 @@ public class AppenderatorDriver implements Closeable
   {
     handoffNotifier.start();
 
-    final FiniteAppenderatorDriverMetadata metadata = objectMapper.convertValue(
+    final AppenderatorDriverMetadata metadata = objectMapper.convertValue(
         appenderator.startJob(),
-        FiniteAppenderatorDriverMetadata.class
+        AppenderatorDriverMetadata.class
     );
 
     log.info("Restored metadata[%s].", metadata);
@@ -215,12 +214,12 @@ public class AppenderatorDriver implements Closeable
     Preconditions.checkNotNull(sequenceName, "sequenceName");
     Preconditions.checkNotNull(committerSupplier, "committerSupplier");
 
-    final SegmentIdentifier identifier = getSegment(row.getTimestamp(), sequenceName);
+    final SegmentIdentifier identifier = getSegment(row, sequenceName);
 
     if (identifier != null) {
       try {
-        final int numRows = appenderator.add(identifier, row, wrapCommitterSupplier(committerSupplier));
-        return AppenderatorDriverAddResult.ok(identifier, numRows);
+        final int numRowsInMemory = appenderator.add(identifier, row, wrapCommitterSupplier(committerSupplier));
+        return AppenderatorDriverAddResult.ok(identifier, numRowsInMemory, appenderator.getTotalRowCount());
       }
       catch (SegmentNotWritableException e) {
         throw new ISE(e, "WTF?! Segment[%s] not writable when it should have been.", identifier);
@@ -265,7 +264,7 @@ public class AppenderatorDriver implements Closeable
    *
    * @return null if the input segmentsAndMetadata is null. Otherwise, a {@link ListenableFuture} for the submitted task
    *         which returns {@link SegmentsAndMetadata} containing the segments successfully handed off and the metadata
-   *         of the caller of {@link FiniteAppenderatorDriverMetadata}
+   *         of the caller of {@link AppenderatorDriverMetadata}
    */
   public ListenableFuture<SegmentsAndMetadata> registerHandoff(SegmentsAndMetadata segmentsAndMetadata)
   {
@@ -281,7 +280,7 @@ public class AppenderatorDriver implements Closeable
         return Futures.immediateFuture(
             new SegmentsAndMetadata(
                 segmentsAndMetadata.getSegments(),
-                ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata())
+                ((AppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata())
                     .getCallerMetadata()
             )
         );
@@ -317,7 +316,7 @@ public class AppenderatorDriver implements Closeable
                         resultFuture.set(
                             new SegmentsAndMetadata(
                                 segmentsAndMetadata.getSegments(),
-                                ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata())
+                                ((AppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata())
                                     .getCallerMetadata()
                             )
                         );
@@ -372,23 +371,24 @@ public class AppenderatorDriver implements Closeable
   /**
    * Return a segment usable for "timestamp". May return null if no segment can be allocated.
    *
-   * @param timestamp    data timestamp
+   * @param row          input row
    * @param sequenceName sequenceName for potential segment allocation
    *
    * @return identifier, or null
    *
    * @throws IOException if an exception occurs while allocating a segment
    */
-  private SegmentIdentifier getSegment(final DateTime timestamp, final String sequenceName) throws IOException
+  private SegmentIdentifier getSegment(final InputRow row, final String sequenceName) throws IOException
   {
     synchronized (activeSegments) {
+      final DateTime timestamp = row.getTimestamp();
       final SegmentIdentifier existing = getActiveSegment(timestamp, sequenceName);
       if (existing != null) {
         return existing;
       } else {
         // Allocate new segment.
         final SegmentIdentifier newSegment = segmentAllocator.allocate(
-            timestamp,
+            row,
             sequenceName,
             lastSegmentIds.get(sequenceName)
         );
@@ -438,6 +438,27 @@ public class AppenderatorDriver implements Closeable
   }
 
   /**
+   * Publish all pending segments.
+   *
+   * @param publisher segment publisher
+   * @param committer committer
+   *
+   * @return a {@link ListenableFuture} for the publish task which removes published {@code sequenceNames} from
+   *         {@code activeSegments} and {@code publishPendingSegments}
+   */
+  public ListenableFuture<SegmentsAndMetadata> publishAll(
+      final TransactionalSegmentPublisher publisher,
+      final Committer committer
+  )
+  {
+    final List<String> sequenceNames;
+    synchronized (activeSegments) {
+      sequenceNames = ImmutableList.copyOf(publishPendingSegments.keySet());
+    }
+    return publish(publisher, committer, sequenceNames);
+  }
+
+  /**
    * Execute a task in background to publish all segments corresponding to the given sequence names.  The task
    * internally pushes the segments to the deep storage first, and then publishes the metadata to the metadata storage.
    *
@@ -446,7 +467,7 @@ public class AppenderatorDriver implements Closeable
    * @param sequenceNames a collection of sequence names to be published
    *
    * @return a {@link ListenableFuture} for the submitted task which removes published {@code sequenceNames} from
-   *         {@code activeSegments} and {@code publishPendingSegments}.
+   *         {@code activeSegments} and {@code publishPendingSegments}
    */
   public ListenableFuture<SegmentsAndMetadata> publish(
       final TransactionalSegmentPublisher publisher,
@@ -520,67 +541,59 @@ public class AppenderatorDriver implements Closeable
       final List<SegmentIdentifier> segmentIdentifiers
   )
   {
-    return publishExecutor.submit(
-        () -> {
-          long nTry = 0;
-          while (true) {
+    log.info("Pushing segments: [%s]", Joiner.on(", ").join(segmentIdentifiers));
+
+    return Futures.transform(
+        appenderator.push(segmentIdentifiers, wrappedCommitter),
+        (Function<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> {
+          // Sanity check
+          final Set<SegmentIdentifier> pushedSegments = segmentsAndMetadata.getSegments().stream()
+                                                                           .map(SegmentIdentifier::fromDataSegment)
+                                                                           .collect(Collectors.toSet());
+          if (!pushedSegments.equals(Sets.newHashSet(segmentIdentifiers))) {
+            throw new ISE(
+                "WTF?! Pushed different segments than requested. Pushed[%s], requested[%s].",
+                pushedSegments,
+                segmentIdentifiers
+            );
+          }
+
+          if (segmentsAndMetadata.getSegments().isEmpty()) {
+            log.info("Nothing to publish, skipping publish step.");
+          } else {
+            log.info(
+                "Publishing segments with commitMetadata[%s]: [%s]",
+                segmentsAndMetadata.getCommitMetadata(),
+                Joiner.on(", ").join(segmentsAndMetadata.getSegments())
+            );
+
             try {
-              log.info("Pushing segments: [%s]", Joiner.on(", ").join(segmentIdentifiers));
-              final SegmentsAndMetadata segmentsAndMetadata = appenderator.push(segmentIdentifiers, wrappedCommitter)
-                                                                          .get();
-
-              // Sanity check
-              final Set<SegmentIdentifier> pushedSegments = segmentsAndMetadata.getSegments().stream()
-                                                                               .map(SegmentIdentifier::fromDataSegment)
-                                                                               .collect(Collectors.toSet());
-              if (!pushedSegments.equals(Sets.newHashSet(segmentIdentifiers))) {
-                throw new ISE(
-                    "WTF?! Pushed different segments than requested. Pushed[%s], requested[%s].",
-                    pushedSegments,
-                    segmentIdentifiers
-                );
-              }
-
-              log.info(
-                  "Publishing segments with commitMetadata[%s]: [%s]",
-                  segmentsAndMetadata.getCommitMetadata(),
-                  Joiner.on(", ").join(segmentsAndMetadata.getSegments())
+              final boolean published = publisher.publishSegments(
+                  ImmutableSet.copyOf(segmentsAndMetadata.getSegments()),
+                  ((AppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata()).getCallerMetadata()
               );
 
-              if (segmentsAndMetadata.getSegments().isEmpty()) {
-                log.info("Nothing to publish, skipping publish step.");
+              if (published) {
+                log.info("Published segments.");
               } else {
-                final boolean published = publisher.publishSegments(
-                    ImmutableSet.copyOf(segmentsAndMetadata.getSegments()),
-                    ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata()).getCallerMetadata()
-                );
-
-                if (published) {
-                  log.info("Published segments, awaiting handoff.");
+                log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
+                if (usedSegmentChecker.findUsedSegments(pushedSegments)
+                                      .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
+                  log.info("Our segments really do exist, awaiting handoff.");
                 } else {
-                  log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
-                  if (usedSegmentChecker.findUsedSegments(pushedSegments)
-                                        .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
-                    log.info("Our segments really do exist, awaiting handoff.");
-                  } else {
-                    log.warn("Our segments don't exist, giving up.");
-                    return null;
-                  }
+                  log.warn("Our segments don't exist, giving up.");
+                  return null;
                 }
               }
-
-              return segmentsAndMetadata;
             }
-            catch (InterruptedException e) {
-              throw e;
-            }
-            catch (Exception e) {
-              final long sleepMillis = computeNextRetrySleep(++nTry);
-              log.warn(e, "Failed publish (try %d), retrying in %,dms.", nTry, sleepMillis);
-              Thread.sleep(sleepMillis);
+            catch (IOException e) {
+              throw Throwables.propagate(e);
             }
           }
-        }
+
+          return segmentsAndMetadata;
+        },
+        publishExecutor
     );
   }
 
@@ -607,9 +620,9 @@ public class AppenderatorDriver implements Closeable
 
   private WrappedCommitter wrapCommitter(final Committer committer)
   {
-    final FiniteAppenderatorDriverMetadata wrappedMetadata;
+    final AppenderatorDriverMetadata wrappedMetadata;
     synchronized (activeSegments) {
-      wrappedMetadata = new FiniteAppenderatorDriverMetadata(
+      wrappedMetadata = new AppenderatorDriverMetadata(
           ImmutableMap.copyOf(
               Maps.transformValues(
                   activeSegments,
@@ -643,13 +656,5 @@ public class AppenderatorDriver implements Closeable
         committer.run();
       }
     };
-  }
-
-  private static long computeNextRetrySleep(final long nTry)
-  {
-    final long baseSleepMillis = 1000;
-    final long maxSleepMillis = 60000;
-    final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * new Random().nextGaussian(), 0), 2);
-    return (long) (Math.min(maxSleepMillis, baseSleepMillis * Math.pow(2, nTry)) * fuzzyMultiplier);
   }
 }

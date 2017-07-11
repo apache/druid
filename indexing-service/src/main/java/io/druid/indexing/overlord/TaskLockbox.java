@@ -41,6 +41,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.server.initialization.ServerConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -52,6 +53,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -67,6 +69,7 @@ public class TaskLockbox
   private final TaskStorage taskStorage;
   private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition lockReleaseCondition = giant.newCondition();
+  protected final long lockTimeoutMillis;
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
@@ -76,10 +79,21 @@ public class TaskLockbox
 
   @Inject
   public TaskLockbox(
-      TaskStorage taskStorage
+      TaskStorage taskStorage,
+      ServerConfig serverConfig
   )
   {
     this.taskStorage = taskStorage;
+    this.lockTimeoutMillis = serverConfig.getMaxIdleTime().getMillis();
+  }
+
+  public TaskLockbox(
+      TaskStorage taskStorage,
+      long lockTimeoutMillis
+  )
+  {
+    this.taskStorage = taskStorage;
+    this.lockTimeoutMillis = lockTimeoutMillis;
   }
 
   /**
@@ -186,15 +200,36 @@ public class TaskLockbox
    */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {
+    long timeout = lockTimeoutMillis;
     giant.lock();
     try {
       Optional<TaskLock> taskLock;
       while (!(taskLock = tryLock(task, interval)).isPresent()) {
-        lockReleaseCondition.await();
+        long startTime = System.currentTimeMillis();
+        lockReleaseCondition.await(timeout, TimeUnit.MILLISECONDS);
+        long timeDelta = System.currentTimeMillis() - startTime;
+        if (timeDelta >= timeout) {
+          log.error(
+              "Task [%s] can not acquire lock for interval [%s] within [%s] ms",
+              task.getId(),
+              interval,
+              lockTimeoutMillis
+          );
+
+          throw new InterruptedException(String.format(
+              "Task [%s] can not acquire lock for interval [%s] within [%s] ms",
+              task.getId(),
+              interval,
+              lockTimeoutMillis
+          ));
+        } else {
+          timeout -= timeDelta;
+        }
       }
 
       return taskLock.get();
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -299,6 +334,12 @@ public class TaskLockbox
         if (foundPosse.getTaskLock().getInterval().contains(interval) && foundPosse.getTaskLock().getGroupId().equals(task.getGroupId())) {
           posseToUse = foundPosse;
         } else {
+          //Could be a deadlock for LockAcquireAction: same task trying to acquire lock for overlapping interval
+          if (foundPosse.getTaskIds().contains(task.getId())) {
+            log.makeAlert("Same Task is trying to acquire lock for overlapping interval")
+               .addData("task", task.getId())
+               .addData("interval", interval);
+          }
           return null;
         }
 

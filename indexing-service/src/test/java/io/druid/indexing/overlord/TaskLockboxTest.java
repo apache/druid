@@ -19,26 +19,36 @@
 
 package io.druid.indexing.overlord;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
+import io.druid.server.initialization.ServerConfig;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TaskLockboxTest
@@ -47,8 +57,12 @@ public class TaskLockboxTest
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
+  private ServerConfig serverConfig;
   private TaskStorage taskStorage;
   private TaskLockbox lockbox;
+
+  @Rule
+  public final ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setup()
@@ -64,7 +78,15 @@ public class TaskLockboxTest
             objectMapper
         )
     );
-    lockbox = new TaskLockbox(taskStorage);
+    serverConfig = EasyMock.niceMock(ServerConfig.class);
+    EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100)).anyTimes();
+    EasyMock.replay(serverConfig);
+
+    ServiceEmitter emitter  = EasyMock.createMock(ServiceEmitter.class);
+    EmittingLogger.registerEmitter(emitter);
+    EasyMock.replay(emitter);
+
+    lockbox = new TaskLockbox(taskStorage, serverConfig);
   }
 
   @Test
@@ -81,17 +103,19 @@ public class TaskLockboxTest
     lockbox.lock(NoopTask.create(), new Interval("2015-01-01/2015-01-02"));
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testLockAfterTaskComplete() throws InterruptedException
   {
     Task task = NoopTask.create();
+    exception.expect(ISE.class);
+    exception.expectMessage("Unable to grant lock to inactive Task");
     lockbox.add(task);
     lockbox.remove(task);
     lockbox.lock(task, new Interval("2015-01-01/2015-01-02"));
   }
 
   @Test
-  public void testTryLock() throws InterruptedException
+  public void testTryLock()
   {
     Task task = NoopTask.create();
     lockbox.add(task);
@@ -110,7 +134,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTrySmallerLock() throws InterruptedException
+  public void testTrySmallerLock()
   {
     Task task = NoopTask.create();
     lockbox.add(task);
@@ -133,25 +157,42 @@ public class TaskLockboxTest
     );
   }
 
+
   @Test(expected = IllegalStateException.class)
-  public void testTryLockForInactiveTask() throws InterruptedException
+  public void testTryLockForInactiveTask()
   {
     Assert.assertFalse(lockbox.tryLock(NoopTask.create(), new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void testTryLockAfterTaskComplete() throws InterruptedException
+  @Test
+  public void testTryLockAfterTaskComplete()
   {
     Task task = NoopTask.create();
+    exception.expect(ISE.class);
+    exception.expectMessage("Unable to grant lock to inactive Task");
     lockbox.add(task);
     lockbox.remove(task);
     Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
   @Test
+  public void testTimeoutForLock() throws InterruptedException
+  {
+    Task task1 = NoopTask.create();
+    Task task2 = new SomeTask(null, 0, 0, null, null, null);
+
+    lockbox.add(task1);
+    lockbox.add(task2);
+    exception.expect(InterruptedException.class);
+    exception.expectMessage("can not acquire lock for interval");
+    lockbox.lock(task1, new Interval("2015-01-01/2015-01-02"));
+    lockbox.lock(task2, new Interval("2015-01-01/2015-01-15"));
+  }
+
+  @Test
   public void testSyncFromStorage() throws EntryExistsException
   {
-    final TaskLockbox originalBox = new TaskLockbox(taskStorage);
+    final TaskLockbox originalBox = new TaskLockbox(taskStorage, serverConfig);
     for (int i = 0; i < 5; i++) {
       final Task task = NoopTask.create();
       taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -166,16 +207,41 @@ public class TaskLockboxTest
                                                            .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
                                                            .collect(Collectors.toList());
 
-    final TaskLockbox newBox = new TaskLockbox(taskStorage);
+    final TaskLockbox newBox = new TaskLockbox(taskStorage, serverConfig);
     newBox.syncFromStorage();
 
     Assert.assertEquals(originalBox.getAllLocks(), newBox.getAllLocks());
     Assert.assertEquals(originalBox.getActiveTasks(), newBox.getActiveTasks());
 
     final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
-                                                         .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
-                                                         .collect(Collectors.toList());
+                                                          .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                                                          .collect(Collectors.toList());
 
     Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
+  }
+
+  public static class SomeTask extends NoopTask {
+
+    public SomeTask(
+        @JsonProperty("id") String id,
+        @JsonProperty("runTime") long runTime,
+        @JsonProperty("isReadyTime") long isReadyTime,
+        @JsonProperty("isReadyResult") String isReadyResult,
+        @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+        @JsonProperty("context") Map<String, Object> context
+    )
+    {
+      super(id, runTime, isReadyTime, isReadyResult, firehoseFactory, context);
+    }
+
+    @Override
+    public String getType()
+    {
+      return "someTask";
+    }
+
+    @Override
+    public  String getGroupId() { return "someGroupId";}
+
   }
 }

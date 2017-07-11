@@ -405,13 +405,13 @@ public class AppenderatorDriverTest
 
     @Override
     public SegmentIdentifier allocate(
-        final DateTime timestamp,
+        final InputRow row,
         final String sequenceName,
         final String previousSegmentId
     ) throws IOException
     {
       synchronized (counters) {
-        final long timestampTruncated = granularity.bucketStart(timestamp).getMillis();
+        final long timestampTruncated = granularity.bucketStart(row.getTimestamp()).getMillis();
         if (!counters.containsKey(timestampTruncated)) {
           counters.put(timestampTruncated, new AtomicInteger());
         }

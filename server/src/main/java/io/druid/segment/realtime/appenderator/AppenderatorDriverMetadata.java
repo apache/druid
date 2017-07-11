@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 
-public class FiniteAppenderatorDriverMetadata
+public class AppenderatorDriverMetadata
 {
   private final Map<String, List<SegmentIdentifier>> activeSegments;
   private final Map<String, List<SegmentIdentifier>> publishPendingSegments;
@@ -33,7 +33,7 @@ public class FiniteAppenderatorDriverMetadata
   private final Object callerMetadata;
 
   @JsonCreator
-  public FiniteAppenderatorDriverMetadata(
+  public AppenderatorDriverMetadata(
       @JsonProperty("activeSegments") Map<String, List<SegmentIdentifier>> activeSegments,
       @JsonProperty("publishPendingSegments") Map<String, List<SegmentIdentifier>> publishPendingSegments,
       @JsonProperty("lastSegmentIds") Map<String, String> lastSegmentIds,
@@ -73,7 +73,7 @@ public class FiniteAppenderatorDriverMetadata
   @Override
   public String toString()
   {
-    return "FiniteAppenderatorDriverMetadata{" +
+    return "AppenderatorDriverMetadata{" +
            "activeSegments=" + activeSegments +
            ", publishPendingSegments=" + publishPendingSegments +
            ", lastSegmentIds=" + lastSegmentIds +
