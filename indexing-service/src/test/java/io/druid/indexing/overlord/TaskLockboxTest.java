@@ -20,16 +20,23 @@
 package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.metadata.EntryExistsException;
+import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
+import io.druid.metadata.TestDerbyConnector;
 import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -40,23 +47,39 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TaskLockboxTest
 {
-  private TaskStorage taskStorage;
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
+  private final ObjectMapper objectMapper = new DefaultObjectMapper();
+  private ServerConfig serverConfig;
+  private TaskStorage taskStorage;
   private TaskLockbox lockbox;
 
   @Rule
   public final ExpectedException exception = ExpectedException.none();
 
   @Before
-  public void setUp()
+  public void setup()
   {
-    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    ServerConfig serverConfig = EasyMock.niceMock(ServerConfig.class);
-    EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100));
+    final TestDerbyConnector derbyConnector = derby.getConnector();
+    derbyConnector.createTaskTables();
+    taskStorage = new MetadataTaskStorage(
+        derbyConnector,
+        new TaskStorageConfig(null),
+        new SQLMetadataStorageActionHandlerFactory(
+            derbyConnector,
+            derby.metadataTablesConfigSupplier().get(),
+            objectMapper
+        )
+    );
+    serverConfig = EasyMock.niceMock(ServerConfig.class);
+    EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100)).anyTimes();
     EasyMock.replay(serverConfig);
 
     ServiceEmitter emitter  = EasyMock.createMock(ServiceEmitter.class);
@@ -166,6 +189,37 @@ public class TaskLockboxTest
     lockbox.lock(task2, new Interval("2015-01-01/2015-01-15"));
   }
 
+  @Test
+  public void testSyncFromStorage() throws EntryExistsException
+  {
+    final TaskLockbox originalBox = new TaskLockbox(taskStorage, serverConfig);
+    for (int i = 0; i < 5; i++) {
+      final Task task = NoopTask.create();
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
+      originalBox.add(task);
+      Assert.assertTrue(
+          originalBox.tryLock(task, new Interval(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2))))
+                     .isPresent()
+      );
+    }
+
+    final List<TaskLock> beforeLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                           .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                                                           .collect(Collectors.toList());
+
+    final TaskLockbox newBox = new TaskLockbox(taskStorage, serverConfig);
+    newBox.syncFromStorage();
+
+    Assert.assertEquals(originalBox.getAllLocks(), newBox.getAllLocks());
+    Assert.assertEquals(originalBox.getActiveTasks(), newBox.getActiveTasks());
+
+    final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                          .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                                                          .collect(Collectors.toList());
+
+    Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
+  }
+
   public static class SomeTask extends NoopTask {
 
     public SomeTask(
@@ -190,5 +244,4 @@ public class TaskLockboxTest
     public  String getGroupId() { return "someGroupId";}
 
   }
-
 }
