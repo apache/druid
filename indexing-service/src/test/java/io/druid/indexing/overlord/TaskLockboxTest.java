@@ -54,13 +54,7 @@ public class TaskLockboxTest
   public void setup()
   {
     final TestDerbyConnector derbyConnector = derby.getConnector();
-    derbyConnector.createDataSourceTable();
-    derbyConnector.createPendingSegmentsTable();
-    derbyConnector.createSegmentTable();
-    derbyConnector.createRulesTable();
-    derbyConnector.createConfigTable();
     derbyConnector.createTaskTables();
-    derbyConnector.createAuditTable();
     taskStorage = new MetadataTaskStorage(
         derbyConnector,
         new TaskStorageConfig(null),
