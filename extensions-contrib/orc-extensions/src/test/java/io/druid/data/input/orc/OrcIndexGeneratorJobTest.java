@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
@@ -154,8 +155,18 @@ public class OrcIndexGeneratorJobTest
     for (int idx = 0; idx < data.size(); idx++) {
       String line = data.get(idx);
       String[] lineSplit = line.split(",");
-      ((BytesColumnVector) batch.cols[0]).setRef(idx, lineSplit[0].getBytes(), 0, lineSplit[0].length());
-      ((BytesColumnVector) batch.cols[1]).setRef(idx, lineSplit[1].getBytes(), 0, lineSplit[1].length());
+      ((BytesColumnVector) batch.cols[0]).setRef(
+          idx,
+          StringUtils.toUtf8(lineSplit[0]),
+          0,
+          lineSplit[0].length()
+      );
+      ((BytesColumnVector) batch.cols[1]).setRef(
+          idx,
+          StringUtils.toUtf8(lineSplit[1]),
+          0,
+          lineSplit[1].length()
+      );
       ((LongColumnVector) batch.cols[2]).vector[idx] = Long.parseLong(lineSplit[2]);
     }
     writer.addRowBatch(batch);
@@ -216,7 +227,8 @@ public class OrcIndexGeneratorJobTest
                 true,
                 null,
                 false,
-                false
+                false,
+                null
             )
         )
     );
@@ -240,7 +252,7 @@ public class OrcIndexGeneratorJobTest
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
       Integer[][] shardInfo = shardInfoForEachSegment[segmentNum++];
       File segmentOutputFolder = new File(
-          String.format(
+          StringUtils.format(
               "%s/%s/%s_%s/%s",
               config.getSchema().getIOConfig().getSegmentOutputPath(),
               config.getSchema().getDataSchema().getDataSource(),

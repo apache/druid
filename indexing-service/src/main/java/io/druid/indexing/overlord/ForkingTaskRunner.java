@@ -53,6 +53,8 @@ import io.druid.indexing.common.tasklogs.LogUtils;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -60,6 +62,7 @@ import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.MonitorsConfig;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogStreamer;
@@ -100,6 +103,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final ListeningExecutorService exec;
   private final ObjectMapper jsonMapper;
   private final PortFinder portFinder;
+  private final PortFinder tlsPortFinder;
+  private final ServerConfig serverConfig;
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   // Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting.
@@ -115,7 +120,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       Properties props,
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
-      @Self DruidNode node
+      @Self DruidNode node,
+      ServerConfig serverConfig
   )
   {
     this.config = config;
@@ -125,7 +131,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.jsonMapper = jsonMapper;
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort());
-
+    this.tlsPortFinder = new PortFinder(config.getTlsStartPort());
+    this.serverConfig = serverConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -227,25 +234,31 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                         final ProcessHolder processHolder;
                         final String childHost = node.getHost();
-                        final int childPort;
-                        final int childChatHandlerPort;
+                        int childPort = -1;
+                        int tlsChildPort = -1;
+                        int childChatHandlerPort = -1;
 
-                        if (config.isSeparateIngestionEndpoint()) {
-                          Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
-                          childPort = portPair.lhs;
-                          childChatHandlerPort = portPair.rhs;
-                        } else {
-                          childPort = portFinder.findUnusedPort();
-                          childChatHandlerPort = -1;
+                        if(serverConfig.isPlaintext()) {
+                          if (config.isSeparateIngestionEndpoint()) {
+                            Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
+                            childPort = portPair.lhs;
+                            childChatHandlerPort = portPair.rhs;
+                          } else {
+                            childPort = portFinder.findUnusedPort();
+                          }
                         }
 
-                        final TaskLocation taskLocation = TaskLocation.create(childHost, childPort);
+                        if(serverConfig.isTls()) {
+                          tlsChildPort = tlsPortFinder.findUnusedPort();
+                        }
+
+                        final TaskLocation taskLocation = TaskLocation.create(childHost, childPort, tlsChildPort);
 
                         try {
                           final Closer closer = Closer.create();
                           try {
                             if (!attemptDir.mkdirs()) {
-                              throw new IOException(String.format("Could not create directories: %s", attemptDir));
+                              throw new IOE("Could not create directories: %s", attemptDir);
                             }
 
                             final File taskFile = new File(taskDir, "task.json");
@@ -309,7 +322,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                       && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
                                       ) {
                                     command.add(
-                                        String.format(
+                                        StringUtils.format(
                                             "-D%s=%s",
                                             propName,
                                             props.getProperty(propName)
@@ -323,7 +336,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               for (String propName : props.stringPropertyNames()) {
                                 if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
                                   command.add(
-                                      String.format(
+                                      StringUtils.format(
                                           "-D%s=%s",
                                           propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                           props.getProperty(propName)
@@ -338,7 +351,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 for (String propName : context.keySet()) {
                                   if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
                                     command.add(
-                                        String.format(
+                                        StringUtils.format(
                                             "-D%s=%s",
                                             propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                             task.getContextValue(propName)
@@ -350,7 +363,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                               // Add dataSource and taskId for metrics or logging
                               command.add(
-                                  String.format(
+                                  StringUtils.format(
                                       "-D%s%s=%s",
                                       MonitorsConfig.METRIC_DIMENSION_PREFIX,
                                       DruidMetrics.DATASOURCE,
@@ -358,7 +371,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   )
                               );
                               command.add(
-                                  String.format(
+                                  StringUtils.format(
                                       "-D%s%s=%s",
                                       MonitorsConfig.METRIC_DIMENSION_PREFIX,
                                       DruidMetrics.TASK_ID,
@@ -366,8 +379,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   )
                               );
 
-                              command.add(String.format("-Ddruid.host=%s", childHost));
-                              command.add(String.format("-Ddruid.port=%d", childPort));
+                              command.add(StringUtils.format("-Ddruid.host=%s", childHost));
+                              command.add(StringUtils.format("-Ddruid.port=%d", childPort));
+                              command.add(StringUtils.format("-Ddruid.tlsPort=%d", tlsChildPort));
                               /**
                                * These are not enabled per default to allow the user to either set or not set them
                                * Users are highly suggested to be set in druid.indexer.runner.javaOpts
@@ -378,17 +392,19 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                */
 
                               if (config.isSeparateIngestionEndpoint()) {
-                                command.add(String.format(
+                                command.add(StringUtils.format(
                                     "-Ddruid.indexer.task.chathandler.service=%s",
                                     "placeholder/serviceName"
                                 ));
                                 // Actual serviceName will be passed by the EventReceiverFirehose when it registers itself with ChatHandlerProvider
                                 // Thus, "placeholder/serviceName" will be ignored
-                                command.add(String.format("-Ddruid.indexer.task.chathandler.host=%s", childHost));
-                                command.add(String.format(
+                                command.add(StringUtils.format("-Ddruid.indexer.task.chathandler.host=%s", childHost));
+                                command.add(StringUtils.format(
                                     "-Ddruid.indexer.task.chathandler.port=%d",
                                     childChatHandlerPort
                                 ));
+                                // Note - TLS is not supported with separate ingestion config,
+                                // if set then peon task will fail to start
                               }
 
                               command.add("io.druid.cli.Main");
@@ -411,7 +427,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
                                   logFile,
                                   taskLocation.getHost(),
-                                  taskLocation.getPort()
+                                  taskLocation.getPort(),
+                                  taskLocation.getTlsPort()
                               );
 
                               processHolder = taskWorkItem.processHolder;
@@ -432,7 +449,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                             // This will block for a while. So we append the thread information with more details
                             final String priorThreadName = Thread.currentThread().getName();
-                            Thread.currentThread().setName(String.format("%s-[%s]", priorThreadName, task.getId()));
+                            Thread.currentThread().setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
 
                             try (final OutputStream toLogfile = logSink.openStream()) {
                               ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
@@ -483,7 +500,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
                             }
 
-                            portFinder.markPortUnused(childPort);
+                            if(serverConfig.isPlaintext()) {
+                              portFinder.markPortUnused(childPort);
+                            }
+                            if(serverConfig.isTls()) {
+                              tlsPortFinder.markPortUnused(tlsChildPort);
+                            }
                             if (childChatHandlerPort > 0) {
                               portFinder.markPortUnused(childChatHandlerPort);
                             }
@@ -744,7 +766,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       if (processHolder == null) {
         return TaskLocation.unknown();
       } else {
-        return TaskLocation.create(processHolder.host, processHolder.port);
+        return TaskLocation.create(processHolder.host, processHolder.port, processHolder.tlsPort);
       }
     }
   }
@@ -755,13 +777,15 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     private final File logFile;
     private final String host;
     private final int port;
+    private final int tlsPort;
 
-    private ProcessHolder(Process process, File logFile, String host, int port)
+    private ProcessHolder(Process process, File logFile, String host, int port, int tlsPort)
     {
       this.process = process;
       this.logFile = logFile;
       this.host = host;
       this.port = port;
+      this.tlsPort = tlsPort;
     }
 
     private void registerWithCloser(Closer closer)

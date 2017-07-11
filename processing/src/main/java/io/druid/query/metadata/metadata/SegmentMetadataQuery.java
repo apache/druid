@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
@@ -32,6 +33,7 @@ import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
@@ -67,13 +69,13 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static AnalysisType fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
 
     public byte[] getCacheKey()
@@ -84,12 +86,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 
   public static final Interval DEFAULT_INTERVAL = new Interval(
       JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
-  );
-
-  public static final EnumSet<AnalysisType> DEFAULT_ANALYSIS_TYPES = EnumSet.of(
-      AnalysisType.CARDINALITY,
-      AnalysisType.INTERVAL,
-      AnalysisType.MINMAX
   );
 
   private final ColumnIncluderator toInclude;
@@ -125,7 +121,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     }
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
-    this.analysisTypes = (analysisTypes == null) ? DEFAULT_ANALYSIS_TYPES : analysisTypes;
+    this.analysisTypes = analysisTypes;
     Preconditions.checkArgument(
         dataSource instanceof TableDataSource || dataSource instanceof UnionDataSource,
         "SegmentMetadataQuery only supports table or union datasource"
@@ -252,6 +248,23 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public Query<SegmentAnalysis> withColumns(ColumnIncluderator includerator)
   {
     return Druids.SegmentMetadataQueryBuilder.copy(this).toInclude(includerator).build();
+  }
+
+  public SegmentMetadataQuery withFinalizedAnalysisTypes(SegmentMetadataQueryConfig config)
+  {
+    if (analysisTypes != null) {
+      return this;
+    }
+    return Druids.SegmentMetadataQueryBuilder
+        .copy(this)
+        .analysisTypes(config.getDefaultAnalysisTypes())
+        .build();
+  }
+
+  @Override
+  public List<Interval> getIntervals()
+  {
+    return this.getQuerySegmentSpec().getIntervals();
   }
 
   @Override

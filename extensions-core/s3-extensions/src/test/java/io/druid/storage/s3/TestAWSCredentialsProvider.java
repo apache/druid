@@ -22,6 +22,7 @@ package io.druid.storage.s3;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
+import com.google.common.io.Files;
 import io.druid.common.aws.AWSCredentialsConfig;
 import io.druid.guice.AWSModule;
 import org.easymock.EasyMock;
@@ -29,9 +30,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -68,9 +70,9 @@ public class TestAWSCredentialsProvider
     EasyMock.expect(config.getAccessKey()).andReturn("");
     EasyMock.expect(config.getSecretKey()).andReturn("");
     File file = folder.newFile();
-    PrintWriter out = new PrintWriter(file.getAbsolutePath());
-    out.println("sessionToken=sessionTokenSample\nsecretKey=secretKeySample\naccessKey=accessKeySample");
-    out.close();
+    try (BufferedWriter out = Files.newWriter(file, StandardCharsets.UTF_8)) {
+      out.write("sessionToken=sessionTokenSample\nsecretKey=secretKeySample\naccessKey=accessKeySample\n");
+    }
     EasyMock.expect(config.getFileSessionCredentials()).andReturn(file.getAbsolutePath()).atLeastOnce();
     EasyMock.replay(config);
 

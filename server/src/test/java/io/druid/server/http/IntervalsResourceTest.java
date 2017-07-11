@@ -22,6 +22,7 @@ package io.druid.server.http;
 import com.google.common.collect.ImmutableList;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.security.AuthConfig;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -92,7 +93,7 @@ public class IntervalsResourceTest
             5
         )
     );
-    server = new DruidServer("who", "host", 1234, "historical", "tier1", 0);
+    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0);
     server.addDataSegment(dataSegmentList.get(0).getIdentifier(), dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1).getIdentifier(), dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2).getIdentifier(), dataSegmentList.get(2));

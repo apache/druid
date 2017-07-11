@@ -20,6 +20,7 @@
 package io.druid.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,6 +36,6 @@ public class DefaultObjectMapperTest
   {
     final DateTime time = new DateTime();
 
-    Assert.assertEquals(String.format("\"%s\"", time), mapper.writeValueAsString(time));
+    Assert.assertEquals(StringUtils.format("\"%s\"", time), mapper.writeValueAsString(time));
   }
 }

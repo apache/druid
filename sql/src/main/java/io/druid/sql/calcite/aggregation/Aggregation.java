@@ -30,25 +30,27 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
+import io.druid.segment.VirtualColumn;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class Aggregation
 {
+  private final List<VirtualColumn> virtualColumns;
   private final List<AggregatorFactory> aggregatorFactories;
   private final PostAggregator postAggregator;
-  private final PostAggregatorFactory finalizingPostAggregatorFactory;
 
   private Aggregation(
+      final List<VirtualColumn> virtualColumns,
       final List<AggregatorFactory> aggregatorFactories,
-      final PostAggregator postAggregator,
-      final PostAggregatorFactory finalizingPostAggregatorFactory
+      final PostAggregator postAggregator
   )
   {
+    this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
     this.aggregatorFactories = Preconditions.checkNotNull(aggregatorFactories, "aggregatorFactories");
     this.postAggregator = postAggregator;
-    this.finalizingPostAggregatorFactory = finalizingPostAggregatorFactory;
 
     if (postAggregator == null) {
       Preconditions.checkArgument(aggregatorFactories.size() == 1, "aggregatorFactories.size == 1");
@@ -62,16 +64,47 @@ public class Aggregation
         }
       }
     }
+
+    // Verify that all "internal" aggregator names are prefixed by the output name of this aggregation.
+    // This is a sanity check to make sure callers are behaving as they should be.
+    final String name = postAggregator != null
+                        ? postAggregator.getName()
+                        : Iterables.getOnlyElement(aggregatorFactories).getName();
+
+    for (VirtualColumn virtualColumn : virtualColumns) {
+      if (!virtualColumn.getOutputName().startsWith(name)) {
+        throw new IAE("VirtualColumn[%s] not prefixed under[%s]", virtualColumn.getOutputName(), name);
+      }
+    }
+
+    for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
+      if (!aggregatorFactory.getName().startsWith(name)) {
+        throw new IAE("Aggregator[%s] not prefixed under[%s]", aggregatorFactory.getName(), name);
+      }
+    }
+  }
+
+  public static Aggregation create(final List<VirtualColumn> virtualColumns, final AggregatorFactory aggregatorFactory)
+  {
+    return new Aggregation(
+        virtualColumns,
+        ImmutableList.of(aggregatorFactory),
+        null
+    );
   }
 
   public static Aggregation create(final AggregatorFactory aggregatorFactory)
   {
-    return new Aggregation(ImmutableList.of(aggregatorFactory), null, null);
+    return new Aggregation(
+        ImmutableList.of(),
+        ImmutableList.of(aggregatorFactory),
+        null
+    );
   }
 
   public static Aggregation create(final PostAggregator postAggregator)
   {
-    return new Aggregation(ImmutableList.<AggregatorFactory>of(), postAggregator, null);
+    return new Aggregation(ImmutableList.of(), ImmutableList.of(), postAggregator);
   }
 
   public static Aggregation create(
@@ -79,20 +112,21 @@ public class Aggregation
       final PostAggregator postAggregator
   )
   {
-    return new Aggregation(aggregatorFactories, postAggregator, null);
+    return new Aggregation(ImmutableList.of(), aggregatorFactories, postAggregator);
   }
 
-  public static Aggregation createFinalizable(
+  public static Aggregation create(
+      final List<VirtualColumn> virtualColumns,
       final List<AggregatorFactory> aggregatorFactories,
-      final PostAggregator postAggregator,
-      final PostAggregatorFactory finalizingPostAggregatorFactory
+      final PostAggregator postAggregator
   )
   {
-    return new Aggregation(
-        aggregatorFactories,
-        postAggregator,
-        Preconditions.checkNotNull(finalizingPostAggregatorFactory, "finalizingPostAggregatorFactory")
-    );
+    return new Aggregation(virtualColumns, aggregatorFactories, postAggregator);
+  }
+
+  public List<VirtualColumn> getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   public List<AggregatorFactory> getAggregatorFactories()
@@ -103,11 +137,6 @@ public class Aggregation
   public PostAggregator getPostAggregator()
   {
     return postAggregator;
-  }
-
-  public PostAggregatorFactory getFinalizingPostAggregatorFactory()
-  {
-    return finalizingPostAggregatorFactory;
   }
 
   public String getOutputName()
@@ -124,7 +153,8 @@ public class Aggregation
     }
 
     if (postAggregator != null) {
-      // Verify that this Aggregation contains all inputs. If not, this "filter" call won't work right.
+      // Verify that this Aggregation contains all input to its postAggregator.
+      // If not, this "filter" call won't work right.
       final Set<String> dependentFields = postAggregator.getDependentFields();
       final Set<String> aggregatorNames = Sets.newHashSet();
       for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
@@ -138,20 +168,15 @@ public class Aggregation
     }
 
     final List<AggregatorFactory> newAggregators = Lists.newArrayList();
-
     for (AggregatorFactory agg : aggregatorFactories) {
       newAggregators.add(new FilteredAggregatorFactory(agg, filter));
     }
 
-    return new Aggregation(
-        newAggregators,
-        postAggregator,
-        finalizingPostAggregatorFactory
-    );
+    return new Aggregation(virtualColumns, newAggregators, postAggregator);
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -159,38 +184,25 @@ public class Aggregation
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    Aggregation that = (Aggregation) o;
-
-    if (aggregatorFactories != null
-        ? !aggregatorFactories.equals(that.aggregatorFactories)
-        : that.aggregatorFactories != null) {
-      return false;
-    }
-    if (postAggregator != null ? !postAggregator.equals(that.postAggregator) : that.postAggregator != null) {
-      return false;
-    }
-    return finalizingPostAggregatorFactory != null
-           ? finalizingPostAggregatorFactory.equals(that.finalizingPostAggregatorFactory)
-           : that.finalizingPostAggregatorFactory == null;
+    final Aggregation that = (Aggregation) o;
+    return Objects.equals(virtualColumns, that.virtualColumns) &&
+           Objects.equals(aggregatorFactories, that.aggregatorFactories) &&
+           Objects.equals(postAggregator, that.postAggregator);
   }
 
   @Override
   public int hashCode()
   {
-    int result = aggregatorFactories != null ? aggregatorFactories.hashCode() : 0;
-    result = 31 * result + (postAggregator != null ? postAggregator.hashCode() : 0);
-    result = 31 * result + (finalizingPostAggregatorFactory != null ? finalizingPostAggregatorFactory.hashCode() : 0);
-    return result;
+    return Objects.hash(virtualColumns, aggregatorFactories, postAggregator);
   }
 
   @Override
   public String toString()
   {
     return "Aggregation{" +
-           "aggregatorFactories=" + aggregatorFactories +
+           "virtualColumns=" + virtualColumns +
+           ", aggregatorFactories=" + aggregatorFactories +
            ", postAggregator=" + postAggregator +
-           ", finalizingPostAggregatorFactory=" + finalizingPostAggregatorFactory +
            '}';
   }
 }

@@ -45,7 +45,7 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
   ) throws InstantiationException, IllegalAccessException, InvocationTargetException
   {
     super(new LocalService(druidMeta), avaticaMonitor);
-    setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPort()));
+    setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
   }
 
   @Override

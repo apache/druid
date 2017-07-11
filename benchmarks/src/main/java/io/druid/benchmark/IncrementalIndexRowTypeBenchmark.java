@@ -22,13 +22,12 @@ package io.druid.benchmark;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -68,14 +67,14 @@ public class IncrementalIndexRowTypeBenchmark
     for (int i = 0; i < dimensionCount; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
-              String.format("sumResult%s", i),
-              String.format("Dim_%s", i)
+              StringUtils.format("sumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
       ingestAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
-              String.format("doubleSumResult%s", i),
-              String.format("Dim_%s", i)
+              StringUtils.format("doubleSumResult%s", i),
+              StringUtils.format("Dim_%s", i)
           )
       );
     }
@@ -87,7 +86,7 @@ public class IncrementalIndexRowTypeBenchmark
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
-      String dimName = String.format("Dim_%d", i);
+      String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
       builder.put(dimName, rng.nextLong());
     }
@@ -99,7 +98,7 @@ public class IncrementalIndexRowTypeBenchmark
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
-      String dimName = String.format("Dim_%d", i);
+      String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
       builder.put(dimName, rng.nextFloat());
     }
@@ -111,7 +110,7 @@ public class IncrementalIndexRowTypeBenchmark
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
-      String dimName = String.format("Dim_%d", i);
+      String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
       builder.put(dimName, String.valueOf(rng.nextLong()));
     }
@@ -120,15 +119,12 @@ public class IncrementalIndexRowTypeBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex(
-        0,
-        Granularities.NONE,
-        aggs,
-        false,
-        false,
-        true,
-        maxRows
-    );
+    return new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(aggs)
+        .setDeserializeComplexMetrics(false)
+        .setReportParseExceptions(false)
+        .setMaxRowCount(maxRows)
+        .buildOnheap();
   }
 
   @Setup

@@ -21,6 +21,8 @@ package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.StringUtils;
+
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
@@ -53,6 +55,6 @@ public enum CacheExecutorFactory
   @JsonCreator
   public static CacheExecutorFactory from(String str)
   {
-    return Enum.valueOf(CacheExecutorFactory.class, str.toUpperCase());
+    return Enum.valueOf(CacheExecutorFactory.class, StringUtils.toUpperCase(str));
   }
 }

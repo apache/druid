@@ -32,11 +32,12 @@ import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.DefaultBlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
@@ -76,7 +77,6 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -106,7 +106,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(jvmArgsPrepend = "-server", value = 1)
+@Fork(value = 1)
 @Warmup(iterations = 15)
 @Measurement(iterations = 30)
 public class GroupByBenchmark
@@ -394,7 +394,7 @@ public class GroupByBenchmark
       }
     }
 
-    StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
+    NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByBenchmark-computeBufferPool",
         new OffheapBufferGenerator("compute", 250_000_000),
         0,
@@ -402,7 +402,7 @@ public class GroupByBenchmark
     );
 
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    BlockingPool<ByteBuffer> mergePool = new BlockingPool<>(
+    BlockingPool<ByteBuffer> mergePool = new DefaultBlockingPool<>(
         new OffheapBufferGenerator("merge", 250_000_000),
         2
     );
@@ -476,18 +476,17 @@ public class GroupByBenchmark
 
   private IncrementalIndex makeIncIndex(boolean withRollup)
   {
-    return new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
             .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(withRollup)
-            .build(),
-        true,
-        false,
-        true,
-        rowsPerSegment
-    );
+            .build()
+        )
+        .setReportParseExceptions(false)
+        .setConcurrentEventAdd(true)
+        .setMaxRowCount(rowsPerSegment)
+        .buildOnheap();
   }
 
   @TearDown(Level.Trial)

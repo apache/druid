@@ -53,11 +53,11 @@
             {
                 "timestamp": "2013-08-31T01:02:33.000Z",
                 "result": {
-                    "added": 2064.0,
-                    "count": 8,
-                    "delta": 748.0,
-                    "deleted": 1316.0,
-                    "rows": 8
+                    "added": 1548.0,
+                    "count": 6,
+                    "delta": 561.0,
+                    "deleted": 987.0,
+                    "rows": 6
                 }
             }
         ]
@@ -115,28 +115,28 @@
                 "timestamp": "2013-08-31T01:02:33.000Z",
                 "result": [
                     {
-                        "added": 3620.0,
-                        "count": 4,
+                        "added": 2715.0,
+                        "count": 3,
                         "page": "Crimson Typhoon",
-                        "delta": 3600.0,
-                        "deleted": 20.0,
-                        "rows": 4
+                        "delta": 2700.0,
+                        "deleted": 15.0,
+                        "rows": 3
                     },
                     {
-                        "added": 1836.0,
-                        "count": 4,
+                        "added": 1377.0,
+                        "count": 3,
                         "page": "Striker Eureka",
-                        "delta": 1320.0,
-                        "deleted": 516.0,
-                        "rows": 4
+                        "delta": 990.0,
+                        "deleted": 387.0,
+                        "rows": 3
                     },
                     {
-                        "added": 492.0,
-                        "count": 4,
+                        "added": 369.0,
+                        "count": 3,
                         "page": "Cherno Alpha",
-                        "delta": 444.0,
-                        "deleted": 48.0,
-                        "rows": 4
+                        "delta": 333.0,
+                        "deleted": 36.0,
+                        "rows": 3
                     }
                 ]
             }
@@ -226,31 +226,31 @@
                 "timestamp": "2013-08-31T01:02:33.000Z",
                 "result": [
                     {
-                        "added": 3620.0,
-                        "count": 4,
+                        "added": 2715.0,
+                        "count": 3,
                         "page": "Crimson Typhoon",
-                        "delta": 3600.0,
-                        "deleted": 20.0,
-                        "sumOfAddedDeletedConst": 4640.0,
-                        "rows": 4
+                        "delta": 2700.0,
+                        "deleted": 15.0,
+                        "sumOfAddedDeletedConst": 3730.0,
+                        "rows": 3
                     },
                     {
-                        "added": 1836.0,
-                        "count": 4,
+                        "added": 1377.0,
+                        "count": 3,
                         "page": "Striker Eureka",
-                        "delta": 1320.0,
-                        "deleted": 516.0,
-                        "sumOfAddedDeletedConst": 3352.0,
-                        "rows": 4
+                        "delta": 990.0,
+                        "deleted": 387.0,
+                        "sumOfAddedDeletedConst": 2764.0,
+                        "rows": 3
                     },
                     {
-                        "added": 492.0,
-                        "count": 4,
+                        "added": 369.0,
+                        "count": 3,
                         "page": "Cherno Alpha",
-                        "delta": 444.0,
-                        "deleted": 48.0,
-                        "sumOfAddedDeletedConst": 1540.0,
-                        "rows": 4
+                        "delta": 333.0,
+                        "deleted": 36.0,
+                        "sumOfAddedDeletedConst": 1405.0,
+                        "rows": 3
                     }
                 ]
             }
@@ -316,22 +316,22 @@
                 "timestamp": "2013-08-31T01:02:33.000Z",
                 "result": [
                     {
-                        "sumOfRowsAndCount": 16.0,
-                        "count": 8,
+                        "sumOfRowsAndCount": 12.0,
+                        "count": 6,
                         "language": "en",
-                        "rows": 8
+                        "rows": 6
                     },
                     {
-                        "sumOfRowsAndCount": 8.0,
-                        "count": 4,
+                        "sumOfRowsAndCount": 6.0,
+                        "count": 3,
                         "language": "ja",
-                        "rows": 4
+                        "rows": 3
                     },
                     {
-                        "sumOfRowsAndCount": 8.0,
-                        "count": 4,
+                        "sumOfRowsAndCount": 6.0,
+                        "count": 3,
                         "language": "ru",
-                        "rows": 4
+                        "rows": 3
                     }
                 ]
             }
@@ -392,9 +392,9 @@
                 "version": "v1",
                 "timestamp": "2013-08-31T00:00:00.000Z",
                 "event": {
-                    "sumOfRowsAndCount": 16.0,
-                    "count": 8,
-                    "rows": 8,
+                    "sumOfRowsAndCount": 12.0,
+                    "count": 6,
+                    "rows": 6,
                     "namespace": "article"
                 }
             },
@@ -402,9 +402,9 @@
                 "version": "v1",
                 "timestamp": "2013-08-31T00:00:00.000Z",
                 "event": {
-                    "sumOfRowsAndCount": 24.0,
-                    "count": 12,
-                    "rows": 12,
+                    "sumOfRowsAndCount": 18.0,
+                    "count": 9,
+                    "rows": 9,
                     "namespace": "wikipedia"
                 }
             }
@@ -470,10 +470,10 @@
                 "version": "v1",
                 "timestamp": "2013-08-31T00:00:00.000Z",
                 "event": {
-                    "sumOfRowsAndCount": 8.0,
-                    "count": 4,
+                    "sumOfRowsAndCount": 6.0,
+                    "count": 3,
                     "robot": "false",
-                    "rows": 4,
+                    "rows": 3,
                     "namespace": "article"
                 }
             },
@@ -481,10 +481,10 @@
                 "version": "v1",
                 "timestamp": "2013-08-31T00:00:00.000Z",
                 "event": {
-                    "sumOfRowsAndCount": 8.0,
-                    "count": 4,
+                    "sumOfRowsAndCount": 6.0,
+                    "count": 3,
                     "robot": "true",
-                    "rows": 4,
+                    "rows": 3,
                     "namespace": "article"
                 }
             },
@@ -492,10 +492,10 @@
                 "version": "v1",
                 "timestamp": "2013-08-31T00:00:00.000Z",
                 "event": {
-                    "sumOfRowsAndCount": 24.0,
-                    "count": 12,
+                    "sumOfRowsAndCount": 18.0,
+                    "count": 9,
                     "robot": "true",
-                    "rows": 12,
+                    "rows": 9,
                     "namespace": "wikipedia"
                 }
             }
@@ -530,12 +530,12 @@
                     {
                         "dimension": "user",
                         "value": "triplets",
-			"count":4
+			"count":3
                     },
                     {
                         "dimension": "namespace",
                         "value": "wikipedia",
-			"count":12
+			"count":9
                     }
                 ]
             }

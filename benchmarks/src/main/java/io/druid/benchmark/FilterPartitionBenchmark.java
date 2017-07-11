@@ -29,7 +29,6 @@ import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
@@ -72,8 +71,6 @@ import io.druid.segment.filter.Filters;
 import io.druid.segment.filter.OrFilter;
 import io.druid.segment.filter.SelectorFilter;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
@@ -100,7 +97,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(jvmArgsPrepend = "-server", value = 1)
+@Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
 public class FilterPartitionBenchmark
@@ -228,17 +225,11 @@ public class FilterPartitionBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
-            .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(new DimensionsSpec(null, null, null))
-            .build(),
-        true,
-        false,
-        true,
-        rowsPerSegment
-    );
+    return new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment)
+        .buildOnheap();
   }
 
   @Benchmark
@@ -508,7 +499,7 @@ public class FilterPartitionBenchmark
 
   private Sequence<Cursor> makeCursors(StorageAdapter sa, Filter filter)
   {
-    return sa.makeCursors(filter, schemaInfo.getDataInterval(), VirtualColumns.EMPTY, Granularities.ALL, false);
+    return sa.makeCursors(filter, schemaInfo.getDataInterval(), VirtualColumns.EMPTY, Granularities.ALL, false, null);
   }
 
   private Sequence<List<String>> readCursors(Sequence<Cursor> cursors, final Blackhole blackhole)

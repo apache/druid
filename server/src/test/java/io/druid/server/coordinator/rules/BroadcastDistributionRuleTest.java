@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import io.druid.client.DruidServer;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -106,8 +107,9 @@ public class BroadcastDistributionRuleTest
         new DruidServer(
             "serverHot2",
             "hostHot2",
+            null,
             1000,
-            "historical",
+            ServerType.HISTORICAL,
             "hot",
             0
         ).addDataSegment(smallSegment.getIdentifier(), smallSegment)
@@ -120,8 +122,9 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverHot1",
                 "hostHot1",
+                null,
                 1000,
-                "historical",
+                ServerType.HISTORICAL,
                 "hot",
                 0
             ).addDataSegment(largeSegments.get(0).getIdentifier(), largeSegments.get(0))
@@ -134,8 +137,9 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverNorm1",
                 "hostNorm1",
+                null,
                 1000,
-                "historical",
+                ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
             ).addDataSegment(largeSegments.get(1).getIdentifier(), largeSegments.get(1))
@@ -148,8 +152,9 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverNorm2",
                 "hostNorm2",
+                null,
                 100,
-                "historical",
+                ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
             ).addDataSegment(largeSegments.get(2).getIdentifier(), largeSegments.get(2))
@@ -163,8 +168,9 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverHot3",
                 "hostHot3",
+                null,
                 1000,
-                "historical",
+                ServerType.HISTORICAL,
                 "hot",
                 0
             ).addDataSegment(largeSegments2.get(0).getIdentifier(), largeSegments2.get(0))
@@ -177,8 +183,9 @@ public class BroadcastDistributionRuleTest
             new DruidServer(
                 "serverNorm3",
                 "hostNorm3",
+                null,
                 100,
-                "historical",
+                ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
             ).addDataSegment(largeSegments2.get(1).getIdentifier(), largeSegments2.get(1))
@@ -232,8 +239,8 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(3, stats.getGlobalStats().get(LoadRule.ASSIGNED_COUNT).intValue());
-    assertTrue(stats.getPerTierStats().isEmpty());
+    assertEquals(3L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(false, stats.hasPerTierStats());
 
     assertTrue(
         holdersOfLargeSegments.stream()
@@ -272,8 +279,8 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(5, stats.getGlobalStats().get(LoadRule.ASSIGNED_COUNT).intValue());
-    assertTrue(stats.getPerTierStats().isEmpty());
+    assertEquals(5L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(false, stats.hasPerTierStats());
 
     assertTrue(
         holdersOfLargeSegments.stream()
@@ -310,8 +317,8 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(6, stats.getGlobalStats().get(LoadRule.ASSIGNED_COUNT).intValue());
-    assertTrue(stats.getPerTierStats().isEmpty());
+    assertEquals(6L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(false, stats.hasPerTierStats());
 
     assertTrue(
         druidCluster.getAllServers().stream()

@@ -20,6 +20,7 @@ package io.druid.data.input.avro;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.StringUtils;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
@@ -106,7 +107,7 @@ public class GenericRecordAsMap implements Map<String, Object>
     }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {
-        return new String(((ByteBuffer) field).array());
+        return StringUtils.fromUtf8(((ByteBuffer) field).array());
       } else {
         return Arrays.toString(((ByteBuffer) field).array());
       }

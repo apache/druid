@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -42,6 +43,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
@@ -54,6 +56,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -191,7 +194,7 @@ public class TimeseriesQueryRunnerTest
     for (Result<TimeseriesResultValue> result : results) {
       DateTime current = result.getTimestamp();
       Assert.assertFalse(
-          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          StringUtils.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
           descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
       );
 
@@ -251,7 +254,7 @@ public class TimeseriesQueryRunnerTest
     for (Result<TimeseriesResultValue> result : results) {
       DateTime current = result.getTimestamp();
       Assert.assertFalse(
-          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          StringUtils.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
           descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
       );
       Assert.assertEquals(ImmutableMap.of(), result.getValue().getBaseObject());
@@ -288,7 +291,7 @@ public class TimeseriesQueryRunnerTest
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());
     Assert.assertFalse(
-        String.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
+        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
         result.getTimestamp().isAfter(expectedLast)
     );
 
@@ -336,7 +339,7 @@ public class TimeseriesQueryRunnerTest
     for (Result<TimeseriesResultValue> result : results) {
       DateTime current = result.getTimestamp();
       Assert.assertFalse(
-          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          StringUtils.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
           descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
       );
 
@@ -416,7 +419,14 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .descending(descending)
-                                  .virtualColumns(new ExpressionVirtualColumn("expr", "index"))
+                                  .virtualColumns(
+                                      new ExpressionVirtualColumn(
+                                          "expr",
+                                          "index",
+                                          ValueType.FLOAT,
+                                          TestExprMacroTable.INSTANCE
+                                      )
+                                  )
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(

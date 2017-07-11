@@ -63,7 +63,6 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
-    Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertNull(config.getWorkerThreads());
@@ -71,6 +70,7 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(8L, (long) config.getChatRetries());
     Assert.assertEquals(Duration.standardSeconds(10), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(80), config.getShutdownTimeout());
+    Assert.assertEquals(Duration.standardSeconds(30), config.getOffsetFetchPeriod());
   }
 
   @Test
@@ -83,14 +83,14 @@ public class KafkaSupervisorTuningConfigTest
                      + "  \"maxRowsPerSegment\": 100,\n"
                      + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
-                     + "  \"buildV9Directly\": false,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
                      + "  \"workerThreads\": 12,\n"
                      + "  \"chatThreads\": 13,\n"
                      + "  \"chatRetries\": 14,\n"
                      + "  \"httpTimeout\": \"PT15S\",\n"
-                     + "  \"shutdownTimeout\": \"PT95S\"\n"
+                     + "  \"shutdownTimeout\": \"PT95S\",\n"
+                     + "  \"offsetFetchPeriod\": \"PT20S\"\n"
                      + "}";
 
     KafkaSupervisorTuningConfig config = (KafkaSupervisorTuningConfig) mapper.readValue(
@@ -108,7 +108,6 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(100, config.getMaxRowsPerSegment());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(100, config.getMaxPendingPersists());
-    Assert.assertEquals(false, config.getBuildV9Directly());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(12, (int) config.getWorkerThreads());
@@ -116,5 +115,6 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(14L, (long) config.getChatRetries());
     Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
+    Assert.assertEquals(Duration.standardSeconds(20), config.getOffsetFetchPeriod());
   }
 }

@@ -21,6 +21,7 @@ package io.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -223,6 +224,8 @@ public class ApproximateHistogramTest
     //for(int i = 0; i < 200; ++i) h.offer((float)(rand.nextGaussian() * 50.0));
     long tFold = 0;
     int count = 5000000;
+    // May be a bug that randNums are not used, should be resolved if testFoldSpeed() becomes a jUnit test again
+    @SuppressWarnings("MismatchedReadAndWriteOfArray")
     Float[] randNums = new Float[numRand];
     for (int i = 0; i < numRand; i++) {
       randNums[i] = (float) rand.nextGaussian();
@@ -252,7 +255,7 @@ public class ApproximateHistogramTest
       tFold += System.nanoTime() - t0;
     }
 
-    System.out.println(String.format("Average folds per second : %f", (double) count / (double) tFold * 1e9));
+    System.out.println(StringUtils.format("Average folds per second : %f", (double) count / (double) tFold * 1e9));
   }
 
   @Test

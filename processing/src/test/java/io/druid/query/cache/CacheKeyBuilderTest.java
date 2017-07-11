@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.Cacheable;
 import org.junit.Test;
 
@@ -228,7 +228,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test".getBytes();
+        return StringUtils.toUtf8("test");
       }
     };
 
@@ -237,7 +237,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "testtest".getBytes();
+        return StringUtils.toUtf8("testtest");
       }
     };
 
@@ -286,11 +286,9 @@ public class CacheKeyBuilderTest
 
   private static void assertNotEqualsEachOther(List<byte[]> keys)
   {
-    for (byte[] k1 : keys) {
-      for (byte[] k2 : keys) {
-        if (k1 != k2) {
-          assertFalse(Arrays.equals(k1, k2));
-        }
+    for (int i = 0; i < keys.size(); i++) {
+      for (int j = i + 1; j < keys.size(); j++) {
+        assertFalse(Arrays.equals(keys.get(i), keys.get(j)));
       }
     }
   }
@@ -358,7 +356,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "te".getBytes();
+        return StringUtils.toUtf8("te");
       }
     };
 
@@ -367,7 +365,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test1".getBytes();
+        return StringUtils.toUtf8("test1");
       }
     };
 
@@ -376,7 +374,7 @@ public class CacheKeyBuilderTest
       @Override
       public byte[] getCacheKey()
       {
-        return "test2".getBytes();
+        return StringUtils.toUtf8("test2");
       }
     };
 

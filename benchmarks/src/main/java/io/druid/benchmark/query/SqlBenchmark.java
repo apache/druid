@@ -23,13 +23,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
+import io.druid.benchmark.datagen.SegmentGenerator;
 import io.druid.common.utils.JodaUtils;
-import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.hll.HyperLogLogHash;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -38,15 +36,12 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
-import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.serde.ComplexMetrics;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -81,7 +76,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -89,18 +83,19 @@ import java.util.concurrent.TimeUnit;
  * Benchmark that compares the same groupBy query through the native query layer and through the SQL layer.
  */
 @State(Scope.Benchmark)
-@Fork(jvmArgsPrepend = "-server", value = 1)
+@Fork(value = 1)
 @Warmup(iterations = 15)
 @Measurement(iterations = 30)
 public class SqlBenchmark
 {
-  @Param({"10000", "100000", "200000"})
+  @Param({"200000", "1000000"})
   private int rowsPerSegment;
 
   private static final Logger log = new Logger(SqlBenchmark.class);
   private static final int RNG_SEED = 9999;
 
   private File tmpDir;
+  private SegmentGenerator segmentGenerator;
   private SpecificSegmentsQuerySegmentWalker walker;
   private PlannerFactory plannerFactory;
   private GroupByQuery groupByQuery;
@@ -112,46 +107,22 @@ public class SqlBenchmark
     tmpDir = Files.createTempDir();
     log.info("Starting benchmark setup using tmpDir[%s], rows[%,d].", tmpDir, rowsPerSegment);
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
-
     final BenchmarkSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get("basic");
-    final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
-        schemaInfo.getColumnSchemas(),
-        RNG_SEED + 1,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
-    );
 
-    final List<InputRow> rows = Lists.newArrayList();
-    for (int i = 0; i < rowsPerSegment; i++) {
-      final InputRow row = dataGenerator.nextRow();
-      if (i % 20000 == 0) {
-        log.info("%,d/%,d rows generated.", i, rowsPerSegment);
-      }
-      rows.add(row);
-    }
+    final DataSegment dataSegment = DataSegment.builder()
+                                               .dataSource("foo")
+                                               .interval(schemaInfo.getDataInterval())
+                                               .version("1")
+                                               .shardSpec(new LinearShardSpec(0))
+                                               .build();
 
-    log.info("%,d/%,d rows generated.", rows.size(), rowsPerSegment);
+    this.segmentGenerator = new SegmentGenerator();
 
-    final PlannerConfig plannerConfig = new PlannerConfig();
+    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, rowsPerSegment);
     final QueryRunnerFactoryConglomerate conglomerate = CalciteTests.queryRunnerFactoryConglomerate();
-    final QueryableIndex index = IndexBuilder.create()
-                                             .tmpDir(new File(tmpDir, "1"))
-                                             .indexMerger(TestHelper.getTestIndexMergerV9())
-                                             .rows(rows)
-                                             .buildMMappedIndex();
+    final PlannerConfig plannerConfig = new PlannerConfig();
 
-    this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .build(),
-        index
-    );
+    this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
 
     final Map<String, Table> tableMap = ImmutableMap.<String, Table>of(
         "foo",
@@ -177,7 +148,9 @@ public class SqlBenchmark
         Calcites.createRootSchema(druidSchema),
         walker,
         CalciteTests.createOperatorTable(),
-        plannerConfig
+        CalciteTests.createExprMacroTable(),
+        plannerConfig,
+        new ServerConfig()
     );
     groupByQuery = GroupByQuery
         .builder()
@@ -207,6 +180,11 @@ public class SqlBenchmark
     if (walker != null) {
       walker.close();
       walker = null;
+    }
+
+    if (segmentGenerator != null) {
+      segmentGenerator.close();
+      segmentGenerator = null;
     }
 
     if (tmpDir != null) {

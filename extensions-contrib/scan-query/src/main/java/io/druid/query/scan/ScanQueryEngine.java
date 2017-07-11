@@ -116,7 +116,8 @@ public class ScanQueryEngine
                 intervals.get(0),
                 VirtualColumns.EMPTY,
                 Granularities.ALL,
-                query.isDescending()
+                query.isDescending(),
+                null
             ),
             new Function<Cursor, Sequence<ScanResultValue>>()
             {

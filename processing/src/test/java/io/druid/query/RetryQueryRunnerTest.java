@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -32,6 +31,7 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.SegmentMissingException;
+import io.druid.segment.TestHelper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -43,7 +43,7 @@ import java.util.Map;
 
 public class RetryQueryRunnerTest
 {
-  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
   final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                       .dataSource(QueryRunnerTestHelper.dataSource)

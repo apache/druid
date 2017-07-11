@@ -27,5 +27,5 @@ public interface RedirectInfo
 {
   public boolean doLocal(String requestURI);
 
-  public URL getRedirectURL(String queryString, String requestURI);
+  public URL getRedirectURL(String scheme, String queryString, String requestURI);
 }

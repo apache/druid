@@ -48,7 +48,7 @@ A topN query object looks like:
   "postAggregations": [
     {
       "type": "arithmetic",
-      "name": "sample_divide",
+      "name": "average",
       "fn": "/",
       "fields": [
         {

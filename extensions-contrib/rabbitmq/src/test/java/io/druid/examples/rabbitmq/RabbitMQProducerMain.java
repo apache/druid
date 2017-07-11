@@ -22,6 +22,7 @@ package io.druid.examples.rabbitmq;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -33,9 +34,9 @@ import org.apache.commons.cli.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -114,13 +115,11 @@ public class RabbitMQProducerMain
     // An extremely silly hack to maintain the above order in the help formatting.
     HelpFormatter formatter = new HelpFormatter();
     // Add a comparator to the HelpFormatter using the ArrayList above to sort by insertion order.
-    formatter.setOptionComparator(new Comparator(){
-      @Override
-      public int compare(Object o1, Object o2)
-      {
-        // I know this isn't fast, but who cares! The list is short.
-        return optionList.indexOf(o1) - optionList.indexOf(o2);
-      }
+    //noinspection ComparatorCombinators -- don't replace with comparingInt() to preserve comments
+    formatter.setOptionComparator((o1, o2) -> {
+      // I know this isn't fast, but who cares! The list is short.
+      //noinspection SuspiciousMethodCalls
+      return Integer.compare(optionList.indexOf(o1), optionList.indexOf(o2));
     });
 
     // Now we can add all the options to an Options instance. This is dumb!
@@ -176,11 +175,11 @@ public class RabbitMQProducerMain
     int interval = Integer.parseInt(cmd.getOptionValue("interval", "10"));
     int delay = Integer.parseInt(cmd.getOptionValue("delay", "100"));
 
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ENGLISH);
     Date stop = sdf.parse(cmd.getOptionValue("stop", sdf.format(new Date())));
 
     Random r = new Random();
-    Calendar timer = Calendar.getInstance();
+    Calendar timer = Calendar.getInstance(Locale.ENGLISH);
     timer.setTime(sdf.parse(cmd.getOptionValue("start", "2010-01-01T00:00:00")));
 
     String msg_template = "{\"utcdt\": \"%s\", \"wp\": %d, \"gender\": \"%s\", \"age\": %d}";
@@ -190,21 +189,21 @@ public class RabbitMQProducerMain
 
     channel.exchangeDeclare(exchange, type, durable, autoDelete, null);
 
-    do{
+    do {
       int wp = (10 + r.nextInt(90)) * 100;
       String gender = r.nextBoolean() ? "male" : "female";
       int age = 20 + r.nextInt(70);
 
-      String line = String.format(msg_template, sdf.format(timer.getTime()), wp, gender, age);
+      String line = StringUtils.format(msg_template, sdf.format(timer.getTime()), wp, gender, age);
 
-      channel.basicPublish(exchange, routingKey, null, line.getBytes());
+      channel.basicPublish(exchange, routingKey, null, StringUtils.toUtf8(line));
 
       System.out.println("Sent message: " + line);
 
       timer.add(Calendar.SECOND, interval);
 
       Thread.sleep(delay);
-    }while((!single && stop.after(timer.getTime())));
+    } while((!single && stop.after(timer.getTime())));
 
     connection.close();
   }

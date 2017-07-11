@@ -27,6 +27,7 @@ import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
@@ -318,7 +319,7 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   public String getVersion(URI uri) throws IOException
   {
     try {
-      return String.format("%d", buildFileObject(uri, config).getLastModified());
+      return StringUtils.format("%d", buildFileObject(uri, config).getLastModified());
     }
     catch (HdfsIOException ex) {
       throw ex.getIOException();

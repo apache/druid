@@ -25,6 +25,7 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -44,7 +45,7 @@ public class WorkerResourceTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final String basePath = "/test/druid";
-  private static final String announcementsPath = String.format("%s/indexer/announcements/host", basePath);
+  private static final String announcementsPath = StringUtils.format("%s/indexer/announcements/host", basePath);
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -70,6 +71,7 @@ public class WorkerResourceTest
     cf.create().creatingParentsIfNeeded().forPath(basePath);
 
     worker = new Worker(
+        "http",
         "host",
         "ip",
         3,

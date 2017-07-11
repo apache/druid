@@ -39,7 +39,6 @@ import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
@@ -70,6 +69,8 @@ import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.timeline.DataSegment;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
@@ -87,7 +88,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -230,65 +230,67 @@ public class DruidCoordinator
     return loadManagementPeons;
   }
 
-  public Map<String, CountingMap<String>> getReplicationStatus()
+  public Map<String, ? extends Object2LongMap<String>> getReplicationStatus()
   {
-    final Map<String, CountingMap<String>> retVal = Maps.newHashMap();
+    final Map<String, Object2LongOpenHashMap<String>> retVal = Maps.newHashMap();
 
     if (segmentReplicantLookup == null) {
       return retVal;
     }
 
     final DateTime now = new DateTime();
-    for (DataSegment segment : getAvailableDataSegments()) {
-      List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
-      for (Rule rule : rules) {
-        if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
-          for (Map.Entry<String, Integer> entry : ((LoadRule) rule).getTieredReplicants().entrySet()) {
-            CountingMap<String> dataSourceMap = retVal.get(entry.getKey());
-            if (dataSourceMap == null) {
-              dataSourceMap = new CountingMap<>();
-              retVal.put(entry.getKey(), dataSourceMap);
-            }
 
-            int diff = Math.max(
-                entry.getValue() - segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), entry.getKey()),
-                0
-            );
-            dataSourceMap.add(segment.getDataSource(), diff);
-          }
-          break;
+    for (final DataSegment segment : getAvailableDataSegments()) {
+      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
+
+      for (final Rule rule : rules) {
+        if (!(rule instanceof LoadRule && rule.appliesTo(segment, now))) {
+          continue;
         }
+
+        ((LoadRule) rule)
+            .getTieredReplicants()
+            .forEach(
+                (final String tier, final Integer ruleReplicants) -> {
+                  int currentReplicants = segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), tier);
+                  retVal
+                      .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
+                      .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
+                }
+            );
       }
     }
 
     return retVal;
   }
 
-  public CountingMap<String> getSegmentAvailability()
+
+  public Object2LongMap<String> getSegmentAvailability()
   {
-    final CountingMap<String> retVal = new CountingMap<>();
+    final Object2LongOpenHashMap<String> retVal = new Object2LongOpenHashMap<>();
 
     if (segmentReplicantLookup == null) {
       return retVal;
     }
 
     for (DataSegment segment : getAvailableDataSegments()) {
-      int available = (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0) ? 0 : 1;
-      retVal.add(segment.getDataSource(), 1 - available);
+      if (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0) {
+        retVal.addTo(segment.getDataSource(), 1);
+      } else {
+        retVal.addTo(segment.getDataSource(), 0);
+      }
     }
 
     return retVal;
   }
 
-  CountingMap<String> getLoadPendingDatasources()
+  boolean hasLoadPending(final String dataSource)
   {
-    final CountingMap<String> retVal = new CountingMap<>();
-    for (LoadQueuePeon peon : loadManagementPeons.values()) {
-      for (DataSegment segment : peon.getSegmentsToLoad()) {
-        retVal.add(segment.getDataSource(), 1);
-      }
-    }
-    return retVal;
+    return loadManagementPeons
+        .values()
+        .stream()
+        .flatMap((final LoadQueuePeon peon) -> peon.getSegmentsToLoad().stream())
+        .anyMatch((final DataSegment segment) -> segment.getDataSource().equals(dataSource));
   }
 
   public Map<String, Double> getLoadStatus()
@@ -362,22 +364,36 @@ public class DruidCoordinator
   }
 
   public void moveSegment(
-      final ImmutableDruidServer fromServer,
-      final ImmutableDruidServer toServer,
-      final String segmentName,
+      ImmutableDruidServer fromServer,
+      ImmutableDruidServer toServer,
+      DataSegment segment,
       final LoadPeonCallback callback
   )
   {
+    if (segment == null) {
+      log.makeAlert(new IAE("Can not move null DataSegment"), "Exception moving null segment").emit();
+      if (callback != null) {
+        callback.execute();
+      }
+    }
+    String segmentName = segment.getIdentifier();
     try {
       if (fromServer.getMetadata().equals(toServer.getMetadata())) {
         throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentName, fromServer.getName());
       }
 
-      final DataSegment segment = fromServer.getSegment(segmentName);
-      if (segment == null) {
-        throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, fromServer.getName());
+      DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(segment.getDataSource());
+      if (dataSource == null) {
+        throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentName);
       }
 
+      // get segment information from MetadataSegmentManager instead of getting it from fromServer's.
+      // This is useful when MetadataSegmentManager and fromServer DataSegment's are different for same
+      // identifier (say loadSpec differs because of deep storage migration).
+      final DataSegment segmentToLoad = dataSource.getSegment(segment.getIdentifier());
+      if (segmentToLoad == null) {
+        throw new IAE("No segment metadata found for segment Id [%s]", segment.getIdentifier());
+      }
       final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
         throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", toServer.getName());
@@ -389,12 +405,12 @@ public class DruidCoordinator
       }
 
       final ServerHolder toHolder = new ServerHolder(toServer, loadPeon);
-      if (toHolder.getAvailableSize() < segment.getSize()) {
+      if (toHolder.getAvailableSize() < segmentToLoad.getSize()) {
         throw new IAE(
             "Not enough capacity on server [%s] for segment [%s]. Required: %,d, available: %,d.",
             toServer.getName(),
-            segment,
-            segment.getSize(),
+            segmentToLoad,
+            segmentToLoad.getSize(),
             toHolder.getAvailableSize()
         );
       }
@@ -407,7 +423,7 @@ public class DruidCoordinator
       );
 
       loadPeon.loadSegment(
-          segment,
+          segmentToLoad,
           new LoadPeonCallback()
           {
             @Override
@@ -494,7 +510,7 @@ public class DruidCoordinator
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, ZKPaths.makePath(zkPaths.getCoordinatorPath(), COORDINATOR_OWNER_NODE), self.getHostAndPort()
+        curator, ZKPaths.makePath(zkPaths.getCoordinatorPath(), COORDINATOR_OWNER_NODE), self.getHostAndPortToUse()
     );
 
     newLeaderLatch.addListener(
@@ -698,8 +714,10 @@ public class DruidCoordinator
           }
         }
 
-        balancerExec = MoreExecutors.listeningDecorator(
-                Executors.newFixedThreadPool(getDynamicConfigs().getBalancerComputeThreads()));
+        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+            getDynamicConfigs().getBalancerComputeThreads(),
+            "coordinator-cost-balancer-%s"
+        ));
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.

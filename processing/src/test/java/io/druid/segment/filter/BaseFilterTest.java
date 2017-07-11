@@ -26,18 +26,20 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.Filter;
@@ -83,7 +85,7 @@ public abstract class BaseFilterTest
 {
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.<VirtualColumn>of(
-          new ExpressionVirtualColumn("expr", "1.0 + 0.1")
+          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
       )
   );
 
@@ -182,8 +184,7 @@ public abstract class BaseFilterTest
         "roaring", new RoaringBitmapSerdeFactory(true)
     );
 
-    final Map<String, IndexMerger> indexMergers = ImmutableMap.<String, IndexMerger>of(
-        "IndexMerger", TestHelper.getTestIndexMerger(),
+    final Map<String, IndexMerger> indexMergers = ImmutableMap.of(
         "IndexMergerV9", TestHelper.getTestIndexMergerV9()
     );
 
@@ -252,7 +253,7 @@ public abstract class BaseFilterTest
         for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry : finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              final String testName = String.format(
+              final String testName = StringUtils.format(
                   "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
                   bitmapSerdeFactoryEntry.getKey(),
                   indexMergerEntry.getKey(),
@@ -304,7 +305,8 @@ public abstract class BaseFilterTest
         new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
         VIRTUAL_COLUMNS,
         Granularities.ALL,
-        false
+        false,
+        null
     );
   }
 
@@ -376,7 +378,7 @@ public abstract class BaseFilterTest
     final Filter postFilteringFilter = new Filter()
     {
       @Override
-      public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+      public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
       {
         throw new UnsupportedOperationException();
       }

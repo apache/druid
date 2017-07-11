@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import io.druid.curator.cache.PathChildrenCacheFactory;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -246,7 +247,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             if (containers.containsKey(containerKey)) {
               log.error("New node[%s] but there was already one.  That's not good, ignoring new one.", child.getPath());
             } else {
-              final String inventoryPath = String.format("%s/%s", config.getInventoryPath(), containerKey);
+              final String inventoryPath = StringUtils.format("%s/%s", config.getInventoryPath(), containerKey);
               PathChildrenCache inventoryCache = cacheFactory.make(curatorFramework, inventoryPath);
               inventoryCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
 

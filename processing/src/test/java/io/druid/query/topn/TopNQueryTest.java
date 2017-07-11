@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -34,6 +33,7 @@ import io.druid.query.dimension.LegacyDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,7 +51,7 @@ import static io.druid.query.QueryRunnerTestHelper.rowsCount;
 
 public class TopNQueryTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
   @Test
   public void testQuerySerialization() throws IOException

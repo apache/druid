@@ -30,6 +30,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
@@ -42,7 +43,7 @@ import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
@@ -64,6 +65,7 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.server.initialization.ServerConfig;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -108,17 +110,44 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final QueryWatcher queryWatcher;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+  private final String scheme;
   private final String host;
   private final ServiceEmitter emitter;
 
   private final AtomicInteger openConnections;
   private final boolean isSmile;
 
+  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(final QueryType query, ServerConfig serverConfig)
+  {
+    return (QueryType) QueryContexts.withMaxScatterGatherBytes(
+        QueryContexts.withDefaultTimeout(
+            (Query) query,
+            serverConfig.getDefaultQueryTimeout()
+        ),
+        serverConfig.getMaxScatterGatherBytes()
+    );
+  }
+
+  public static Map<String, Object> makeResponseContextForQuery(Query query, long startTimeMillis)
+  {
+    final Map<String, Object> responseContext = new MapMaker().makeMap();
+    responseContext.put(
+        DirectDruidClient.QUERY_FAIL_TIME,
+        startTimeMillis + QueryContexts.getTimeout(query)
+    );
+    responseContext.put(
+        DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED,
+        new AtomicLong()
+    );
+    return responseContext;
+  }
+
   public DirectDruidClient(
       QueryToolChestWarehouse warehouse,
       QueryWatcher queryWatcher,
       ObjectMapper objectMapper,
       HttpClient httpClient,
+      String scheme,
       String host,
       ServiceEmitter emitter
   )
@@ -127,6 +156,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.queryWatcher = queryWatcher;
     this.objectMapper = objectMapper;
     this.httpClient = httpClient;
+    this.scheme = scheme;
     this.host = host;
     this.emitter = emitter;
 
@@ -165,16 +195,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     }
 
     final ListenableFuture<InputStream> future;
-    final String url = String.format("http://%s/druid/v2/", host);
-    final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
+    final String url = StringUtils.format("%s://%s/druid/v2/", scheme, host);
+    final String cancelUrl = StringUtils.format("%s://%s/druid/v2/%s", scheme, host, query.getId());
 
     try {
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
 
       final long requestStartTimeNs = System.nanoTime();
-
-      final QueryMetrics<? super Query<T>> queryMetrics = toolChest.makeMetrics(query);
-      queryMetrics.server(host);
 
       long timeoutAt = ((Long) context.get(QUERY_FAIL_TIME)).longValue();
       long maxScatterGatherBytes = QueryContexts.getMaxScatterGatherBytes(query);
@@ -182,11 +209,22 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
       {
-        private long responseStartTimeNs;
         private final AtomicLong byteCount = new AtomicLong(0);
         private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
+
+        private QueryMetrics<? super Query<T>> queryMetrics;
+        private long responseStartTimeNs;
+
+        private QueryMetrics<? super Query<T>> acquireResponseMetrics()
+        {
+          if (queryMetrics == null) {
+            queryMetrics = toolChest.makeMetrics(query);
+            queryMetrics.server(host);
+          }
+          return queryMetrics;
+        }
 
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response)
@@ -196,7 +234,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
-          queryMetrics.reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
+          acquireResponseMetrics().reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
 
           try {
             final String responseContext = response.headers().get("X-Druid-Response-Context");
@@ -315,9 +353,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               nodeTimeMs,
               byteCount.get() / (0.001 * nodeTimeMs) // Floating math; division by zero will yield Inf, not exception
           );
-          queryMetrics.reportNodeTime(nodeTimeNs);
-          queryMetrics.reportNodeBytes(byteCount.get());
-          queryMetrics.emit(emitter);
+          QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
+          responseMetrics.reportNodeTime(nodeTimeNs);
+          responseMetrics.reportNodeBytes(byteCount.get());
+          responseMetrics.emit(emitter);
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
@@ -343,7 +382,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public void exceptionCaught(final ClientResponse<InputStream> clientResponse, final Throwable e)
         {
-          String msg = StringUtils.safeFormat(
+          String msg = StringUtils.format(
               "Query[%s] url[%s] failed with exception msg [%s]",
               query.getId(),
               url,
@@ -376,7 +415,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           long timeLeft = timeoutAt - System.currentTimeMillis();
           if (timeLeft <= 0) {
-            String msg = StringUtils.safeFormat("Query[%s] url[%s] timed out.", query.getId(), url);
+            String msg = StringUtils.format("Query[%s] url[%s] timed out.", query.getId(), url);
             setupResponseReadFailure(msg, null);
             throw new RE(msg);
           } else {
@@ -387,7 +426,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private void checkTotalBytesLimit(long bytes)
         {
           if (maxScatterGatherBytes < Long.MAX_VALUE && totalBytesGathered.addAndGet(bytes) > maxScatterGatherBytes) {
-            String msg = StringUtils.safeFormat(
+            String msg = StringUtils.format(
                 "Query[%s] url[%s] max scatter-gather bytes limit reached.",
                 query.getId(),
                 url
@@ -608,5 +647,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         jp.close();
       }
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DirectDruidClient{" +
+           "host='" + host + '\'' +
+           ", isSmile=" + isSmile +
+           '}';
   }
 }

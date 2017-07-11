@@ -188,7 +188,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.expect(runner.getWorkers()).andReturn(
         Arrays.<ImmutableWorkerInfo>asList(
             new TestZkWorker(testTask).toImmutable(),
-            new TestZkWorker(testTask, "h1", "n1", INVALID_VERSION).toImmutable() // Invalid version node
+            new TestZkWorker(testTask, "http", "h1", "n1", INVALID_VERSION).toImmutable() // Invalid version node
         )
     );
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
@@ -226,7 +226,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.expect(runner.getWorkers()).andReturn(
         Arrays.<ImmutableWorkerInfo>asList(
             new TestZkWorker(testTask).toImmutable(),
-            new TestZkWorker(testTask, "h1", "n1", INVALID_VERSION).toImmutable() // Invalid version node
+            new TestZkWorker(testTask, "http", "h1", "n1", INVALID_VERSION).toImmutable() // Invalid version node
         )
     ).times(2);
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig()).times(1);
@@ -285,9 +285,9 @@ public class PendingTaskBasedProvisioningStrategyTest
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
         Arrays.asList(
-            new TestZkWorker(testTask, "hi", "lo", MIN_VERSION, 1).toImmutable(),
-            new TestZkWorker(testTask, "h1", "n1", INVALID_VERSION).toImmutable(), // Invalid version node
-            new TestZkWorker(testTask, "h2", "n1", INVALID_VERSION).toImmutable() // Invalid version node
+            new TestZkWorker(testTask, "http", "hi", "lo", MIN_VERSION, 1).toImmutable(),
+            new TestZkWorker(testTask, "http", "h1", "n1", INVALID_VERSION).toImmutable(), // Invalid version node
+            new TestZkWorker(testTask, "http", "h2", "n1", INVALID_VERSION).toImmutable() // Invalid version node
         )
     ).times(2);
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
@@ -479,7 +479,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
         Arrays.asList(
-            new TestZkWorker(NoopTask.create(), "h1", "i1", MIN_VERSION).toImmutable()
+            new TestZkWorker(NoopTask.create(), "http", "h1", "i1", MIN_VERSION).toImmutable()
         )
     ).times(3);
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig()).times(2);
@@ -566,28 +566,30 @@ public class PendingTaskBasedProvisioningStrategyTest
         Task testTask
     )
     {
-      this(testTask, "host", "ip", MIN_VERSION);
+      this(testTask, "http", "host", "ip", MIN_VERSION);
     }
 
     public TestZkWorker(
         Task testTask,
+        String scheme,
         String host,
         String ip,
         String version
     )
     {
-      this(testTask, host, ip, version, 1);
+      this(testTask, scheme, host, ip, version, 1);
     }
 
     public TestZkWorker(
         Task testTask,
+        String scheme,
         String host,
         String ip,
         String version,
         int capacity
     )
     {
-      super(new Worker(host, ip, capacity, version), null, new DefaultObjectMapper());
+      super(new Worker(scheme, host, ip, capacity, version), null, new DefaultObjectMapper());
 
       this.testTask = testTask;
     }

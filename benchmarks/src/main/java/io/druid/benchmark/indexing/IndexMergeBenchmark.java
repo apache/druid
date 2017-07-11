@@ -25,21 +25,17 @@ import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -63,7 +59,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(jvmArgsPrepend = "-server", value = 1)
+@Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
 public class IndexMergeBenchmark
@@ -82,7 +78,6 @@ public class IndexMergeBenchmark
 
   private static final Logger log = new Logger(IndexMergeBenchmark.class);
   private static final int RNG_SEED = 9999;
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
@@ -104,7 +99,6 @@ public class IndexMergeBenchmark
           }
         }
     );
-    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
   }
 
@@ -161,45 +155,16 @@ public class IndexMergeBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    return new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
             .withMetrics(schemaInfo.getAggsArray())
-            .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(rollup)
-            .build(),
-        true,
-        false,
-        true,
-        rowsPerSegment
-    );
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void merge(Blackhole blackhole) throws Exception
-  {
-    File tmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-" + System.currentTimeMillis(), ".TEMPFILE");
-    tmpFile.delete();
-    tmpFile.mkdirs();
-    try {
-      log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
-
-      File mergedFile = INDEX_MERGER.mergeQueryableIndex(
-          indexesToMerge,
-          rollup,
-          schemaInfo.getAggsArray(),
-          tmpFile,
-          new IndexSpec()
-      );
-
-      blackhole.consume(mergedFile);
-    }
-    finally {
-      tmpFile.delete();
-    }
-
+            .build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment)
+        .buildOnheap();
   }
 
   @Benchmark

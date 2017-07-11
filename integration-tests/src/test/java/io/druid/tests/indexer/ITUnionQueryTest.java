@@ -63,7 +63,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   @Test
   public void testUnionQuery() throws Exception
   {
-    final int numTasks = 4;
+    final int numTasks = 3;
 
     try {
       // Load 4 datasources with same dimensions
@@ -86,8 +86,21 @@ public class ITUnionQueryTest extends AbstractIndexerTest
         postEvents(i);
       }
 
-      // sleep for a while to let the events ingested
-      TimeUnit.SECONDS.sleep(5);
+      // wait until all events are ingested
+      RetryUtil.retryUntil(
+          () -> {
+            for (int i = 0; i < numTasks; i++) {
+              if (queryHelper.countRows(UNION_DATASOURCE + i, "2013-08-31/2013-09-01") < 5) {
+                return false;
+              }
+            }
+            return true;
+          },
+          true,
+          1000,
+          100,
+          "Waiting all events are ingested"
+      );
 
       // should hit the queries on realtime task
       LOG.info("Running Union Queries..");
@@ -110,7 +123,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
               }
             },
             true,
-            60000,
+            10000,
             10,
             "Real-time generated segments loaded"
         );
@@ -120,7 +133,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
 
     }
     catch (Exception e) {
-      e.printStackTrace();
+      LOG.error(e, "Error while testing");
       throw Throwables.propagate(e);
     }
     finally {

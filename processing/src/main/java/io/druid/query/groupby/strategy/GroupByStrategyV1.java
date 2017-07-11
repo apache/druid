@@ -29,7 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.IAE;
@@ -65,14 +65,14 @@ public class GroupByStrategyV1 implements GroupByStrategy
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final GroupByQueryEngine engine;
   private final QueryWatcher queryWatcher;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
 
   @Inject
   public GroupByStrategyV1(
       Supplier<GroupByQueryConfig> configSupplier,
       GroupByQueryEngine engine,
       QueryWatcher queryWatcher,
-      @Global StupidPool<ByteBuffer> bufferPool
+      @Global NonBlockingPool<ByteBuffer> bufferPool
   )
   {
     this.configSupplier = configSupplier;

@@ -26,7 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -125,7 +125,7 @@ public class SegmentAnalyzer
           break;
         default:
           log.warn("Unknown column type[%s].", type);
-          analysis = ColumnAnalysis.error(String.format("unknown_type_%s", type));
+          analysis = ColumnAnalysis.error(StringUtils.format("unknown_type_%s", type));
       }
 
       columns.put(columnName, analysis);
@@ -254,7 +254,8 @@ public class SegmentAnalyzer
               new Interval(start, end),
               VirtualColumns.EMPTY,
               Granularities.ALL,
-              false
+              false,
+              null
           );
 
       size = cursors.accumulate(
@@ -320,7 +321,7 @@ public class SegmentAnalyzer
       if (analyzingSize() && complexColumn != null) {
         final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
         if (serde == null) {
-          return ColumnAnalysis.error(String.format("unknown_complex_%s", typeName));
+          return ColumnAnalysis.error(StringUtils.format("unknown_complex_%s", typeName));
         }
 
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();

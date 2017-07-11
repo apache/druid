@@ -82,7 +82,6 @@ import java.util.concurrent.TimeUnit;
 public class RealtimePlumberSchoolTest
 {
   private final RejectionPolicyFactory rejectionPolicy;
-  private final boolean buildV9Directly;
   private RealtimePlumber plumber;
   private RealtimePlumberSchool realtimePlumberSchool;
   private DataSegmentAnnouncer announcer;
@@ -97,26 +96,22 @@ public class RealtimePlumberSchoolTest
   private FireDepartmentMetrics metrics;
   private File tmpDir;
 
-  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, boolean buildV9Directly)
+  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy)
   {
     this.rejectionPolicy = rejectionPolicy;
-    this.buildV9Directly = buildV9Directly;
   }
 
-  @Parameterized.Parameters(name = "rejectionPolicy = {0}, buildV9Directly = {1}")
+  @Parameterized.Parameters(name = "rejectionPolicy = {0}")
   public static Collection<?> constructorFeeder() throws IOException
   {
     final RejectionPolicyFactory[] rejectionPolicies = new RejectionPolicyFactory[]{
         new NoopRejectionPolicyFactory(),
         new MessageTimeRejectionPolicyFactory()
     };
-    final boolean[] buildV9Directlies = new boolean[]{true, false};
 
     final List<Object[]> constructors = Lists.newArrayList();
     for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
-      for (boolean buildV9Directly : buildV9Directlies) {
-        constructors.add(new Object[]{rejectionPolicy, buildV9Directly});
-      }
+      constructors.add(new Object[]{rejectionPolicy});
     }
     return constructors;
   }
@@ -199,7 +194,7 @@ public class RealtimePlumberSchoolTest
         null,
         null,
         null,
-        buildV9Directly,
+        true,
         0,
         0,
         false,
@@ -215,12 +210,11 @@ public class RealtimePlumberSchoolTest
         segmentPublisher,
         handoffNotifierFactory,
         MoreExecutors.sameThreadExecutor(),
-        TestHelper.getTestIndexMerger(),
         TestHelper.getTestIndexMergerV9(),
         TestHelper.getTestIndexIO(),
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
-        TestHelper.getObjectMapper()
+        TestHelper.getJsonMapper()
     );
 
     metrics = new FireDepartmentMetrics();

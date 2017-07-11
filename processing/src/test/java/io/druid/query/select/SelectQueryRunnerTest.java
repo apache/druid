@@ -40,6 +40,7 @@ import io.druid.query.TableDataSource;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -508,7 +509,9 @@ public class SelectQueryRunnerTest
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
         .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
         .pagingSpec(new PagingSpec(null, 10, true))
-        .virtualColumns(new ExpressionVirtualColumn("expr", "index / 10.0"))
+        .virtualColumns(
+            new ExpressionVirtualColumn("expr", "index / 10.0", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+        )
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();

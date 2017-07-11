@@ -35,6 +35,7 @@ import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestHistory;
 import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
@@ -105,8 +106,9 @@ public class BatchDataSegmentAnnouncerTest
         new DruidServerMetadata(
             "id",
             "host",
+            null,
             Long.MAX_VALUE,
-            "historical",
+            ServerType.HISTORICAL,
             "tier",
             0
         ),

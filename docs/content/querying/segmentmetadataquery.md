@@ -32,7 +32,7 @@ There are several main parts to a segment metadata query:
 |toInclude|A JSON Object representing what columns should be included in the result. Defaults to "all".|no|
 |merge|Merge all individual segment metadata results into a single result|no|
 |context|See [Context](../querying/query-context.html)|no|
-|analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "interval", "minmax"]. See section [analysisTypes](#analysistypes) for more details.|no|
+|analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "interval", "minmax"], but can be overridden with using this [BrokerConfig](../configuration/broker.html#segment-metadata-query-config). See section [analysisTypes](#analysistypes) for more details.|no|
 |lenientAggregatorMerge|If true, and if the "aggregators" analysisType is enabled, aggregators will be merged leniently. See below for details.|no|
 
 The format of the result is:
@@ -106,7 +106,10 @@ The grammar is as follows:
 
 This is a list of properties that determines the amount of information returned about the columns, i.e. analyses to be performed on the columns.
 
-By default, the "cardinality", "size", "interval", and "minmax" types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
+By default, the "cardinality", "interval", and "minmax" types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
+
+The default analysis types can be set in the broker configuration via:
+  `druid.query.segmentMetadata.defaultAnalysisTypes`
 
 Types of column analyses are described below:
 

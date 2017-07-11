@@ -42,10 +42,11 @@ import io.druid.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -285,7 +286,7 @@ public class RealtimePlumber implements Plumber
                                               );
 
     persistExecutor.execute(
-        new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
+        new ThreadRenamingRunnable(StringUtils.format("%s-incremental-persist", schema.getDataSource()))
         {
           @Override
           public void doRun()
@@ -352,7 +353,7 @@ public class RealtimePlumber implements Plumber
   // Submits persist-n-merge task for a Sink to the mergeExecutor
   private void persistAndMerge(final long truncatedTime, final Sink sink)
   {
-    final String threadName = String.format(
+    final String threadName = StringUtils.format(
         "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(truncatedTime)
     );
     mergeExecutor.execute(
@@ -424,12 +425,11 @@ public class RealtimePlumber implements Plumber
               metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
               metrics.incrementMergeTimeMillis(mergeStopwatch.elapsed(TimeUnit.MILLISECONDS));
 
-              QueryableIndex index = indexIO.loadIndex(mergedFile);
               log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
 
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
-                  sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
               );
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());
               segmentPublisher.publishSegment(segment);
@@ -761,7 +761,7 @@ public class RealtimePlumber implements Plumber
             ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                String.format(
+                StringUtils.format(
                     "%s-overseer-%d",
                     schema.getDataSource(),
                     config.getShardSpec().getPartitionNum()
@@ -861,6 +861,7 @@ public class RealtimePlumber implements Plumber
         );
         for (FireHydrant hydrant : sink) {
           cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+          hydrant.getSegment().close();
         }
         synchronized (handoffCondition) {
           handoffCondition.notifyAll();

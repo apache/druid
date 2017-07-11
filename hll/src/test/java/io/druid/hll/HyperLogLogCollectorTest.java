@@ -24,6 +24,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -35,6 +36,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -101,7 +103,7 @@ public class HyperLogLogCollectorTest
 
     int count;
     for (count = 0; count < 100_000_000; ++count) {
-      md.update(Integer.toString(count).getBytes());
+      md.update(StringUtils.toUtf8(Integer.toString(count)));
 
       byte[] hashed = fn.hashBytes(md.digest()).asBytes();
 
@@ -120,7 +122,7 @@ public class HyperLogLogCollectorTest
     System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
     System.out.println("Simple  buffer cardinality " + simple.estimateCardinality());
     System.out.println(
-        String.format(
+        StringUtils.format(
             "Rolling cardinality estimate off by %4.1f%%",
             100 * (1 - rolling.estimateCardinality() / n)
         )
@@ -143,14 +145,18 @@ public class HyperLogLogCollectorTest
       theCollector.add(fn.hashLong(count).asBytes());
       rolling.fold(theCollector);
     }
-    System.out.printf("testHighCardinalityRollingFold2 took %d ms%n", System.currentTimeMillis() - start);
+    System.out.printf(
+        Locale.ENGLISH,
+        "testHighCardinalityRollingFold2 took %d ms%n",
+        System.currentTimeMillis() - start
+    );
 
     int n = count;
 
     System.out.println("True cardinality " + n);
     System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
     System.out.println(
-        String.format(
+        StringUtils.format(
             "Rolling cardinality estimate off by %4.1f%%",
             100 * (1 - rolling.estimateCardinality() / n)
         )
@@ -555,7 +561,7 @@ public class HyperLogLogCollectorTest
 
       int numThings = 500000;
       for (int i = 0; i < numThings; i++) {
-        md.update(Integer.toString(random.nextInt()).getBytes());
+        md.update(StringUtils.toUtf8(Integer.toString(random.nextInt())));
         byte[] hashedVal = fn.hashBytes(md.digest()).asBytes();
 
         if (i % 2 == 0) {
@@ -692,7 +698,7 @@ public class HyperLogLogCollectorTest
     fillBuckets(collector, (byte) 0, (byte) 63);
     collector.add(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-    Assert.assertEquals(Double.MAX_VALUE, collector.estimateCardinality(), 1000);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, collector.estimateCardinality(), 1000);
   }
 
   @Test
@@ -836,6 +842,7 @@ public class HyperLogLogCollectorTest
     error += errorThisTime;
 
     System.out.printf(
+        Locale.ENGLISH,
         "%,d ==? %,f in %,d millis. actual error[%,f%%], avg. error [%,f%%]%n",
         numThings,
         estimatedValue,

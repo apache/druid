@@ -23,7 +23,7 @@ import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -32,6 +32,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Accumulator;
@@ -44,8 +45,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
@@ -61,7 +60,7 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
-      StupidPool<ByteBuffer> bufferPool,
+      NonBlockingPool<ByteBuffer> bufferPool,
       final boolean combine
   )
   {
@@ -120,22 +119,21 @@ public class GroupByQueryHelper
         .build();
 
     if (query.getContextValue("useOffheap", false)) {
-      index = new OffheapIncrementalIndex(
-          indexSchema,
-          false,
-          true,
-          sortResults,
-          querySpecificConfig.getMaxResults(),
-          bufferPool
-      );
+      index = new IncrementalIndex.Builder()
+          .setIndexSchema(indexSchema)
+          .setDeserializeComplexMetrics(false)
+          .setConcurrentEventAdd(true)
+          .setSortFacts(sortResults)
+          .setMaxRowCount(querySpecificConfig.getMaxResults())
+          .buildOffheap(bufferPool);
     } else {
-      index = new OnheapIncrementalIndex(
-          indexSchema,
-          false,
-          true,
-          sortResults,
-          querySpecificConfig.getMaxResults()
-      );
+      index = new IncrementalIndex.Builder()
+          .setIndexSchema(indexSchema)
+          .setDeserializeComplexMetrics(false)
+          .setConcurrentEventAdd(true)
+          .setSortFacts(sortResults)
+          .setMaxRowCount(querySpecificConfig.getMaxResults())
+          .buildOnheap();
     }
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
@@ -191,7 +189,7 @@ public class GroupByQueryHelper
   public static IncrementalIndex makeIncrementalIndex(
       GroupByQuery query,
       GroupByQueryConfig config,
-      StupidPool<ByteBuffer> bufferPool,
+      NonBlockingPool<ByteBuffer> bufferPool,
       Sequence<Row> rows,
       boolean combine
   )
@@ -245,9 +243,12 @@ public class GroupByQueryHelper
 
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
       final String typeName = aggregatorFactory.getTypeName();
-      final ValueType valueType = typeName != null
-                                  ? Enums.getIfPresent(ValueType.class, typeName.toUpperCase()).orNull()
-                                  : null;
+      final ValueType valueType;
+      if (typeName != null) {
+        valueType = Enums.getIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)).orNull();
+      } else {
+        valueType = null;
+      }
       if (valueType != null) {
         types.put(aggregatorFactory.getName(), valueType);
       }

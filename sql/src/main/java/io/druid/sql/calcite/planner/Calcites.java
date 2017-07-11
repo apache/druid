@@ -21,6 +21,10 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.query.ordering.StringComparator;
+import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
@@ -29,6 +33,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ConversionUtil;
 import org.joda.time.DateTime;
@@ -37,12 +42,17 @@ import org.joda.time.Days;
 
 import java.nio.charset.Charset;
 import java.util.Calendar;
+import java.util.Locale;
+import java.util.NavigableSet;
+import java.util.TimeZone;
+import java.util.TreeSet;
 
 /**
  * Utility functions for Calcite.
  */
 public class Calcites
 {
+  private static final TimeZone GMT_TIME_ZONE = TimeZone.getTimeZone("GMT");
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
 
   private Calcites()
@@ -58,7 +68,7 @@ public class Calcites
     final String charset = ConversionUtil.NATIVE_UTF16_CHARSET_NAME;
     System.setProperty("saffron.default.charset", Calcites.defaultCharset().name());
     System.setProperty("saffron.default.nationalcharset", Calcites.defaultCharset().name());
-    System.setProperty("saffron.default.collation.name", String.format("%s$en_US", charset));
+    System.setProperty("saffron.default.collation.name", StringUtils.format("%s$en_US", charset));
   }
 
   public static Charset defaultCharset()
@@ -100,11 +110,12 @@ public class Calcites
 
   public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
   {
-    if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
+    if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName)) {
       return ValueType.FLOAT;
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName
                || SqlTypeName.DATE == sqlTypeName
-               || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
+               || SqlTypeName.BOOLEAN == sqlTypeName
+               || SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
       return ValueType.LONG;
     } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
       return ValueType.STRING;
@@ -112,6 +123,16 @@ public class Calcites
       return ValueType.COMPLEX;
     } else {
       return null;
+    }
+  }
+
+  public static StringComparator getStringComparatorForSqlTypeName(SqlTypeName sqlTypeName)
+  {
+    final ValueType valueType = getValueTypeForSqlTypeName(sqlTypeName);
+    if (valueType == ValueType.LONG || valueType == ValueType.FLOAT) {
+      return StringComparators.NUMERIC;
+    } else {
+      return StringComparators.LEXICOGRAPHIC;
     }
   }
 
@@ -153,9 +174,30 @@ public class Calcites
    */
   public static Calendar jodaToCalciteCalendarLiteral(final DateTime dateTime, final DateTimeZone timeZone)
   {
-    final Calendar calendar = Calendar.getInstance();
+    final Calendar calendar = Calendar.getInstance(Locale.ENGLISH);
+    calendar.setTimeZone(GMT_TIME_ZONE);
     calendar.setTimeInMillis(Calcites.jodaToCalciteTimestamp(dateTime, timeZone));
     return calendar;
+  }
+
+  /**
+   * Translates "literal" (a TIMESTAMP or DATE literal) to milliseconds since the epoch using the provided
+   * session time zone.
+   *
+   * @param literal  TIMESTAMP or DATE literal
+   * @param timeZone session time zone
+   *
+   * @return milliseconds time
+   */
+  public static DateTime calciteDateTimeLiteralToJoda(final RexNode literal, final DateTimeZone timeZone)
+  {
+    final SqlTypeName typeName = literal.getType().getSqlTypeName();
+    if (literal.getKind() != SqlKind.LITERAL || (typeName != SqlTypeName.TIMESTAMP && typeName != SqlTypeName.DATE)) {
+      throw new IAE("Expected TIMESTAMP or DATE literal but got[%s:%s]", literal.getKind(), typeName);
+    }
+
+    final Calendar calendar = (Calendar) RexLiteral.value(literal);
+    return calciteTimestampToJoda(calendar.getTimeInMillis(), timeZone);
   }
 
   /**
@@ -195,5 +237,11 @@ public class Calcites
   public static boolean isIntLiteral(final RexNode rexNode)
   {
     return rexNode instanceof RexLiteral && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName());
+  }
+
+  public static boolean anyStartsWith(final TreeSet<String> set, final String prefix)
+  {
+    final NavigableSet<String> headSet = set.headSet(prefix, true);
+    return !headSet.isEmpty() && headSet.first().startsWith(prefix);
   }
 }

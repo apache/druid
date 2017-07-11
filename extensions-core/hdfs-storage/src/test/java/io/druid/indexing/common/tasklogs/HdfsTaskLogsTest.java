@@ -23,6 +23,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import io.druid.tasklogs.TaskLogs;
@@ -56,7 +57,7 @@ public class HdfsTaskLogsTest
     final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
     for (Map.Entry<Long, String> entry : expected.entrySet()) {
       final String string = readLog(taskLogs, "foo", entry.getKey());
-      Assert.assertEquals(String.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
+      Assert.assertEquals(StringUtils.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
     }
   }
 
@@ -114,9 +115,6 @@ public class HdfsTaskLogsTest
 
   private String readLog(TaskLogs taskLogs, String logFile, long offset) throws IOException
   {
-    return new String(
-        ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()),
-        Charsets.UTF_8
-    );
+    return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()));
   }
 }

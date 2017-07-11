@@ -21,7 +21,8 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.java.util.common.StringUtils;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DruidFloatPredicate;
@@ -102,9 +103,9 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
-    return Filters.matchPredicate(dimension, selector, predicateFactory.makeStringPredicate());
+    return Filters.matchPredicate(dimension, selector, bitmapResultFactory, predicateFactory.makeStringPredicate());
   }
 
   @Override
@@ -141,9 +142,9 @@ public class DimensionPredicateFilter implements Filter
   public String toString()
   {
     if (extractionFn != null) {
-      return String.format("%s(%s) = %s", extractionFn, dimension, basePredicateString);
+      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, basePredicateString);
     } else {
-      return String.format("%s = %s", dimension, basePredicateString);
+      return StringUtils.format("%s = %s", dimension, basePredicateString);
     }
   }
 }

@@ -300,13 +300,13 @@ public class BoundDimFilter implements DimFilter
     }
 
     if (extractionFn != null) {
-      builder.append(String.format("%s(%s)", extractionFn, dimension));
+      builder.append(StringUtils.format("%s(%s)", extractionFn, dimension));
     } else {
       builder.append(dimension);
     }
 
     if (!ordering.equals(StringComparators.LEXICOGRAPHIC)) {
-      builder.append(String.format(" as %s", ordering.toString()));
+      builder.append(StringUtils.format(" as %s", ordering.toString()));
     }
 
     if (upper != null) {

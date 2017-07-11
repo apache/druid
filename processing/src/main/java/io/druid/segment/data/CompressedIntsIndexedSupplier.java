@@ -25,6 +25,7 @@ import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -318,7 +319,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     {
       if (totalSize - index < toFill.length) {
         throw new IndexOutOfBoundsException(
-            String.format(
+            StringUtils.format(
                 "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
             )
         );

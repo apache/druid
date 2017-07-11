@@ -20,6 +20,7 @@
 package io.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import io.druid.java.util.common.StringUtils;
 
 /**
 */
@@ -36,6 +37,6 @@ public enum ValueType
     if (name == null) {
       return null;
     }
-    return valueOf(name.toUpperCase());
+    return valueOf(StringUtils.toUpperCase(name));
   }
 }

@@ -57,9 +57,11 @@ import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
@@ -122,6 +124,7 @@ import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.TestHelper;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -328,11 +331,11 @@ public class CachingClusteredClientTest
     client = makeClient(MoreExecutors.sameThreadExecutor());
 
     servers = new DruidServer[]{
-        new DruidServer("test1", "test1", 10, "historical", "bye", 0),
-        new DruidServer("test2", "test2", 10, "historical", "bye", 0),
-        new DruidServer("test3", "test3", 10, "historical", "bye", 0),
-        new DruidServer("test4", "test4", 10, "historical", "bye", 0),
-        new DruidServer("test5", "test5", 10, "historical", "bye", 0)
+        new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test2", "test2", null, 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test3", "test3", null, 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test4", "test4", null, 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test5", "test5", null, 10, ServerType.HISTORICAL, "bye", 0)
     };
   }
 
@@ -1997,7 +2000,7 @@ public class CachingClusteredClientTest
     MultipleSpecificSegmentSpec spec = (MultipleSpecificSegmentSpec)query.getQuerySegmentSpec();
     List<Result<TimeseriesResultValue>> ret = Lists.newArrayList();
     for (SegmentDescriptor descriptor : spec.getDescriptors()) {
-      String id = String.format("%s_%s", queryIntervals.indexOf(descriptor.getInterval()), descriptor.getPartitionNumber());
+      String id = StringUtils.format("%s_%s", queryIntervals.indexOf(descriptor.getInterval()), descriptor.getPartitionNumber());
       int index = segmentIds.indexOf(id);
       if (index != -1) {
         ret.add(new Result(
@@ -2166,7 +2169,7 @@ public class CachingClusteredClientTest
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable<>(
-                        Ordering.<Result<Object>>natural().nullsFirst(),
+                        Comparators.naturalNullsFirst(),
                         FunctionalIterable
                             .create(new RangeIterable(expectedResultsRangeStart, expectedResultsRangeEnd))
                             .transformCat(
@@ -2248,7 +2251,7 @@ public class CachingClusteredClientTest
 
         DataSegment mockSegment = makeMock(mocks, DataSegment.class);
         ServerExpectation expectation = new ServerExpectation(
-            String.format("%s_%s", k, j), // interval/chunk
+            StringUtils.format("%s_%s", k, j), // interval/chunk
             queryIntervals.get(k),
             mockSegment,
             expectedResults.get(k).get(j)

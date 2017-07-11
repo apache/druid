@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
@@ -55,9 +56,9 @@ public class LikeFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
-    return selector.getBitmapFactory().union(getBitmapIterable(selector));
+    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(selector));
   }
 
   @Override

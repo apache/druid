@@ -28,13 +28,13 @@ import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.ISE;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
@@ -50,6 +50,7 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -62,11 +63,11 @@ public class InitializationTest
   @Test
   public void test01InitialModulesEmpty() throws Exception
   {
-    Initialization.clearLoadedModules();
+    Initialization.clearLoadedImplementations();
     Assert.assertEquals(
         "Initial set of loaded modules must be empty",
         0,
-        Initialization.getLoadedModules(DruidModule.class).size()
+        Initialization.getLoadedImplementations(DruidModule.class).size()
     );
   }
 
@@ -95,7 +96,7 @@ public class InitializationTest
 
     Assert.assertFalse(
         "modules does not contain TestDruidModule",
-        Collections2.transform(Initialization.getLoadedModules(DruidModule.class), fnClassName)
+        Collections2.transform(Initialization.getLoadedImplementations(DruidModule.class), fnClassName)
                     .contains("io.druid.initialization.InitializationTest.TestDruidModule")
     );
 
@@ -140,7 +141,7 @@ public class InitializationTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
+                    binder, Key.get(DruidNode.class, Self.class),  new DruidNode("test-inject", null, null, null, new ServerConfig())
                 );
               }
             }
@@ -179,13 +180,16 @@ public class InitializationTest
   public void testGetLoadedModules()
   {
 
-    Set<DruidModule> modules = Initialization.getLoadedModules(DruidModule.class);
+    Collection<DruidModule> modules = Initialization.getLoadedImplementations(DruidModule.class);
+    HashSet<DruidModule> moduleSet = new HashSet<>(modules);
 
-    Set<DruidModule> loadedModules = Initialization.getLoadedModules(DruidModule.class);
-    Assert.assertEquals("Set from loaded modules #1 should be same!", modules, loadedModules);
+    Collection<DruidModule> loadedModules = Initialization.getLoadedImplementations(DruidModule.class);
+    Assert.assertEquals("Set from loaded modules #1 should be same!", modules.size(), loadedModules.size());
+    Assert.assertEquals("Set from loaded modules #1 should be same!", moduleSet, new HashSet<>(loadedModules));
 
-    Set<DruidModule> loadedModules2 = Initialization.getLoadedModules(DruidModule.class);
-    Assert.assertEquals("Set from loaded modules #2 should be same!", modules, loadedModules2);
+    Collection<DruidModule> loadedModules2 = Initialization.getLoadedImplementations(DruidModule.class);
+    Assert.assertEquals("Set from loaded modules #2 should be same!", modules.size(), loadedModules2.size());
+    Assert.assertEquals("Set from loaded modules #2 should be same!", moduleSet, new HashSet<>(loadedModules2));
   }
 
   @Test

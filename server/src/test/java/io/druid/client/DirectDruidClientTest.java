@@ -33,6 +33,7 @@ import io.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.java.util.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -42,6 +43,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -136,6 +138,7 @@ public class DirectDruidClientTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
+        "http",
         "foo",
         new NoopServiceEmitter()
     );
@@ -144,17 +147,18 @@ public class DirectDruidClientTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
+        "http",
         "foo2",
         new NoopServiceEmitter()
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client2
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer2, serverSelector.getSegment());
@@ -181,7 +185,11 @@ public class DirectDruidClientTest
     Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
     // produce result for first connection
-    futureResult.set(new ByteArrayInputStream("[{\"timestamp\":\"2014-01-01T01:02:03Z\", \"result\": 42.0}]".getBytes()));
+    futureResult.set(
+        new ByteArrayInputStream(
+            StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\", \"result\": 42.0}]")
+        )
+    );
     List<Result> results = Sequences.toList(s1, Lists.<Result>newArrayList());
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(new DateTime("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
@@ -248,12 +256,13 @@ public class DirectDruidClientTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
+        "http",
         "foo",
         new NoopServiceEmitter()
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
@@ -317,19 +326,24 @@ public class DirectDruidClientTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
+        "http",
         hostName,
         new NoopServiceEmitter()
     );
 
     QueryableDruidServer queryableDruidServer = new QueryableDruidServer(
-        new DruidServer("test1", hostName, 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", hostName, null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
 
     serverSelector.addServerAndUpdateSegment(queryableDruidServer, dataSegment);
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-    interruptionFuture.set(new ByteArrayInputStream("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}".getBytes()));
+    interruptionFuture.set(
+        new ByteArrayInputStream(
+            StringUtils.toUtf8("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}")
+        )
+    );
     Sequence results = client1.run(query, defaultContext);
 
     QueryInterruptedException actualException = null;

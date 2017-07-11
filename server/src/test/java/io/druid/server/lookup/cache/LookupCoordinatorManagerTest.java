@@ -35,12 +35,13 @@ import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.SequenceInputStreamResponseHandler;
 import io.druid.audit.AuditInfo;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.LookupModule;
 import io.druid.query.lookup.LookupsState;
+import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.listener.announcer.ListenerDiscoverer;
 import org.easymock.EasyMock;
 import org.hamcrest.BaseMatcher;
@@ -205,7 +206,7 @@ public class LookupCoordinatorManagerTest
         };
 
     LookupsState<LookupExtractorFactoryMapContainer> resp = lookupsCommunicator.updateNode(
-        HostAndPort.fromString("localhost"),
+        HostAndPortWithScheme.fromString("localhost"),
         LOOKUPS_STATE
     );
 
@@ -219,7 +220,7 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream("server failed".getBytes()));
+    future.set(new ByteArrayInputStream(StringUtils.toUtf8("server failed")));
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -245,7 +246,7 @@ public class LookupCoordinatorManagerTest
 
     try {
       lookupsCommunicator.updateNode(
-          HostAndPort.fromString("localhost"),
+          HostAndPortWithScheme.fromString("localhost"),
           LOOKUPS_STATE
       );
       Assert.fail();
@@ -262,7 +263,7 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream("weird".getBytes()));
+    future.set(new ByteArrayInputStream(StringUtils.toUtf8("weird")));
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -288,7 +289,7 @@ public class LookupCoordinatorManagerTest
 
     try {
       lookupsCommunicator.updateNode(
-          HostAndPort.fromString("localhost"),
+          HostAndPortWithScheme.fromString("localhost"),
           LOOKUPS_STATE
       );
       Assert.fail();
@@ -331,7 +332,7 @@ public class LookupCoordinatorManagerTest
     Thread.currentThread().interrupt();
     try {
       lookupsCommunicator.updateNode(
-          HostAndPort.fromString("localhost"),
+          HostAndPortWithScheme.fromString("localhost"),
           LOOKUPS_STATE
       );
       Assert.fail();
@@ -386,7 +387,7 @@ public class LookupCoordinatorManagerTest
         };
 
     LookupsState<LookupExtractorFactoryMapContainer> resp = lookupsCommunicator.getLookupStateForNode(
-        HostAndPort.fromString("localhost")
+        HostAndPortWithScheme.fromString("localhost")
     );
 
     EasyMock.verify(client, responseHandler);
@@ -400,7 +401,7 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream("server failed".getBytes()));
+    future.set(new ByteArrayInputStream(StringUtils.toUtf8("server failed")));
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -426,7 +427,7 @@ public class LookupCoordinatorManagerTest
 
     try {
       lookupsCommunicator.getLookupStateForNode(
-          HostAndPort.fromString("localhost")
+          HostAndPortWithScheme.fromString("localhost")
       );
       Assert.fail();
     }
@@ -442,7 +443,7 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream("weird".getBytes()));
+    future.set(new ByteArrayInputStream(StringUtils.toUtf8("weird")));
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -468,7 +469,7 @@ public class LookupCoordinatorManagerTest
 
     try {
       lookupsCommunicator.getLookupStateForNode(
-          HostAndPort.fromString("localhost")
+          HostAndPortWithScheme.fromString("localhost")
       );
       Assert.fail();
     }
@@ -511,7 +512,7 @@ public class LookupCoordinatorManagerTest
     Thread.currentThread().interrupt();
     try {
       lookupsCommunicator.getLookupStateForNode(
-          HostAndPort.fromString("localhost")
+          HostAndPortWithScheme.fromString("localhost")
       );
       Assert.fail();
     }
@@ -1046,8 +1047,8 @@ public class LookupCoordinatorManagerTest
         new AtomicReference<>(configuredLookups)).once();
     EasyMock.replay(configManager);
 
-    HostAndPort host1 = HostAndPort.fromParts("host1", 1234);
-    HostAndPort host2 = HostAndPort.fromParts("host2", 3456);
+    HostAndPortWithScheme host1 = HostAndPortWithScheme.fromParts("http", "host1", 1234);
+    HostAndPortWithScheme host2 = HostAndPortWithScheme.fromParts("http", "host2", 3456);
 
     EasyMock.reset(discoverer);
     EasyMock.expect(
@@ -1142,9 +1143,9 @@ public class LookupCoordinatorManagerTest
     manager.start();
 
     Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> expectedKnownState = ImmutableMap.of(
-        host1,
+        host1.getHostAndPort(),
         host1UpdatedState,
-        host2,
+        host2.getHostAndPort(),
         host2UpdatedState
     );
 

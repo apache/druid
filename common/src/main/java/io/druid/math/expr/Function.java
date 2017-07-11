@@ -19,12 +19,13 @@
 
 package io.druid.math.expr;
 
+import com.google.common.base.Strings;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
-import com.google.common.base.Supplier;
 
 import java.util.List;
 
@@ -36,17 +37,13 @@ interface Function
 
   ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
 
-  // optional interface to be used when function should be created per reference in expression
-  interface FunctionFactory extends Supplier<Function>, Function {
-  }
-
   abstract class SingleParam implements Function
   {
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
-        throw new IAE("function '%s' needs 1 argument", name());
+        throw new IAE("Function[%s] needs 1 argument", name());
       }
       Expr expr = args.get(0);
       return eval(expr.eval(bindings));
@@ -61,7 +58,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 2) {
-        throw new IAE("function '%s' needs 2 arguments", name());
+        throw new IAE("Function[%s] needs 2 arguments", name());
       }
       Expr expr1 = args.get(0);
       Expr expr2 = args.get(1);
@@ -244,6 +241,27 @@ interface Function
     protected ExprEval eval(double param)
     {
       return ExprEval.of(Math.cosh(param));
+    }
+  }
+
+  class Div extends DoubleParamMath
+  {
+    @Override
+    public String name()
+    {
+      return "div";
+    }
+
+    @Override
+    protected ExprEval eval(final long x, final long y)
+    {
+      return ExprEval.of(x / y);
+    }
+
+    @Override
+    protected ExprEval eval(final double x, final double y)
+    {
+      return ExprEval.of((long) (x / y));
     }
   }
 
@@ -691,11 +709,75 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 3) {
-        throw new IAE("function 'if' needs 3 arguments");
+        throw new IAE("Function[%s] needs 3 arguments", name());
       }
 
       ExprEval x = args.get(0).eval(bindings);
       return x.asBoolean() ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
+    }
+  }
+
+  /**
+   * "Searched CASE" function, similar to {@code CASE WHEN boolean_expr THEN result [ELSE else_result] END} in SQL.
+   */
+  class CaseSearchedFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "case_searched";
+    }
+
+    @Override
+    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
+    {
+      if (args.size() < 2) {
+        throw new IAE("Function[%s] must have at least 2 arguments", name());
+      }
+
+      for (int i = 0; i < args.size(); i += 2) {
+        if (i == args.size() - 1) {
+          // ELSE else_result.
+          return args.get(i).eval(bindings);
+        } else if (args.get(i).eval(bindings).asBoolean()) {
+          // Matching WHEN boolean_expr THEN result
+          return args.get(i + 1).eval(bindings);
+        }
+      }
+
+      return ExprEval.of(null);
+    }
+  }
+
+  /**
+   * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
+   */
+  class CaseSimpleFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "case_simple";
+    }
+
+    @Override
+    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
+    {
+      if (args.size() < 3) {
+        throw new IAE("Function[%s] must have at least 3 arguments", name());
+      }
+
+      for (int i = 1; i < args.size(); i += 2) {
+        if (i == args.size() - 1) {
+          // ELSE else_result.
+          return args.get(i).eval(bindings);
+        } else if (new BinEqExpr("==", args.get(0), args.get(i)).eval(bindings).asBoolean()) {
+          // Matching WHEN value THEN result
+          return args.get(i + 1).eval(bindings);
+        }
+      }
+
+      return ExprEval.of(null);
     }
   }
 
@@ -712,7 +794,7 @@ interface Function
     {
       ExprType castTo;
       try {
-        castTo = ExprType.valueOf(y.asString().toUpperCase());
+        castTo = ExprType.valueOf(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
         throw new IAE("invalid type '%s'", y.asString());
@@ -733,7 +815,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("function '%s' needs 1 or 2 arguments", name());
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
       }
       ExprEval value = args.get(0).eval(bindings);
       if (value.type() != ExprType.STRING) {
@@ -791,10 +873,178 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 2) {
-        throw new IAE("function 'nvl' needs 2 arguments");
+        throw new IAE("Function[%s] needs 2 arguments", name());
       }
       final ExprEval eval = args.get(0).eval(bindings);
       return eval.isNull() ? args.get(1).eval(bindings) : eval;
+    }
+  }
+
+  class ConcatFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "concat";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() == 0) {
+        return ExprEval.of(null);
+      } else {
+        // Pass first argument in to the constructor to provide StringBuilder a little extra sizing hint.
+        final StringBuilder builder = new StringBuilder(Strings.nullToEmpty(args.get(0).eval(bindings).asString()));
+        for (int i = 1; i < args.size(); i++) {
+          final String s = args.get(i).eval(bindings).asString();
+          if (s != null) {
+            builder.append(s);
+          }
+        }
+        return ExprEval.of(builder.toString());
+      }
+    }
+  }
+
+  class StrlenFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "strlen";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final String arg = args.get(0).eval(bindings).asString();
+      return arg == null ? ExprEval.of(0) : ExprEval.of(arg.length());
+    }
+  }
+
+  class SubstringFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "substring";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
+
+      final String arg = args.get(0).eval(bindings).asString();
+
+      if (arg == null) {
+        return ExprEval.of(null);
+      }
+
+      // Behaves like SubstringDimExtractionFn, not SQL SUBSTRING
+      final int index = args.get(1).eval(bindings).asInt();
+      final int length = args.get(2).eval(bindings).asInt();
+
+      if (index < arg.length()) {
+        if (length >= 0) {
+          return ExprEval.of(arg.substring(index, Math.min(index + length, arg.length())));
+        } else {
+          return ExprEval.of(arg.substring(index));
+        }
+      } else {
+        return ExprEval.of(null);
+      }
+    }
+  }
+
+  class ReplaceFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "replace";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
+
+      final String arg = args.get(0).eval(bindings).asString();
+      final String pattern = args.get(1).eval(bindings).asString();
+      final String replacement = args.get(2).eval(bindings).asString();
+      return ExprEval.of(
+          Strings.nullToEmpty(arg).replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
+      );
+    }
+  }
+
+  class TrimFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "trim";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final String arg = args.get(0).eval(bindings).asString();
+      return ExprEval.of(Strings.nullToEmpty(arg).trim());
+    }
+  }
+
+  class LowerFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "lower";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final String arg = args.get(0).eval(bindings).asString();
+      return ExprEval.of(Strings.nullToEmpty(arg).toLowerCase());
+    }
+  }
+
+  class UpperFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "upper";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final String arg = args.get(0).eval(bindings).asString();
+      return ExprEval.of(Strings.nullToEmpty(arg).toUpperCase());
     }
   }
 }

@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.Cacheable;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -53,7 +54,7 @@ public abstract class Granularity implements Cacheable
   @JsonCreator
   public static Granularity fromString(String str)
   {
-    return GranularityType.valueOf(str.toUpperCase()).getDefaultGranularity();
+    return GranularityType.valueOf(StringUtils.toUpperCase(str)).getDefaultGranularity();
   }
 
   /**

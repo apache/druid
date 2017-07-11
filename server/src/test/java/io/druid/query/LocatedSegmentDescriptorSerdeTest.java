@@ -22,6 +22,7 @@ package io.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,9 +42,9 @@ public class LocatedSegmentDescriptorSerdeTest
         new SegmentDescriptor(new Interval(100, 200), "version", 100),
         65535,
         Arrays.asList(
-            new DruidServerMetadata("server1", "host1", 30000L, "historical", "tier1", 0),
-            new DruidServerMetadata("server2", "host2", 40000L, "historical", "tier1", 1),
-            new DruidServerMetadata("server3", "host3", 50000L, "realtime", "tier2", 2)
+            new DruidServerMetadata("server1", "host1", null, 30000L, ServerType.HISTORICAL, "tier1", 0),
+            new DruidServerMetadata("server2", "host2", null, 40000L, ServerType.HISTORICAL, "tier1", 1),
+            new DruidServerMetadata("server3", "host3", null, 50000L, ServerType.REALTIME, "tier2", 2)
         )
     );
 

@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Floats;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
@@ -118,7 +119,7 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     {
       if (totalSize - index < toFill.length) {
         throw new IndexOutOfBoundsException(
-            String.format(
+            StringUtils.format(
                 "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
             )
         );

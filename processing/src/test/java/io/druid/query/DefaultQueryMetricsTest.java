@@ -21,7 +21,6 @@ package io.druid.query;
 
 import com.google.common.collect.ImmutableSet;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -29,6 +28,7 @@ import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
+import io.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +50,7 @@ public class DefaultQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>(new DefaultObjectMapper());
+    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>(TestHelper.getJsonMapper());
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
         .granularity(Granularities.ALL)
@@ -92,7 +92,7 @@ public class DefaultQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>(new DefaultObjectMapper());
+    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>(TestHelper.getJsonMapper());
     testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 

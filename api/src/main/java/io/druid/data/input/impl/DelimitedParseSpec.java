@@ -21,7 +21,6 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.parsers.DelimitedParser;
 import io.druid.java.util.common.parsers.Parser;
@@ -71,6 +70,18 @@ public class DelimitedParseSpec extends ParseSpec
     }
   }
 
+  @Deprecated
+  public DelimitedParseSpec(
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      String delimiter,
+      String listDelimiter,
+      List<String> columns
+  )
+  {
+    this(timestampSpec, dimensionsSpec, delimiter, listDelimiter, columns, false, 0);
+  }
+
   @JsonProperty("delimiter")
   public String getDelimiter()
   {
@@ -113,8 +124,8 @@ public class DelimitedParseSpec extends ParseSpec
   public Parser<String, Object> makeParser()
   {
     return new DelimitedParser(
-        Optional.fromNullable(delimiter),
-        Optional.fromNullable(listDelimiter),
+        delimiter,
+        listDelimiter,
         columns,
         hasHeaderRow,
         skipHeaderRows

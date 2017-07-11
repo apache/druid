@@ -131,6 +131,7 @@ public class CliOverlord extends ServerRunnable
                     .annotatedWith(Names.named("serviceName"))
                     .to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
             }
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);

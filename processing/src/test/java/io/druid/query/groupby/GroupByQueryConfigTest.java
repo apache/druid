@@ -21,15 +21,15 @@ package io.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class GroupByQueryConfigTest
 {
-  private final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private final ObjectMapper MAPPER = TestHelper.getJsonMapper();
 
   private final ImmutableMap<String, String> CONFIG_MAP = ImmutableMap
       .<String, String>builder()

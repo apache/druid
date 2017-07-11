@@ -29,6 +29,7 @@ import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.HadoopTuningConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -71,7 +72,8 @@ public class GranularityPathSpecTest
       null,
       null,
       false,
-      false
+      false,
+      null
   );
 
   private GranularityPathSpec granularityPathSpec;
@@ -179,10 +181,10 @@ public class GranularityPathSpecTest
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/y=2015/m=11/d=06/H=00/file1"),
-        String.format(formatStr, testFolder.getRoot(), "test/y=2015/m=11/d=06/H=02/file2"),
-        String.format(formatStr, testFolder.getRoot(), "test/y=2015/m=11/d=06/H=05/file3"),
-        String.format(formatStr, testFolder.getRoot(), "test/y=2015/m=11/d=06/H=05/file4")
+        StringUtils.format(formatStr, testFolder.getRoot(), "test/y=2015/m=11/d=06/H=00/file1"),
+        StringUtils.format(formatStr, testFolder.getRoot(), "test/y=2015/m=11/d=06/H=02/file2"),
+        StringUtils.format(formatStr, testFolder.getRoot(), "test/y=2015/m=11/d=06/H=05/file3"),
+        StringUtils.format(formatStr, testFolder.getRoot(), "test/y=2015/m=11/d=06/H=05/file4")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -230,9 +232,9 @@ public class GranularityPathSpecTest
 
     String expected = Joiner.on(",").join(
         Lists.newArrayList(
-            String.format(formatStr, testFolder.getRoot(), "test/2015/01/01/18/file3"),
-            String.format(formatStr, testFolder.getRoot(), "test/2015/01/02/00/file1"),
-            String.format(formatStr, testFolder.getRoot(), "test/2015/01/02/03/file2")
+            StringUtils.format(formatStr, testFolder.getRoot(), "test/2015/01/01/18/file3"),
+            StringUtils.format(formatStr, testFolder.getRoot(), "test/2015/01/02/00/file1"),
+            StringUtils.format(formatStr, testFolder.getRoot(), "test/2015/01/02/03/file2")
         )
     );
 

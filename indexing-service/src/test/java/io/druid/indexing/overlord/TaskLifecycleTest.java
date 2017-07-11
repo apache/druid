@@ -70,6 +70,8 @@ import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
@@ -80,7 +82,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -103,6 +104,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -122,6 +124,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -135,7 +138,6 @@ import java.util.concurrent.Executor;
 public class TaskLifecycleTest
 {
   private static final ObjectMapper MAPPER;
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   private static final TestUtils TEST_UTILS;
@@ -143,7 +145,6 @@ public class TaskLifecycleTest
   static {
     TEST_UTILS = new TestUtils();
     MAPPER = TEST_UTILS.getTestObjectMapper();
-    INDEX_MERGER = TEST_UTILS.getTestIndexMerger();
     INDEX_MERGER_V9 = TEST_UTILS.getTestIndexMergerV9();
     INDEX_IO = TEST_UTILS.getTestIndexIO();
   }
@@ -404,7 +405,7 @@ public class TaskLifecycleTest
       }
 
       default: {
-        throw new RuntimeException(String.format("Unknown task storage type [%s]", taskStorageType));
+        throw new RE("Unknown task storage type [%s]", taskStorageType);
       }
     }
     tsqa = new TaskStorageQueryAdapter(taskStorage);
@@ -477,6 +478,12 @@ public class TaskLifecycleTest
         pushedSegments++;
         return segment;
       }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
+      }
     };
   }
 
@@ -507,7 +514,7 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage);
+    taskLockbox = new TaskLockbox(taskStorage, 300);
     tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
         SupervisorManager.class)));
     File tmpDir = temporaryFolder.newFolder();
@@ -587,7 +594,6 @@ public class TaskLifecycleTest
             )
         ),
         MAPPER,
-        INDEX_MERGER,
         INDEX_IO,
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
@@ -604,7 +610,7 @@ public class TaskLifecycleTest
         tb,
         taskConfig,
         emitter,
-        new DruidNode("dummy", "dummy", 10000)
+        new DruidNode("dummy", "dummy", 10000, null, new ServerConfig())
     );
   }
 
@@ -649,7 +655,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
         null,
         MAPPER
@@ -707,7 +713,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
         null,
         MAPPER
@@ -1017,6 +1023,12 @@ public class TaskLifecycleTest
       {
         throw new RuntimeException("FAILURE");
       }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
+      }
     };
 
     tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc);
@@ -1066,7 +1078,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null)
         ),
         null,
         MAPPER
@@ -1159,7 +1171,7 @@ public class TaskLifecycleTest
 
   private RealtimeIndexTask newRealtimeIndexTask()
   {
-    String taskId = String.format("rt_task_%s", System.currentTimeMillis());
+    String taskId = StringUtils.format("rt_task_%s", System.currentTimeMillis());
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,

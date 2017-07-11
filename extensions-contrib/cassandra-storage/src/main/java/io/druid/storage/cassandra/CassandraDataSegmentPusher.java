@@ -30,12 +30,13 @@ import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
 
 /**
  * Cassandra Segment Pusher
@@ -77,7 +78,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     log.info("Writing [%s] to C*", indexFilesDir);
     String key = JOINER.join(
         config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
-        DataSegmentPusherUtil.getStorageDir(segment)
+        this.getStorageDir(segment)
         );
 
     // Create index
@@ -113,5 +114,11 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     log.info("Deleting zipped index File[%s]", compressedIndexFile);
     compressedIndexFile.delete();
     return segment;
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI uri)
+  {
+    throw new UnsupportedOperationException("not supported");
   }
 }

@@ -31,6 +31,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -61,6 +62,7 @@ public class IndexerZkConfigTest
     {
       binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
       binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+      binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
       // See IndexingServiceModuleHelper
       JsonConfigProvider.bind(binder, indexerPropertyString, IndexerZkConfig.class);
       JsonConfigProvider.bind(
@@ -75,12 +77,12 @@ public class IndexerZkConfigTest
   {
     for (Field field : IndexerZkConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        clobberableProperties.add(String.format("%s.%s", indexerPropertyString, field.getName()));
+        clobberableProperties.add(StringUtils.format("%s.%s", indexerPropertyString, field.getName()));
       }
     }
     for (Field field : ZkPathsConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        clobberableProperties.add(String.format("%s.%s", zkServiceConfigString, field.getName()));
+        clobberableProperties.add(StringUtils.format("%s.%s", zkServiceConfigString, field.getName()));
       }
     }
   }
@@ -103,10 +105,10 @@ public class IndexerZkConfigTest
   {
     for (Field field : ZkPathsConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        String property = String.format("%s.%s", zkServiceConfigString, field.getName());
-        String getter = String.format(
+        String property = StringUtils.format("%s.%s", zkServiceConfigString, field.getName());
+        String getter = StringUtils.format(
             "get%s%s",
-            field.getName().substring(0, 1).toUpperCase(),
+            StringUtils.toUpperCase(field.getName().substring(0, 1)),
             field.getName().substring(1)
         );
         Method method = ZkPathsConfig.class.getDeclaredMethod(getter);
@@ -121,10 +123,10 @@ public class IndexerZkConfigTest
   {
     for (Field field : IndexerZkConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        String property = String.format("%s.%s", indexerPropertyString, field.getName());
-        String getter = String.format(
+        String property = StringUtils.format("%s.%s", indexerPropertyString, field.getName());
+        String getter = StringUtils.format(
             "get%s%s",
-            field.getName().substring(0, 1).toUpperCase(),
+            StringUtils.toUpperCase(field.getName().substring(0, 1)),
             field.getName().substring(1)
         );
         Method method = IndexerZkConfig.class.getDeclaredMethod(getter);

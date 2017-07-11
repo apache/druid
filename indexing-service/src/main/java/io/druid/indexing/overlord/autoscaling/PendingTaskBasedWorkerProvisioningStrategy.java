@@ -56,6 +56,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 {
   private static final EmittingLogger log = new EmittingLogger(PendingTaskBasedWorkerProvisioningStrategy.class);
 
+  private static final String SCHEME = "http";
+
   private final PendingTaskBasedWorkerProvisioningConfig config;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
 
@@ -259,7 +261,12 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         } else {
           // None of the existing worker can run this task, we need to provision one worker for it.
           // create a dummy worker and try to simulate assigning task to it.
-          workerRunningTask = createDummyWorker("dummy" + need, capacity, workerTaskRunnerConfig.getMinWorkerVersion());
+          workerRunningTask = createDummyWorker(
+              SCHEME,
+              "dummy" + need,
+              capacity,
+              workerTaskRunnerConfig.getMinWorkerVersion()
+          );
           need++;
         }
         // Update map with worker running task
@@ -404,10 +411,10 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     );
   }
 
-  private static ImmutableWorkerInfo createDummyWorker(String host, int capacity, String version)
+  private static ImmutableWorkerInfo createDummyWorker(String scheme, String host, int capacity, String version)
   {
     return new ImmutableWorkerInfo(
-        new Worker(host, "-2", capacity, version),
+        new Worker(scheme, host, "-2", capacity, version),
         0,
         Sets.<String>newHashSet(),
         Sets.<String>newHashSet(),

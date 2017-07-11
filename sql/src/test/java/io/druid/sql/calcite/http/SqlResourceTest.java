@@ -26,8 +26,10 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -77,7 +79,11 @@ public class SqlResourceTest
         CalciteTests.createMockSchema(walker, plannerConfig)
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
-    resource = new SqlResource(JSON_MAPPER, new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig));
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    resource = new SqlResource(
+        JSON_MAPPER,
+        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig())
+    );
   }
 
   @After
@@ -178,7 +184,7 @@ public class SqlResourceTest
         ImmutableList.of(
             ImmutableMap.<String, Object>of(
                 "PLAN",
-                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
+                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{virtualColumns=[], aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null}]])\n"
             )
         ),
         rows

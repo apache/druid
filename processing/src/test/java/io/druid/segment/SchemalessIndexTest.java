@@ -26,12 +26,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -39,8 +39,8 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -86,7 +86,7 @@ public class SchemalessIndexTest
   private static final Map<Integer, Map<Integer, QueryableIndex>> mergedIndexes = Maps.newHashMap();
   private static final List<QueryableIndex> rowPersistedIndexes = Lists.newArrayList();
 
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   private static IncrementalIndex index = null;
@@ -141,7 +141,16 @@ public class SchemalessIndexTest
         final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
 
         if (theIndex == null) {
-          theIndex = new OnheapIncrementalIndex(timestamp, Granularities.MINUTE, METRIC_AGGS, 1000);
+          theIndex = new IncrementalIndex.Builder()
+              .setIndexSchema(
+                  new IncrementalIndexSchema.Builder()
+                      .withMinTimestamp(timestamp)
+                      .withQueryGranularity(Granularities.MINUTE)
+                      .withMetrics(METRIC_AGGS)
+                      .build()
+              )
+              .setMaxRowCount(1000)
+              .buildOnheap();
         }
 
         final List<String> dims = Lists.newArrayList();
@@ -350,9 +359,16 @@ public class SchemalessIndexTest
             }
           }
 
-          final IncrementalIndex rowIndex = new OnheapIncrementalIndex(
-              timestamp, Granularities.MINUTE, METRIC_AGGS, 1000
-          );
+          final IncrementalIndex rowIndex = new IncrementalIndex.Builder()
+              .setIndexSchema(
+                  new IncrementalIndexSchema.Builder()
+                      .withMinTimestamp(timestamp)
+                      .withQueryGranularity(Granularities.MINUTE)
+                      .withMetrics(METRIC_AGGS)
+                      .build()
+              )
+              .setMaxRowCount(1000)
+              .buildOnheap();
 
           rowIndex.add(
               new MapBasedInputRow(timestamp, dims, event)
@@ -380,9 +396,16 @@ public class SchemalessIndexTest
     String filename = resource.getFile();
     log.info("Realtime loading index file[%s]", filename);
 
-    final IncrementalIndex retVal = new OnheapIncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), Granularities.MINUTE, aggs, 1000
-    );
+    final IncrementalIndex retVal = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(aggs)
+                .build()
+        )
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     try {
       final List<Object> events = jsonMapper.readValue(new File(filename), List.class);
@@ -444,7 +467,7 @@ public class SchemalessIndexTest
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
 
       VersionedIntervalTimeline<Integer, File> timeline = new VersionedIntervalTimeline<Integer, File>(
-          Ordering.natural().nullsFirst()
+          Comparators.naturalNullsFirst()
       );
 
       ShardSpec noneShardSpec = NoneShardSpec.instance();

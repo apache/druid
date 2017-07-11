@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.Pair;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.FloatColumnSelector;
@@ -92,6 +93,7 @@ public class AggregatorUtil
 
   public static FloatColumnSelector getFloatColumnSelector(
       final ColumnSelectorFactory metricFactory,
+      final ExprMacroTable macroTable,
       final String fieldName,
       final String fieldExpression,
       final float nullValue
@@ -101,13 +103,18 @@ public class AggregatorUtil
       return metricFactory.makeFloatColumnSelector(fieldName);
     }
     if (fieldName == null && fieldExpression != null) {
-      return ExpressionSelectors.makeFloatColumnSelector(metricFactory, Parser.parse(fieldExpression), nullValue);
+      return ExpressionSelectors.makeFloatColumnSelector(
+          metricFactory,
+          Parser.parse(fieldExpression, macroTable),
+          nullValue
+      );
     }
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
   public static LongColumnSelector getLongColumnSelector(
       final ColumnSelectorFactory metricFactory,
+      final ExprMacroTable macroTable,
       final String fieldName,
       final String fieldExpression,
       final long nullValue
@@ -117,7 +124,11 @@ public class AggregatorUtil
       return metricFactory.makeLongColumnSelector(fieldName);
     }
     if (fieldName == null && fieldExpression != null) {
-      return ExpressionSelectors.makeLongColumnSelector(metricFactory, Parser.parse(fieldExpression), nullValue);
+      return ExpressionSelectors.makeLongColumnSelector(
+          metricFactory,
+          Parser.parse(fieldExpression, macroTable),
+          nullValue
+      );
     }
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }

@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
@@ -77,7 +78,7 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
       if (!supervisorSpecOptional.isPresent()) {
         throw new WebApplicationException(
             Response.status(Response.Status.BAD_REQUEST)
-                    .entity(String.format("Cannot find any supervisor with id: [%s]", supervisorId))
+                    .entity(StringUtils.format("Cannot find any supervisor with id: [%s]", supervisorId))
                     .build()
         );
       }
@@ -102,7 +103,7 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
         if (!authResult.isAllowed()) {
           throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
                                                     .entity(
-                                                        String.format("Access-Check-Result: %s", authResult.toString())
+                                                        StringUtils.format("Access-Check-Result: %s", authResult.toString())
                                                     )
                                                     .build());
         }

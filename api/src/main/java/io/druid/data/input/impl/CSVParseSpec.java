@@ -21,7 +21,6 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.Parser;
@@ -68,6 +67,17 @@ public class CSVParseSpec extends ParseSpec
     }
   }
 
+  @Deprecated
+  public CSVParseSpec(
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      String listDelimiter,
+      List<String> columns
+  )
+  {
+    this(timestampSpec, dimensionsSpec, listDelimiter, columns, false, 0);
+  }
+
   @JsonProperty
   public String getListDelimiter()
   {
@@ -103,7 +113,7 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new CSVParser(Optional.fromNullable(listDelimiter), columns, hasHeaderRow, skipHeaderRows);
+    return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
   @Override

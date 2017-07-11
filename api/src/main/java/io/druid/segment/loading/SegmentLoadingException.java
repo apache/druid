@@ -19,6 +19,8 @@
 
 package io.druid.segment.loading;
 
+import io.druid.java.util.common.StringUtils;
+
 /**
  */
 public class SegmentLoadingException extends Exception
@@ -28,7 +30,7 @@ public class SegmentLoadingException extends Exception
       Object... objs
   )
   {
-    super(String.format(formatString, objs));
+    super(StringUtils.nonStrictFormat(formatString, objs));
   }
 
   public SegmentLoadingException(
@@ -37,6 +39,6 @@ public class SegmentLoadingException extends Exception
       Object... objs
   )
   {
-    super(String.format(formatString, objs), cause);
+    super(StringUtils.nonStrictFormat(formatString, objs), cause);
   }
 }

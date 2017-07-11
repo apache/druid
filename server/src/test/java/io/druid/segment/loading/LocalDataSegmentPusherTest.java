@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -88,14 +89,14 @@ public class LocalDataSegmentPusherTest
     Assert.assertEquals(dataSegment2, returnSegment2);
 
     Assert.assertNotEquals(
-        DataSegmentPusherUtil.getStorageDir(dataSegment),
-        DataSegmentPusherUtil.getStorageDir(dataSegment2)
+        localDataSegmentPusher.getStorageDir(dataSegment),
+        localDataSegmentPusher.getStorageDir(dataSegment2)
     );
 
     for (DataSegment returnSegment : ImmutableList.of(returnSegment1, returnSegment2)) {
       File outDir = new File(
           config.getStorageDirectory(),
-          DataSegmentPusherUtil.getStorageDir(returnSegment)
+          localDataSegmentPusher.getStorageDir(returnSegment)
       );
       File versionFile = new File(outDir, "index.zip");
       File descriptorJson = new File(outDir, "descriptor.json");
@@ -143,7 +144,7 @@ public class LocalDataSegmentPusherTest
     config.storageDirectory = new File("druid");
 
     Assert.assertEquals(
-        String.format("file:%s/druid", System.getProperty("user.dir")),
+        StringUtils.format("file:%s/druid", System.getProperty("user.dir")),
         new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop()
     );
   }

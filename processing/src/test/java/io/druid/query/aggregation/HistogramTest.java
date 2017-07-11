@@ -21,7 +21,7 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,6 +36,25 @@ public class HistogramTest
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
     Histogram hExpected = new Histogram(breaks, new long[]{1,3,2,3,1,1}, -3f, 2f);
+
+    Histogram h = new Histogram(breaks);
+    for(float v : values) {
+      h.offer(v);
+    }
+
+    Assert.assertEquals("histogram matches expected histogram", hExpected, h);
+  }
+
+  /**
+   * This test differs from {@link #testOffer()} only in that it offers only negative values into Histogram. It's to
+   * expose the issue of using Float's MIN_VALUE that is actually positive as initial value for {@link Histogram#max}.
+   */
+  @Test
+  public void testOfferOnlyNegative() {
+    final float[] values = {-0.3f, -.1f, -0.8f, -.7f, -.5f, -3f};
+    final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
+
+    Histogram hExpected = new Histogram(breaks, new long[]{1,3,2,0,0,0}, -3f, -0.1f);
 
     Histogram h = new Histogram(breaks);
     for(float v : values) {
@@ -63,7 +82,7 @@ public class HistogramTest
     Double[] visualBreaks = {-1.0, -0.5, 0.0, 0.5, 1.0};
     Double[] visualCounts = { 123., 4., 56., 7. };
 
-    ObjectMapper objectMapper = new DefaultObjectMapper();
+    ObjectMapper objectMapper = TestHelper.getJsonMapper();
     String json = objectMapper.writeValueAsString(h.asVisual());
 
     Map<String,Object> expectedObj = Maps.newLinkedHashMap();

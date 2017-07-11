@@ -24,6 +24,8 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.types.TopNColumnSelectorStrategy;
 import io.druid.segment.Cursor;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
@@ -37,7 +39,8 @@ public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
   public void run(
       Parameters params,
       TopNResultBuilder resultBuilder,
-      DimValSelector dimValSelector
+      DimValSelector dimValSelector,
+      @Nullable TopNQueryMetrics queryMetrics
   );
 
   public void cleanup(Parameters params);

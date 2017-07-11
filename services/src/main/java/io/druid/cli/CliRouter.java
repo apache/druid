@@ -29,15 +29,20 @@ import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
+import io.druid.guice.RouterProcessingModule;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.AsyncQueryForwardingServlet;
+import io.druid.server.http.RouterResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.CoordinatorRuleManager;
@@ -70,6 +75,9 @@ public class CliRouter extends ServerRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new RouterProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new JettyHttpClientModule("druid.router.http", Router.class),
         new Module()
         {
@@ -78,6 +86,7 @@ public class CliRouter extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9088);
 
             JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
 
@@ -95,6 +104,9 @@ public class CliRouter extends ServerRunnable
             binder.bind(QueryCountStatsProvider.class).to(AsyncQueryForwardingServlet.class).in(LazySingleton.class);
             binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 
+            Jerseys.addResource(binder, RouterResource.class);
+
+            LifecycleModule.register(binder, RouterResource.class);
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
           }

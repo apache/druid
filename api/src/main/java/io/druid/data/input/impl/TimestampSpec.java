@@ -47,12 +47,13 @@ public class TimestampSpec
 
   private final String timestampColumn;
   private final String timestampFormat;
-  private final Function<Object, DateTime> timestampConverter;
   // this value should never be set for production data
   private final DateTime missingValue;
+  /** This field is a derivative of {@link #timestampFormat}; not checked in {@link #equals} and {@link #hashCode} */
+  private final Function<Object, DateTime> timestampConverter;
 
   // remember last value parsed
-  private ParseCtx parseCtx = new ParseCtx();
+  private transient ParseCtx parseCtx = new ParseCtx();
 
   @JsonCreator
   public TimestampSpec(
@@ -97,6 +98,7 @@ public class TimestampSpec
   {
     DateTime extracted = missingValue;
     if (input != null) {
+      // Check if the input is equal to the last input, so we don't need to parse it again
       if (input.equals(parseCtx.lastTimeObject)) {
         extracted = parseCtx.lastDateTime;
       } else {
@@ -139,6 +141,16 @@ public class TimestampSpec
     result = 31 * result + timestampFormat.hashCode();
     result = 31 * result + (missingValue != null ? missingValue.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TimestampSpec{" +
+           "timestampColumn='" + timestampColumn + '\'' +
+           ", timestampFormat='" + timestampFormat + '\'' +
+           ", missingValue=" + missingValue +
+           '}';
   }
 
   //simple merge strategy on timestampSpec that checks if all are equal or else

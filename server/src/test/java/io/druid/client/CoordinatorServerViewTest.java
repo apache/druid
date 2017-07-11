@@ -32,6 +32,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.query.TableDataSource;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
@@ -90,8 +91,9 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     final DruidServer druidServer = new DruidServer(
         "localhost:1234",
         "localhost:1234",
+        null,
         10000000L,
-        "historical",
+        ServerType.HISTORICAL,
         "default_tier",
         0
     );
@@ -148,7 +150,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     setupViews();
 
     final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.<String>of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        ImmutableList.<String>of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
         new Function<String, DruidServer>()
         {
           @Override
@@ -157,8 +159,9 @@ public class CoordinatorServerViewTest extends CuratorTestBase
             return new DruidServer(
                 input,
                 input,
+                null,
                 10000000L,
-                "historical",
+                ServerType.HISTORICAL,
                 "default_tier",
                 0
             );

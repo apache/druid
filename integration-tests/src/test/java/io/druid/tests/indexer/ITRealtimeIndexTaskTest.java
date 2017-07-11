@@ -26,6 +26,7 @@ import com.metamx.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
@@ -45,6 +46,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -187,7 +189,10 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
     BufferedReader reader = null;
     InputStreamReader isr = null;
     try {
-      isr = new InputStreamReader(ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE));
+      isr = new InputStreamReader(
+          ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE),
+          StandardCharsets.UTF_8
+      );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -254,7 +259,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
 
   private String getRouterURL()
   {
-    return String.format(
+    return StringUtils.format(
         "%s/druid/v2?pretty",
         config.getRouterUrl()
     );

@@ -58,12 +58,13 @@ public class DruidServer implements Comparable
   public DruidServer(
       DruidNode node,
       DruidServerConfig config,
-      String type
+      ServerType type
   )
   {
     this(
+        node.getHostAndPortToUse(),
         node.getHostAndPort(),
-        node.getHostAndPort(),
+        node.getHostAndTlsPort(),
         config.getMaxSize(),
         type,
         config.getTier(),
@@ -74,19 +75,21 @@ public class DruidServer implements Comparable
   @JsonCreator
   public DruidServer(
       @JsonProperty("name") String name,
-      @JsonProperty("host") String host,
+      @JsonProperty("host") String hostAndPort,
+      @JsonProperty("hostAndTlsPort") String hostAndTlsPort,
       @JsonProperty("maxSize") long maxSize,
-      @JsonProperty("type") String type,
+      @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
       @JsonProperty("priority") int priority
   )
   {
-    this.metadata = new DruidServerMetadata(name, host, maxSize, type, tier, priority);
+    this.metadata = new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, type, tier, priority);
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new ConcurrentHashMap<String, DataSegment>();
   }
 
+  @JsonProperty
   public String getName()
   {
     return metadata.getName();
@@ -99,7 +102,17 @@ public class DruidServer implements Comparable
 
   public String getHost()
   {
-    return metadata.getHost();
+    return getHostAndTlsPort() != null ? getHostAndTlsPort() : getHostAndPort();
+  }
+
+  @JsonProperty("host")
+  public String getHostAndPort() {
+    return metadata.getHostAndPort();
+  }
+
+  @JsonProperty
+  public String getHostAndTlsPort() {
+    return metadata.getHostAndTlsPort();
   }
 
   public long getCurrSize()
@@ -107,16 +120,19 @@ public class DruidServer implements Comparable
     return currSize;
   }
 
+  @JsonProperty
   public long getMaxSize()
   {
     return metadata.getMaxSize();
   }
 
+  @JsonProperty
   public ServerType getType()
   {
     return metadata.getType();
   }
 
+  @JsonProperty
   public String getTier()
   {
     return metadata.getTier();
@@ -127,9 +143,15 @@ public class DruidServer implements Comparable
     return metadata.segmentReplicatable();
   }
 
+  @JsonProperty
   public int getPriority()
   {
     return metadata.getPriority();
+  }
+
+  public String getScheme()
+  {
+    return metadata.getHostAndTlsPort() != null ? "https" : "http";
   }
 
   public Map<String, DataSegment> getSegments()

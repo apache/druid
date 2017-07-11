@@ -180,7 +180,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
-            String.format(
+            StringUtils.format(
                 "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start <= :end and %2$send%2$s >= :start",
                 dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
@@ -219,7 +219,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ? AND (");
     for (int i = 0; i < intervals.size(); i++) {
       sb.append(
-          String.format("(start <= ? AND %1$send%1$s >= ?)", connector.getQuoteString())
+          StringUtils.format("(start <= ? AND %1$send%1$s >= ?)", connector.getQuoteString())
       );
       if (i == intervals.size() - 1) {
         sb.append(")");
@@ -229,7 +229,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     Query<Map<String, Object>> sql = handle.createQuery(
-        String.format(
+        StringUtils.format(
             sb.toString(),
             dbTables.getSegmentsTable()
         )
@@ -402,7 +402,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           {
             final List<byte[]> existingBytes = handle
                 .createQuery(
-                    String.format(
+                    StringUtils.format(
                         "SELECT payload FROM %s WHERE "
                         + "dataSource = :dataSource AND "
                         + "sequence_name = :sequence_name AND "
@@ -560,7 +560,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             );
 
             handle.createStatement(
-                String.format(
+                StringUtils.format(
                     "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
                     dbTables.getPendingSegmentsTable(), connector.getQuoteString()
@@ -614,7 +614,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Avoiding ON DUPLICATE KEY since it's not portable.
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
       handle.createStatement(
-          String.format(
+          StringUtils.format(
               "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
               + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
               dbTables.getSegmentsTable(), connector.getQuoteString()
@@ -645,7 +645,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     return !handle
         .createQuery(
-            String.format(
+            StringUtils.format(
                 "SELECT id FROM %s WHERE id = :identifier",
                 dbTables.getSegmentsTable()
             )
@@ -758,7 +758,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (oldCommitMetadataBytesFromDb == null) {
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       final int numRows = handle.createStatement(
-          String.format(
+          StringUtils.format(
               "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
               + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
               dbTables.getDataSourceTable()
@@ -774,7 +774,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final int numRows = handle.createStatement(
-          String.format(
+          StringUtils.format(
               "UPDATE %s SET "
               + "commit_metadata_payload = :new_commit_metadata_payload, "
               + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
@@ -810,7 +810,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           public Boolean withHandle(Handle handle) throws Exception
           {
             int rows = handle.createStatement(
-                String.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
+                StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
             )
                              .bind("dataSource", dataSource)
                              .execute();
@@ -838,7 +838,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           public Boolean withHandle(Handle handle) throws Exception
           {
             final int numRows = handle.createStatement(
-                String.format(
+                StringUtils.format(
                     "UPDATE %s SET "
                     + "commit_metadata_payload = :new_commit_metadata_payload, "
                     + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
@@ -897,7 +897,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private void deleteSegment(final Handle handle, final DataSegment segment)
   {
     handle.createStatement(
-        String.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable())
+        StringUtils.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable())
     )
           .bind("id", segment.getIdentifier())
           .execute();
@@ -907,7 +907,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     try {
       handle.createStatement(
-          String.format("UPDATE %s SET payload = :payload WHERE id = :id", dbTables.getSegmentsTable())
+          StringUtils.format("UPDATE %s SET payload = :payload WHERE id = :id", dbTables.getSegmentsTable())
       )
             .bind("id", segment.getIdentifier())
             .bind("payload", jsonMapper.writeValueAsBytes(segment))
@@ -930,7 +930,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           {
             return handle
                 .createQuery(
-                    String.format(
+                    StringUtils.format(
                         "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false",
                         dbTables.getSegmentsTable(), connector.getQuoteString()
                     )

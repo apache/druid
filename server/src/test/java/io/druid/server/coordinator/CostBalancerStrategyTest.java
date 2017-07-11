@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -61,7 +62,7 @@ public class CostBalancerStrategyTest
       serverHolderList.add(
           new ServerHolder(
               new ImmutableDruidServer(
-                  new DruidServerMetadata("DruidServer_Name_" + i, "localhost", 10000000L, "historical", "hot", 1),
+                  new DruidServerMetadata("DruidServer_Name_" + i, "localhost", null, 10000000L, ServerType.HISTORICAL, "hot", 1),
                   3000L,
                   ImmutableMap.of("DUMMY", EasyMock.createMock(ImmutableDruidDataSource.class)),
                   ImmutableMap.copyOf(segments)
