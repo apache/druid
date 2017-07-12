@@ -51,6 +51,7 @@ import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.concurrent.Execs;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.TaskLocation;
@@ -173,7 +174,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private final Object statusLock = new Object();
 
-  private volatile boolean started = false;
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private final ListeningScheduledExecutorService cleanupExec;
 
@@ -218,11 +219,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @LifecycleStart
   public void start()
   {
+    if (!lifecycleLock.canStart()) {
+      return;
+    }
     try {
-      if (started) {
-        return;
-      }
-
       final MutableInt waitingFor = new MutableInt(1);
       final Object waitingForMonitor = new Object();
 
@@ -330,10 +330,13 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
       scheduleBlackListedNodesCleanUp();
       provisioningService = provisioningStrategy.makeProvisioningService(this);
-      started = true;
+      lifecycleLock.started();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+    finally {
+      lifecycleLock.exitStart();
     }
   }
 
@@ -341,12 +344,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @LifecycleStop
   public void stop()
   {
+    if (!lifecycleLock.canStop()) {
+      return;
+    }
     try {
-      if (!started) {
-        return;
-      }
-      started = false;
-
       provisioningService.close();
 
       Closer closer = Closer.create();
@@ -512,8 +513,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public void shutdown(final String taskId)
   {
-    if (!started) {
-      log.info("This TaskRunner is stopped. Ignoring shutdown command for task: %s", taskId);
+    if (!lifecycleLock.awaitStarted(1, TimeUnit.SECONDS)) {
+      log.info("This TaskRunner is stopped or not yet started. Ignoring shutdown command for task: %s", taskId);
     } else if (pendingTasks.remove(taskId) != null) {
       pendingTaskPayloads.remove(taskId);
       log.info("Removed task from pending queue: %s", taskId);
@@ -695,7 +696,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    */
   private void cleanup(final String taskId)
   {
-    if (!started) {
+    if (!lifecycleLock.awaitStarted(1, TimeUnit.SECONDS)) {
       return;
     }
     final RemoteTaskRunnerWorkItem removed = completeTasks.remove(taskId);
