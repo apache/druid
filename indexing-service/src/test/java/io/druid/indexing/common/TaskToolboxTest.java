@@ -105,7 +105,7 @@ public class TaskToolboxTest
         mockSegmentAnnouncer,
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         mockHandoffNotifierFactory,
-        mockQueryRunnerFactoryConglomerate,
+        () -> mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         mockMonitorScheduler,
         new SegmentLoaderFactory(mockSegmentLoaderLocalCacheManager),

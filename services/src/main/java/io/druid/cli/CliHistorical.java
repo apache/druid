@@ -92,7 +92,7 @@ public class CliHistorical extends ServerRunnable
 
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.HISTORICAL));
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
-            binder.bind(QueryCountStatsProvider.class).to(QueryResource.class).in(LazySingleton.class);
+            binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, HistoricalResource.class);
             Jerseys.addResource(binder, SegmentListerResource.class);
