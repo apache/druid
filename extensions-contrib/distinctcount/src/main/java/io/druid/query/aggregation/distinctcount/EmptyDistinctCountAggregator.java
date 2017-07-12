@@ -47,19 +47,19 @@ public class EmptyDistinctCountAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    return (float) 0;
+    return 0.0f;
   }
 
   @Override
   public long getLong()
   {
-    return (long) 0;
+    return 0L;
   }
 
   @Override
   public double getDouble()
   {
-    return (float) 0;
+    return 0.0;
   }
 
   @Override
