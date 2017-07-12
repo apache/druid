@@ -37,11 +37,11 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
       case STRING:
         return new StringTopNColumnSelectorStrategy();
       case LONG:
-        new NumericTopNColumnSelectorStrategy.OfLong();
+        return new NumericTopNColumnSelectorStrategy.OfLong();
       case FLOAT:
-        new NumericTopNColumnSelectorStrategy.OfFloat();
+        return new NumericTopNColumnSelectorStrategy.OfFloat();
       case DOUBLE:
-        new NumericTopNColumnSelectorStrategy.OfDouble();
+        return new NumericTopNColumnSelectorStrategy.OfDouble();
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }
