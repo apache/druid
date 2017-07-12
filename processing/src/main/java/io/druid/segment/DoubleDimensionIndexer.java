@@ -219,7 +219,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public int compareUnsortedEncodedKeyComponents(Double lhs, Double rhs)
   {
-    return lhs.compareTo(rhs);
+    return Double.compare(lhs == null ? 0.0: lhs, rhs == null ? 0.0 : rhs);
   }
 
   @Override
