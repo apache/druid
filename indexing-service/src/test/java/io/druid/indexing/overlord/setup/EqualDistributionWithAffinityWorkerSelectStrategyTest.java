@@ -146,9 +146,9 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
         new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
     );
-    final WorkerBehaviorConfig strategy2 = objectMapper.readValue(
+    final WorkerSelectStrategy strategy2 = objectMapper.readValue(
         objectMapper.writeValueAsBytes(strategy),
-        WorkerBehaviorConfig.class
+        WorkerSelectStrategy.class
     );
     Assert.assertEquals(strategy, strategy2);
   }
