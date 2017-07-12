@@ -110,7 +110,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0L;
+          return DimensionHandlerUtils.ZERO_LONG;
         }
 
         float floatVal = (Float) dims[dimIndex];
@@ -142,7 +142,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0.0f;
+          return DimensionHandlerUtils.ZERO_FLOAT;
         }
 
         return (Float) dims[dimIndex];
@@ -180,7 +180,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0.0f;
+          return DimensionHandlerUtils.ZERO_FLOAT;
         }
 
         return dims[dimIndex];
@@ -204,7 +204,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0.0d;
+          return DimensionHandlerUtils.ZERO_DOUBLE;
         }
         float floatVal = (Float) dims[dimIndex];
         return (double) floatVal;

@@ -29,6 +29,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
 import java.util.List;
+import java.util.Objects;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
@@ -108,7 +109,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0L;
+          return DimensionHandlerUtils.ZERO_LONG;
         }
 
         double doubleValue = (Double) dims[dimIndex];
@@ -139,7 +140,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0.0f;
+          return DimensionHandlerUtils.ZERO_FLOAT;
         }
 
         double doubleValue = (Double) dims[dimIndex];
@@ -176,7 +177,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0.0;
+          return DimensionHandlerUtils.ZERO_DOUBLE;
         }
 
         return dims[dimIndex];
@@ -200,7 +201,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0.0;
+          return DimensionHandlerUtils.ZERO_DOUBLE;
         }
         return (Double) dims[dimIndex];
       }
@@ -224,13 +225,13 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(Double lhs, Double rhs)
   {
-    return lhs.equals(rhs);
+    return Objects.equals(lhs, rhs);
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(Double key)
   {
-    return key.hashCode();
+    return Objects.hashCode(key);
   }
 
   @Override

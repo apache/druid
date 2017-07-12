@@ -42,6 +42,8 @@ import java.util.List;
 public final class DimensionHandlerUtils
 {
 
+  // use these values to ensure that convertObjectToLong(), convertObjectToDouble() and convertObjectToFloat()
+  // return the same boxed object when returning a constant zero.
   public static final Double ZERO_DOUBLE = 0.0d;
   public static final Float ZERO_FLOAT = 0.0f;
   public static final Long ZERO_LONG = 0L;
@@ -214,9 +216,7 @@ public final class DimensionHandlerUtils
 
     // DimensionSpec's decorate only operates on DimensionSelectors, so if a spec mustDecorate(),
     // we need to wrap selectors on numeric columns with a string casting DimensionSelector.
-    if (capabilities.getType() == ValueType.LONG
-        || capabilities.getType() == ValueType.FLOAT
-        || capabilities.getType() == ValueType.DOUBLE) {
+    if (ValueType.isNumeric(capabilities.getType())) {
       if (dimSpec.mustDecorate()) {
         capabilities = DEFAULT_STRING_CAPABILITIES;
       }
@@ -317,7 +317,8 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).doubleValue();
     } else if (valObj instanceof String) {
-      return Doubles.tryParse((String) valObj);
+      Double doubleValue = Doubles.tryParse((String) valObj);
+      return  doubleValue == null ? ZERO_DOUBLE : doubleValue;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
