@@ -22,6 +22,7 @@ package io.druid.indexing.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
@@ -60,7 +61,7 @@ public class TaskToolboxFactory
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
-  private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
+  private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   private final ExecutorService queryExecutorService;
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoaderFactory segmentLoaderFactory;
@@ -83,7 +84,7 @@ public class TaskToolboxFactory
       DataSegmentAnnouncer segmentAnnouncer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
-      QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
+      Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoaderFactory segmentLoaderFactory,
@@ -105,7 +106,7 @@ public class TaskToolboxFactory
     this.segmentAnnouncer = segmentAnnouncer;
     this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
-    this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
+    this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
     this.segmentLoaderFactory = segmentLoaderFactory;
@@ -122,7 +123,6 @@ public class TaskToolboxFactory
     final File taskWorkDir = config.getTaskWorkDir(task.getId());
     return new TaskToolbox(
         config,
-        task,
         taskActionClientFactory.create(task),
         emitter,
         segmentPusher,
@@ -132,7 +132,7 @@ public class TaskToolboxFactory
         segmentAnnouncer,
         serverAnnouncer,
         handoffNotifierFactory,
-        queryRunnerFactoryConglomerate,
+        queryRunnerFactoryConglomerateProvider,
         queryExecutorService,
         monitorScheduler,
         segmentLoaderFactory.manufacturate(taskWorkDir),

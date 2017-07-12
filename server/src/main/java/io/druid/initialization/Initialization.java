@@ -46,6 +46,7 @@ import io.druid.guice.JavaScriptModule;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.MetadataConfigModule;
+import io.druid.guice.ModulesConfig;
 import io.druid.guice.ParsersModule;
 import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
@@ -185,8 +186,6 @@ public class Initialization
             + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
         );
-      } else if (extensionsConfig.getModuleExcludeList().contains(serviceImplName)) {
-        log.info("Not loading module [%s] because it is present in moduleExcludeList", serviceImplName);
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
         log.info(
             "Adding implementation [%s] for class [%s] from %s extension",
@@ -394,6 +393,7 @@ public class Initialization
   private static class ModuleList
   {
     private final Injector baseInjector;
+    private final ModulesConfig modulesConfig;
     private final ObjectMapper jsonMapper;
     private final ObjectMapper smileMapper;
     private final List<Module> modules;
@@ -401,6 +401,7 @@ public class Initialization
     public ModuleList(Injector baseInjector)
     {
       this.baseInjector = baseInjector;
+      this.modulesConfig = baseInjector.getInstance(ModulesConfig.class);
       this.jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
       this.smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
       this.modules = Lists.newArrayList();
@@ -414,12 +415,21 @@ public class Initialization
     public void addModule(Object input)
     {
       if (input instanceof DruidModule) {
+        if (!checkModuleClass(input.getClass())) {
+          return;
+        }
         baseInjector.injectMembers(input);
         modules.add(registerJacksonModules(((DruidModule) input)));
       } else if (input instanceof Module) {
+        if (!checkModuleClass(input.getClass())) {
+          return;
+        }
         baseInjector.injectMembers(input);
         modules.add((Module) input);
       } else if (input instanceof Class) {
+        if (!checkModuleClass((Class<?>) input)) {
+          return;
+        }
         if (DruidModule.class.isAssignableFrom((Class) input)) {
           modules.add(registerJacksonModules(baseInjector.getInstance((Class<? extends DruidModule>) input)));
         } else if (Module.class.isAssignableFrom((Class) input)) {
@@ -431,6 +441,16 @@ public class Initialization
       } else {
         throw new ISE("Unknown module type[%s]", input.getClass());
       }
+    }
+
+    private boolean checkModuleClass(Class<?> moduleClass)
+    {
+      String moduleClassName = moduleClass.getCanonicalName();
+      if (moduleClassName != null && modulesConfig.getExcludeList().contains(moduleClassName)) {
+        log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
+        return false;
+      }
+      return true;
     }
 
     public void addModules(Object... object)
