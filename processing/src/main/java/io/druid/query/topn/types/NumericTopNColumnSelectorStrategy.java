@@ -32,57 +32,22 @@ import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ValueType;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-import javax.annotation.Nullable;
+import java.util.Map;
 
-public class NumericTopNColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector>
-    implements TopNColumnSelectorStrategy<ValueSelectorType, Long2ObjectMap<Aggregator[]>>
+public abstract class NumericTopNColumnSelectorStrategy<
+    ValueSelectorType extends ColumnValueSelector,
+    DimExtractionAggregateStoreType extends Map<?, Aggregator[]>>
+    implements TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggregateStoreType>
 {
-  private final ValueType valueType;
-  private final Function<ValueSelectorType, Long> keyFn;
-  private final Function<Long, Comparable> reverseKeyFn;
-
-  public NumericTopNColumnSelectorStrategy(ValueType valueType)
-  {
-    this.valueType = valueType;
-    keyFn = input -> {
-      switch (valueType) {
-        case LONG:
-          return ((LongColumnSelector) input).get();
-        case FLOAT:
-          return Double.doubleToLongBits((double) ((FloatColumnSelector) input).get());
-        case DOUBLE:
-          return Double.doubleToLongBits(((DoubleColumnSelector) input).get());
-        default:
-          throw new UnsupportedOperationException("should not be here supports only numeric types");
-      }
-    };
-    reverseKeyFn = input -> {
-      switch (valueType) {
-        case LONG:
-          return input;
-        case FLOAT:
-        case DOUBLE:
-          return Double.longBitsToDouble(input);
-        default:
-          throw new UnsupportedOperationException("should not be here supports only numeric types");
-      }
-    };
-  }
-
   @Override
   public int getCardinality(ValueSelectorType selector)
   {
     return TopNColumnSelectorStrategy.CARDINALITY_UNKNOWN;
-  }
-
-
-  @Override
-  public ValueType getValueType()
-  {
-    return valueType;
   }
 
   @Override
@@ -93,31 +58,70 @@ public class NumericTopNColumnSelectorStrategy<ValueSelectorType extends ColumnV
     return null;
   }
 
-  @Override
-  public Long2ObjectMap<Aggregator[]> makeDimExtractionAggregateStore()
+  static long floatDimExtractionScanAndAggregate(
+      TopNQuery query,
+      FloatColumnSelector selector,
+      Cursor cursor,
+      Int2ObjectMap<Aggregator[]> aggregatesStore
+  )
   {
-    return new Long2ObjectOpenHashMap<>();
+    long processedRows = 0;
+    while (!cursor.isDone()) {
+      int key = Float.floatToIntBits(selector.get());
+      Aggregator[] theAggregators = aggregatesStore.get(key);
+      if (theAggregators == null) {
+        theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+        aggregatesStore.put(key, theAggregators);
+      }
+      for (Aggregator aggregator : theAggregators) {
+        aggregator.aggregate();
+      }
+      cursor.advance();
+      processedRows++;
+    }
+    return processedRows;
   }
 
-
-  @Override
-  public long dimExtractionScanAndAggregate(
+  static long doubleDimExtractionScanAndAggregate(
       TopNQuery query,
-      ValueSelectorType selector,
+      DoubleColumnSelector selector,
       Cursor cursor,
-      Aggregator[][] rowSelector,
       Long2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      long key = keyFn.apply(selector);
-      Aggregator[] aggregators = aggregatesStore.get(key);
-      if (aggregators == null) {
-        aggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-        aggregatesStore.put(key, aggregators);
+      long key = Double.doubleToLongBits(selector.get());
+      Aggregator[] theAggregators = aggregatesStore.get(key);
+      if (theAggregators == null) {
+        theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+        aggregatesStore.put(key, theAggregators);
       }
-      for (Aggregator aggregator : aggregators) {
+      for (Aggregator aggregator : theAggregators) {
+        aggregator.aggregate();
+      }
+      cursor.advance();
+      processedRows++;
+    }
+    return processedRows;
+  }
+
+  static long longDimExtractionScanAndAggregate(
+      TopNQuery query,
+      LongColumnSelector selector,
+      Cursor cursor,
+      Long2ObjectMap<Aggregator[]> aggregatesStore
+  )
+  {
+    long processedRows = 0;
+    while (!cursor.isDone()) {
+      long key = selector.get();
+      Aggregator[] theAggregators = aggregatesStore.get(key);
+      if (theAggregators == null) {
+        theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+        aggregatesStore.put(key, theAggregators);
+      }
+      for (Aggregator aggregator : theAggregators) {
         aggregator.aggregate();
       }
       cursor.advance();
@@ -128,29 +132,127 @@ public class NumericTopNColumnSelectorStrategy<ValueSelectorType extends ColumnV
 
   @Override
   public void updateDimExtractionResults(
-      Long2ObjectMap<Aggregator[]> aggregatesStore,
-      @Nullable Function<Object, Object> valueTransformer,
-      TopNResultBuilder resultBuilder
+      final DimExtractionAggregateStoreType aggregatesStore,
+      final Function<Object, Object> valueTransformer,
+      final TopNResultBuilder resultBuilder
   )
   {
-    for (Long2ObjectMap.Entry<Aggregator[]> entry : aggregatesStore.long2ObjectEntrySet()) {
+    for (Map.Entry<?, Aggregator[]> entry : aggregatesStore.entrySet()) {
       Aggregator[] aggs = entry.getValue();
       if (aggs != null) {
         Object[] vals = new Object[aggs.length];
         for (int i = 0; i < aggs.length; i++) {
           vals[i] = aggs[i].get();
         }
-        Comparable key = reverseKeyFn.apply(entry.getLongKey());
+
+        Comparable key = convertAggregatorStoreKeyToColumnValue(entry.getKey());
         if (valueTransformer != null) {
           key = (Comparable) valueTransformer.apply(key);
         }
-        resultBuilder.addEntry(
-            key,
-            key,
-            vals
-        );
+
+        resultBuilder.addEntry(key, key, vals);
       }
     }
   }
 
+  abstract Comparable convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey);
+
+  static class OfFloat extends NumericTopNColumnSelectorStrategy<FloatColumnSelector, Int2ObjectMap<Aggregator[]>>
+  {
+    @Override
+    public ValueType getValueType()
+    {
+      return ValueType.FLOAT;
+    }
+
+    @Override
+    public Int2ObjectMap<Aggregator[]> makeDimExtractionAggregateStore()
+    {
+      return new Int2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    Comparable convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
+    {
+      return Float.intBitsToFloat((Integer) aggregatorStoreKey);
+    }
+
+    @Override
+    public long dimExtractionScanAndAggregate(
+        TopNQuery query,
+        FloatColumnSelector selector,
+        Cursor cursor,
+        Aggregator[][] rowSelector,
+        Int2ObjectMap<Aggregator[]> aggregatesStore
+    )
+    {
+      return floatDimExtractionScanAndAggregate(query, selector, cursor, aggregatesStore);
+    }
+  }
+
+  static class OfLong extends NumericTopNColumnSelectorStrategy<LongColumnSelector, Long2ObjectMap<Aggregator[]>>
+  {
+    @Override
+    public ValueType getValueType()
+    {
+      return ValueType.LONG;
+    }
+
+    @Override
+    public Long2ObjectMap<Aggregator[]> makeDimExtractionAggregateStore()
+    {
+      return new Long2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    Comparable convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
+    {
+      return (Long) aggregatorStoreKey;
+    }
+
+    @Override
+    public long dimExtractionScanAndAggregate(
+        TopNQuery query,
+        LongColumnSelector selector,
+        Cursor cursor,
+        Aggregator[][] rowSelector,
+        Long2ObjectMap<Aggregator[]> aggregatesStore
+    )
+    {
+      return longDimExtractionScanAndAggregate(query, selector, cursor, aggregatesStore);
+    }
+  }
+
+  static class OfDouble extends NumericTopNColumnSelectorStrategy<DoubleColumnSelector, Long2ObjectMap<Aggregator[]>>
+  {
+    @Override
+    public ValueType getValueType()
+    {
+      return ValueType.DOUBLE;
+    }
+
+    @Override
+    public Long2ObjectMap<Aggregator[]> makeDimExtractionAggregateStore()
+    {
+      return new Long2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    Comparable convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
+    {
+      return Double.longBitsToDouble((Long) aggregatorStoreKey);
+    }
+
+    @Override
+    public long dimExtractionScanAndAggregate(
+        TopNQuery query,
+        DoubleColumnSelector selector,
+        Cursor cursor,
+        Aggregator[][] rowSelector,
+        Long2ObjectMap<Aggregator[]> aggregatesStore
+    )
+    {
+      return doubleDimExtractionScanAndAggregate(query, selector, cursor, aggregatesStore);
+    }
+  }
 }
