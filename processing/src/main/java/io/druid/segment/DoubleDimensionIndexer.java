@@ -109,7 +109,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return DimensionHandlerUtils.ZERO_LONG;
+          return 0L;
         }
 
         double doubleValue = (Double) dims[dimIndex];
@@ -140,7 +140,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return DimensionHandlerUtils.ZERO_FLOAT;
+          return 0.0f;
         }
 
         double doubleValue = (Double) dims[dimIndex];
@@ -201,7 +201,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return DimensionHandlerUtils.ZERO_DOUBLE;
+          return 0.0;
         }
         return (Double) dims[dimIndex];
       }

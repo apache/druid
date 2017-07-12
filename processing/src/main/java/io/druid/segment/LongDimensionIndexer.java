@@ -180,7 +180,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0L;
+          return DimensionHandlerUtils.ZERO_LONG;
         }
 
         return dims[dimIndex];
