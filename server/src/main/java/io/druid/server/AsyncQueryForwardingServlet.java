@@ -138,7 +138,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     super.init();
 
-    // Note that httpClinetProvider is setup to return same HttpClient instance on each get() so
+    // Note that httpClientProvider is setup to return same HttpClient instance on each get() so
     // it is same http client as that is used by parent ProxyServlet.
     broadcastClient = httpClientProvider.get();
     try {
