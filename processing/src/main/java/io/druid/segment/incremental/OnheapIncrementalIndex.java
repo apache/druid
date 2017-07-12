@@ -329,7 +329,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         objectColumnSelectorMap = new HashMap<>();
         doubleColumnSelectorMap = new HashMap<>();
       }
-
     }
 
     @Override
@@ -368,27 +367,21 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       return objectColumnSelectorMap.computeIfAbsent(columnName, delegate::makeObjectColumnSelector);
     }
 
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+    {
+      final DoubleColumnSelector existing = doubleColumnSelectorMap.get(columnName);
+      if (existing != null) {
+        return existing;
+      }
+      return doubleColumnSelectorMap.computeIfAbsent(columnName, delegate::makeDoubleColumnSelector);
+    }
+
     @Nullable
     @Override
     public ColumnCapabilities getColumnCapabilities(String columnName)
     {
       return delegate.getColumnCapabilities(columnName);
-    }
-
-    @Override
-    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
-    {
-      DoubleColumnSelector existing = doubleColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      } else {
-        DoubleColumnSelector newSelector = delegate.makeDoubleColumnSelector(columnName);
-        DoubleColumnSelector prev = doubleColumnSelectorMap.putIfAbsent(
-            columnName,
-            newSelector
-        );
-        return prev != null ? prev : newSelector;
-      }
     }
   }
 

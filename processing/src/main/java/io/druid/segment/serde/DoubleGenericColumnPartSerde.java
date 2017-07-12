@@ -148,20 +148,21 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
     public DoubleGenericColumnPartSerde build()
     {
       return new DoubleGenericColumnPartSerde(
-          byteOrder, new Serializer()
-      {
-        @Override
-        public long numBytes()
-        {
-          return delegate.getSerializedSize();
-        }
+          byteOrder,
+          new Serializer()
+          {
+            @Override
+            public long numBytes()
+            {
+              return delegate.getSerializedSize();
+            }
 
-        @Override
-        public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
-        {
-          delegate.writeToChannel(channel, fileSmoosher);
-        }
-      }
+            @Override
+            public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+            {
+              delegate.writeToChannel(channel, fileSmoosher);
+            }
+          }
       );
     }
   }

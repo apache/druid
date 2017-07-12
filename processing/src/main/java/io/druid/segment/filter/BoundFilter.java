@@ -50,6 +50,7 @@ public class BoundFilter implements Filter
 
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
+  private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
@@ -58,6 +59,7 @@ public class BoundFilter implements Filter
     this.extractionFn = boundDimFilter.getExtractionFn();
     this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
     this.floatPredicateSupplier = boundDimFilter.getFloatPredicateSupplier();
+    this.doublePredicateSupplier = boundDimFilter.getDoublePredicateSupplier();
   }
 
   @Override
@@ -199,76 +201,34 @@ public class BoundFilter implements Filter
       public Predicate<String> makeStringPredicate()
       {
         if (extractionFn != null) {
-          return new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              return doesMatch(extractionFn.apply(input));
-            }
-          };
-        } else {
-          return new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              return doesMatch(input);
-            }
-          };
+          return input -> doesMatch(extractionFn.apply(input));
         }
+        return input -> doesMatch(input);
+
       }
 
       @Override
       public DruidLongPredicate makeLongPredicate()
       {
         if (extractionFn != null) {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return doesMatch(extractionFn.apply(input));
-            }
-          };
-        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
-          return longPredicateSupplier.get();
-        } else {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return doesMatch(String.valueOf(input));
-            }
-          };
+          return input -> doesMatch(extractionFn.apply(input));
         }
+        if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return longPredicateSupplier.get();
+        }
+        return input -> doesMatch(String.valueOf(input));
       }
 
       @Override
       public DruidFloatPredicate makeFloatPredicate()
       {
         if (extractionFn != null) {
-          return new DruidFloatPredicate()
-          {
-            @Override
-            public boolean applyFloat(float input)
-            {
-              return doesMatch(extractionFn.apply(input));
-            }
-          };
-        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
-          return floatPredicateSupplier.get();
-        } else {
-          return new DruidFloatPredicate()
-          {
-            @Override
-            public boolean applyFloat(float input)
-            {
-              return doesMatch(String.valueOf(input));
-            }
-          };
+          return input -> doesMatch(extractionFn.apply(input));
         }
+        if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return floatPredicateSupplier.get();
+        }
+        return input -> doesMatch(String.valueOf(input));
       }
 
       @Override
@@ -277,9 +237,8 @@ public class BoundFilter implements Filter
         if (extractionFn != null) {
           return input -> doesMatch(extractionFn.apply(input));
         }
-        if(boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
-          //TODO @bslim fix this hack
-          return input -> floatPredicateSupplier.get().applyFloat((float) input);
+        if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return input -> doublePredicateSupplier.get().applyDouble(input);
         }
         return input -> doesMatch(String.valueOf(input));
       }

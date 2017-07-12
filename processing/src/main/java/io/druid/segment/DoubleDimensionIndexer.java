@@ -22,10 +22,13 @@ package io.druid.segment;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+
+import java.util.List;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
@@ -38,43 +41,46 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public Double processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
   {
-    return null;
+    if (dimValues instanceof List) {
+      throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
+    }
+    return DimensionHandlerUtils.convertObjectToDouble(dimValues);
   }
 
   @Override
   public Double getSortedEncodedValueFromUnsorted(Double unsortedIntermediateValue)
   {
-    return null;
+    return unsortedIntermediateValue;
   }
 
   @Override
   public Double getUnsortedEncodedValueFromSorted(Double sortedIntermediateValue)
   {
-    return null;
+    return sortedIntermediateValue;
   }
 
   @Override
   public Indexed<Double> getSortedIndexedValues()
   {
-    return null;
+    throw new UnsupportedOperationException("Numeric columns do not support value dictionaries.");
   }
 
   @Override
   public Double getMinValue()
   {
-    return null;
+    return Double.NEGATIVE_INFINITY;
   }
 
   @Override
   public Double getMaxValue()
   {
-    return null;
+    return Double.POSITIVE_INFINITY;
   }
 
   @Override
   public int getCardinality()
   {
-    return 0;
+    return DimensionSelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
@@ -82,7 +88,10 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       DimensionSpec spec, IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
-    return null;
+    return new DoubleWrappingDimensionSelector(
+        makeDoubleColumnSelector(currEntry, desc),
+        spec.getExtractionFn()
+    );
   }
 
   @Override
@@ -90,7 +99,30 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
-    return null;
+    final int dimIndex = desc.getIndex();
+    class IndexerLongColumnSelector implements LongColumnSelector
+    {
+      @Override
+      public long get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return 0L;
+        }
+
+        double doubleValue = (Double) dims[dimIndex];
+        return (long) doubleValue;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
+    }
+
+    return new IndexerLongColumnSelector();
   }
 
   @Override
@@ -98,7 +130,30 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
-    return null;
+    final int dimIndex = desc.getIndex();
+    class IndexerFloatColumnSelector implements FloatColumnSelector
+    {
+      @Override
+      public float get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return 0.0f;
+        }
+
+        double doubleValue = (Double) dims[dimIndex];
+        return (float) doubleValue;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
+    }
+
+    return new IndexerFloatColumnSelector();
   }
 
   @Override
@@ -106,7 +161,29 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       DimensionSpec spec, IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
-    return null;
+    final int dimIndex = desc.getIndex();
+    class IndexerObjectColumnSelector implements ObjectColumnSelector
+    {
+      @Override
+      public Class classOfObject()
+      {
+        return Double.class;
+      }
+
+      @Override
+      public Object get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return 0.0;
+        }
+
+        return dims[dimIndex];
+      }
+    }
+
+    return new IndexerObjectColumnSelector();
   }
 
   @Override
@@ -114,37 +191,58 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
-    return null;
+    final int dimIndex = desc.getIndex();
+    class IndexerDoubleColumnSelector implements DoubleColumnSelector
+    {
+      @Override
+      public double get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return 0.0;
+        }
+        return (Double) dims[dimIndex];
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
+    }
+
+    return new IndexerDoubleColumnSelector();
   }
 
   @Override
   public int compareUnsortedEncodedKeyComponents(Double lhs, Double rhs)
   {
-    return 0;
+    return lhs.compareTo(rhs);
   }
 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(Double lhs, Double rhs)
   {
-    return false;
+    return lhs.equals(rhs);
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(Double key)
   {
-    return 0;
+    return key.hashCode();
   }
 
   @Override
   public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Double key, boolean asList)
   {
-    return null;
+    return key;
   }
 
   @Override
   public Double convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(Double key)
   {
-    return null;
+    return key;
   }
 
   @Override
@@ -152,6 +250,6 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       Double key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {
-
+    throw new UnsupportedOperationException("Numeric columns do not support bitmaps.");
   }
 }

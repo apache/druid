@@ -625,17 +625,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
               }
 
-              @Nullable
-              @Override
-              public ColumnCapabilities getColumnCapabilities(String columnName)
-              {
-                if (virtualColumns.exists(columnName)) {
-                  return virtualColumns.getColumnCapabilities(columnName);
-                }
-
-                return index.getCapabilities(columnName);
-              }
-
               @Override
               public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
               {
@@ -673,6 +662,17 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     inspector.visit("index", index);
                   }
                 };
+              }
+
+              @Nullable
+              @Override
+              public ColumnCapabilities getColumnCapabilities(String columnName)
+              {
+                if (virtualColumns.exists(columnName)) {
+                  return virtualColumns.getColumnCapabilities(columnName);
+                }
+
+                return index.getCapabilities(columnName);
               }
             };
           }

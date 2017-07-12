@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
  */
 public class MapBasedRow implements Row
 {
-  private static final Function<Object, String> TO_STRING_INCLUDING_NULL = o -> String.valueOf(o);
+  private static final Function<Object, String> TO_STRING_INCLUDING_NULL = String::valueOf;
 
   private final DateTime timestamp;
   private final Map<String, Object> event;

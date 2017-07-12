@@ -204,7 +204,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0.0f;
+          return 0.0;
         }
 
         long longVal = (Long) dims[dimIndex];

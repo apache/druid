@@ -95,6 +95,31 @@ public class ExpressionSelectors
     return new ExpressionFloatColumnSelector();
   }
 
+  public static DoubleColumnSelector makeDoubleColumnSelector(
+      ColumnSelectorFactory columnSelectorFactory,
+      Expr expression,
+      double nullValue
+  )
+  {
+    final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
+    class ExpressionDoubleColumnSelector implements DoubleColumnSelector
+    {
+      @Override
+      public double get()
+      {
+        final Double number = baseSelector.get().asDouble();
+        return number != null ? number.doubleValue() : nullValue;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("baseSelector", baseSelector);
+      }
+    }
+    return new ExpressionDoubleColumnSelector();
+  }
+
   public static DimensionSelector makeDimensionSelector(
       final ColumnSelectorFactory columnSelectorFactory,
       final Expr expression,
@@ -137,30 +162,5 @@ public class ExpressionSelectors
       }
       return new ExtractionExpressionDimensionSelector();
     }
-  }
-
-  public static DoubleColumnSelector makeDoubleColumnSelector(
-      ColumnSelectorFactory columnSelectorFactory,
-      Expr expression,
-      double nullValue
-  )
-  {
-    final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    class ExpressionDoubleColumnSelector implements DoubleColumnSelector
-    {
-      @Override
-      public double get()
-      {
-        final Double number = baseSelector.get().asDouble();
-        return number != null ? number.doubleValue() : nullValue;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("baseSelector", baseSelector);
-      }
-    }
-    return new ExpressionDoubleColumnSelector();
   }
 }

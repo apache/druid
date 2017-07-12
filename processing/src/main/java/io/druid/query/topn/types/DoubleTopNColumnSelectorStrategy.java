@@ -81,8 +81,7 @@ public class DoubleTopNColumnSelectorStrategy
         aggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
         aggregatesStore.put(key, aggregators);
       }
-      for (Aggregator aggregator:
-           aggregators) {
+      for (Aggregator aggregator : aggregators) {
         aggregator.aggregate();
       }
       cursor.advance();

@@ -544,9 +544,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(columnName);
-                        if (holder != null && (holder.getCapabilities().getType() == ValueType.FLOAT
-                                               || holder.getCapabilities().getType() == ValueType.LONG
-                                               || holder.getCapabilities().getType() == ValueType.DOUBLE)) {
+                        if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
                           cachedMetricVals = holder.getGenericColumn();
                           closer.register(cachedMetricVals);
                           genericColumnCache.put(columnName, cachedMetricVals);
@@ -592,9 +590,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(columnName);
-                        if (holder != null && (holder.getCapabilities().getType() == ValueType.DOUBLE
-                                               || holder.getCapabilities().getType() == ValueType.LONG
-                                               || holder.getCapabilities().getType() == ValueType.FLOAT)) {
+                        if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
                           cachedMetricVals = holder.getGenericColumn();
                           closer.register(cachedMetricVals);
                           genericColumnCache.put(columnName, cachedMetricVals);
@@ -634,10 +630,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(columnName);
-                        if (holder != null && (holder.getCapabilities().getType() == ValueType.LONG
-                                               || holder.getCapabilities().getType() == ValueType.FLOAT
-                                               || holder.getCapabilities().getType() == ValueType.DOUBLE)
-                            ) {
+                        if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
                           cachedMetricVals = holder.getGenericColumn();
                           closer.register(cachedMetricVals);
                           genericColumnCache.put(columnName, cachedMetricVals);

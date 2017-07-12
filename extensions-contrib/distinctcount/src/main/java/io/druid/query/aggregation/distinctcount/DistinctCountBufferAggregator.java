@@ -88,7 +88,7 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return buf.getDouble(position);
+    return (double) buf.getLong(position);
   }
 
   @Override

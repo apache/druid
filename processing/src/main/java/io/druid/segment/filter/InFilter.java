@@ -52,12 +52,14 @@ public class InFilter implements Filter
   private final ExtractionFn extractionFn;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
+  private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
   public InFilter(
       String dimension,
       Set<String> values,
       Supplier<DruidLongPredicate> longPredicateSupplier,
       Supplier<DruidFloatPredicate> floatPredicateSupplier,
+      Supplier<DruidDoublePredicate> doublePredicateSupplier,
       ExtractionFn extractionFn
   )
   {
@@ -66,6 +68,7 @@ public class InFilter implements Filter
     this.extractionFn = extractionFn;
     this.longPredicateSupplier = longPredicateSupplier;
     this.floatPredicateSupplier = floatPredicateSupplier;
+    this.doublePredicateSupplier = doublePredicateSupplier;
   }
 
   @Override
@@ -163,23 +166,9 @@ public class InFilter implements Filter
       public Predicate<String> makeStringPredicate()
       {
         if (extractionFn != null) {
-          return new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              return values.contains(Strings.nullToEmpty(extractionFn.apply(input)));
-            }
-          };
+          return input -> values.contains(Strings.nullToEmpty(extractionFn.apply(input)));
         } else {
-          return new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              return values.contains(Strings.nullToEmpty(input));
-            }
-          };
+          return input -> values.contains(Strings.nullToEmpty(input));
         }
       }
 
@@ -187,14 +176,7 @@ public class InFilter implements Filter
       public DruidLongPredicate makeLongPredicate()
       {
         if (extractionFn != null) {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return values.contains(extractionFn.apply(input));
-            }
-          };
+          return input -> values.contains(extractionFn.apply(input));
         } else {
           return longPredicateSupplier.get();
         }
@@ -204,14 +186,7 @@ public class InFilter implements Filter
       public DruidFloatPredicate makeFloatPredicate()
       {
         if (extractionFn != null) {
-          return new DruidFloatPredicate()
-          {
-            @Override
-            public boolean applyFloat(float input)
-            {
-              return values.contains(extractionFn.apply(input));
-            }
-          };
+          return input -> values.contains(extractionFn.apply(input));
         } else {
           return floatPredicateSupplier.get();
         }
@@ -223,8 +198,7 @@ public class InFilter implements Filter
         if (extractionFn != null) {
           return input -> values.contains(extractionFn.apply(input));
         }
-        //@TODO @bslim fix this
-        return input -> floatPredicateSupplier.get().applyFloat((float) input);
+        return input -> doublePredicateSupplier.get().applyDouble(input);
       }
     };
   }

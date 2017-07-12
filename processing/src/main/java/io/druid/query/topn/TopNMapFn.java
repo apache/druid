@@ -33,9 +33,9 @@ import java.util.Objects;
 
 public class TopNMapFn
 {
-  public static final long ZERO_LONG = 0L;
-  public static final double ZERO_DOUBLE = 0.0d;
-  public static final float ZERO_FLOAT = 0.0f;
+  public static final Long ZERO_LONG = 0L;
+  public static final Double ZERO_DOUBLE = 0.0d;
+  public static final Float ZERO_FLOAT = 0.0f;
 
   public static Function<Object, Object> getValueTransformer(ValueType outputType)
   {

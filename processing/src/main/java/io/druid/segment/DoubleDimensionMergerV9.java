@@ -115,7 +115,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   @Override
   public boolean canSkip()
   {
-    // can not be all null
+    // a double column can never be all null
     return false;
   }
 }

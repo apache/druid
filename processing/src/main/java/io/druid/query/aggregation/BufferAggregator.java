@@ -126,7 +126,7 @@ public interface BufferAggregator extends HotLoopCallee
    * @param buf byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
    * @return the double representation of the aggregate
-   * */
+   */
   double getDouble(ByteBuffer buf, int position);
 
   /**

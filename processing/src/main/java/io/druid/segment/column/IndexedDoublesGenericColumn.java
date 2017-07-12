@@ -29,7 +29,11 @@ import io.druid.segment.data.IndexedLongs;
 public class IndexedDoublesGenericColumn implements GenericColumn
 {
   private final IndexedDoubles column;
-  public IndexedDoublesGenericColumn(IndexedDoubles indexedDoubles) {column = indexedDoubles;}
+
+  public IndexedDoublesGenericColumn(IndexedDoubles indexedDoubles)
+  {
+    column = indexedDoubles;
+  }
 
   @Override
   public int length()

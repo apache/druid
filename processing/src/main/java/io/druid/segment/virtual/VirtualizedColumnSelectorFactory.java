@@ -76,6 +76,16 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
     }
   }
 
+  @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+  {
+    if (virtualColumns.exists(columnName)) {
+      return virtualColumns.makeDoubleColumnSelector(columnName, baseFactory);
+    } else {
+      return baseFactory.makeDoubleColumnSelector(columnName);
+    }
+  }
+
   @Nullable
   @Override
   public ObjectColumnSelector makeObjectColumnSelector(String columnName)
@@ -95,16 +105,6 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
       return virtualColumns.getColumnCapabilities(columnName);
     } else {
       return baseFactory.getColumnCapabilities(columnName);
-    }
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
-  {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeDoubleColumnSelector(columnName, baseFactory);
-    } else {
-      return baseFactory.makeDoubleColumnSelector(columnName);
     }
   }
 }
