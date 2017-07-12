@@ -26,28 +26,63 @@ import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultBuilder;
 import io.druid.segment.Capabilities;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ValueType;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import javax.annotation.Nullable;
 
-public class DoubleTopNColumnSelectorStrategy
-    implements TopNColumnSelectorStrategy<DoubleColumnSelector, Long2ObjectMap<Aggregator[]>>
+public class NumericTopNColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector>
+    implements TopNColumnSelectorStrategy<ValueSelectorType, Long2ObjectMap<Aggregator[]>>
 {
+  private final ValueType valueType;
+  private final Function<ValueSelectorType, Long> keyFn;
+  private final Function<Long, Comparable> reverseKeyFn;
+
+  public NumericTopNColumnSelectorStrategy(ValueType valueType)
+  {
+    this.valueType = valueType;
+    keyFn = input -> {
+      switch (valueType) {
+        case LONG:
+          return ((LongColumnSelector) input).get();
+        case FLOAT:
+          return Double.doubleToLongBits((double) ((FloatColumnSelector) input).get());
+        case DOUBLE:
+          return Double.doubleToLongBits(((DoubleColumnSelector) input).get());
+        default:
+          throw new UnsupportedOperationException("should not be here supports only numeric types");
+      }
+    };
+    reverseKeyFn = input -> {
+      switch (valueType) {
+        case LONG:
+          return input;
+        case FLOAT:
+        case DOUBLE:
+          return Double.longBitsToDouble(input);
+        default:
+          throw new UnsupportedOperationException("should not be here supports only numeric types");
+      }
+    };
+  }
 
   @Override
-  public int getCardinality(DoubleColumnSelector selector)
+  public int getCardinality(ValueSelectorType selector)
   {
     return TopNColumnSelectorStrategy.CARDINALITY_UNKNOWN;
   }
 
+
   @Override
   public ValueType getValueType()
   {
-    return ValueType.DOUBLE;
+    return valueType;
   }
 
   @Override
@@ -64,10 +99,11 @@ public class DoubleTopNColumnSelectorStrategy
     return new Long2ObjectOpenHashMap<>();
   }
 
+
   @Override
   public long dimExtractionScanAndAggregate(
       TopNQuery query,
-      DoubleColumnSelector selector,
+      ValueSelectorType selector,
       Cursor cursor,
       Aggregator[][] rowSelector,
       Long2ObjectMap<Aggregator[]> aggregatesStore
@@ -75,7 +111,7 @@ public class DoubleTopNColumnSelectorStrategy
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      long key = Double.doubleToLongBits(selector.get());
+      long key = keyFn.apply(selector);
       Aggregator[] aggregators = aggregatesStore.get(key);
       if (aggregators == null) {
         aggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -104,7 +140,7 @@ public class DoubleTopNColumnSelectorStrategy
         for (int i = 0; i < aggs.length; i++) {
           vals[i] = aggs[i].get();
         }
-        Comparable key = Double.longBitsToDouble(entry.getLongKey());
+        Comparable key = reverseKeyFn.apply(entry.getLongKey());
         if (valueTransformer != null) {
           key = (Comparable) valueTransformer.apply(key);
         }

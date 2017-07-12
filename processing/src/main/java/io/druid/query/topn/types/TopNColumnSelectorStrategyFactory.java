@@ -37,11 +37,9 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
       case STRING:
         return new StringTopNColumnSelectorStrategy();
       case LONG:
-        return new LongTopNColumnSelectorStrategy();
       case FLOAT:
-        return new FloatTopNColumnSelectorStrategy();
       case DOUBLE:
-        return new DoubleTopNColumnSelectorStrategy();
+        return new NumericTopNColumnSelectorStrategy(type);
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }
