@@ -190,6 +190,20 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      String columnName,
+      ColumnSelectorFactory factory
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      return ZeroDoubleColumnSelector.instance();
+    } else {
+      final DoubleColumnSelector selector = virtualColumn.makeDoubleColumnSelector(columnName, factory);
+      return selector == null ? ZeroDoubleColumnSelector.instance() : selector;
+    }
+  }
+
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
@@ -282,19 +296,5 @@ public class VirtualColumns implements Cacheable
   public String toString()
   {
     return virtualColumns.toString();
-  }
-
-  public DoubleColumnSelector makeDoubleColumnSelector(
-      String columnName,
-      ColumnSelectorFactory factory
-  )
-  {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      return ZeroDoubleColumnSelector.instance();
-    } else {
-      final DoubleColumnSelector selector = virtualColumn.makeDoubleColumnSelector(columnName, factory);
-      return selector == null ? ZeroDoubleColumnSelector.instance() : selector;
-    }
   }
 }

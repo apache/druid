@@ -42,9 +42,9 @@ import java.util.List;
 public final class DimensionHandlerUtils
 {
 
-  public static final double ZERO_DOUBLE = 0.0d;
-  public static final float ZERO_FLOAT = 0.0f;
-  public static final long ZERO_LONG = 0L;
+  public static final Double ZERO_DOUBLE = 0.0d;
+  public static final Float ZERO_FLOAT = 0.0f;
+  public static final Long ZERO_LONG = 0L;
 
   private DimensionHandlerUtils() {}
 

@@ -70,7 +70,7 @@ public class TimestampBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float)buf.getLong(position);
+    return (float) buf.getLong(position);
   }
 
   @Override

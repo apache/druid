@@ -85,48 +85,6 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
     return new SerializerBuilder();
   }
 
-  public static LegacySerializerBuilder legacySerializerBuilder()
-  {
-    return new LegacySerializerBuilder();
-  }
-
-  public static class LegacySerializerBuilder
-  {
-    private ByteOrder byteOrder = null;
-    private CompressedDoublesIndexedSupplier delegate = null;
-
-    public LegacySerializerBuilder withByteOrder(final ByteOrder byteOrder)
-    {
-      this.byteOrder = byteOrder;
-      return this;
-    }
-
-    public LegacySerializerBuilder withDelegate(final CompressedDoublesIndexedSupplier delegate)
-    {
-      this.delegate = delegate;
-      return this;
-    }
-
-    public DoubleGenericColumnPartSerde build()
-    {
-      return new DoubleGenericColumnPartSerde(
-          byteOrder, new Serializer()
-      {
-        @Override
-        public long numBytes()
-        {
-          return delegate.getSerializedSize();
-        }
-
-        @Override
-        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-        {
-          delegate.writeToChannel(channel);
-        }
-      }
-      );
-    }
-  }
   public static class SerializerBuilder
   {
     private ByteOrder byteOrder = null;
