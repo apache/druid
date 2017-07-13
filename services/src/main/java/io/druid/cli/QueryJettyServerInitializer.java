@@ -23,12 +23,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.initialization.jetty.LimitRequestsFilter;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
@@ -39,12 +43,17 @@ import java.util.Set;
  */
 public class QueryJettyServerInitializer implements JettyServerInitializer
 {
+  private static final Logger log = new Logger(QueryJettyServerInitializer.class);
+
   private final List<Handler> extensionHandlers;
 
+  private final ServerConfig serverConfig;
+
   @Inject
-  public QueryJettyServerInitializer(Set<Handler> extensionHandlers)
+  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig)
   {
     this.extensionHandlers = ImmutableList.copyOf(extensionHandlers);
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -52,6 +61,14 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+
+    if (serverConfig.getMaxActiveRequests() < Integer.MAX_VALUE) {
+      log.info("Adding LimitRequestsFilter with maxActiveRequests [%d].", serverConfig.getMaxActiveRequests());
+      root.addFilter(new FilterHolder(new LimitRequestsFilter(serverConfig.getMaxActiveRequests())),
+                     "/*", null
+      );
+    }
+
     JettyServerInitUtils.addExtensionFilters(root, injector);
 
     root.addFilter(GuiceFilter.class, "/*", null);

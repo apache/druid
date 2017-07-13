@@ -38,6 +38,10 @@ public class ServerConfig
   private int queueSize = Integer.MAX_VALUE;
 
   @JsonProperty
+  @Min(1)
+  private int maxActiveRequests = Integer.MAX_VALUE;
+
+  @JsonProperty
   @NotNull
   private Period maxIdleTime = new Period("PT5m");
 
@@ -63,6 +67,11 @@ public class ServerConfig
   public int getQueueSize()
   {
     return queueSize;
+  }
+
+  public int getMaxActiveRequests()
+  {
+    return maxActiveRequests;
   }
 
   public Period getMaxIdleTime()

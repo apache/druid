@@ -51,15 +51,6 @@ public class JettyBindings
                .toInstance(new QosFilterHolder(path, maxRequests));
   }
 
-  public static void addLimitRequestsFilter(Binder binder, String path, int maxActiveRequests)
-  {
-    if (maxActiveRequests > 0) {
-      Multibinder.newSetBinder(binder, ServletFilterHolder.class)
-                 .addBinding()
-                 .toInstance(new LimitRequestsFilterHolder(path, maxActiveRequests));
-    }
-  }
-
   public static void addHandler(Binder binder, Class<? extends Handler> handlerClass)
   {
     Multibinder.newSetBinder(binder, Handler.class)

@@ -21,7 +21,6 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
@@ -51,7 +50,6 @@ import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.BrokerResource;
-import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.QueryCountStatsProvider;
@@ -60,7 +58,6 @@ import io.druid.sql.guice.SqlModule;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
-import java.util.Properties;
 
 /**
  */
@@ -71,11 +68,6 @@ import java.util.Properties;
 public class CliBroker extends ServerRunnable
 {
   private static final Logger log = new Logger(CliBroker.class);
-
-  private static final String MAX_ACTIVE_REQUESTS_KEY = "druid.server.http.maxActiveRequests";
-
-  @Inject
-  private Properties properties;
 
   public CliBroker()
   {
@@ -116,11 +108,6 @@ public class CliBroker extends ServerRunnable
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
-
-            if (properties.getProperty(MAX_ACTIVE_REQUESTS_KEY) != null) {
-              final int maxActiveRequests = Integer.parseInt(properties.getProperty(MAX_ACTIVE_REQUESTS_KEY));
-              JettyBindings.addLimitRequestsFilter(binder, "/*", maxActiveRequests);
-            }
 
             Jerseys.addResource(binder, BrokerQueryResource.class);
             binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
