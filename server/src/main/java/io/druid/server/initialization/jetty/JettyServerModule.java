@@ -76,6 +76,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -169,9 +170,20 @@ public class JettyServerModule extends JerseyServletModule
 
   static Server makeJettyServer(DruidNode node, ServerConfig config, TLSServerConfig tlsServerConfig)
   {
-    final QueuedThreadPool threadPool = new QueuedThreadPool();
-    threadPool.setMinThreads(config.getNumThreads());
-    threadPool.setMaxThreads(config.getNumThreads());
+    final QueuedThreadPool threadPool;
+    if (config.getQueueSize() == Integer.MAX_VALUE) {
+      threadPool = new QueuedThreadPool();
+      threadPool.setMinThreads(config.getNumThreads());
+      threadPool.setMaxThreads(config.getNumThreads());
+    } else {
+      threadPool = new QueuedThreadPool(
+          config.getNumThreads(),
+          config.getNumThreads(),
+          60000,
+          new LinkedBlockingQueue<>(config.getQueueSize())
+      );
+    }
+
     threadPool.setDaemon(true);
 
     final Server server = new Server(threadPool);

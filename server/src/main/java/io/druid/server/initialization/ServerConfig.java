@@ -34,6 +34,10 @@ public class ServerConfig
   private int numThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2) + 30;
 
   @JsonProperty
+  @Min(1)
+  private int queueSize = Integer.MAX_VALUE;
+
+  @JsonProperty
   @NotNull
   private Period maxIdleTime = new Period("PT5m");
 
@@ -54,6 +58,11 @@ public class ServerConfig
   public int getNumThreads()
   {
     return numThreads;
+  }
+
+  public int getQueueSize()
+  {
+    return queueSize;
   }
 
   public Period getMaxIdleTime()
