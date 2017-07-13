@@ -97,5 +97,10 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use Double.NEGATIVE_INFINITY"/>
     </module>
+    <module name="Regexp">
+      <property name="format" value="com\.metamx\.common\.logger"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use io.druid.java.util.common.logger.Logger instead"/>
+    </module>
   </module>
 </module>

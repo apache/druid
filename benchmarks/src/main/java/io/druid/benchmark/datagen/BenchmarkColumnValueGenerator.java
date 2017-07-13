@@ -59,7 +59,7 @@ public class BenchmarkColumnValueGenerator
     int rowSize = schema.getRowSize();
 
     if (nullProbability != null) {
-      Double randDouble = simpleRng.nextDouble();
+      double randDouble = simpleRng.nextDouble();
       if (randDouble <= nullProbability) {
         return null;
       }

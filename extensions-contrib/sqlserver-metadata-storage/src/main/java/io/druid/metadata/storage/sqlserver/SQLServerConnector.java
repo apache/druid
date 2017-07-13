@@ -20,8 +20,8 @@ package io.druid.metadata.storage.sqlserver;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
