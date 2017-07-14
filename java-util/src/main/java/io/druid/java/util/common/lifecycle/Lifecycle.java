@@ -269,8 +269,10 @@ public class Lifecycle
       if (state.get().equals(State.STOP)) {
         throw new ISE("Cannot add a handler after the Lifecycle has stopped");
       }
-      if (currStage == null || stage.compareTo(currStage) < 1) {
-        handler.start();
+      if (state.get().equals(State.RUNNING)) {
+        if (stage.compareTo(currStage) <= 0) {
+          handler.start();
+        }
       }
       handlers.get(stage).add(handler);
     }
