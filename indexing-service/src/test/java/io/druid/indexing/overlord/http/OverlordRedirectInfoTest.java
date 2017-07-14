@@ -102,7 +102,6 @@ public class OverlordRedirectInfoTest
   public void testGetRedirectURLWithEncodedCharacter() throws UnsupportedEncodingException
   {
     String host = "localhost";
-
     String request = "/druid/indexer/v1/task/" + URLEncoder.encode(
         "index_hadoop_datasource_2017-07-12T07:43:01.495Z",
         "UTF-8"
