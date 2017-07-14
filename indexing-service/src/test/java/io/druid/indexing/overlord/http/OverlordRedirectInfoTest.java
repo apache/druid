@@ -25,7 +25,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.net.URLEncoder;
 
 public class OverlordRedirectInfoTest
 {
@@ -95,4 +97,25 @@ public class OverlordRedirectInfoTest
     Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
     EasyMock.verify(taskMaster);
   }
+
+  @Test
+  public void testGetRedirectURLWithEncodedCharacter() throws UnsupportedEncodingException
+  {
+    String host = "localhost";
+
+    String request = "/druid/indexer/v1/task/" + URLEncoder.encode(
+        "index_hadoop_datasource_2017-07-12T07:43:01.495Z",
+        "UTF-8"
+    ) + "/status";
+
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
+    EasyMock.replay(taskMaster);
+    URL url = redirectInfo.getRedirectURL("http", null, request);
+    Assert.assertEquals(
+        "http://localhost/druid/indexer/v1/task/index_hadoop_datasource_2017-07-12T07%3A43%3A01.495Z/status",
+        url.toString()
+    );
+    EasyMock.verify(taskMaster);
+  }
+
 }
