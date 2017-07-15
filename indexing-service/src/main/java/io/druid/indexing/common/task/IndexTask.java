@@ -193,7 +193,8 @@ public class IndexTask extends AbstractTask
     final DataSchema dataSchema;
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(shardSpecs.getIntervals());
-      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval));
+      final long lockTimeoutMs = ingestionSchema.getTuningConfig().getLockTimeout().getMillis();
+      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval, lockTimeoutMs));
       version = lock.getVersion();
       dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
           ingestionSchema.getDataSchema()
@@ -898,6 +899,7 @@ public class IndexTask extends AbstractTask
     private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUBLISH_TIMEOUT = 0;
+    private static final Period DEFAULT_LOCK_TIMEOUT = new Period("PT5m");
 
     static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
 
@@ -912,6 +914,7 @@ public class IndexTask extends AbstractTask
     private final boolean forceGuaranteedRollup;
     private final boolean reportParseExceptions;
     private final long publishTimeout;
+    private final Period lockTimeout;
 
     @JsonCreator
     public IndexTuningConfig(
@@ -927,7 +930,8 @@ public class IndexTask extends AbstractTask
         @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
         @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
         @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
-        @JsonProperty("publishTimeout") @Nullable Long publishTimeout
+        @JsonProperty("publishTimeout") @Nullable Long publishTimeout,
+        @JsonProperty("lockTimeout") @Nullable Period lockTimeout
     )
     {
       this(
@@ -941,13 +945,14 @@ public class IndexTask extends AbstractTask
           forceGuaranteedRollup,
           reportParseExceptions,
           publishTimeout,
+          lockTimeout,
           null
       );
     }
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -961,6 +966,7 @@ public class IndexTask extends AbstractTask
         @Nullable Boolean forceGuaranteedRollup,
         @Nullable Boolean reportParseExceptions,
         @Nullable Long publishTimeout,
+        @Nullable Period lockTimeout,
         @Nullable File basePersistDirectory
     )
     {
@@ -989,6 +995,7 @@ public class IndexTask extends AbstractTask
                                    ? DEFAULT_REPORT_PARSE_EXCEPTIONS
                                    : reportParseExceptions;
       this.publishTimeout = publishTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : publishTimeout;
+      this.lockTimeout = lockTimeout == null ? DEFAULT_LOCK_TIMEOUT : lockTimeout;
       this.basePersistDirectory = basePersistDirectory;
 
       Preconditions.checkArgument(
@@ -1010,6 +1017,7 @@ public class IndexTask extends AbstractTask
           forceGuaranteedRollup,
           reportParseExceptions,
           publishTimeout,
+          lockTimeout,
           dir
       );
     }
@@ -1092,6 +1100,12 @@ public class IndexTask extends AbstractTask
     public long getPublishTimeout()
     {
       return publishTimeout;
+    }
+
+    @JsonProperty
+    public Period getLockTimeout()
+    {
+      return lockTimeout;
     }
 
     @Override

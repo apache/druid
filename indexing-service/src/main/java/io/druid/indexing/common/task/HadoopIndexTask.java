@@ -198,7 +198,8 @@ public class HadoopIndexTask extends HadoopTask
               indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get()
           )
       );
-      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval));
+      final long lockTimeoutMs = spec.getTuningConfig().getLockTimeout().getMillis();
+      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval, lockTimeoutMs));
       version = lock.getVersion();
     } else {
       Iterable<TaskLock> locks = getTaskLocks(toolbox);

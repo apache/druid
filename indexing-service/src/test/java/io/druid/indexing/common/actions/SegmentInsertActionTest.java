@@ -90,7 +90,7 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL), 5000);
     action.perform(task, actionTestKit.getTaskActionToolbox());
 
     Assert.assertEquals(
@@ -108,7 +108,7 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL), 5000);
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));

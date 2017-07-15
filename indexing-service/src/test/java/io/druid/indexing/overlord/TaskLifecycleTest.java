@@ -60,6 +60,9 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
+import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
+import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.common.task.KillTask;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
@@ -514,7 +517,7 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage, 300);
+    taskLockbox = new TaskLockbox(taskStorage);
     tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
         SupervisorManager.class)));
     File tmpDir = temporaryFolder.newFolder();
@@ -642,7 +645,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -654,8 +657,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
+            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null, null)
         ),
         null,
         MAPPER
@@ -700,7 +703,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -712,8 +715,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
+            new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null, null)
         ),
         null,
         MAPPER
@@ -1065,7 +1068,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -1077,8 +1080,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null)
+            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null, null)
         ),
         null,
         MAPPER
@@ -1200,7 +1203,8 @@ public class TaskLifecycleTest
         0,
         null,
         null,
-        null
+        null,
+        new Period("PT5s")
     );
     FireDepartment fireDepartment = new FireDepartment(dataSchema, realtimeIOConfig, realtimeTuningConfig);
     return new RealtimeIndexTask(

@@ -210,6 +210,7 @@ public class HadoopConverterJobTest
                 null,
                 false,
                 false,
+                null,
                 null
             )
         )

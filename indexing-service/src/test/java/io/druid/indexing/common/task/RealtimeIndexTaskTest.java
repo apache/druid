@@ -894,6 +894,7 @@ public class RealtimeIndexTaskTest
         0,
         reportParseExceptions,
         handoffTimeout,
+        null,
         null
     );
     return new RealtimeIndexTask(
@@ -933,7 +934,7 @@ public class RealtimeIndexTaskTest
   )
   {
     final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, 300);
+    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
