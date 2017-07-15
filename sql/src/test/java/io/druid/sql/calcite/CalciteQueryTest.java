@@ -5351,11 +5351,10 @@ public class CalciteQueryTest
   {
     final InProcessViewManager viewManager = new InProcessViewManager();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig, viewManager);
-    final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        druidSchema,
         walker,
         operatorTable,
         macroTable,
