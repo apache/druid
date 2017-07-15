@@ -99,13 +99,23 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    toolbox.verifyTaskLocks(task, segments);
+    for (DataSegment segment : segments) {
+      if (!toolbox.getTaskLockbox().upgrade(task, segment.getInterval()).isOk()) {
+        return SegmentPublishResult.fail();
+      }
+    }
+
+    TaskActionPreconditions.checkTaskLocks(task, toolbox.getTaskLockbox(), segments);
 
     final SegmentPublishResult retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
         segments,
         startMetadata,
         endMetadata
     );
+
+    for (DataSegment segment : segments) {
+      toolbox.getTaskLockbox().downgrade(task, segment.getInterval());
+    }
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

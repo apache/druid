@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,15 +42,12 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
-import io.druid.guice.annotations.Smile;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockAcquireAction;
-import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
@@ -100,8 +96,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -126,21 +124,24 @@ public class IndexTask extends AbstractTask
 
   @JsonIgnore
   private final IndexIngestionSpec ingestionSchema;
-  private final ObjectMapper smileMapper;
 
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("spec") final IndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context,
-      @Smile @JacksonInject final ObjectMapper smileMapper
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     super(makeId(id, ingestionSchema), null, taskResource, makeDataSource(ingestionSchema), context);
 
     this.ingestionSchema = ingestionSchema;
-    this.smileMapper = smileMapper;
+  }
+
+  @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 
   @Override
@@ -152,11 +153,21 @@ public class IndexTask extends AbstractTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema().getGranularitySpec().bucketIntervals();
+    final Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema()
+                                                                   .getGranularitySpec()
+                                                                   .bucketIntervals();
 
     if (intervals.isPresent()) {
-      Interval interval = JodaUtils.umbrellaInterval(intervals.get());
-      return taskActionClient.submit(new LockTryAcquireAction(interval)) != null;
+      final List<TaskLock> locks = getTaskLocks(taskActionClient);
+      if (locks.size() == 0) {
+        try {
+          Tasks.acquireLocks(taskActionClient, intervals.get());
+        }
+        catch (Exception e) {
+          return false;
+        }
+      }
+      return true;
     } else {
       return true;
     }
@@ -189,12 +200,15 @@ public class IndexTask extends AbstractTask
 
     final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir);
 
-    final String version;
     final DataSchema dataSchema;
+    final Map<Interval, String> versions;
     if (determineIntervals) {
-      Interval interval = JodaUtils.umbrellaInterval(shardSpecs.getIntervals());
-      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval));
-      version = lock.getVersion();
+      final SortedSet<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+      intervals.addAll(shardSpecs.getIntervals());
+      final Map<Interval, TaskLock> locks = Tasks.acquireLocks(toolbox.getTaskActionClient(), intervals);
+      versions = locks.entrySet().stream()
+                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getVersion()));
+
       dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
           ingestionSchema.getDataSchema()
                          .getGranularitySpec()
@@ -205,15 +219,30 @@ public class IndexTask extends AbstractTask
                          )
       );
     } else {
-      version = Iterables.getOnlyElement(getTaskLocks(toolbox)).getVersion();
+      versions = getTaskLocks(toolbox.getTaskActionClient()).stream()
+                                                            .collect(
+                                                                Collectors.toMap(
+                                                                    TaskLock::getInterval,
+                                                                    TaskLock::getVersion
+                                                                )
+                                                            );
       dataSchema = ingestionSchema.getDataSchema();
     }
 
-    if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, version, firehoseFactory, firehoseTempDir)) {
+    if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, versions, firehoseFactory, firehoseTempDir)) {
       return TaskStatus.success(getId());
     } else {
       return TaskStatus.failure(getId());
     }
+  }
+
+  private static String findVersion(Map<Interval, String> versions, Interval interval)
+  {
+    return versions.entrySet().stream()
+                   .filter(entry -> entry.getKey().contains(interval))
+                   .map(Entry::getValue)
+                   .findFirst()
+                   .orElse(null);
   }
 
   private static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
@@ -565,7 +594,7 @@ public class IndexTask extends AbstractTask
       final TaskToolbox toolbox,
       final DataSchema dataSchema,
       final ShardSpecs shardSpecs,
-      final String version,
+      Map<Interval, String> versions,
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir
   ) throws IOException, InterruptedException
@@ -597,7 +626,7 @@ public class IndexTask extends AbstractTask
 
     final SegmentAllocator segmentAllocator;
     if (ioConfig.isAppendToExisting()) {
-      segmentAllocator = new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema);
+      segmentAllocator = new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema, false);
     } else {
       segmentAllocator = (row, sequenceName, previousSegmentId) -> {
         final DateTime timestamp = row.getTimestamp();
@@ -612,12 +641,12 @@ public class IndexTask extends AbstractTask
           throw new ISE("Could not find shardSpec for interval[%s]", interval);
         }
 
-        return new SegmentIdentifier(getDataSource(), interval, version, shardSpec);
+        return new SegmentIdentifier(getDataSource(), interval, findVersion(versions, interval), shardSpec);
       };
     }
 
     final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-      final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments, null, null);
+      final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
       return toolbox.getTaskActionClient().submit(action).isSuccess();
     };
 
@@ -654,7 +683,8 @@ public class IndexTask extends AbstractTask
 
             final Interval interval = optInterval.get();
             final ShardSpec shardSpec = shardSpecs.getShardSpec(interval, inputRow);
-            final String sequenceName = Appenderators.getSequenceName(interval, version, shardSpec);
+            // TODO: validate versions if appendToExisting? => need to test
+            final String sequenceName = Appenderators.getSequenceName(interval, findVersion(versions, interval), shardSpec);
             final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {

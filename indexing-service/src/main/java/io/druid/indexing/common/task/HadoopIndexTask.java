@@ -29,7 +29,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -38,12 +37,14 @@ import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
+import io.druid.indexing.overlord.LockResult;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
@@ -121,6 +122,12 @@ public class HadoopIndexTask extends HadoopTask
   }
 
   @Override
+  public int getPriority()
+  {
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
+  }
+
+  @Override
   public String getType()
   {
     return "index_hadoop";
@@ -136,7 +143,7 @@ public class HadoopIndexTask extends HadoopTask
               intervals.get()
           )
       );
-      return taskActionClient.submit(new LockTryAcquireAction(interval)) != null;
+      return taskActionClient.submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
     } else {
       return true;
     }
@@ -198,10 +205,13 @@ public class HadoopIndexTask extends HadoopTask
               indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get()
           )
       );
-      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval));
-      version = lock.getVersion();
+      final LockResult lockResult = toolbox.getTaskActionClient().submit(
+          new LockAcquireAction(TaskLockType.EXCLUSIVE, interval)
+      );
+      Tasks.checkLockResult(lockResult, interval);
+      version = lockResult.getTaskLock().getVersion();
     } else {
-      Iterable<TaskLock> locks = getTaskLocks(toolbox);
+      Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());
       final TaskLock myLock = Iterables.getOnlyElement(locks);
       version = myLock.getVersion();
     }

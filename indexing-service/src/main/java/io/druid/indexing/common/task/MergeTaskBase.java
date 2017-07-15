@@ -125,9 +125,15 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   }
 
   @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox.getTaskActionClient()));
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     final DataSegment mergedSegment = computeMergedSegment(getDataSource(), myLock.getVersion(), segments);

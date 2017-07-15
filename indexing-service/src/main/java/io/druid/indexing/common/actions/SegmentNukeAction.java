@@ -62,7 +62,7 @@ public class SegmentNukeAction implements TaskAction<Void>
   @Override
   public Void perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    toolbox.verifyTaskLocks(task, segments);
+    TaskActionPreconditions.checkTaskLocks(task, toolbox.getTaskLockbox(), segments);
     toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
 
     // Emit metrics

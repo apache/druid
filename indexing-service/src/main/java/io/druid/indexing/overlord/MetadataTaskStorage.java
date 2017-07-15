@@ -247,6 +247,26 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
+  public void replaceLock(String taskid, TaskLock oldLock, TaskLock newLock)
+  {
+    Preconditions.checkNotNull(taskid, "taskid");
+    Preconditions.checkNotNull(oldLock, "oldLock");
+    Preconditions.checkNotNull(newLock, "newLock");
+
+    log.info(
+        "Replacing lock on interval[%s] version[%s] for task: %s",
+        oldLock.getInterval(),
+        oldLock.getVersion(),
+        taskid
+    );
+
+    // Even though these two operations are not atomically executed, the caller of replaceLock() is thread-safe and
+    // guarantees that two or more threads never call replaceLock() at the same time
+    removeLock(taskid, oldLock);
+    addLock(taskid, newLock);
+  }
+
+  @Override
   public void removeLock(String taskid, TaskLock taskLockToRemove)
   {
     Preconditions.checkNotNull(taskid, "taskid");

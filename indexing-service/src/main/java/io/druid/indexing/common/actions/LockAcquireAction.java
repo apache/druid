@@ -24,21 +24,32 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Throwables;
-import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.LockResult;
 import org.joda.time.Interval;
 
-public class LockAcquireAction implements TaskAction<TaskLock>
+public class LockAcquireAction implements TaskAction<LockResult>
 {
+  private final TaskLockType type;
+
   @JsonIgnore
   private final Interval interval;
 
   @JsonCreator
   public LockAcquireAction(
+      @JsonProperty("lockType") TaskLockType type,
       @JsonProperty("interval") Interval interval
   )
   {
+    this.type = type;
     this.interval = interval;
+  }
+
+  @JsonProperty("lockType")
+  public TaskLockType getType()
+  {
+    return type;
   }
 
   @JsonProperty
@@ -48,18 +59,18 @@ public class LockAcquireAction implements TaskAction<TaskLock>
   }
 
   @Override
-  public TypeReference<TaskLock> getReturnTypeReference()
+  public TypeReference<LockResult> getReturnTypeReference()
   {
-    return new TypeReference<TaskLock>()
+    return new TypeReference<LockResult>()
     {
     };
   }
 
   @Override
-  public TaskLock perform(Task task, TaskActionToolbox toolbox)
+  public LockResult perform(Task task, TaskActionToolbox toolbox)
   {
     try {
-      return toolbox.getTaskLockbox().lock(task, interval);
+      return toolbox.getTaskLockbox().lock(type, task, interval);
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
@@ -76,7 +87,8 @@ public class LockAcquireAction implements TaskAction<TaskLock>
   public String toString()
   {
     return "LockAcquireAction{" +
-           "interval=" + interval +
+           "lockType=" + type +
+           ", interval=" + interval +
            '}';
   }
 }

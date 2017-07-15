@@ -31,6 +31,7 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
@@ -98,10 +99,12 @@ public class RemoteTaskActionClientTest
     long now = System.currentTimeMillis();
 
     result = Collections.singletonList(new TaskLock(
+        TaskLockType.SHARED,
         "groupId",
         "dataSource",
         new Interval(now - 30 * 1000, now),
-        "version"
+        "version",
+        0
     ));
   }
 

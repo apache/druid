@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
@@ -72,7 +73,11 @@ public class RealtimeishTask extends AbstractTask
     // Sort of similar to what realtime tasks do:
 
     // Acquire lock for first interval
-    final TaskLock lock1 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval1));
+    final LockResult lockResult1 = toolbox.getTaskActionClient().submit(
+        new LockAcquireAction(TaskLockType.EXCLUSIVE, interval1)
+    );
+    Assert.assertTrue(lockResult1.isOk() && !lockResult1.isWasRevoked());
+    final TaskLock lock1 = lockResult1.getTaskLock();
     final List<TaskLock> locks1 = toolbox.getTaskActionClient().submit(new LockListAction());
 
     // (Confirm lock sanity)
@@ -80,7 +85,11 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks1", ImmutableList.of(lock1), locks1);
 
     // Acquire lock for second interval
-    final TaskLock lock2 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval2));
+    final LockResult lockResult2 = toolbox.getTaskActionClient().submit(
+        new LockAcquireAction(TaskLockType.EXCLUSIVE, interval2)
+    );
+    Assert.assertTrue(lockResult2.isOk() && !lockResult2.isWasRevoked());
+    final TaskLock lock2 = lockResult2.getTaskLock();
     final List<TaskLock> locks2 = toolbox.getTaskActionClient().submit(new LockListAction());
 
     // (Confirm lock sanity)

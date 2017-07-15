@@ -29,7 +29,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
@@ -193,9 +192,31 @@ public class HeapMemoryTaskStorage implements TaskStorage
     giant.lock();
 
     try {
+      Preconditions.checkNotNull(taskid, "taskid");
       Preconditions.checkNotNull(taskLock, "taskLock");
       taskLocks.put(taskid, taskLock);
     } finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public void replaceLock(String taskid, TaskLock oldLock, TaskLock newLock)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskid, "taskid");
+      Preconditions.checkNotNull(oldLock, "oldLock");
+      Preconditions.checkNotNull(newLock, "newLock");
+
+      if (!taskLocks.remove(taskid, oldLock)) {
+        log.warn("taskLock[%s] for replacement is not found for task[%s]", oldLock, taskid);
+      }
+
+      taskLocks.put(taskid, newLock);
+    }
+    finally {
       giant.unlock();
     }
   }

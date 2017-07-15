@@ -22,6 +22,7 @@ package io.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.timeline.DataSegment;
@@ -90,7 +91,8 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().upgrade(task, new Interval(INTERVAL));
     action.perform(task, actionTestKit.getTaskActionToolbox());
 
     Assert.assertEquals(
@@ -108,7 +110,8 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().upgrade(task, new Interval(INTERVAL));
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));

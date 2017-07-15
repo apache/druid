@@ -27,6 +27,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -77,6 +78,19 @@ public interface Task
    * @return task group ID
    */
   public String getGroupId();
+
+  /**
+   * Returns task priority. The task priority is currently used only for prioritized locking, but, in the future, it can
+   * be used for task scheduling, cluster resource management, etc.
+   *
+   * @return task priority
+   *
+   * @see Tasks for default task priorities
+   */
+  default int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_TASK_PRIORITY);
+  }
 
   /**
    * Returns a {@link io.druid.indexing.common.task.TaskResource} for this task. Task resources define specific
@@ -166,6 +180,16 @@ public interface Task
 
   public Map<String, Object> getContext();
 
-  public Object getContextValue(String key);
+  @Nullable
+  default <ContextValueType> ContextValueType getContextValue(String key)
+  {
+    return getContext() == null ? null : (ContextValueType) getContext().get(key);
+  }
+
+  default <ContextValueType> ContextValueType getContextValue(String key, ContextValueType defaultValue)
+  {
+    final ContextValueType value = getContextValue(key);
+    return value == null ? defaultValue : value;
+  }
 
 }

@@ -22,6 +22,7 @@ package io.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ObjectMetadata;
@@ -89,7 +90,7 @@ public class SegmentTransactionalInsertActionTest
   {
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL));
 
     SegmentPublishResult result1 = new SegmentTransactionalInsertAction(
         ImmutableSet.of(SEGMENT1),
@@ -130,7 +131,7 @@ public class SegmentTransactionalInsertActionTest
   {
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL));
 
     SegmentPublishResult result = new SegmentTransactionalInsertAction(
         ImmutableSet.of(SEGMENT1),
@@ -150,7 +151,7 @@ public class SegmentTransactionalInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL));
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));
