@@ -888,7 +888,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   {
     return new AppenderatorDriver(
         appenderator,
-        new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema, true),
+        new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getObjectMapper(),

@@ -626,7 +626,7 @@ public class IndexTask extends AbstractTask
 
     final SegmentAllocator segmentAllocator;
     if (ioConfig.isAppendToExisting()) {
-      segmentAllocator = new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema, false);
+      segmentAllocator = new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema);
     } else {
       segmentAllocator = (row, sequenceName, previousSegmentId) -> {
         final DateTime timestamp = row.getTimestamp();
