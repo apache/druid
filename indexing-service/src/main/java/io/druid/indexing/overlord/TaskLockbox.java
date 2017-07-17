@@ -63,8 +63,6 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class TaskLockbox
 {
-  private static final TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
-
   // Datasource -> Interval -> Tasks + TaskLock
   private final Map<String, NavigableMap<Interval, TaskLockPosse>> running = Maps.newHashMap();
   private final TaskStorage taskStorage;
@@ -214,7 +212,7 @@ public class TaskLockbox
    */
   public TaskLock lock(final Task task, final Interval interval, long timeoutMs) throws InterruptedException
   {
-    long nanos = TIME_UNIT.toNanos(timeoutMs);
+    long nanos = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
     giant.lockInterruptibly();
     try {
       Optional<TaskLock> taskLock;
