@@ -152,8 +152,8 @@ public class PolygonBound extends RectangularBound
 
 
   private boolean isPointLayingOnHorizontalBound(int i, int j, float coords[]){
-    return ordinate[i] == ordinate[j] && (ordinate[j] == coords[1] &&
-            (abscissa[i] < abscissa[j] && abscissa[j] > coords[0] && abscissa[i] < coords[0])
+    return ordinate[i] == ordinate[j] && ordinate[j] == coords[1] &&
+            ((abscissa[i] < abscissa[j] && abscissa[j] > coords[0] && abscissa[i] < coords[0])
             || (abscissa[i] > abscissa[j] && abscissa[j] < coords[0] && abscissa[i] > coords[0]));
   }
 
