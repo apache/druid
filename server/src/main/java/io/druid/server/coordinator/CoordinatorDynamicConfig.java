@@ -26,6 +26,7 @@ import io.druid.java.util.common.IAE;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class CoordinatorDynamicConfig
 {
@@ -260,6 +261,17 @@ public class CoordinatorDynamicConfig
 
   public static class Builder
   {
+    private final static long DEFAULT_MILLIS_TO_WAIT_BEFORE_DELETING = TimeUnit.MINUTES.toMillis(15);
+    private final static long DEFAULT_MERGE_BYTES_LIMIT = 524288000L;
+    private final static int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
+    private final static int DEFAULT_MAX_SEGMENTS_TO_MOVE = 5;
+    private final static int DEFAULT_REPLICANT_LIFETIME = 15;
+    private final static int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
+    private final static int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
+    private final static boolean DEFAULT_EMIT_BALANCING_STATS = false;
+    private final static boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
+    private final static int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
+
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
     private Integer mergeSegmentsLimit;
@@ -370,20 +382,23 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+
+
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
-          millisToWaitBeforeDeleting == null ? 15 * 60 * 1000L : millisToWaitBeforeDeleting,
-          mergeBytesLimit == null ? 524288000L : mergeBytesLimit,
-          mergeSegmentsLimit == null ? 100 : mergeSegmentsLimit,
-          maxSegmentsToMove == null ? 5 : maxSegmentsToMove,
-          replicantLifetime == null ? 15 : replicantLifetime,
-          replicationThrottleLimit == null ? 10 : replicationThrottleLimit,
-          balancerComputeThreads == null ? 1 : balancerComputeThreads,
-          emitBalancingStats == null ? false : emitBalancingStats,
+          millisToWaitBeforeDeleting == null ? DEFAULT_MILLIS_TO_WAIT_BEFORE_DELETING : millisToWaitBeforeDeleting,
+          mergeBytesLimit == null ? DEFAULT_MERGE_BYTES_LIMIT : mergeBytesLimit,
+          mergeSegmentsLimit == null ? DEFAULT_MERGE_SEGMENTS_LIMIT : mergeSegmentsLimit,
+          maxSegmentsToMove == null ? DEFAULT_MAX_SEGMENTS_TO_MOVE : maxSegmentsToMove,
+          replicantLifetime == null ? DEFAULT_REPLICANT_LIFETIME : replicantLifetime,
+          replicationThrottleLimit == null ? DEFAULT_REPLICATION_THROTTLE_LIMIT : replicationThrottleLimit,
+          balancerComputeThreads == null ? DEFAULT_BALANCER_COMPUTE_THREADS : balancerComputeThreads,
+          emitBalancingStats == null ? DEFAULT_EMIT_BALANCING_STATS : emitBalancingStats,
           killDataSourceWhitelist,
-          killAllDataSources == null ? false : killAllDataSources,
-          maxSegmentsInNodeLoadingQueue == null ? 0 : maxSegmentsInNodeLoadingQueue
+          killAllDataSources == null ? DEFAULT_KILL_ALL_DATA_SOURCES : killAllDataSources,
+          maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue
       );
     }
 
