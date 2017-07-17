@@ -61,7 +61,7 @@ import java.util.Map;
  *                                  .build();
  * </code></pre>
  *
- * @see io.druid.query.topn.TopNQuery
+ * @see TopNQuery
  */
 public class TopNQueryBuilder
 {

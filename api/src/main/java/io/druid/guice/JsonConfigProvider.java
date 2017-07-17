@@ -48,7 +48,7 @@ import java.util.Properties;
  * <h3>Implementation</h3>
  * <br/>
  * The state of {@code <T>} is defined by the value of the property {@code propertyBase}.
- * This value is a json structure, decoded via {@link JsonConfigurator#configurate(java.util.Properties, String, Class)}.
+ * This value is a json structure, decoded via {@link JsonConfigurator#configurate(Properties, String, Class)}.
  * <br/>
  *
  * An example might be if DruidServerConfig.class were

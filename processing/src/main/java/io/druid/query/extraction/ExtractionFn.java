@@ -116,8 +116,7 @@ public interface ExtractionFn
    * modified into another unique value. In the `MANY_TO_ONE` case, there is no longer a 1:1 relation between old dimension
    * value and new dimension value
    *
-   * @return {@link io.druid.query.extraction.ExtractionFn.ExtractionType} declaring what kind of manipulation this
-   * function does
+   * @return {@link ExtractionFn.ExtractionType} declaring what kind of manipulation this function does
    */
   public ExtractionType getExtractionType();
 
