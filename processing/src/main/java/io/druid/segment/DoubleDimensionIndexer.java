@@ -28,6 +28,7 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -217,19 +218,20 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   }
 
   @Override
-  public int compareUnsortedEncodedKeyComponents(Double lhs, Double rhs)
+  public int compareUnsortedEncodedKeyComponents(@Nullable Double lhs, @Nullable Double rhs)
   {
-    return Double.compare(lhs == null ? 0.0: lhs, rhs == null ? 0.0 : rhs);
+    // DimensionHandlerUtils.convertObjectToDouble is used to convert null to DoubleZero
+    return Double.compare(DimensionHandlerUtils.convertObjectToDouble(lhs), DimensionHandlerUtils.convertObjectToDouble(rhs));
   }
 
   @Override
-  public boolean checkUnsortedEncodedKeyComponentsEqual(Double lhs, Double rhs)
+  public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Double lhs, @Nullable Double rhs)
   {
     return Objects.equals(lhs, rhs);
   }
 
   @Override
-  public int getUnsortedEncodedKeyComponentHashCode(Double key)
+  public int getUnsortedEncodedKeyComponentHashCode(@Nullable Double key)
   {
     return Objects.hashCode(key);
   }

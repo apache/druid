@@ -28,7 +28,9 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
@@ -222,21 +224,22 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
 
   @Override
-  public int compareUnsortedEncodedKeyComponents(Long lhs, Long rhs)
+  public int compareUnsortedEncodedKeyComponents(@Nullable Long lhs, @Nullable Long rhs)
   {
-    return lhs.compareTo(rhs);
+    // DimensionHandlerUtils.convertObjectToLong is used to handel null to Zero Long
+    return DimensionHandlerUtils.convertObjectToLong(lhs).compareTo(DimensionHandlerUtils.convertObjectToLong(rhs));
   }
 
   @Override
-  public boolean checkUnsortedEncodedKeyComponentsEqual(Long lhs, Long rhs)
+  public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Long lhs, @Nullable Long rhs)
   {
-    return lhs.equals(rhs);
+    return Objects.equals(lhs, rhs);
   }
 
   @Override
-  public int getUnsortedEncodedKeyComponentHashCode(Long key)
+  public int getUnsortedEncodedKeyComponentHashCode(@Nullable Long key)
   {
-    return key.hashCode();
+    return Objects.hashCode(key);
   }
 
   @Override

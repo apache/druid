@@ -28,7 +28,9 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
 {
@@ -221,21 +223,22 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public int compareUnsortedEncodedKeyComponents(Float lhs, Float rhs)
+  public int compareUnsortedEncodedKeyComponents(@Nullable Float lhs, @Nullable Float rhs)
   {
-    return lhs.compareTo(rhs);
+    //DimensionHandlerUtils.convertObjectToFloat is used to convert nulls to Zero Floats
+    return DimensionHandlerUtils.convertObjectToFloat(lhs).compareTo(DimensionHandlerUtils.convertObjectToFloat(rhs));
   }
 
   @Override
-  public boolean checkUnsortedEncodedKeyComponentsEqual(Float lhs, Float rhs)
+  public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Float lhs, @Nullable Float rhs)
   {
-    return lhs.equals(rhs);
+    return Objects.equals(lhs, rhs);
   }
 
   @Override
-  public int getUnsortedEncodedKeyComponentHashCode(Float key)
+  public int getUnsortedEncodedKeyComponentHashCode(@Nullable Float key)
   {
-    return key.hashCode();
+    return Objects.hashCode(key);
   }
 
   @Override
