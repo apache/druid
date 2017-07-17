@@ -27,7 +27,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.collections.spatial.ImmutablePoint;
-import org.omg.PortableServer.POA;
 
 import java.nio.ByteBuffer;
 
@@ -125,13 +124,16 @@ public class PolygonBound extends RectangularBound
     int j = polyCorners - 1;
     boolean oddNodes = false;
     for (int i = 0; i < polyCorners; i++) {
-      if(abscissa[i] == coords[0] && ordinate[i] == coords[1])
+      if(abscissa[i] == coords[0] && ordinate[i] == coords[1]) {
         return true;
+      }
 
-      if(ordinate[i] == ordinate[j] && ordinate[j] == coords[1])
-        if((abscissa[i] < abscissa[j] && abscissa[j] > coords[0] && abscissa[i] < coords[0])
-        || (abscissa[i] > abscissa[j] && abscissa[j] < coords[0] && abscissa[i] > coords[0]))
+      if(ordinate[i] == ordinate[j] && ordinate[j] == coords[1]) {
+        if ((abscissa[i] < abscissa[j] && abscissa[j] > coords[0] && abscissa[i] < coords[0])
+                || (abscissa[i] > abscissa[j] && abscissa[j] < coords[0] && abscissa[i] > coords[0])) {
           return true;
+        }
+      }
 
       if ((ordinate[i] < coords[1] && ordinate[j] >= coords[1]
            || ordinate[j] < coords[1] && ordinate[i] >= coords[1])
