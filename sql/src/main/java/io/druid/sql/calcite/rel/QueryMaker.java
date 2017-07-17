@@ -27,6 +27,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import io.druid.client.DirectDruidClient;
 import io.druid.common.guava.GuavaUtils;
+import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -355,10 +356,10 @@ public class QueryMaker
                      walker,
                      DirectDruidClient.makeResponseContextForQuery(query, plannerContext.getQueryStartTimeMillis())
                  ),
-        new Function<io.druid.data.input.Row, Object[]>()
+        new Function<Row, Object[]>()
         {
           @Override
-          public Object[] apply(final io.druid.data.input.Row row)
+          public Object[] apply(final Row row)
           {
             final Object[] retVal = new Object[fieldList.size()];
             for (RelDataTypeField field : fieldList) {

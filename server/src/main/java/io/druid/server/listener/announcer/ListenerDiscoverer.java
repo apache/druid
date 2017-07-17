@@ -109,7 +109,7 @@ public class ListenerDiscoverer
     try {
       children = cf.getChildren().forPath(zkPath);
     }
-    catch (org.apache.zookeeper.KeeperException.NoNodeException e) {
+    catch (KeeperException.NoNodeException e) {
       LOG.debug(e, "No path found at [%s]", zkPath);
       return ImmutableMap.of();
     }

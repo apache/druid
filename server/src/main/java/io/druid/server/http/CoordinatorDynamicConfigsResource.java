@@ -76,15 +76,20 @@ public class CoordinatorDynamicConfigsResource
   // default value is used for backwards compatibility
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response setDynamicConfigs(final CoordinatorDynamicConfig dynamicConfig,
+  public Response setDynamicConfigs(final CoordinatorDynamicConfig.Builder dynamicConfigBuilder,
                                     @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
                                     @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
                                     @Context HttpServletRequest req
   )
   {
+    CoordinatorDynamicConfig current = manager.watch(
+        CoordinatorDynamicConfig.CONFIG_KEY,
+        CoordinatorDynamicConfig.class
+    ).get();
+
     if (!manager.set(
         CoordinatorDynamicConfig.CONFIG_KEY,
-        dynamicConfig,
+        current == null ? dynamicConfigBuilder.build() : dynamicConfigBuilder.build(current),
         new AuditInfo(author, comment, req.getRemoteAddr())
     )) {
       return Response.status(Response.Status.BAD_REQUEST).build();

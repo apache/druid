@@ -86,7 +86,7 @@ public class TaskLockbox
   }
 
   /**
-   * Wipe out our current in-memory state and resync it from our bundled {@link io.druid.indexing.overlord.TaskStorage}.
+   * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
    */
   public void syncFromStorage()
   {
@@ -184,7 +184,7 @@ public class TaskLockbox
    * @param interval interval to lock
    * @return acquired TaskLock
    *
-   * @throws java.lang.InterruptedException if the current thread is interrupted
+   * @throws InterruptedException if the current thread is interrupted
    */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {

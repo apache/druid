@@ -118,7 +118,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
   @Override
   public io.druid.client.cache.CacheStats getStats()
   {
-    final com.github.benmanes.caffeine.cache.stats.CacheStats stats = cache.stats();
+    final CacheStats stats = cache.stats();
     final long size = cache
         .policy().eviction()
         .map(eviction -> eviction.isWeighted() ? eviction.weightedSize() : OptionalLong.empty())

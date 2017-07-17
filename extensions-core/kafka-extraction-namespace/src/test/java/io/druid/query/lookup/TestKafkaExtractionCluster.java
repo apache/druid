@@ -42,6 +42,7 @@ import kafka.server.KafkaServer;
 import kafka.utils.Time;
 import kafka.utils.ZKStringSerializer$;
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.exception.ZkException;
 import org.apache.curator.test.TestingServer;
 import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
@@ -199,7 +200,7 @@ public class TestKafkaExtractionCluster
           try {
             zkClient.deleteRecursive(zkKafkaPath);
           }
-          catch (org.I0Itec.zkclient.exception.ZkException ex) {
+          catch (ZkException ex) {
             log.warn(ex, "error deleting %s zk node", zkKafkaPath);
           }
         }

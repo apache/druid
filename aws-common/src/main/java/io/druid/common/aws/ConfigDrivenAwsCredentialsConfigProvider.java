@@ -20,6 +20,7 @@
 package io.druid.common.aws;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.google.common.base.Strings;
 
@@ -32,10 +33,10 @@ public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsP
   }
 
   @Override
-  public com.amazonaws.auth.AWSCredentials getCredentials()
+  public AWSCredentials getCredentials()
   {
       if (!Strings.isNullOrEmpty(config.getAccessKey()) && !Strings.isNullOrEmpty(config.getSecretKey())) {
-        return new com.amazonaws.auth.AWSCredentials() {
+        return new AWSCredentials() {
           @Override
           public String getAWSAccessKeyId() {
             return config.getAccessKey();

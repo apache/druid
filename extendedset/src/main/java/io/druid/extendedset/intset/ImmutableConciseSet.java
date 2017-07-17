@@ -21,6 +21,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.primitives.Ints;
 import io.druid.extendedset.utilities.IntList;
+import org.roaringbitmap.IntIterator;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -1000,7 +1001,7 @@ public class ImmutableConciseSet
     return new WordIterator();
   }
 
-  public class WordIterator implements org.roaringbitmap.IntIterator, Cloneable
+  public class WordIterator implements IntIterator, Cloneable
   {
     private int startIndex;
     private int wordsWalked;
