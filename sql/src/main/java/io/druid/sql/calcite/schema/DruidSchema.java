@@ -190,7 +190,7 @@ public class DruidSchema extends AbstractSchema
 
                     // Compute the list of dataSources to rebuild tables for.
                     dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
-                    segmentsNeedingRefresh.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
+                    refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
                     dataSourcesNeedingRebuild.clear();
 
                     lock.notifyAll();
@@ -462,7 +462,7 @@ public class DruidSchema extends AbstractSchema
           if (rowSignature != null) {
             for (String column : rowSignature.getRowOrder()) {
               // Newer column types should override older ones.
-              columnTypes.put(column, rowSignature.getColumnType(column));
+              columnTypes.putIfAbsent(column, rowSignature.getColumnType(column));
             }
           }
         }

@@ -96,7 +96,6 @@ import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.schema.SchemaPlus;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;

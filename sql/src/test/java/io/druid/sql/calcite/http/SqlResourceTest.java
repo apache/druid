@@ -41,7 +41,6 @@ import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.http.SqlQuery;
 import io.druid.sql.http.SqlResource;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.ValidationException;
 import org.junit.After;
 import org.junit.Assert;

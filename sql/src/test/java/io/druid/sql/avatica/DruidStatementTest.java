@@ -33,7 +33,6 @@ import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.schema.SchemaPlus;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
