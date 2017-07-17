@@ -19,6 +19,7 @@
 
 package io.druid.guice;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
@@ -58,7 +59,7 @@ public class ServerModule implements DruidModule
   }
 
   @Override
-  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  public List<? extends Module> getJacksonModules()
   {
     return Collections.singletonList(
         new SimpleModule()

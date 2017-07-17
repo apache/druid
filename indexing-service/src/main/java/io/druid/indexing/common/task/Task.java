@@ -93,10 +93,10 @@ public interface Task
   }
 
   /**
-   * Returns a {@link io.druid.indexing.common.task.TaskResource} for this task. Task resources define specific
-   * worker requirements a task may require.
+   * Returns a {@link TaskResource} for this task. Task resources define specific worker requirements a task may
+   * require.
    *
-   * @return {@link io.druid.indexing.common.task.TaskResource} for this task
+   * @return {@link TaskResource} for this task
    */
   public TaskResource getTaskResource();
 

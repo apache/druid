@@ -288,7 +288,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   {
     synchronized (servers) {
       return Iterables.transform(
-          servers.values(), new com.google.common.base.Function<DruidServerHolder, DruidServer>()
+          servers.values(), new Function<DruidServerHolder, DruidServer>()
           {
             @Override
             public DruidServer apply(DruidServerHolder input)
