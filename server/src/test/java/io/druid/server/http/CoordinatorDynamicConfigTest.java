@@ -19,44 +19,22 @@
 
 package io.druid.server.http;
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
-import io.druid.common.config.JacksonConfigManager;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
+import io.druid.segment.TestHelper;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.easymock.EasyMock;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
 public class CoordinatorDynamicConfigTest
 {
-  private JacksonConfigManager configManager;
-  private ObjectMapper mapper;
-
-  @Before
-  public void setup()
-  {
-    mapper = new DefaultObjectMapper();
-    configManager = EasyMock.mock(JacksonConfigManager.class);
-    EasyMock.expect(
-        configManager.watch(
-            CoordinatorDynamicConfig.CONFIG_KEY,
-            CoordinatorDynamicConfig.class
-        )
-    ).andReturn(new AtomicReference<>(null)).anyTimes();
-    EasyMock.replay(configManager);
-    InjectableValues inject = new InjectableValues.Std().addValue(JacksonConfigManager.class, configManager);
-    mapper.setInjectableValues(inject);
-  }
+  private final ObjectMapper mapper = TestHelper.getJsonMapper();
 
   @Test
   public void testSerde() throws Exception
@@ -201,15 +179,8 @@ public class CoordinatorDynamicConfigTest
     CoordinatorDynamicConfig current = CoordinatorDynamicConfig.builder()
                                                                .withKillDataSourceWhitelist(ImmutableSet.of("x"))
                                                                .build();
-    JacksonConfigManager mock = EasyMock.mock(JacksonConfigManager.class);
-    EasyMock.expect(mock.watch(CoordinatorDynamicConfig.CONFIG_KEY, CoordinatorDynamicConfig.class)).andReturn(
-        new AtomicReference<>(current)
-    );
-    EasyMock.replay(mock);
-    Assert.assertEquals(
-        current,
-        new CoordinatorDynamicConfig(mock, null, null, null, null, null, null, null, null, null, null, null)
-    );
+
+    Assert.assertEquals(current, new CoordinatorDynamicConfig.Builder().build(current));
   }
 
   @Test
