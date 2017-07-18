@@ -125,23 +125,22 @@ public class PolygonBound extends RectangularBound
     boolean oddNodes = false;
     for (int i = 0; i < polyCorners; i++) {
 
-      if(abscissa[i] == coords[0] && ordinate[i] == coords[1]) {
+      if (abscissa[i] == coords[0] && ordinate[i] == coords[1]) {
         return true;
       }
 
-
-      if(isPointLayingOnHorizontalBound(i, j, coords)) {
+      if (ordinate[i] == ordinate[j] && ordinate[j] == coords[1] && between(i, j, coords)) {
         return true;
       }
 
-      if ((ordinate[i] < coords[1] && ordinate[j] >= coords[1] || ordinate[j] < coords[1] && ordinate[i] >= coords[1])
-          && (abscissa[i] <= coords[0] || abscissa[j] <= coords[0])) {
+      if ((ordinate[j] < coords[1] && ordinate[i] >= coords[1] || ordinate[i] < coords[1] && ordinate[j] >= coords[1])
+              && (abscissa[j] <= coords[0] || abscissa[i] <= coords[0])) {
+        float intersectionPointX = abscissa[i] + (coords[1] - ordinate[i]) / (ordinate[j] - ordinate[i]) * (abscissa[j] - abscissa[i]);
 
-        float intersection_x = abscissa[i] + (coords[1] - ordinate[i]) / (ordinate[j] - ordinate[i]) * (abscissa[j] - abscissa[i]);
-        if (intersection_x == coords[0]) {
+        if (intersectionPointX == coords[0]) {
           return true;
         }
-        else if (intersection_x < coords[0]) {
+        else if (intersectionPointX < coords[0]) {
           oddNodes = !oddNodes;
         }
       }
@@ -150,13 +149,10 @@ public class PolygonBound extends RectangularBound
     return oddNodes;
   }
 
-
-  private boolean isPointLayingOnHorizontalBound(int i, int j, float coords[]){
-    return ordinate[i] == ordinate[j] && ordinate[j] == coords[1] &&
-            ((abscissa[i] < abscissa[j] && abscissa[j] > coords[0] && abscissa[i] < coords[0])
-            || (abscissa[i] > abscissa[j] && abscissa[j] < coords[0] && abscissa[i] > coords[0]));
+  private boolean between(int i, int j, float coords[]) {
+    return (abscissa[i] < abscissa[j] && abscissa[j] > coords[0] && abscissa[i] < coords[0])
+            || (abscissa[i] > abscissa[j] && abscissa[j] < coords[0] && abscissa[i] > coords[0]);
   }
-
 
   @Override
   public Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points)
