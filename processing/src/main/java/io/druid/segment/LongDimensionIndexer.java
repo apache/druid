@@ -30,7 +30,6 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
@@ -232,13 +231,13 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Long lhs, @Nullable Long rhs)
   {
-    return Objects.equals(DimensionHandlerUtils.nullToZero(lhs), DimensionHandlerUtils.nullToZero(rhs));
+    return DimensionHandlerUtils.nullToZero(lhs).equals(DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Long key)
   {
-    return Objects.hashCode(DimensionHandlerUtils.nullToZero(key));
+    return DimensionHandlerUtils.nullToZero(key).hashCode();
   }
 
   @Override

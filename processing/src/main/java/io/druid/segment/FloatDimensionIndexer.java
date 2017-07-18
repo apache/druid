@@ -30,7 +30,6 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Objects;
 
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
 {
@@ -231,13 +230,13 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Float lhs, @Nullable Float rhs)
   {
-    return Objects.equals(DimensionHandlerUtils.nullToZero(lhs), DimensionHandlerUtils.nullToZero(rhs));
+    return DimensionHandlerUtils.nullToZero(lhs).equals(DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Float key)
   {
-    return Objects.hashCode(DimensionHandlerUtils.nullToZero(key));
+    return DimensionHandlerUtils.nullToZero(key).hashCode();
   }
 
   @Override
