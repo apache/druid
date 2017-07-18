@@ -138,8 +138,7 @@ public class PolygonBound extends RectangularBound
 
         if (intersectionPointX == coords[0]) {
           return true;
-        }
-        else if (intersectionPointX < coords[0]) {
+        } else if (intersectionPointX < coords[0]) {
           oddNodes = !oddNodes;
         }
       }
@@ -148,7 +147,8 @@ public class PolygonBound extends RectangularBound
     return oddNodes;
   }
 
-  private boolean isPointLayingOnHorizontalBound(int i, int j, float[] coords) {
+  private boolean isPointLayingOnHorizontalBound(int i, int j, float[] coords)
+  {
     return ordinate[i] == ordinate[j] && ordinate[j] == coords[1] && between(abscissa[i], abscissa[j], coords[0]);
   }
 
