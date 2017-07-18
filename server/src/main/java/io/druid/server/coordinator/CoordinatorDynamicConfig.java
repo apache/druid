@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import io.druid.java.util.common.IAE;
 
-import javax.ws.rs.HEAD;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
