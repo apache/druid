@@ -21,6 +21,7 @@ package io.druid.storage.azure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
@@ -37,6 +38,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -71,6 +73,12 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop()
   {
     return null;
+  }
+
+  @Override
+  public List<String> getAllowedPropertyPrefixesForHadoop()
+  {
+    return ImmutableList.of("druid.azure.");
   }
 
   public File createSegmentDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment) throws
