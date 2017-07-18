@@ -220,20 +220,19 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Double lhs, @Nullable Double rhs)
   {
-    // DimensionHandlerUtils.convertObjectToDouble is used to convert null to DoubleZero
-    return Double.compare(DimensionHandlerUtils.convertObjectToDouble(lhs), DimensionHandlerUtils.convertObjectToDouble(rhs));
+    return Double.compare(DimensionHandlerUtils.nullToZero(lhs), DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Double lhs, @Nullable Double rhs)
   {
-    return Objects.equals(lhs, rhs);
+    return Objects.equals(DimensionHandlerUtils.nullToZero(lhs), DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Double key)
   {
-    return Objects.hashCode(key);
+    return Objects.hashCode(DimensionHandlerUtils.nullToZero(key));
   }
 
   @Override

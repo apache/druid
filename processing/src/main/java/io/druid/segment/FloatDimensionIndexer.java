@@ -225,20 +225,19 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Float lhs, @Nullable Float rhs)
   {
-    //DimensionHandlerUtils.convertObjectToFloat is used to convert nulls to Zero Floats
-    return DimensionHandlerUtils.convertObjectToFloat(lhs).compareTo(DimensionHandlerUtils.convertObjectToFloat(rhs));
+    return DimensionHandlerUtils.nullToZero(lhs).compareTo(DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Float lhs, @Nullable Float rhs)
   {
-    return Objects.equals(lhs, rhs);
+    return Objects.equals(DimensionHandlerUtils.nullToZero(lhs), DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Float key)
   {
-    return Objects.hashCode(key);
+    return Objects.hashCode(DimensionHandlerUtils.nullToZero(key));
   }
 
   @Override

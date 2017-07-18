@@ -236,7 +236,7 @@ public final class DimensionHandlerUtils
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
-  public static Long convertObjectToLong(Object valObj)
+  public static Long convertObjectToLong(@Nullable Object valObj)
   {
     if (valObj == null) {
       return ZERO_LONG;
@@ -253,7 +253,7 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Float convertObjectToFloat(Object valObj)
+  public static Float convertObjectToFloat(@Nullable Object valObj)
   {
     if (valObj == null) {
       return ZERO_FLOAT;
@@ -265,6 +265,24 @@ public final class DimensionHandlerUtils
       return ((Number) valObj).floatValue();
     } else if (valObj instanceof String) {
       return Floats.tryParse((String) valObj);
+    } else {
+      throw new ParseException("Unknown type[%s]", valObj.getClass());
+    }
+  }
+
+  public static Double convertObjectToDouble(@Nullable Object valObj)
+  {
+    if (valObj == null) {
+      return ZERO_DOUBLE;
+    }
+
+    if (valObj instanceof Double) {
+      return (Double) valObj;
+    } else if (valObj instanceof Number) {
+      return ((Number) valObj).doubleValue();
+    } else if (valObj instanceof String) {
+      Double doubleValue = Doubles.tryParse((String) valObj);
+      return  doubleValue == null ? ZERO_DOUBLE : doubleValue;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -306,21 +324,15 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Double convertObjectToDouble(Object valObj)
-  {
-    if (valObj == null) {
-      return ZERO_DOUBLE;
-    }
+  public static Double nullToZero(@Nullable Double number) {
+    return number == null ? ZERO_DOUBLE : number;
+  }
 
-    if (valObj instanceof Double) {
-      return (Double) valObj;
-    } else if (valObj instanceof Number) {
-      return ((Number) valObj).doubleValue();
-    } else if (valObj instanceof String) {
-      Double doubleValue = Doubles.tryParse((String) valObj);
-      return  doubleValue == null ? ZERO_DOUBLE : doubleValue;
-    } else {
-      throw new ParseException("Unknown type[%s]", valObj.getClass());
-    }
+  public static Long nullToZero(@Nullable Long number) {
+    return number == null ? ZERO_LONG : number;
+  }
+
+  public static Float nullToZero(@Nullable Float number) {
+    return number == null ? ZERO_FLOAT : number;
   }
 }

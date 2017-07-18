@@ -226,20 +226,19 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Long lhs, @Nullable Long rhs)
   {
-    // DimensionHandlerUtils.convertObjectToLong is used to handel null to Zero Long
-    return DimensionHandlerUtils.convertObjectToLong(lhs).compareTo(DimensionHandlerUtils.convertObjectToLong(rhs));
+    return DimensionHandlerUtils.nullToZero(lhs).compareTo(DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Long lhs, @Nullable Long rhs)
   {
-    return Objects.equals(lhs, rhs);
+    return Objects.equals(DimensionHandlerUtils.nullToZero(lhs), DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Long key)
   {
-    return Objects.hashCode(key);
+    return Objects.hashCode(DimensionHandlerUtils.nullToZero(key));
   }
 
   @Override
