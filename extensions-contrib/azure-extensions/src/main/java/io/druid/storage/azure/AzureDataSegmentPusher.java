@@ -78,7 +78,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public List<String> getAllowedPropertyPrefixesForHadoop()
   {
-    return ImmutableList.of("druid.azure.");
+    return ImmutableList.of("druid.azure");
   }
 
   public File createSegmentDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment) throws

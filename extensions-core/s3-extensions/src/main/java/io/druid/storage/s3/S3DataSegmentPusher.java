@@ -84,7 +84,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public List<String> getAllowedPropertyPrefixesForHadoop()
   {
-    return ImmutableList.of("druid.s3.");
+    return ImmutableList.of("druid.s3");
   }
 
   @Override

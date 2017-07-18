@@ -80,7 +80,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   @Override
   public List<String> getAllowedPropertyPrefixesForHadoop()
   {
-    return ImmutableList.of("druid.google.");
+    return ImmutableList.of("druid.google");
   }
 
   public File createDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment)
