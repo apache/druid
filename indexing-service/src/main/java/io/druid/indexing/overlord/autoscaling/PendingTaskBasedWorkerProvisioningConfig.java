@@ -24,7 +24,7 @@ import org.joda.time.Period;
 
 /**
  */
-public class PendingTaskBasedWorkerResourceManagementConfig extends SimpleWorkerResourceManagementConfig
+public class PendingTaskBasedWorkerProvisioningConfig extends SimpleWorkerProvisioningConfig
 {
   @JsonProperty
   private int maxScalingStep = 10;
@@ -35,42 +35,42 @@ public class PendingTaskBasedWorkerResourceManagementConfig extends SimpleWorker
     return maxScalingStep;
   }
 
-  public PendingTaskBasedWorkerResourceManagementConfig setMaxScalingStep(int maxScalingStep)
+  public PendingTaskBasedWorkerProvisioningConfig setMaxScalingStep(int maxScalingStep)
   {
     this.maxScalingStep = maxScalingStep;
     return this;
   }
 
   @Override
-  public PendingTaskBasedWorkerResourceManagementConfig setWorkerIdleTimeout(Period workerIdleTimeout)
+  public PendingTaskBasedWorkerProvisioningConfig setWorkerIdleTimeout(Period workerIdleTimeout)
   {
     super.setWorkerIdleTimeout(workerIdleTimeout);
     return this;
   }
 
   @Override
-  public PendingTaskBasedWorkerResourceManagementConfig setMaxScalingDuration(Period maxScalingDuration)
+  public PendingTaskBasedWorkerProvisioningConfig setMaxScalingDuration(Period maxScalingDuration)
   {
     super.setMaxScalingDuration(maxScalingDuration);
     return this;
   }
 
   @Override
-  public PendingTaskBasedWorkerResourceManagementConfig setNumEventsToTrack(int numEventsToTrack)
+  public PendingTaskBasedWorkerProvisioningConfig setNumEventsToTrack(int numEventsToTrack)
   {
     super.setNumEventsToTrack(numEventsToTrack);
     return this;
   }
 
   @Override
-  public PendingTaskBasedWorkerResourceManagementConfig setWorkerVersion(String workerVersion)
+  public PendingTaskBasedWorkerProvisioningConfig setWorkerVersion(String workerVersion)
   {
     super.setWorkerVersion(workerVersion);
     return this;
   }
 
   @Override
-  public PendingTaskBasedWorkerResourceManagementConfig setPendingTaskTimeout(Period pendingTaskTimeout)
+  public PendingTaskBasedWorkerProvisioningConfig setPendingTaskTimeout(Period pendingTaskTimeout)
   {
     super.setPendingTaskTimeout(pendingTaskTimeout);
     return this;

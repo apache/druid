@@ -67,7 +67,7 @@ public class AppenderatorTest
   @Test
   public void testSimpleIngestion() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
 
@@ -138,7 +138,7 @@ public class AppenderatorTest
   @Test
   public void testMaxRowsInMemory() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(3)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(3, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
       final Supplier<Committer> committerSupplier = new Supplier<Committer>()
@@ -180,6 +180,8 @@ public class AppenderatorTest
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), IR("2000", "bob", 1), committerSupplier);
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.persist(ImmutableList.of(IDENTIFIERS.get(1)), committerSupplier.get());
+      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.close();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
     }
@@ -189,7 +191,7 @@ public class AppenderatorTest
   public void testRestoreFromDisk() throws Exception
   {
     final RealtimeTuningConfig tuningConfig;
-    try (final AppenderatorTester tester = new AppenderatorTester(2)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
       tuningConfig = tester.getTuningConfig();
 
@@ -231,7 +233,7 @@ public class AppenderatorTest
       appenderator.add(IDENTIFIERS.get(0), IR("2000", "bob", 5), committerSupplier);
       appenderator.close();
 
-      try (final AppenderatorTester tester2 = new AppenderatorTester(2, tuningConfig.getBasePersistDirectory())) {
+      try (final AppenderatorTester tester2 = new AppenderatorTester(2, tuningConfig.getBasePersistDirectory(), true)) {
         final Appenderator appenderator2 = tester2.getAppenderator();
         Assert.assertEquals(ImmutableMap.of("eventCount", 4), appenderator2.startJob());
         Assert.assertEquals(ImmutableList.of(IDENTIFIERS.get(0)), appenderator2.getSegments());
@@ -240,10 +242,52 @@ public class AppenderatorTest
     }
   }
 
+  @Test(timeout = 10000L)
+  public void testTotalRowCount() throws Exception
+  {
+    try (final AppenderatorTester tester = new AppenderatorTester(3, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
+      final Supplier<Committer> committerSupplier = committerSupplierFromConcurrentMap(commitMetadata);
+
+      Assert.assertEquals(0, appenderator.getTotalRowCount());
+      appenderator.startJob();
+      Assert.assertEquals(0, appenderator.getTotalRowCount());
+      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
+      Assert.assertEquals(1, appenderator.getTotalRowCount());
+      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
+      Assert.assertEquals(2, appenderator.getTotalRowCount());
+
+      appenderator.persistAll(committerSupplier.get()).get();
+      Assert.assertEquals(2, appenderator.getTotalRowCount());
+      appenderator.drop(IDENTIFIERS.get(0)).get();
+      Assert.assertEquals(1, appenderator.getTotalRowCount());
+      appenderator.drop(IDENTIFIERS.get(1)).get();
+      Assert.assertEquals(0, appenderator.getTotalRowCount());
+
+      appenderator.add(IDENTIFIERS.get(2), IR("2001", "bar", 1), committerSupplier);
+      Assert.assertEquals(1, appenderator.getTotalRowCount());
+      appenderator.add(IDENTIFIERS.get(2), IR("2001", "baz", 1), committerSupplier);
+      Assert.assertEquals(2, appenderator.getTotalRowCount());
+      appenderator.add(IDENTIFIERS.get(2), IR("2001", "qux", 1), committerSupplier);
+      Assert.assertEquals(3, appenderator.getTotalRowCount());
+      appenderator.add(IDENTIFIERS.get(2), IR("2001", "bob", 1), committerSupplier);
+      Assert.assertEquals(4, appenderator.getTotalRowCount());
+
+      appenderator.persistAll(committerSupplier.get()).get();
+      Assert.assertEquals(4, appenderator.getTotalRowCount());
+      appenderator.drop(IDENTIFIERS.get(2)).get();
+      Assert.assertEquals(0, appenderator.getTotalRowCount());
+
+      appenderator.close();
+      Assert.assertEquals(0, appenderator.getTotalRowCount());
+    }
+  }
+
   @Test
   public void testQueryByIntervals() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
@@ -379,7 +423,7 @@ public class AppenderatorTest
   @Test
   public void testQueryBySegments() throws Exception
   {
-    try (final AppenderatorTester tester = new AppenderatorTester(2)) {
+    try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();

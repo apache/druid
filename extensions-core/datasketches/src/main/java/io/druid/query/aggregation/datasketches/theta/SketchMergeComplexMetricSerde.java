@@ -69,7 +69,7 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
   {
-    GenericIndexed<Sketch> ge = GenericIndexed.read(buffer, strategy);
+    GenericIndexed<Sketch> ge = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
     builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), ge));
   }
 

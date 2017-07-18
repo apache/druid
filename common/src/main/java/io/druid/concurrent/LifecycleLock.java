@@ -212,7 +212,8 @@ public final class LifecycleLock
 
   /**
    * Awaits until {@link #exitStart()} is called, if needed, and returns {@code true} if {@link #started()} was called
-   * before that.
+   * before that. Returns {@code false} if {@link #started()} is not called before {@link #exitStart()}, or if {@link
+   * #canStop()} is already called on this LifecycleLock.
    */
   public boolean awaitStarted()
   {
@@ -222,7 +223,8 @@ public final class LifecycleLock
   /**
    * Awaits until {@link #exitStart()} is called for at most the specified timeout, and returns {@code true} if {@link
    * #started()} was called before that. Returns {@code false} if {@code started()} wasn't called before {@code
-   * exitStart()}, or if {@code exitStart()} isn't called on this LifecycleLock until the specified timeout expires.
+   * exitStart()}, or if {@code exitStart()} isn't called on this LifecycleLock until the specified timeout expires, or
+   * if {@link #canStop()} is already called on this LifecycleLock.
    */
   public boolean awaitStarted(long timeout, TimeUnit unit)
   {

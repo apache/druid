@@ -69,7 +69,7 @@ public class PolyBind
   }
 
   /**
-   * @deprecated use {@link #createChoiceWithDefault(com.google.inject.Binder, String, com.google.inject.Key, String)}
+   * @deprecated use {@link #createChoiceWithDefault(Binder, String, Key, String)}
    * instead. {@code defaultKey} argument is ignored.
    */
   @Deprecated

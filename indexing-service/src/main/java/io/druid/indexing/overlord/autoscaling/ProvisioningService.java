@@ -19,28 +19,23 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
-import io.druid.indexing.overlord.TaskRunner;
+import java.io.Closeable;
 
 /**
- * The ResourceManagementStrategy decides if worker nodes should be provisioned or determined
+ * The ProvisioningService decides if worker nodes should be provisioned or terminated
  * based on the available tasks in the system and the state of the workers in the system.
- * In general, the resource management is tied to the runner.
+ *
+ * ProvisioningService is tied to the task runner.
+ *
+ * @see ProvisioningStrategy#makeProvisioningService
  */
-public interface ResourceManagementStrategy<T extends TaskRunner>
+public interface ProvisioningService extends Closeable
 {
   /**
-   * Equivalent to start() but requires a specific runner instance which holds state of interest.
-   * This method is intended to be called from the TaskRunner's lifecycle
-   *
-   * @param runner The TaskRunner state holder this strategy should use during execution
+   * Should be called from TaskRunner's lifecycle stop
    */
-  void startManagement(T runner);
-
-  /**
-   * Equivalent to stop()
-   * Should be called from TaskRunner's lifecycle
-   */
-  void stopManagement();
+  @Override
+  void close();
 
   /**
    * Get any interesting stats related to scaling

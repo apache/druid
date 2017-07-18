@@ -22,6 +22,7 @@ package io.druid.guice;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provider;
@@ -68,7 +69,7 @@ public class GuiceInjectorsTest
     private Emitter emitter;
     private Injector injector;
 
-    @com.google.inject.Inject
+    @Inject
     public void configure(Injector injector) {
       this.injector = injector;
       emitter = injector.getInstance(Emitter.class);

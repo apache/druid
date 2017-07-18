@@ -17,24 +17,30 @@
  * under the License.
  */
 
-package io.druid.query.topn;
+package io.druid.guice;
 
-import io.druid.query.Result;
+import com.fasterxml.jackson.databind.Module;
+import com.google.inject.Binder;
+import io.druid.initialization.DruidModule;
+import io.druid.server.QueryResource;
+import io.druid.server.metrics.QueryCountStatsProvider;
 
-import java.util.Comparator;
+import java.util.Collections;
+import java.util.List;
 
-/**
- */
-public interface TopNResultMerger
+public class QueryablePeonModule implements DruidModule
 {
-  public static TopNResultMerger identity = new TopNResultMerger()
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    @Override
-    public Result<TopNResultValue> getResult(Result<TopNResultValue> result, Comparator comparator)
-    {
-      return result;
-    }
-  };
+    return Collections.emptyList();
+  }
 
-  public Result<TopNResultValue> getResult(Result<TopNResultValue> result, Comparator comparator);
+  @Override
+  public void configure(Binder binder)
+  {
+    binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
+    Jerseys.addResource(binder, QueryResource.class);
+    LifecycleModule.register(binder, QueryResource.class);
+  }
 }

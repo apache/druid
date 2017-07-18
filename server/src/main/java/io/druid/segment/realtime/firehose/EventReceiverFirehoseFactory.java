@@ -68,8 +68,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Builds firehoses that accept events through the {@link io.druid.segment.realtime.firehose.EventReceiver} interface. Can also register these
- * firehoses with an {@link io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider}.
+ * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
+ * firehoses with an {@link ServiceAnnouncingChatHandlerProvider}.
  */
 public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRowParser>
 {

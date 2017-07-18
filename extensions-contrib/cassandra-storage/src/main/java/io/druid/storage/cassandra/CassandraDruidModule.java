@@ -20,6 +20,7 @@
 package io.druid.storage.cassandra;
 
 import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
@@ -54,10 +55,10 @@ public class CassandraDruidModule implements DruidModule
   }
 
   @Override
-  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
-        new com.fasterxml.jackson.databind.Module()
+        new Module()
         {
           @Override
           public String getModuleName()

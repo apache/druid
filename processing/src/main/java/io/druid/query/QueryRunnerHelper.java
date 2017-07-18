@@ -64,7 +64,6 @@ public class QueryRunnerHelper
               @Override
               public Result<T> apply(Cursor input)
               {
-                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
                 return mapFn.apply(input);
               }
             }

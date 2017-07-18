@@ -25,6 +25,8 @@ import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 /**
  *
  */
@@ -85,7 +87,7 @@ public class StringFormatExtractionFnTest
     return new StringFormatExtractionFn(format, StringFormatExtractionFn.NullHandling.forValue(nullHandling));
   }
 
-  private void validateSerde(String json) throws java.io.IOException
+  private void validateSerde(String json) throws IOException
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     StringFormatExtractionFn extractionFn = (StringFormatExtractionFn) objectMapper.readValue(json, ExtractionFn.class);

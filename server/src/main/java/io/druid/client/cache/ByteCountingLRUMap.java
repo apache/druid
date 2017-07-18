@@ -88,7 +88,7 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
       if (logEvictions && evictionCount.get() % logEvictionCount == 0) {
         log.info(
             "Evicting %,dth element.  Size[%,d], numBytes[%,d], averageSize[%,d]",
-            evictionCount,
+            evictionCount.get(),
             size(),
             numBytes.get(),
             numBytes.get() / size()

@@ -269,7 +269,7 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        null
+        allowedHadoopPrefix
     );
   }
 
@@ -294,7 +294,7 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        null
+        allowedHadoopPrefix
     );
   }
 
@@ -319,7 +319,7 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        null
+        allowedHadoopPrefix
     );
   }
 

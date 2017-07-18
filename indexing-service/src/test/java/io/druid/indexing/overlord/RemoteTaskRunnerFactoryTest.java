@@ -26,9 +26,9 @@ import com.google.common.base.Supplier;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.indexing.common.TestUtils;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
-import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementConfig;
-import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -109,8 +109,8 @@ public class RemoteTaskRunnerFactoryTest
         return ScheduledExecutors.fixed(i, s);
       }
     };
-    SimpleWorkerResourceManagementConfig resourceManagementConfig = new SimpleWorkerResourceManagementConfig();
-    ResourceManagementSchedulerConfig resourceManagementSchedulerConfig = new ResourceManagementSchedulerConfig()
+    SimpleWorkerProvisioningConfig provisioningConfig = new SimpleWorkerProvisioningConfig();
+    ProvisioningSchedulerConfig provisioningSchedulerConfig = new ProvisioningSchedulerConfig()
     {
       @Override
       public boolean isDoAutoscale()
@@ -126,19 +126,18 @@ public class RemoteTaskRunnerFactoryTest
         httpClient,
         workerBehaviorConfig,
         executorFactory,
-        resourceManagementSchedulerConfig,
-        new SimpleWorkerResourceManagementStrategy(
-            resourceManagementConfig,
+        provisioningSchedulerConfig,
+        new SimpleWorkerProvisioningStrategy(
+            provisioningConfig,
             workerBehaviorConfig,
-            resourceManagementSchedulerConfig,
-            executorFactory
+            provisioningSchedulerConfig
         )
     );
-    Assert.assertEquals(1, executorCount.get());
+    Assert.assertEquals(0, executorCount.get());
     RemoteTaskRunner remoteTaskRunner1 = factory.build();
-    Assert.assertEquals(2, executorCount.get());
+    Assert.assertEquals(1, executorCount.get());
     RemoteTaskRunner remoteTaskRunner2 = factory.build();
-    Assert.assertEquals(3, executorCount.get());
+    Assert.assertEquals(2, executorCount.get());
 
   }
 }

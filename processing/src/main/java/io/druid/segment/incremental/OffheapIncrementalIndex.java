@@ -201,7 +201,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
         }
 
-        final Integer rowIndex = indexIncrement.getAndIncrement();
+        final int rowIndex = indexIncrement.getAndIncrement();
 
         // note that indexAndOffsets must be updated before facts, because as soon as we update facts
         // concurrent readers get hold of it and might ask for newly added row
