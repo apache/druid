@@ -30,9 +30,8 @@ public class IndexedLongsGenericColumn implements GenericColumn
 {
   private final IndexedLongs column;
 
-  public IndexedLongsGenericColumn(
-      final IndexedLongs column
-  ) {
+  public IndexedLongsGenericColumn(final IndexedLongs column)
+  {
     this.column = column;
   }
 

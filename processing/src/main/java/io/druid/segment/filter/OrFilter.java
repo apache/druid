@@ -107,7 +107,8 @@ public class OrFilter implements BooleanFilter
   }
 
 
-  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers){
+  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  {
     Preconditions.checkState(baseMatchers.length > 0);
 
     if (baseMatchers.length == 1) {

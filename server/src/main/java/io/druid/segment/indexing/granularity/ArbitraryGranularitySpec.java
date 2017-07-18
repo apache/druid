@@ -178,7 +178,8 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public GranularitySpec withIntervals(List<Interval> inputIntervals) {
+  public GranularitySpec withIntervals(List<Interval> inputIntervals)
+  {
     return new ArbitraryGranularitySpec(queryGranularity, rollup, inputIntervals);
   }
 }

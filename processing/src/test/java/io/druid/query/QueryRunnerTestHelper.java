@@ -73,6 +73,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -612,5 +613,14 @@ public class QueryRunnerTestHelper
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
+  }
+
+  public static Map<String, Object> orderedMap(Object... keyValues)
+  {
+    LinkedHashMap<String, Object> map = new LinkedHashMap<>();
+    for (int i = 0; i < keyValues.length; i += 2) {
+      map.put(keyValues[i].toString(), keyValues[i + 1]);
+    }
+    return map;
   }
 }

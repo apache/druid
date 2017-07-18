@@ -31,7 +31,8 @@ public class MappingYieldingAccumulator<OutType, InType, MappedType> extends Yie
   public MappingYieldingAccumulator(
       Function<InType, MappedType> fn,
       YieldingAccumulator<OutType, MappedType> baseAccumulator
-  ) {
+  )
+  {
     this.fn = fn;
     this.baseAccumulator = baseAccumulator;
   }

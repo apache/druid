@@ -37,6 +37,8 @@
   <suppress checks="UnusedImports" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="AvoidStarImport" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="FileTabCharacter" files="[\\/]target[\\/]generated-test-sources[\\/]" />
+  <suppress checks="LeftCurly" files="[\\/]target[\\/]generated-test-sources[\\/]" />
+  <suppress checks="RightCurly" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 
   <!-- extendedset is a fork of Alessandro Colantonio's CONCISE (COmpressed 'N' Composable Integer SEt) repository and licensed to Metamarkets under a CLA is not true. -->
   <suppress checks="Header" files="[\\/]extendedset[\\/]" />

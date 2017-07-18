@@ -93,7 +93,8 @@ public class SegmentChangeRequestHistoryTest
     try {
       history.getRequestsSince(new SegmentChangeRequestHistory.Counter(0, 1234)).get();
       Assert.fail();
-    } catch (ExecutionException ex) {
+    }
+    catch (ExecutionException ex) {
       Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
     }
 
@@ -106,7 +107,8 @@ public class SegmentChangeRequestHistoryTest
     try {
       history.getRequestsSince(new SegmentChangeRequestHistory.Counter(0, 1234)).get();
       Assert.fail();
-    } catch (ExecutionException ex) {
+    }
+    catch (ExecutionException ex) {
       Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
     }
 
@@ -117,7 +119,8 @@ public class SegmentChangeRequestHistoryTest
     try {
       history.getRequestsSince(new SegmentChangeRequestHistory.Counter(1, 1234)).get();
       Assert.fail();
-    } catch (ExecutionException ex) {
+    }
+    catch (ExecutionException ex) {
       Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
     }
 
@@ -134,7 +137,8 @@ public class SegmentChangeRequestHistoryTest
     try {
       history.getRequestsSince(new SegmentChangeRequestHistory.Counter(2, 1234)).get();
       Assert.fail();
-    } catch (ExecutionException ex) {
+    }
+    catch (ExecutionException ex) {
       Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
     }
   }

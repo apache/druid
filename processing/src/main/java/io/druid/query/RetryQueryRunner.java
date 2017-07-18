@@ -103,8 +103,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
               Sequences.simple(listOfSequences)).toYielder(
               initValue, accumulator
           );
-        }
-        else {
+        } else {
           return Iterables.getOnlyElement(listOfSequences).toYielder(initValue, accumulator);
         }
       }

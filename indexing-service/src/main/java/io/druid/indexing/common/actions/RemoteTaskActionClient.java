@@ -148,7 +148,8 @@ public class RemoteTaskActionClient implements TaskActionClient
     }
   }
 
-  private long jitter(long input){
+  private long jitter(long input)
+  {
     final double jitter = random.nextGaussian() * input / 4.0;
     long retval = input + (long)jitter;
     return retval < 0 ? 0 : retval;

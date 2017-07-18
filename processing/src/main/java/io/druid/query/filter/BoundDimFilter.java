@@ -152,7 +152,8 @@ public class BoundDimFilter implements DimFilter
     return longPredicateSupplier;
   }
 
-  public Supplier<DruidFloatPredicate> getFloatPredicateSupplier() {
+  public Supplier<DruidFloatPredicate> getFloatPredicateSupplier()
+  {
     return floatPredicateSupplier;
   }
 
@@ -364,7 +365,8 @@ public class BoundDimFilter implements DimFilter
                 try {
                   lowerLongBound = lowerBigDecimal.longValueExact();
                   hasLowerLongBound = true;
-                } catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
+                }
+                catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
                   hasLowerLongBound = false;
                   lowerLongBound = 0L;
                   if (lowerBigDecimal.compareTo(BigDecimal.ZERO) > 0) {
@@ -395,7 +397,8 @@ public class BoundDimFilter implements DimFilter
                 try {
                   upperLongBound = upperBigDecimal.longValueExact();
                   hasUpperLongBound = true;
-                } catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
+                }
+                catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
                   hasUpperLongBound = false;
                   upperLongBound = 0L;
                   if (upperBigDecimal.compareTo(BigDecimal.ZERO) < 0) {
@@ -437,7 +440,8 @@ public class BoundDimFilter implements DimFilter
     BigDecimal convertedBD;
     try {
       convertedBD = new BigDecimal(floatStr);
-    } catch (NumberFormatException nfe) {
+    }
+    catch (NumberFormatException nfe) {
       return null;
     }
 
@@ -454,7 +458,8 @@ public class BoundDimFilter implements DimFilter
     BigDecimal convertedBD;
     try {
       convertedBD = new BigDecimal(floatStr);
-    } catch (NumberFormatException nfe) {
+    }
+    catch (NumberFormatException nfe) {
       return null;
     }
 

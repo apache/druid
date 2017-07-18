@@ -106,10 +106,11 @@ public class FileRequestLogger implements RequestLogger
     }
   }
 
-  private OutputStreamWriter getFileWriter() throws FileNotFoundException {
+  private OutputStreamWriter getFileWriter() throws FileNotFoundException
+  {
     return new OutputStreamWriter(
-            new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
-            Charsets.UTF_8
+        new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
+        Charsets.UTF_8
     );
   }
 

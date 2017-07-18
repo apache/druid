@@ -60,14 +60,11 @@ import java.util.Arrays;
 @RunWith(Parameterized.class)
 public class BoundDimFilterTest
 {
-  public BoundDimFilterTest(BoundDimFilter boundDimFilter) {this.boundDimFilter = boundDimFilter;}
-
-  private final BoundDimFilter boundDimFilter;
-
   private static final ExtractionFn extractionFn = new RegexDimExtractionFn(".*", false, null);
 
   @Parameterized.Parameters
-  public static Iterable<Object[]>  constructorFeeder(){
+  public static Iterable<Object[]>  constructorFeeder()
+  {
 
     return ImmutableList.of(
         new Object[]{new BoundDimFilter("dimension", "12", "15", null, null, null, null,
@@ -89,6 +86,13 @@ public class BoundDimFilterTest
         new Object[]{new BoundDimFilter("dimension", null, "15", null, true, true, extractionFn,
                                         StringComparators.ALPHANUMERIC)}
     );
+  }
+
+  private final BoundDimFilter boundDimFilter;
+
+  public BoundDimFilterTest(BoundDimFilter boundDimFilter)
+  {
+    this.boundDimFilter = boundDimFilter;
   }
 
   @Test

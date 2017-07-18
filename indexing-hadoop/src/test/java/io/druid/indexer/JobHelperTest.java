@@ -197,6 +197,9 @@ public class JobHelperTest
       return job;
     }
 
-    public Map<String, String> getJobProperties() { return jobProperties; }
+    public Map<String, String> getJobProperties()
+    {
+      return jobProperties;
+    }
   }
 }

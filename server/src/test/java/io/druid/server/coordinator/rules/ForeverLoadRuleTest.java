@@ -49,7 +49,8 @@ public class ForeverLoadRuleTest
   }
 
   @Test
-  public void testMappingNullTieredReplicants() throws Exception{
+  public void testMappingNullTieredReplicants() throws Exception
+  {
     String inputJson = "{\n"
                       + " \"type\": \"loadForever\"\n"
                       + "}";

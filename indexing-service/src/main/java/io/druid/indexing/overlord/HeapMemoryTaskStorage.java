@@ -85,7 +85,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
       log.info("Inserting task %s with status: %s", task.getId(), status);
       tasks.put(task.getId(), new TaskStuff(task, status, new DateTime()));
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -102,7 +103,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
       } else {
         return Optional.absent();
       }
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -120,7 +122,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
       Preconditions.checkState(tasks.get(taskid).getStatus().isRunnable(), "Task status must be runnable: %s", taskid);
       log.info("Updating task %s to status: %s", taskid, status);
       tasks.put(taskid, tasks.get(taskid).withStatus(status));
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -137,7 +140,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
       } else {
         return Optional.absent();
       }
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -155,7 +159,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
         }
       }
       return listBuilder.build();
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -176,13 +181,14 @@ public class HeapMemoryTaskStorage implements TaskStorage
           return a.getCreatedDate().compareTo(b.getCreatedDate());
         }
       }.reverse();
-      for(final TaskStuff taskStuff : createdDateDesc.sortedCopy(tasks.values())) {
+      for (final TaskStuff taskStuff : createdDateDesc.sortedCopy(tasks.values())) {
         if(taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > recent) {
           returns.add(taskStuff.getStatus());
         }
       }
       return returns;
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -195,7 +201,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
     try {
       Preconditions.checkNotNull(taskLock, "taskLock");
       taskLocks.put(taskid, taskLock);
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -208,7 +215,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
     try {
       Preconditions.checkNotNull(taskLock, "taskLock");
       taskLocks.remove(taskid, taskLock);
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -220,7 +228,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       return ImmutableList.copyOf(taskLocks.get(taskid));
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -232,7 +241,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       taskActions.put(task.getId(), taskAction);
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -244,7 +254,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       return ImmutableList.copyOf(taskActions.get(taskid));
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }

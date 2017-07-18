@@ -377,7 +377,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 done = !foundMatched && (emptyRange || !baseIter.hasNext());
               }
 
-              private boolean beyondMaxRowIndex(int rowIndex) {
+              private boolean beyondMaxRowIndex(int rowIndex)
+              {
                 // ignore rows whose rowIndex is beyond the maxRowIndex
                 // rows are order by timestamp, not rowIndex,
                 // so we still need to go through all rows to skip rows added after cursor created

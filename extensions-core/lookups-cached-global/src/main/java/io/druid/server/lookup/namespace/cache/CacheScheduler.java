@@ -137,8 +137,8 @@ public final class CacheScheduler
    * that would be a leak preventing the Entry to be collected by GC, and therefore {@link #entryCleaner} to be run by
    * the JVM. Also, {@link #entryCleaner} must not reference the Entry through it's Runnable hunk.
    */
-  public class EntryImpl<T extends ExtractionNamespace> implements AutoCloseable {
-
+  public class EntryImpl<T extends ExtractionNamespace> implements AutoCloseable
+  {
     private final T namespace;
     private final String asString;
     private final AtomicReference<CacheState> cacheStateHolder = new AtomicReference<CacheState>(NoCache.CACHE_NOT_INITIALIZED);

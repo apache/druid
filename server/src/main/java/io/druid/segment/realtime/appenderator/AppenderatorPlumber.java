@@ -111,7 +111,8 @@ public class AppenderatorPlumber implements Plumber
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
 
-  public Map<Long, SegmentIdentifier> getSegmentsView() {
+  public Map<Long, SegmentIdentifier> getSegmentsView()
+  {
     return ImmutableMap.copyOf(segments);
   }
 

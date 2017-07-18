@@ -150,7 +150,8 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
     @GuardedBy("this")
     private State current;
 
-    private SynchronizedStateHolder(State initial) {
+    private SynchronizedStateHolder(State initial)
+    {
       current = initial;
     }
 

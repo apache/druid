@@ -21,12 +21,9 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -39,13 +36,6 @@ import java.util.regex.Pattern;
 public class MapBasedRow implements Row
 {
   private static final Logger log = new Logger(MapBasedRow.class);
-  private static final Function<Object, String> TO_STRING_INCLUDING_NULL = new Function<Object, String>() {
-    @Override
-    public String apply(final Object o)
-    {
-      return String.valueOf(o);
-    }
-  };
 
   private final DateTime timestamp;
   private final Map<String, Object> event;
@@ -98,9 +88,7 @@ public class MapBasedRow implements Row
       return Collections.emptyList();
     } else if (dimValue instanceof List) {
       // guava's toString function fails on null objects, so please do not use it
-      return Lists.transform(
-          (List) dimValue,
-          TO_STRING_INCLUDING_NULL);
+      return Lists.transform((List) dimValue, String::valueOf);
     } else {
       return Collections.singletonList(String.valueOf(dimValue));
     }

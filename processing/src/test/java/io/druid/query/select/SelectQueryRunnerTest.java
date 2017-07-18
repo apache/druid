@@ -148,7 +148,8 @@ public class SelectQueryRunnerTest
     this.descending = descending;
   }
 
-  private Druids.SelectQueryBuilder newTestQuery() {
+  private Druids.SelectQueryBuilder newTestQuery()
+  {
     return Druids.newSelectQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                  .dimensionSpecs(DefaultDimensionSpec.toSpec(Arrays.<String>asList()))
@@ -548,7 +549,8 @@ public class SelectQueryRunnerTest
   }
 
   @Test
-  public void testSelectWithFilterLookupExtractionFn () {
+  public void testSelectWithFilterLookupExtractionFn()
+  {
 
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("total_market","replaced");

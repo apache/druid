@@ -72,7 +72,8 @@ public class JavaScriptBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void close() {
+  public void close()
+  {
     script.close();
   }
 

@@ -30,10 +30,7 @@ public class UnioningOffset extends Offset
 
   private int nextOffsetIndex;
 
-  public UnioningOffset(
-      Offset lhs,
-      Offset rhs
-  )
+  public UnioningOffset(Offset lhs, Offset rhs)
   {
     if (lhs.withinBounds()) {
       offsets[0] = lhs;
@@ -42,8 +39,7 @@ public class UnioningOffset extends Offset
     if (rhs.withinBounds()) {
       if (offsets[0] == null) {
         offsets[0] = rhs;
-      }
-      else {
+      } else {
         offsets[1] = rhs;
       }
     }
@@ -68,7 +64,8 @@ public class UnioningOffset extends Offset
     this.nextOffsetIndex = nextOffsetIndex;
   }
 
-  private void figureOutNextValue() {
+  private void figureOutNextValue()
+  {
     if (offsets[0] != null) {
       if (offsets[1] != null) {
         int lhs = offsetVals[0];
@@ -79,28 +76,26 @@ public class UnioningOffset extends Offset
         } else if (lhs == rhs) {
           nextOffsetIndex = 0;
           rollIndexForward(1);
-        }
-        else {
+        } else {
           nextOffsetIndex = 1;
         }
-      }
-      else {
+      } else {
         nextOffsetIndex = 0;
       }
     }
   }
 
-  private void rollIndexForward(int i) {
+  private void rollIndexForward(int i)
+  {
     offsets[i].increment();
 
-    if (! offsets[i].withinBounds()) {
+    if (!offsets[i].withinBounds()) {
       offsets[i] = null;
       if (i == 0) {
         offsets[0] = offsets[1];
         offsetVals[0] = offsetVals[1];
       }
-    }
-    else {
+    } else {
       offsetVals[i] = offsets[i].getOffset();
     }
   }

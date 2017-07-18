@@ -105,7 +105,8 @@ public class GroupByQueryRunnerFactoryTest
                               )
                           )
                       );
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                       Throwables.propagate(e);
                       return null;
                     }

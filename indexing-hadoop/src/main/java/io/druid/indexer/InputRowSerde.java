@@ -20,7 +20,6 @@
 package io.druid.indexer;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataOutput;
@@ -121,8 +120,9 @@ public class InputRowSerde
       }
 
       return out.toByteArray();
-    } catch(IOException ex) {
-      throw Throwables.propagate(ex);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
   }
 
@@ -220,8 +220,9 @@ public class InputRowSerde
       }
 
       return new MapBasedInputRow(timestamp, dimensions, event);
-    } catch(IOException ex) {
-      throw Throwables.propagate(ex);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
   }
 

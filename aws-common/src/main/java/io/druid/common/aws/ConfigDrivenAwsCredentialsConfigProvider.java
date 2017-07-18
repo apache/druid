@@ -28,7 +28,8 @@ public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsP
 {
   private AWSCredentialsConfig config;
 
-  public ConfigDrivenAwsCredentialsConfigProvider(AWSCredentialsConfig config) {
+  public ConfigDrivenAwsCredentialsConfigProvider(AWSCredentialsConfig config)
+  {
     this.config = config;
   }
 
@@ -36,14 +37,17 @@ public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsP
   public AWSCredentials getCredentials()
   {
       if (!Strings.isNullOrEmpty(config.getAccessKey()) && !Strings.isNullOrEmpty(config.getSecretKey())) {
-        return new AWSCredentials() {
+        return new AWSCredentials()
+        {
           @Override
-          public String getAWSAccessKeyId() {
+          public String getAWSAccessKeyId()
+          {
             return config.getAccessKey();
           }
 
           @Override
-          public String getAWSSecretKey() {
+          public String getAWSSecretKey()
+          {
             return config.getSecretKey();
           }
         };

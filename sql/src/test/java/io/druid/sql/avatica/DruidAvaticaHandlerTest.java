@@ -570,7 +570,7 @@ public class DruidAvaticaHandlerTest
         Frame frame = super.fetch(statement, offset, fetchMaxRowCount);
         frames.add(frame);
         return frame;
-      };
+      }
     };
 
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(

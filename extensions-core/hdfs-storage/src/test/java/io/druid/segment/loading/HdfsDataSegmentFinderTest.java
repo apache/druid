@@ -245,8 +245,7 @@ public class HdfsDataSegmentFinderTest
         updatedSegment4_1 = dataSegment;
       } else if (dataSegment.getIdentifier().equals(SEGMENT_5.getIdentifier())) {
         updatedSegment5 = dataSegment;
-      }
-      else {
+      } else {
         Assert.fail("Unexpected segment");
       }
     }

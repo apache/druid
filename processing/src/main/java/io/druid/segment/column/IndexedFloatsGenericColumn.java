@@ -30,9 +30,8 @@ public class IndexedFloatsGenericColumn implements GenericColumn
 {
   private final IndexedFloats column;
 
-  public IndexedFloatsGenericColumn(
-      final IndexedFloats column
-  ) {
+  public IndexedFloatsGenericColumn(final IndexedFloats column)
+  {
     this.column = column;
   }
 

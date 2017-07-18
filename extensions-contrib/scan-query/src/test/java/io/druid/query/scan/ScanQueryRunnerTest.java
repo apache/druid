@@ -600,7 +600,8 @@ public class ScanQueryRunnerTest
     return results;
   }
 
-  private Iterable<ScanResultValue> compactedListToRow(Iterable<ScanResultValue> results) {
+  private Iterable<ScanResultValue> compactedListToRow(Iterable<ScanResultValue> results)
+  {
     return Iterables.transform(results, new Function<ScanResultValue, ScanResultValue>()
     {
       @Override

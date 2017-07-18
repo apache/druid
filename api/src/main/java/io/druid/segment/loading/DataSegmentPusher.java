@@ -38,10 +38,14 @@ public interface DataSegmentPusher
   DataSegment push(File file, DataSegment segment) throws IOException;
   //use map instead of LoadSpec class to avoid dependency pollution.
   Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath);
-  default String getStorageDir(DataSegment dataSegment) {
+
+  default String getStorageDir(DataSegment dataSegment)
+  {
     return getDefaultStorageDir(dataSegment);
   }
-  default String makeIndexPathName(DataSegment dataSegment, String indexName) {
+
+  default String makeIndexPathName(DataSegment dataSegment, String indexName)
+  {
     return StringUtils.format("./%s/%s", getStorageDir(dataSegment), indexName);
   }
 
@@ -49,7 +53,8 @@ public interface DataSegmentPusher
   // If above format is ever changed, make sure to change it appropriately in other places
   // e.g. HDFSDataSegmentKiller uses this information to clean the version, interval and dataSource directories
   // on segment deletion if segment being deleted was the only segment
-  static String getDefaultStorageDir(DataSegment segment) {
+  static String getDefaultStorageDir(DataSegment segment)
+  {
     return JOINER.join(
         segment.getDataSource(),
         StringUtils.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
