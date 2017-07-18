@@ -21,23 +21,24 @@ package io.druid.indexing.overlord.autoscaling;
 
 import io.druid.indexing.overlord.TaskRunner;
 
-public class NoopResourceManagementStrategy<T extends TaskRunner> implements ResourceManagementStrategy<T>
+public class NoopProvisioningStrategy<T extends TaskRunner> implements ProvisioningStrategy<T>
 {
   @Override
-  public void startManagement(T runner)
+  public ProvisioningService makeProvisioningService(T runner)
   {
+    return new ProvisioningService()
+    {
+      @Override
+      public void close()
+      {
+        // nothing to close
+      }
 
-  }
-
-  @Override
-  public void stopManagement()
-  {
-
-  }
-
-  @Override
-  public ScalingStats getStats()
-  {
-    return null;
+      @Override
+      public ScalingStats getStats()
+      {
+        return null;
+      }
+    };
   }
 }

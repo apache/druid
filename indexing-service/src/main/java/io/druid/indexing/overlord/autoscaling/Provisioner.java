@@ -17,33 +17,13 @@
  * under the License.
  */
 
-package io.druid.guice;
+package io.druid.indexing.overlord.autoscaling;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.Collections;
-import java.util.List;
-
-public class ModulesConfig
+interface Provisioner
 {
-  /**
-   * Canonical class names of modules, which should not be loaded despite they are founded in extensions from {@link
-   * ExtensionsConfig#loadList} or the standard list of modules loaded by some node type, e. g. {@code
-   * CliPeon}.
-   */
-  @JsonProperty
-  private List<String> excludeList = Collections.emptyList();
+  boolean doTerminate();
 
-  public List<String> getExcludeList()
-  {
-    return excludeList;
-  }
+  boolean doProvision();
 
-  @Override
-  public String toString()
-  {
-    return "ModulesConfig{" +
-           "excludeList=" + excludeList +
-           '}';
-  }
+  ScalingStats getStats();
 }

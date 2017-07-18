@@ -20,6 +20,7 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSSessionCredentials;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
@@ -103,7 +104,7 @@ public class S3StorageDruidModule implements DruidModule
   @LazySingleton
   public RestS3Service getRestS3Service(AWSCredentialsProvider provider)
   {
-    if (provider.getCredentials() instanceof com.amazonaws.auth.AWSSessionCredentials) {
+    if (provider.getCredentials() instanceof AWSSessionCredentials) {
       return new RestS3Service(new AWSSessionCredentialsAdapter(provider));
     } else {
       return new RestS3Service(new AWSCredentials(

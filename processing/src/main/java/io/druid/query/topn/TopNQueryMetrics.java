@@ -23,8 +23,6 @@ import io.druid.query.QueryMetrics;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 
-import java.util.List;
-
 /**
  * Specialization of {@link QueryMetrics} for {@link TopNQuery}.
  */
@@ -74,7 +72,7 @@ public interface TopNQueryMetrics extends QueryMetrics<TopNQuery>
   /**
    * Called with the number of rows, processed via each cursor, processed for the query within the segment. The total
    * number of processed rows, reported via this method for a TopNQueryMetrics instance, is smaller or equal to
-   * {@link #reportPreFilteredRows(long)}, because {@link #postFilters(List)} are additionally applied. If there
+   * {@link #reportPreFilteredRows(long)}, because {@link #postFilters} are additionally applied. If there
    * are no postFilters, preFilteredRows and processedRows are equal.
    */
   TopNQueryMetrics addProcessedRows(long numRows);

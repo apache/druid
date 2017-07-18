@@ -25,7 +25,7 @@ import org.joda.time.Period;
 
 /**
  */
-public class ResourceManagementSchedulerConfig
+public class ProvisioningSchedulerConfig
 {
   @JsonProperty
   private boolean doAutoscale = false;

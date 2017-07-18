@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
+import com.google.inject.ProvisionException;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
@@ -105,7 +106,7 @@ public class CacheConfigTest
     Assert.assertEquals(false, config.isUseCache());
   }
 
-  @Test(expected = com.google.inject.ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testValidationError()
   {
     properties.put(propertyPrefix + ".numBackgroundThreads", "-1");
@@ -116,7 +117,7 @@ public class CacheConfigTest
   }
 
 
-  @Test(expected = com.google.inject.ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testValidationInsaneError()
   {
     properties.put(propertyPrefix + ".numBackgroundThreads", "BABBA YAGA");
@@ -125,7 +126,7 @@ public class CacheConfigTest
     throw new IllegalStateException("Should have already failed");
   }
 
-  @Test(expected = com.google.inject.ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testTRUE()
   {
     properties.put(propertyPrefix + ".populateCache", "TRUE");
@@ -134,7 +135,7 @@ public class CacheConfigTest
     throw new IllegalStateException("Should have already failed");
   }
 
-  @Test(expected = com.google.inject.ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testFALSE()
   {
     properties.put(propertyPrefix + ".populateCache", "FALSE");
@@ -144,7 +145,7 @@ public class CacheConfigTest
   }
 
 
-  @Test(expected = com.google.inject.ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testFaLse()
   {
     properties.put(propertyPrefix + ".populateCache", "FaLse");

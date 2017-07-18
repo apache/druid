@@ -17,33 +17,20 @@
  * under the License.
  */
 
-package io.druid.guice;
+package io.druid.indexing.overlord.autoscaling;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.indexing.overlord.TaskRunner;
 
-import java.util.Collections;
-import java.util.List;
-
-public class ModulesConfig
+/**
+ * In general, the resource management is tied to the runner.
+ */
+public interface ProvisioningStrategy<T extends TaskRunner>
 {
   /**
-   * Canonical class names of modules, which should not be loaded despite they are founded in extensions from {@link
-   * ExtensionsConfig#loadList} or the standard list of modules loaded by some node type, e. g. {@code
-   * CliPeon}.
+   * Creates a new {@link ProvisioningService} for the given {@link TaskRunner}
+   * This method is intended to be called from the TaskRunner's lifecycle start
+   *
+   * @param runner The TaskRunner state holder this strategy should use during execution
    */
-  @JsonProperty
-  private List<String> excludeList = Collections.emptyList();
-
-  public List<String> getExcludeList()
-  {
-    return excludeList;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "ModulesConfig{" +
-           "excludeList=" + excludeList +
-           '}';
-  }
+  ProvisioningService makeProvisioningService(T runner);
 }

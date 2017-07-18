@@ -122,8 +122,8 @@ public class Initialization
 
   /**
    * Look for implementations for the given class from both classpath and extensions directory, using {@link
-   * java.util.ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if
-   * he/she does that, the one that is in the classpath will be loaded, the other will be ignored.
+   * ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if he/she
+   * does that, the one that is in the classpath will be loaded, the other will be ignored.
    *
    * @param config        Extensions configuration
    * @param serviceClass  The class to look the implementations of (e.g., DruidModule)
