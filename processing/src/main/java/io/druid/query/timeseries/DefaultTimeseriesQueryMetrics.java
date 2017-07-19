@@ -37,6 +37,7 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
     super.query(query);
     numMetrics(query);
     numComplexMetrics(query);
+    granularity(query.getGranularity());
   }
 
   @Override

@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
@@ -286,4 +287,10 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
    */
   void emit(ServiceEmitter emitter);
+
+  // Sets "query granularity".
+  default QueryMetrics<QueryType> granularity(Granularity granularity)
+  {
+    return this;
+  }
 }

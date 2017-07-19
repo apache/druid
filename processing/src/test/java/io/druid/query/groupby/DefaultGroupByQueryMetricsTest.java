@@ -93,7 +93,7 @@ public class DefaultGroupByQueryMetricsTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(15, actualEvent.size());
+    Assert.assertEquals(16, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
@@ -110,6 +110,7 @@ public class DefaultGroupByQueryMetricsTest
     Assert.assertEquals("1", actualEvent.get("numDimensions"));
     Assert.assertEquals("2", actualEvent.get("numMetrics"));
     Assert.assertEquals("0", actualEvent.get("numComplexMetrics"));
+    Assert.assertEquals("\"MONTH\"", actualEvent.get("granularity"));
 
     // Metric
     Assert.assertEquals("query/time", actualEvent.get("metric"));

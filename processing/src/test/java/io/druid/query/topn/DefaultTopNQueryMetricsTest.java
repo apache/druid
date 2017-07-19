@@ -71,7 +71,7 @@ public class DefaultTopNQueryMetricsTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(16, actualEvent.size());
+    Assert.assertEquals(17, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
@@ -91,6 +91,7 @@ public class DefaultTopNQueryMetricsTest
     Assert.assertEquals("tags", actualEvent.get("dimension"));
     Assert.assertEquals("1", actualEvent.get("numMetrics"));
     Assert.assertEquals("0", actualEvent.get("numComplexMetrics"));
+    Assert.assertEquals("{\"type\":\"all\"}", actualEvent.get("granularity"));
 
     // Metric
     Assert.assertEquals("query/time", actualEvent.get("metric"));

@@ -41,6 +41,7 @@ public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> impl
     dimension(query);
     numMetrics(query);
     numComplexMetrics(query);
+    granularity(query.getGranularity());
   }
 
   @Override

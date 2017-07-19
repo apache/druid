@@ -38,6 +38,7 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
     numDimensions(query);
     numMetrics(query);
     numComplexMetrics(query);
+    granularity(query.getGranularity());
   }
 
   @Override

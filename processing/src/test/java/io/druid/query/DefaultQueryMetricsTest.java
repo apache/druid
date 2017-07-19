@@ -66,10 +66,11 @@ public class DefaultQueryMetricsTest
         .filters(new SelectorDimFilter("tags", "t3", null))
         .build();
     queryMetrics.query(query);
+    queryMetrics.granularity(query.getGranularity());
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(12, actualEvent.size());
+    Assert.assertEquals(13, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
@@ -85,6 +86,7 @@ public class DefaultQueryMetricsTest
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
     Assert.assertEquals("query/time", actualEvent.get("metric"));
     Assert.assertEquals(0L, actualEvent.get("value"));
+    Assert.assertEquals("{\"type\":\"all\"}", actualEvent.get("granularity"));
   }
 
   @Test
