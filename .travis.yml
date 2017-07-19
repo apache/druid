@@ -18,12 +18,12 @@ matrix:
       # processing module test
     - sudo: false
       install: mvn install -q -ff -DskipTests -B
-      script: mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
+      script: mvn test -B -Pparallel-test -Dmaven.fork.count=1 -pl processing
 
       # non-processing modules test
     - sudo: false
       install: mvn install -q -ff -DskipTests -B
-      script: mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing'
+      script: mvn test -B -Pparallel-test -Dmaven.fork.count=1 -pl '!processing'
 
       # run integration tests
     - sudo: required
