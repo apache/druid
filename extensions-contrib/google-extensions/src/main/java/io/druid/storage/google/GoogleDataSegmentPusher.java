@@ -24,6 +24,7 @@ import com.google.api.client.http.InputStreamContent;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
@@ -38,6 +39,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Map;
 
 public class GoogleDataSegmentPusher implements DataSegmentPusher
@@ -73,6 +75,12 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop()
   {
     return StringUtils.format("gs://%s/%s", config.getBucket(), config.getPrefix());
+  }
+
+  @Override
+  public List<String> getAllowedPropertyPrefixesForHadoop()
+  {
+    return ImmutableList.of("druid.google");
   }
 
   public File createDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment)
