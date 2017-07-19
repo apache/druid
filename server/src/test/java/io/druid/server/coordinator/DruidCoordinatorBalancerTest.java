@@ -36,7 +36,6 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -174,8 +173,6 @@ public class DruidCoordinatorBalancerTest
     balancerStrategyExecutor.shutdownNow();
   }
 
-
-  @Ignore
   @Test
   public void testMoveToEmptyServerBalancer() throws IOException
   {
@@ -184,9 +181,6 @@ public class DruidCoordinatorBalancerTest
 
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
-
-    // Mock stuff that the coordinator needs
-    mockCoordinator(coordinator);
 
     BalancerStrategy predefinedPickOrderStrategy = new PredefinedPickOrderBalancerStrategy(
         balancerStrategy,
@@ -217,9 +211,6 @@ public class DruidCoordinatorBalancerTest
 
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
-
-    // Mock stuff that the coordinator needs
-    mockCoordinator(coordinator);
 
     BalancerStrategy predefinedPickOrderStrategy = new PredefinedPickOrderBalancerStrategy(
         balancerStrategy,
@@ -254,9 +245,6 @@ public class DruidCoordinatorBalancerTest
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
 
-    // Mock stuff that the coordinator needs
-    mockCoordinator(coordinator);
-
     DruidCoordinatorRuntimeParams params = defaullRuntimeParamsBuilder(
         ImmutableList.of(druidServer1, druidServer2),
         ImmutableList.of(peon1, peon2)
@@ -275,9 +263,6 @@ public class DruidCoordinatorBalancerTest
     mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyMap());
     mockDruidServer(druidServer3, "3", "normal", 0L, 100L, Collections.emptyMap());
     mockDruidServer(druidServer4, "4", "normal", 0L, 100L, Collections.emptyMap());
-
-    // Mock stuff that the coordinator needs
-    mockCoordinator(coordinator);
 
     DruidCoordinatorRuntimeParams params = defaullRuntimeParamsBuilder(druidServers, peons).build();
 
@@ -345,18 +330,6 @@ public class DruidCoordinatorBalancerTest
       EasyMock.expect(druidServer.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     }
     EasyMock.replay(druidServer);
-  }
-
-  private void mockCoordinator(DruidCoordinator coordinator)
-  {
-    coordinator.moveSegment(
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator);
   }
 
   private static class PredefinedPickOrderBalancerStrategy implements BalancerStrategy
