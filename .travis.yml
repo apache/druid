@@ -1,5 +1,7 @@
 language: java
 
+dist: precise
+
 jdk:
   - oraclejdk8
 
@@ -20,6 +22,7 @@ matrix:
         # Using && instead of independent script steps to make Travis build fail faster, if each step is not successful
         - echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B && rm ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2
     - sudo: required
+      dist: trusty
       services:
         - docker
       env:
