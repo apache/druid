@@ -50,7 +50,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
   private static final long defaultHandoffConditionTimeout = 0;
   private static final long defaultAlertTimeout = 0;
-  private static final Period defaultLockTimeoutMs = new Period("PT5m");
 
   private static File createNewBasePersistDirectory()
   {
@@ -75,8 +74,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         0,
         defaultReportParseExceptions,
         defaultHandoffConditionTimeout,
-        defaultAlertTimeout,
-        defaultLockTimeoutMs
+        defaultAlertTimeout
     );
   }
 
@@ -94,7 +92,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
   private final long alertTimeout;
-  private final Period lockTimeout;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -113,8 +110,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
-      @JsonProperty("alertTimeout") Long alertTimeout,
-      @JsonProperty("lockTimeout") Period lockTimeout
+      @JsonProperty("alertTimeout") Long alertTimeout
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -142,7 +138,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
     this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
-    this.lockTimeout = lockTimeout == null ? defaultLockTimeoutMs : lockTimeout;
   }
 
   @Override
@@ -245,12 +240,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return alertTimeout;
   }
 
-  @JsonProperty
-  public Period getLockTimeout()
-  {
-    return lockTimeout;
-  }
-
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -268,8 +257,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         mergeThreadPriority,
         reportParseExceptions,
         handoffConditionTimeout,
-        alertTimeout,
-        lockTimeout
+        alertTimeout
     );
   }
 
@@ -290,8 +278,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         mergeThreadPriority,
         reportParseExceptions,
         handoffConditionTimeout,
-        alertTimeout,
-        lockTimeout
+        alertTimeout
     );
   }
 }

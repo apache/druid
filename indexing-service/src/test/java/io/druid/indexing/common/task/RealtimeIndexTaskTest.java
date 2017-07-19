@@ -894,7 +894,6 @@ public class RealtimeIndexTaskTest
         0,
         reportParseExceptions,
         handoffTimeout,
-        null,
         null
     );
     return new RealtimeIndexTask(

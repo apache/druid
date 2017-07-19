@@ -207,7 +207,7 @@ public class RealtimeIndexTask extends AbstractTask
     // which will typically be either the main data processing loop or the persist thread.
 
     // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
-    final long lockTimeoutMs = spec.getTuningConfig().getLockTimeout().getMillis();
+    final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
     final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
     {
       @Override

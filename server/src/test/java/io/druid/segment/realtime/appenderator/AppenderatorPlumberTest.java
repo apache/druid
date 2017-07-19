@@ -28,7 +28,6 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -80,7 +79,6 @@ public class AppenderatorPlumberTest
         0,
         0,
         false,
-        null,
         null,
         null
     );

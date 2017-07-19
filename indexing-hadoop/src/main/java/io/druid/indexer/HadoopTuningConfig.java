@@ -30,7 +30,6 @@ import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.TuningConfig;
 import org.joda.time.DateTime;
-import org.joda.time.Period;
 
 import java.util.List;
 import java.util.Map;
@@ -46,7 +45,6 @@ public class HadoopTuningConfig implements TuningConfig
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 75000;
   private static final boolean DEFAULT_USE_COMBINER = false;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
-  private static final Period DEFAULT_LOCK_TIMEOUT = new Period("PT5m");
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
@@ -69,8 +67,7 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_NUM_BACKGROUND_PERSIST_THREADS,
         false,
         false,
-        null,
-        DEFAULT_LOCK_TIMEOUT
+        null
     );
   }
 
@@ -91,7 +88,6 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean forceExtendableShardSpecs;
   private final boolean useExplicitVersion;
   private final List<String> allowedHadoopPrefix;
-  private final Period lockTimeout;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -115,8 +111,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("numBackgroundPersistThreads") Integer numBackgroundPersistThreads,
       final @JsonProperty("forceExtendableShardSpecs") boolean forceExtendableShardSpecs,
       final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
-      final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix,
-      final @JsonProperty("lockTimeout") Period lockTimeout
+      final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix
   )
   {
     this.workingPath = workingPath;
@@ -143,7 +138,6 @@ public class HadoopTuningConfig implements TuningConfig
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
     this.useExplicitVersion = useExplicitVersion;
     this.allowedHadoopPrefix = allowedHadoopPrefix == null ? ImmutableList.of() : allowedHadoopPrefix;
-    this.lockTimeout = lockTimeout == null ? DEFAULT_LOCK_TIMEOUT : lockTimeout;
   }
 
   @JsonProperty
@@ -252,12 +246,6 @@ public class HadoopTuningConfig implements TuningConfig
     return useExplicitVersion;
   }
 
-  @JsonProperty
-  public Period getLockTimeout()
-  {
-    return lockTimeout;
-  }
-
   @JsonProperty("allowedHadoopPrefix")
   public List<String> getUserAllowedHadoopPrefix()
   {
@@ -286,8 +274,7 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        allowedHadoopPrefix,
-        lockTimeout
+        allowedHadoopPrefix
     );
   }
 
@@ -312,8 +299,7 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        allowedHadoopPrefix,
-        lockTimeout
+        allowedHadoopPrefix
     );
   }
 
@@ -338,8 +324,7 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        allowedHadoopPrefix,
-        lockTimeout
+        allowedHadoopPrefix
     );
   }
 }
