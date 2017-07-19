@@ -111,6 +111,7 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.<DataSegment>newHashSet()).anyTimes();
     EasyMock.replay(mockPeon);
 
     LoadRule rule = new LoadRule()
@@ -219,6 +220,7 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).anyTimes();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.<DataSegment>newHashSet()).anyTimes();
     EasyMock.replay(mockPeon);
 
     LoadRule rule = new LoadRule()
@@ -331,6 +333,7 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.<DataSegment>newHashSet()).anyTimes();
     EasyMock.replay(mockPeon);
 
     LoadRule rule = new LoadRule()
@@ -422,6 +425,7 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).anyTimes();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.<DataSegment>newHashSet()).anyTimes();
     EasyMock.replay(mockPeon);
 
     LoadRule rule = new LoadRule()
