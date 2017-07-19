@@ -29,6 +29,7 @@ matrix:
 
       # run integration tests
     - sudo: required
+      dist: trusty
       services:
         - docker
       env:
