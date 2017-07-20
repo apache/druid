@@ -61,6 +61,7 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -359,13 +360,22 @@ public class GroupByQueryEngineV2
           // Choose array-based aggregation if the grouping key is a single string dimension of a known cardinality
           if ((columnCapabilities == null || columnCapabilities.getType().equals(ValueType.STRING)) &&
               cardinality > 0) {
-            return new BufferArrayGrouper<>(
-                Suppliers.ofInstance(buffer),
-                keySerde,
-                cursor,
-                aggregatorFactories,
-                cardinality
-            );
+            final int keySize = BufferArrayGrouper.keySize(keySerde);
+            final int aggValuesSize = Arrays.stream(aggregatorFactories)
+                                            .mapToInt(AggregatorFactory::getMaxIntermediateSize)
+                                            .sum();
+            final int recordSize = keySize + aggValuesSize;
+
+            // Check that all keys and aggregated values can be contained the buffer
+            if (cardinality * recordSize < buffer.capacity()) {
+              return new BufferArrayGrouper<>(
+                  Suppliers.ofInstance(buffer),
+                  keySerde,
+                  cursor,
+                  aggregatorFactories,
+                  cardinality
+              );
+            }
           }
         }
       }
