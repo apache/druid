@@ -111,7 +111,7 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public AggregateResult aggregate(KeyType key, int dimIndex)
   {
-    Preconditions.checkArgument(dimIndex > -1, "Invalid dimIndex[%d]", dimIndex);
+    Preconditions.checkArgument(dimIndex > -1, "Invalid dimIndex[%s]", dimIndex);
 
     final ByteBuffer fromKey = keySerde.toByteBuffer(key);
     if (fromKey == null) {
