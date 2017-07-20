@@ -28,21 +28,10 @@ import io.druid.query.aggregation.BufferAggregator;
 
 import java.nio.ByteBuffer;
 
-public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
+public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyType>
 {
-  private static final AggregateResult DICTIONARY_FULL = AggregateResult.failure(
-      "Not enough dictionary space to execute this query. Try increasing "
-      + "druid.query.groupBy.maxMergingDictionarySize or enable disk spilling by setting "
-      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
-  );
-  private static final AggregateResult HASHTABLE_FULL = AggregateResult.failure(
-      "Not enough aggregation table space to execute this query. Try increasing "
-      + "druid.processing.buffer.sizeBytes or enable disk spilling by setting "
-      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
-  );
-
   protected static final int HASH_SIZE = Ints.BYTES;
-  protected static final Logger log = new Logger(AbstractBufferGrouper.class);
+  protected static final Logger log = new Logger(AbstractBufferHashGrouper.class);
 
   protected final Supplier<ByteBuffer> bufferSupplier;
   protected final KeySerde<KeyType> keySerde;
@@ -61,7 +50,7 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
   protected ByteBufferHashTable hashTable;
   protected ByteBuffer hashTableBuffer; // buffer for the entire hash table (total space, not individual growth)
 
-  public AbstractBufferGrouper(
+  public AbstractBufferHashGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
       final AggregatorFactory[] aggregatorFactories,
@@ -77,7 +66,7 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
   }
 
   /**
-   * Called when a new bucket is used for an entry in the hash table. An implementing BufferGrouper class
+   * Called when a new bucket is used for an entry in the hash table. An implementing BufferHashGrouper class
    * can use this to update its own state, e.g. tracking bucket offsets in a structure outside of the hash table.
    *
    * @param bucketOffset offset of the new bucket, within the buffer returned by hashTable.getTableBuffer()
@@ -95,7 +84,7 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
   public abstract boolean canSkipAggregate(boolean bucketWasUsed, int bucketOffset);
 
   /**
-   * Called after a row is aggregated. An implementing BufferGrouper class can use this to update
+   * Called after a row is aggregated. An implementing BufferHashGrouper class can use this to update
    * its own state, e.g. reading the new aggregated values for the row's key and acting on that information.
    *
    * @param bucketOffset Offset of the bucket containing the row that was aggregated,
@@ -134,7 +123,7 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
     if (keyBuffer == null) {
       // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
       // be correct.
-      return DICTIONARY_FULL;
+      return Groupers.DICTIONARY_FULL;
     }
 
     if (keyBuffer.remaining() != keySize) {
@@ -150,7 +139,7 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
     if (bucket < 0) {
       // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
       // be correct.
-      return HASHTABLE_FULL;
+      return Groupers.BUFFER_OVERFLOW;
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);

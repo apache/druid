@@ -41,7 +41,7 @@ public class ByteBufferMinMaxOffsetHeap
   private final Comparator maxComparator;
   private final ByteBuffer buf;
   private final int limit;
-  private final LimitedBufferGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater;
+  private final LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater;
 
   private int heapSize;
 
@@ -49,7 +49,7 @@ public class ByteBufferMinMaxOffsetHeap
       ByteBuffer buf,
       int limit,
       Comparator<Integer> minComparator,
-      LimitedBufferGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater
+      LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater
   )
   {
     this.buf = buf;

@@ -67,4 +67,16 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
   }
+
+  @Override
+  public Object getOnlyValue(ColumnValueSelector selector)
+  {
+    return ((DoubleColumnSelector) selector).get();
+  }
+
+  @Override
+  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putDouble(keyBufferPosition, (Double) obj);
+  }
 }

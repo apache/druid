@@ -287,7 +287,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
     );
 
-    // Don't apply limit here for inner results, that will be pushed down to the BufferGrouper
+    // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
     if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
       return query.postProcess(rowSequence);
     } else {
