@@ -42,6 +42,7 @@ import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
@@ -192,6 +193,29 @@ public class FilteredAggregatorTest
       {
         if (columnName.equals("value")) {
           return selector;
+        } else {
+          throw new UnsupportedOperationException();
+        }
+      }
+
+      @Override
+      public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+      {
+        if (columnName.equals("value")) {
+          return new DoubleColumnSelector()
+          {
+            @Override
+            public double get()
+            {
+              return (double) selector.get();
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+
+            }
+          };
         } else {
           throw new UnsupportedOperationException();
         }

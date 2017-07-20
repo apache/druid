@@ -27,6 +27,7 @@ import io.druid.java.util.common.StringUtils;
 public enum ValueType
 {
   FLOAT,
+  DOUBLE,
   LONG,
   STRING,
   COMPLEX;
@@ -38,5 +39,13 @@ public enum ValueType
       return null;
     }
     return valueOf(StringUtils.toUpperCase(name));
+  }
+
+  public static boolean isNumeric(ValueType type)
+  {
+    if (type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE) {
+      return true;
+    }
+    return false;
   }
 }

@@ -306,7 +306,7 @@ public class CalciteQueryTest
             new Object[]{"cnt", "BIGINT", "NO"},
             new Object[]{"dim1", "VARCHAR", "YES"},
             new Object[]{"dim2", "VARCHAR", "YES"},
-            new Object[]{"m1", "FLOAT", "NO"},
+            new Object[]{"m1", "DOUBLE", "NO"},
             new Object[]{"unique_dim1", "OTHER", "NO"}
         )
     );
@@ -1988,7 +1988,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{18L, 3.295836866004329, 2, 12, 3f + (double) ((float) Math.log(5.0))}
+            new Object[]{18L, 3.295836866004329, 2, 12, 3f + (Math.log(5.0))}
         )
     );
   }

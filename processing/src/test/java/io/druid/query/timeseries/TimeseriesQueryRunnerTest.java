@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.StringUtils;
+import com.google.common.primitives.Doubles;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -96,7 +97,8 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         // descending?
-        Arrays.asList(false, true)
+        Arrays.asList(false, true),
+        Arrays.asList(QueryRunnerTestHelper.commonDoubleAggregators, QueryRunnerTestHelper.commonFloatAggregators)
     );
   }
 
@@ -110,13 +112,16 @@ public class TimeseriesQueryRunnerTest
 
   protected final QueryRunner runner;
   protected final boolean descending;
+  private final List<AggregatorFactory> aggregatorFactoryList;
 
   public TimeseriesQueryRunnerTest(
-      QueryRunner runner, boolean descending
+      QueryRunner runner, boolean descending,
+      List<AggregatorFactory> aggregatorFactoryList
   )
   {
     this.runner = runner;
     this.descending = descending;
+    this.aggregatorFactoryList = aggregatorFactoryList;
   }
 
   @Test
@@ -207,15 +212,16 @@ public class TimeseriesQueryRunnerTest
       );
       Assert.assertEquals(
           result.toString(),
-          expectedIndex[count],
-          String.valueOf(value.getDoubleMetric("index"))
+          Doubles.tryParse(expectedIndex[count]).doubleValue(),
+          value.getDoubleMetric("index").doubleValue(),
+          value.getDoubleMetric("index").doubleValue() *  1e-6
       );
       Assert.assertEquals(
           result.toString(),
           new Double(expectedIndex[count]) +
           (QueryRunnerTestHelper.skippedDay.equals(current) ? 0L : 13L) + 1L,
           value.getDoubleMetric("addRowsIndexConstant"),
-          0.0
+          value.getDoubleMetric("addRowsIndexConstant") * 1e-6
       );
       Assert.assertEquals(
           value.getDoubleMetric("uniques"),
@@ -297,8 +303,8 @@ public class TimeseriesQueryRunnerTest
 
     final TimeseriesResultValue value = result.getValue();
 
-    Assert.assertEquals(result.toString(), 1870.06103515625, value.getDoubleMetric("maxIndex"), 0.0);
-    Assert.assertEquals(result.toString(), 59.02102279663086, value.getDoubleMetric("minIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 1870.061029, value.getDoubleMetric("maxIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 59.021022, value.getDoubleMetric("minIndex"), 0.0);
   }
 
   @Test
@@ -1142,7 +1148,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(andDimFilter)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1201,7 +1207,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(andDimFilter)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1260,7 +1266,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(andDimFilter)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(QueryRunnerTestHelper.commonDoubleAggregators)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1443,7 +1449,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(andDimFilter)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1488,7 +1494,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters("bobby", "billy")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1533,7 +1539,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters("bobby", "billy")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", "true"))
                                   .descending(descending)
@@ -1556,7 +1562,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters("bobby", null)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1601,7 +1607,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(new NotDimFilter(new SelectorDimFilter("bobby", "sally", null)))
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1646,7 +1652,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(QueryRunnerTestHelper.marketDimension, "billy")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1705,7 +1711,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(andDimFilter)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1941,7 +1947,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(QueryRunnerTestHelper.placementishDimension, "preferred")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1952,7 +1958,7 @@ public class TimeseriesQueryRunnerTest
                   .dataSource(QueryRunnerTestHelper.dataSource)
                   .granularity(QueryRunnerTestHelper.dayGran)
                   .intervals(QueryRunnerTestHelper.firstToThird)
-                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                  .aggregators(aggregatorFactoryList)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                   .descending(descending)
                   .build(),
@@ -1975,7 +1981,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(QueryRunnerTestHelper.placementishDimension, "a")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -1987,7 +1993,7 @@ public class TimeseriesQueryRunnerTest
                   .granularity(QueryRunnerTestHelper.dayGran)
                   .filters(QueryRunnerTestHelper.qualityDimension, "automotive")
                   .intervals(QueryRunnerTestHelper.firstToThird)
-                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                  .aggregators(aggregatorFactoryList)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                   .descending(descending)
                   .build(),
@@ -2024,7 +2030,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(andDimFilter)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -2051,7 +2057,7 @@ public class TimeseriesQueryRunnerTest
                   .granularity(QueryRunnerTestHelper.dayGran)
                   .filters(andDimFilter2)
                   .intervals(QueryRunnerTestHelper.firstToThird)
-                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                  .aggregators(aggregatorFactoryList)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                   .descending(descending)
                   .build(),
@@ -2087,7 +2093,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(andDimFilter)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                  .aggregators(aggregatorFactoryList)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
@@ -2117,7 +2123,7 @@ public class TimeseriesQueryRunnerTest
                   .granularity(QueryRunnerTestHelper.dayGran)
                   .filters(andDimFilter2)
                   .intervals(QueryRunnerTestHelper.firstToThird)
-                  .aggregators(QueryRunnerTestHelper.commonAggregators)
+                  .aggregators(aggregatorFactoryList)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                   .descending(descending)
                   .build(),
@@ -2142,7 +2148,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Lists.newArrayList(
                                           Iterables.concat(
-                                              QueryRunnerTestHelper.commonAggregators,
+                                              aggregatorFactoryList,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
                                                       new CountAggregatorFactory("filteredAgg"),
@@ -2191,7 +2197,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Lists.newArrayList(
                                           Iterables.concat(
-                                              QueryRunnerTestHelper.commonAggregators,
+                                              aggregatorFactoryList,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
                                                       new CountAggregatorFactory("filteredAgg"),
@@ -2241,7 +2247,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Lists.newArrayList(
                                           Iterables.concat(
-                                              QueryRunnerTestHelper.commonAggregators,
+                                              aggregatorFactoryList,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
                                                       new CountAggregatorFactory("filteredAgg"),
@@ -2291,7 +2297,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Lists.newArrayList(
                                           Iterables.concat(
-                                              QueryRunnerTestHelper.commonAggregators,
+                                              aggregatorFactoryList,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
                                                       new CountAggregatorFactory("filteredAgg"),
@@ -2342,7 +2348,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Lists.newArrayList(
                                           Iterables.concat(
-                                              QueryRunnerTestHelper.commonAggregators,
+                                              aggregatorFactoryList,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
                                                       new CountAggregatorFactory("filteredAgg"),

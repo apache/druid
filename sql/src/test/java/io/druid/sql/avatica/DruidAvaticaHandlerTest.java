@@ -354,8 +354,8 @@ public class DruidAvaticaHandlerTest
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m1"),
-                Pair.of("DATA_TYPE", Types.FLOAT),
-                Pair.of("TYPE_NAME", "FLOAT"),
+                Pair.of("DATA_TYPE", Types.DOUBLE),
+                Pair.of("TYPE_NAME", "DOUBLE"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(

@@ -389,7 +389,7 @@ public class SchemalessIndexTest
     }
   }
 
-  private static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
+  public static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
   {
     URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading resource[%s]", resource);
