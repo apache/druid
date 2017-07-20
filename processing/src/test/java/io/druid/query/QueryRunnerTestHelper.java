@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.core.NoopEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -38,6 +37,7 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FloatSumAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
@@ -81,14 +81,7 @@ import java.util.Map;
 public class QueryRunnerTestHelper
 {
 
-  public static final QueryWatcher NOOP_QUERYWATCHER = new QueryWatcher()
-  {
-    @Override
-    public void registerQuery(Query query, ListenableFuture future)
-    {
-
-    }
-  };
+  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
 
   public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
@@ -105,8 +98,6 @@ public class QueryRunnerTestHelper
           }
       )
   );
-
-  public static final DateTime minTime = new DateTime("2011-01-12T00:00:00.000Z");
 
   public static final Granularity dayGran = Granularities.DAY;
   public static final Granularity allGran = Granularities.ALL;
@@ -127,8 +118,6 @@ public class QueryRunnerTestHelper
   public static final String indexMetric = "index";
   public static final String uniqueMetric = "uniques";
   public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
-  public static final List<String> metrics = Lists.newArrayList(indexMetric, uniqueMetric, addRowsIndexConstantMetric);
-
   public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", indexMetric);
@@ -199,10 +188,19 @@ public class QueryRunnerTestHelper
       )
   );
 
-  public static final List<AggregatorFactory> commonAggregators = Arrays.asList(
+  public static final List<AggregatorFactory> commonDoubleAggregators = Arrays.asList(
       rowsCount,
       indexDoubleSum,
       qualityUniques
+  );
+
+  public final static List<AggregatorFactory> commonFloatAggregators = Arrays.asList(
+      new FloatSumAggregatorFactory("index", "indexFloat"),
+      new CountAggregatorFactory("rows"),
+      new HyperUniquesAggregatorFactory(
+          "uniques",
+          "quality_uniques"
+      )
   );
 
   public static final double UNIQUES_9 = 9.019833517963864;

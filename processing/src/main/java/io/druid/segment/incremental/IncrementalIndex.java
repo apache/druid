@@ -50,6 +50,7 @@ import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
@@ -97,12 +98,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
   private static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
       .put(Long.class, ValueType.LONG)
-      .put(Double.class, ValueType.FLOAT)
+      .put(Double.class, ValueType.DOUBLE)
       .put(Float.class, ValueType.FLOAT)
       .put(String.class, ValueType.STRING)
       .put(DimensionSchema.ValueType.LONG, ValueType.LONG)
       .put(DimensionSchema.ValueType.FLOAT, ValueType.FLOAT)
       .put(DimensionSchema.ValueType.STRING, ValueType.STRING)
+      .put(DimensionSchema.ValueType.DOUBLE, ValueType.DOUBLE)
       .build();
 
   /**
@@ -182,6 +184,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       public ColumnCapabilities getColumnCapabilities(String columnName)
       {
         return baseSelectorFactory.getColumnCapabilities(columnName);
+      }
+
+      @Override
+      public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+      {
+        return baseSelectorFactory.makeDoubleColumnSelector(columnName);
       }
     }
 
@@ -438,6 +446,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   protected abstract Object getMetricObjectValue(int rowOffset, int aggOffset);
 
+  protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
+
   @Override
   public void close()
   {
@@ -658,6 +668,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     switch (metricDesc.getCapabilities().getType()) {
       case COMPLEX:
         return ComplexMetrics.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();
+      case DOUBLE:
+        return Double.class;
       case FLOAT:
         return Float.class;
       case LONG:
@@ -905,6 +917,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         this.type = typeInfo;
       } else if (typeInfo.equalsIgnoreCase("long")) {
         capabilities.setType(ValueType.LONG);
+        this.type = typeInfo;
+      } else if (typeInfo.equalsIgnoreCase("double")) {
+        capabilities.setType(ValueType.DOUBLE);
         this.type = typeInfo;
       } else {
         capabilities.setType(ValueType.COMPLEX);

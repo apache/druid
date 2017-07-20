@@ -72,6 +72,12 @@ public class JavaScriptBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
+  }
+
+  @Override
   public void close() {
     script.close();
   }

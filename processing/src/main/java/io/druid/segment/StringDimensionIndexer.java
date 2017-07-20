@@ -569,6 +569,14 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+  )
+  {
+    return ZeroDoubleColumnSelector.instance();
+  }
+
+  @Override
   public ObjectColumnSelector makeObjectColumnSelector(
       final DimensionSpec spec,
       final IncrementalIndexStorageAdapter.EntryHolder currEntry,

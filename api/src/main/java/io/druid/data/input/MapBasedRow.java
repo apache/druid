@@ -23,10 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-
-import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -38,14 +35,7 @@ import java.util.regex.Pattern;
  */
 public class MapBasedRow implements Row
 {
-  private static final Logger log = new Logger(MapBasedRow.class);
-  private static final Function<Object, String> TO_STRING_INCLUDING_NULL = new Function<Object, String>() {
-    @Override
-    public String apply(final Object o)
-    {
-      return String.valueOf(o);
-    }
-  };
+  private static final Function<Object, String> TO_STRING_INCLUDING_NULL = String::valueOf;
 
   private final DateTime timestamp;
   private final Map<String, Object> event;
@@ -150,6 +140,29 @@ public class MapBasedRow implements Row
       try {
         String s = ((String) metricValue).replace(",", "");
         return LONG_PAT.matcher(s).matches() ? Long.valueOf(s) : Double.valueOf(s).longValue();
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s]", metricValue.getClass());
+    }
+  }
+
+  @Override
+  public double getDoubleMetric(String metric)
+  {
+    Object metricValue = event.get(metric);
+
+    if (metricValue == null) {
+      return 0.0d;
+    }
+
+    if (metricValue instanceof Number) {
+      return ((Number) metricValue).doubleValue();
+    } else if (metricValue instanceof String) {
+      try {
+        return Double.valueOf(((String) metricValue).replace(",", ""));
       }
       catch (Exception e) {
         throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
