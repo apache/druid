@@ -139,7 +139,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     if (bucket < 0) {
       // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
       // be correct.
-      return Groupers.BUFFER_OVERFLOW;
+      return Groupers.HASH_TABLE_FULL;
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);

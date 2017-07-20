@@ -36,7 +36,7 @@ public class Groupers
       + "druid.query.groupBy.maxMergingDictionarySize or enable disk spilling by setting "
       + "druid.query.groupBy.maxOnDiskStorage to a positive number."
   );
-  static final AggregateResult BUFFER_OVERFLOW = AggregateResult.failure(
+  static final AggregateResult HASH_TABLE_FULL = AggregateResult.failure(
       "Not enough aggregation buffer space to execute this query. Try increasing "
       + "druid.processing.buffer.sizeBytes or enable disk spilling by setting "
       + "druid.query.groupBy.maxOnDiskStorage to a positive number."

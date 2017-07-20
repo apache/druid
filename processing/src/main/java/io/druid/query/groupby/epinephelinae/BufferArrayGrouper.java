@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
@@ -110,6 +111,8 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public AggregateResult aggregate(KeyType key, int dimIndex)
   {
+    Preconditions.checkArgument(dimIndex > -1, "Invalid dimIndex[%d]", dimIndex);
+
     final ByteBuffer fromKey = keySerde.toByteBuffer(key);
     if (fromKey == null) {
       // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
@@ -128,9 +131,14 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
     final int recordOffset = dimIndex * recordSize;
 
     if (recordOffset + recordSize > keyBuffer.capacity()) {
-      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
-      // be correct.
-      return Groupers.BUFFER_OVERFLOW;
+      // This error cannot be recoverd, and the query must fail
+      throw new ISE(
+          "A record of size [%d] cannot be written to the array buffer at offset[%d] "
+          + "because it exceeds the buffer capacity[%d]. Try increasing druid.processing.buffer.sizeBytes",
+          recordSize,
+          recordOffset,
+          keyBuffer.capacity()
+      );
     }
 
     if (!isUsedKey(keyBuffer, recordOffset)) {
