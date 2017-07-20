@@ -138,7 +138,18 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     );
   }
 
-  private class SpecificQueryRunner
+  @Override
+  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  {
+    return new SpecificQueryRunnable(queryPlus, responseContext).run();
+  }
+
+  /**
+   * This class essentially incapsulates the whole logic of {@link CachingClusteredClient}. It's state and methods
+   * couldn't belong to {@link CachingClusteredClient} itself, because they depend on the specific query object being
+   * run, but {@link QueryRunner} API is designed so that implementations should be able to accept arbitrary queries.
+   */
+  private class SpecificQueryRunnable
   {
     private final QueryPlus<T> queryPlus;
     private final Map<String, Object> responseContext;
@@ -153,7 +164,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     private final Query<T> downstreamQuery;
     private final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    SpecificQueryRunner(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+    SpecificQueryRunnable(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
     {
       this.queryPlus = queryPlus;
       this.responseContext = responseContext;
@@ -417,18 +428,18 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(Set<ServerToSegment> segments)
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = Maps.newTreeMap();
-      for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
-        final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
+      for (ServerToSegment serverToSegment : segments) {
+        final QueryableDruidServer queryableDruidServer = serverToSegment.lhs.pick();
 
         if (queryableDruidServer == null) {
           log.makeAlert(
               "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
-              segment.rhs,
+              serverToSegment.rhs,
               query.getDataSource()
           ).emit();
         } else {
           final DruidServer server = queryableDruidServer.getServer();
-          serverSegments.computeIfAbsent(server, s -> new ArrayList<>()).add(segment.rhs);
+          serverSegments.computeIfAbsent(server, s -> new ArrayList<>()).add(serverToSegment.rhs);
         }
       }
       return serverSegments;
@@ -599,12 +610,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         );
       }
     }
-  }
-
-  @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
-  {
-    return new SpecificQueryRunner(queryPlus, responseContext).run();
   }
 
   private static class ServerToSegment extends Pair<ServerSelector, SegmentDescriptor>
