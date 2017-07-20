@@ -558,57 +558,26 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       return resultsBySegments
           .map(result -> {
             final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
-            @Nullable
             final CachePopulator cachePopulator =
                 getCachePopulator(resultsOfSegment.getSegmentId(), resultsOfSegment.getInterval());
-            final ConcurrentLinkedQueue<ListenableFuture<Object>> cacheFutures = new ConcurrentLinkedQueue<>();
-            return Sequences
+            Sequence<T> res = Sequences
                 .simple(resultsOfSegment.getResults())
                 .map(r -> {
                   if (cachePopulator != null) {
                     // only compute cache data if populating cache
-                    cacheFutures.add(backgroundExecutorService.submit(() -> cacheFn.apply(r)));
+                    cachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cacheFn.apply(r)));
                   }
                   return r;
                 })
                 .map(
                     toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
-                )
-                .withEffect(
-                    () -> populateCache(cachePopulator, cacheFutures),
-                    MoreExecutors.sameThreadExecutor()
                 );
+            if (cachePopulator != null) {
+              res = res.withEffect(cachePopulator::populate, MoreExecutors.sameThreadExecutor());
+            }
+            return res;
           })
           .flatMerge(seq -> seq, query.getResultOrdering());
-    }
-
-    private void populateCache(
-        @Nullable final CachePopulator cachePopulator,
-        final ConcurrentLinkedQueue<ListenableFuture<Object>> cacheFutures
-    )
-    {
-      if (cachePopulator != null) {
-        Futures.addCallback(
-            Futures.allAsList(cacheFutures),
-            new FutureCallback<List<Object>>()
-            {
-              @Override
-              public void onSuccess(List<Object> cacheData)
-              {
-                cachePopulator.populate(cacheData);
-                // Help out GC by making sure all references are gone
-                cacheFutures.clear();
-              }
-
-              @Override
-              public void onFailure(Throwable throwable)
-              {
-                log.error(throwable, "Background caching failed");
-              }
-            },
-            backgroundExecutorService
-        );
-      }
     }
   }
 
@@ -630,11 +599,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     }
   }
 
-  private static class CachePopulator
+  private class CachePopulator
   {
     private final Cache cache;
     private final ObjectMapper mapper;
     private final Cache.NamedKey key;
+    private final ConcurrentLinkedQueue<ListenableFuture<Object>> cacheFutures = new ConcurrentLinkedQueue<>();
 
     CachePopulator(Cache cache, ObjectMapper mapper, Cache.NamedKey key)
     {
@@ -643,9 +613,28 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       this.key = key;
     }
 
-    public void populate(Iterable<Object> results)
+    public void populate()
     {
-      CacheUtil.populate(cache, mapper, key, results);
+      Futures.addCallback(
+          Futures.allAsList(cacheFutures),
+          new FutureCallback<List<Object>>()
+          {
+            @Override
+            public void onSuccess(List<Object> cacheData)
+            {
+              CacheUtil.populate(cache, mapper, key, cacheData);
+              // Help out GC by making sure all references are gone
+              cacheFutures.clear();
+            }
+
+            @Override
+            public void onFailure(Throwable throwable)
+            {
+              log.error(throwable, "Background caching failed");
+            }
+          },
+          backgroundExecutorService
+      );
     }
   }
 }
