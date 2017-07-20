@@ -96,7 +96,6 @@ import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.schema.SchemaPlus;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -5351,11 +5350,10 @@ public class CalciteQueryTest
   {
     final InProcessViewManager viewManager = new InProcessViewManager();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig, viewManager);
-    final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        druidSchema,
         walker,
         operatorTable,
         macroTable,
