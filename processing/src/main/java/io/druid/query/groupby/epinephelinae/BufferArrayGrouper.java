@@ -26,6 +26,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
@@ -37,7 +38,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * A grouper for array-based aggregation. The array consists of records. The memory format of the record is like below.
+ * A grouper for array-based aggregation.  The array consists of records.  The first record is to store
+ * {@link StringGroupByColumnSelectorStrategy#GROUP_BY_MISSING_VALUE}.
+ * The memory format of the record is like below.
  *
  * +---------------+----------+--------------------+--------------------+-----+
  * | used flag (4) |  key (4) | agg_1 (fixed size) | agg_2 (fixed size) | ... |
@@ -151,7 +154,7 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
     // Here, the key contains the dictionary-encoded value of the grouping key
     // and we use it as the index for the aggregation array.
     final ByteBuffer fromKey = keySerde.toByteBuffer(key);
-    final int dimIndex = fromKey.getInt();
+    final int dimIndex = fromKey.getInt() + 1; // the first index is for missing value
     fromKey.rewind();
     return aggregate(key, dimIndex);
   }
@@ -164,7 +167,8 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public void reset()
   {
-    for (int i = 0; i < cardinality; i++) {
+    keyBuffer.putInt(0, 0); // for missing value
+    for (int i = 1; i < cardinality + 1; i++) {
       keyBuffer.putInt(i * recordSize, 0);
       final int baseOffset = i * recordSize + keySize;
       for (int j = 0; j < aggregators.length; ++j) {
@@ -198,7 +202,7 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
     // partial aggregation result in brokers and even data nodes (historicals and realtimes).
     // However, it should be used in the future.
     final BufferComparator comparator = keySerde.bufferComparator();
-    final List<Integer> wrappedOffsets = IntStream.range(0, cardinality).boxed().collect(Collectors.toList());
+    final List<Integer> wrappedOffsets = IntStream.range(0, cardinality + 1).boxed().collect(Collectors.toList());
     wrappedOffsets.sort(
         (lhs, rhs) -> comparator.compare(keyBuffer, keyBuffer, lhs + USED_FLAG_SIZE, rhs + USED_FLAG_SIZE)
     );
@@ -209,7 +213,7 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
   private Iterator<Entry<KeyType>> plainIterator()
   {
     return new ResultIterator(
-        IntStream.range(0, cardinality).boxed().collect(Collectors.toList())
+        IntStream.range(0, cardinality + 1).boxed().collect(Collectors.toList())
     );
   }
 
