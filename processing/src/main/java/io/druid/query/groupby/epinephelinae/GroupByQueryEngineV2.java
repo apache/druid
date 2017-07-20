@@ -367,7 +367,7 @@ public class GroupByQueryEngineV2
             final int recordSize = keySize + aggValuesSize;
 
             // Check that all keys and aggregated values can be contained the buffer
-            if (cardinality * recordSize < buffer.capacity()) {
+            if ((cardinality + 1 ) * recordSize < buffer.capacity()) {
               return new BufferArrayGrouper<>(
                   Suppliers.ofInstance(buffer),
                   keySerde,
