@@ -26,6 +26,8 @@ import io.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public interface DataSegmentPusher
@@ -43,6 +45,15 @@ public interface DataSegmentPusher
   }
   default String makeIndexPathName(DataSegment dataSegment, String indexName) {
     return StringUtils.format("./%s/%s", getStorageDir(dataSegment), indexName);
+  }
+
+  /**
+   * Property prefixes that should be added to the "allowedHadoopPrefix" config for passing down to Hadoop jobs. These
+   * should be property prefixes like "druid.xxx", which means to include "druid.xxx" and "druid.xxx.*".
+   */
+  default List<String> getAllowedPropertyPrefixesForHadoop()
+  {
+    return Collections.emptyList();
   }
 
   // Note: storage directory structure format = .../dataSource/interval/version/partitionNumber/

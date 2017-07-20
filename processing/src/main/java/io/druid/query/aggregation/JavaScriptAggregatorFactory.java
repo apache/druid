@@ -50,8 +50,6 @@ import java.util.Objects;
 
 public class JavaScriptAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x6;
-
   private final String name;
   private final List<String> fieldNames;
   private final String fnAggregate;
@@ -240,7 +238,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       byte[] sha1 = md.digest(StringUtils.toUtf8(fnAggregate + fnReset + fnCombine));
 
       return ByteBuffer.allocate(1 + fieldNameBytes.length + sha1.length)
-                       .put(CACHE_TYPE_ID)
+                       .put(AggregatorUtil.JS_CACHE_TYPE_ID)
                        .put(fieldNameBytes)
                        .put(sha1)
                        .array();

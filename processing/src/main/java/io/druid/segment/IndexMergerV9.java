@@ -63,6 +63,7 @@ import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.serde.DoubleGenericColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -367,28 +368,42 @@ public class IndexMergerV9 implements IndexMerger
         case LONG:
           builder.setValueType(ValueType.LONG);
           builder.addSerde(
-              LongGenericColumnPartSerde.serializerBuilder()
-                                        .withByteOrder(IndexIO.BYTE_ORDER)
-                                        .withDelegate((LongColumnSerializer) writer)
-                                        .build()
+              LongGenericColumnPartSerde
+                  .serializerBuilder()
+                  .withByteOrder(IndexIO.BYTE_ORDER)
+                  .withDelegate((LongColumnSerializer) writer)
+                  .build()
           );
           break;
         case FLOAT:
           builder.setValueType(ValueType.FLOAT);
           builder.addSerde(
-              FloatGenericColumnPartSerde.serializerBuilder()
-                                         .withByteOrder(IndexIO.BYTE_ORDER)
-                                         .withDelegate((FloatColumnSerializer) writer)
-                                         .build()
+              FloatGenericColumnPartSerde
+                  .serializerBuilder()
+                  .withByteOrder(IndexIO.BYTE_ORDER)
+                  .withDelegate((FloatColumnSerializer) writer)
+                  .build()
+          );
+          break;
+        case DOUBLE:
+          builder.setValueType(ValueType.DOUBLE);
+          builder.addSerde(
+              DoubleGenericColumnPartSerde
+                  .serializerBuilder()
+                  .withByteOrder(IndexIO.BYTE_ORDER)
+                  .withDelegate((DoubleColumnSerializer) writer)
+                  .build()
           );
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
           builder.setValueType(ValueType.COMPLEX);
           builder.addSerde(
-              ComplexColumnPartSerde.serializerBuilder().withTypeName(typeName)
-                                    .withDelegate(writer)
-                                    .build()
+              ComplexColumnPartSerde
+                  .serializerBuilder()
+                  .withTypeName(typeName)
+                  .withDelegate(writer)
+                  .build()
           );
           break;
         default:
@@ -542,6 +557,9 @@ public class IndexMergerV9 implements IndexMerger
           break;
         case FLOAT:
           writer = FloatColumnSerializer.create(ioPeon, metric, metCompression);
+          break;
+        case DOUBLE:
+          writer = DoubleColumnSerializer.create(ioPeon, metric, metCompression);
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);

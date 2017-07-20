@@ -191,7 +191,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
       pullMessageService.start();
     }
     catch (MQClientException e) {
-      LOGGER.error("Failed to start DefaultMQPullConsumer", e);
+      LOGGER.error(e, "Failed to start DefaultMQPullConsumer");
       throw new IOException("Failed to start RocketMQ client", e);
     }
 
@@ -228,7 +228,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
                 }
               }
               catch (MQClientException e) {
-                LOGGER.error("Failed to fetch consume offset for queue: {}", entry.getKey());
+                LOGGER.error("Failed to fetch consume offset for queue: %s", entry.getKey());
               }
             }
           }
@@ -241,7 +241,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
             hasMore = true;
           }
           catch (InterruptedException e) {
-            LOGGER.error("CountDownLatch await got interrupted", e);
+            LOGGER.error(e, "CountDownLatch await got interrupted");
           }
         }
         return hasMore;
@@ -448,7 +448,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
 
             case OFFSET_ILLEGAL:
               LOGGER.error(
-                  "Bad Pull Request: Offset is illegal. Offset used: {}",
+                  "Bad Pull Request: Offset is illegal. Offset used: %d",
                   pullRequest.getNextBeginOffset()
               );
               break;
@@ -458,7 +458,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
           }
         }
         catch (MQClientException | RemotingException | MQBrokerException | InterruptedException e) {
-          LOGGER.error("Failed to pull message from broker.", e);
+          LOGGER.error(e, "Failed to pull message from broker.");
         }
         finally {
           pullRequest.getCountDownLatch().countDown();
@@ -485,7 +485,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         Thread.sleep(10);
       }
       catch (InterruptedException e) {
-        LOGGER.error("", e);
+        LOGGER.error(e, "");
       }
 
       synchronized (this) {

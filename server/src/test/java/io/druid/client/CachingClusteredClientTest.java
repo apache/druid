@@ -331,11 +331,11 @@ public class CachingClusteredClientTest
     client = makeClient(MoreExecutors.sameThreadExecutor());
 
     servers = new DruidServer[]{
-        new DruidServer("test1", "test1", 10, ServerType.HISTORICAL, "bye", 0),
-        new DruidServer("test2", "test2", 10, ServerType.HISTORICAL, "bye", 0),
-        new DruidServer("test3", "test3", 10, ServerType.HISTORICAL, "bye", 0),
-        new DruidServer("test4", "test4", 10, ServerType.HISTORICAL, "bye", 0),
-        new DruidServer("test5", "test5", 10, ServerType.HISTORICAL, "bye", 0)
+        new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test2", "test2", null, 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test3", "test3", null, 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test4", "test4", null, 10, ServerType.HISTORICAL, "bye", 0),
+        new DruidServer("test5", "test5", null, 10, ServerType.HISTORICAL, "bye", 0)
     };
   }
 

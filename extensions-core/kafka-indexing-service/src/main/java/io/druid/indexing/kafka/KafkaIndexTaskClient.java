@@ -182,7 +182,9 @@ public class KafkaIndexTaskClient
 
       if (response.getStatus().equals(HttpResponseStatus.OK)) {
         log.info("Task [%s] paused successfully", id);
-        return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>() {});
+        return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>()
+        {
+        });
       }
 
       final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
@@ -256,7 +258,9 @@ public class KafkaIndexTaskClient
 
     try {
       final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "offsets/current", null, retry);
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>() {});
+      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>()
+      {
+      });
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -272,7 +276,9 @@ public class KafkaIndexTaskClient
 
     try {
       final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "offsets/end", null, true);
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>() {});
+      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>()
+      {
+      });
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -480,18 +486,34 @@ public class KafkaIndexTaskClient
         throw new TaskNotRunnableException(StringUtils.format("Aborting request because task [%s] is not runnable", id));
       }
 
+      String host = location.getHost();
+      String scheme = "";
+      int port = -1;
+
       try {
         location = taskInfoProvider.getTaskLocation(id);
         if (location.equals(TaskLocation.unknown())) {
           throw new NoTaskLocationException(StringUtils.format("No TaskLocation available for task [%s]", id));
         }
 
+        host = location.getHost();
+        scheme = location.getTlsPort() >= 0 ? "https" : "http";
+        port = location.getTlsPort() >= 0 ? location.getTlsPort() : location.getPort();
+
         // Netty throws some annoying exceptions if a connection can't be opened, which happens relatively frequently
         // for tasks that happen to still be starting up, so test the connection first to keep the logs clean.
-        checkConnection(location.getHost(), location.getPort());
+        checkConnection(host, port);
 
         try {
-          URI serviceUri = new URI("http", null, location.getHost(), location.getPort(), path, query, null);
+          URI serviceUri = new URI(
+              scheme,
+              null,
+              host,
+              port,
+              path,
+              query,
+              null
+          );
           request = new Request(method, serviceUri.toURL());
 
           // used to validate that we are talking to the correct worker
@@ -543,10 +565,15 @@ public class KafkaIndexTaskClient
         } else {
           delay = retryPolicy.getAndIncrementRetryDelay();
         }
-
         String urlForLog = (request != null
                             ? request.getUrl().toString()
-                            : StringUtils.format("http://%s:%d%s", location.getHost(), location.getPort(), path));
+                            : StringUtils.format(
+                                "%s://%s:%d%s",
+                                scheme,
+                                host,
+                                port,
+                                path
+                            ));
         if (!retry) {
           // if retry=false, we probably aren't too concerned if the operation doesn't succeed (i.e. the request was
           // for informational purposes only) so don't log a scary stack trace

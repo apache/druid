@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
@@ -120,7 +121,7 @@ public class QueryResourceTest
   @BeforeClass
   public static void staticSetup()
   {
-    com.metamx.emitter.EmittingLogger.registerEmitter(noopServiceEmitter);
+    EmittingLogger.registerEmitter(noopServiceEmitter);
   }
 
   @Before

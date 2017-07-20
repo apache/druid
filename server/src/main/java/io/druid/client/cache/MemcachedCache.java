@@ -74,6 +74,12 @@ public class MemcachedCache implements Cache
 {
   private static final Logger log = new Logger(MemcachedCache.class);
 
+  /**
+   * Default hash algorithm for cache distribution.
+   *
+   * If some other algorithms are considered as the default algorithm instead of this one, the cache distribution for
+   * those hash algorithms should be checked and compared using {@code CacheDistributionTest}.
+   */
   final static HashAlgorithm MURMUR3_128 = new HashAlgorithm()
   {
     final HashFunction fn = Hashing.murmur3_128();

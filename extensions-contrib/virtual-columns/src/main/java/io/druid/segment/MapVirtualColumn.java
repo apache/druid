@@ -181,6 +181,12 @@ public class MapVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory)
+  {
+    return null;
+  }
+
+  @Override
   public ColumnCapabilities capabilities(String columnName)
   {
     final ValueType valueType = columnName.indexOf('.') < 0 ? ValueType.COMPLEX : ValueType.STRING;

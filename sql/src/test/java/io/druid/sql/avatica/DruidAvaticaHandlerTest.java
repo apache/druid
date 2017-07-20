@@ -130,7 +130,7 @@ public class DruidAvaticaHandlerTest
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1),
+        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 10000;
@@ -255,7 +255,7 @@ public class DruidAvaticaHandlerTest
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
+                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{virtualColumns=[], aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null}]])\n"
             )
         ),
         getRows(resultSet)
@@ -340,7 +340,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "dim1"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -348,14 +348,14 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "dim2"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m1"),
-                Pair.of("DATA_TYPE", Types.FLOAT),
-                Pair.of("TYPE_NAME", "FLOAT"),
+                Pair.of("DATA_TYPE", Types.DOUBLE),
+                Pair.of("TYPE_NAME", "DOUBLE"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
@@ -575,7 +575,7 @@ public class DruidAvaticaHandlerTest
 
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", 1),
+        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 20000;

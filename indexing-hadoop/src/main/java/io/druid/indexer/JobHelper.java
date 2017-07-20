@@ -313,7 +313,7 @@ public class JobHelper
 
     for (String propName : System.getProperties().stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {
-        if (propName.startsWith(prefix)) {
+        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
           mapJavaOpts = StringUtils.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
           reduceJavaOpts = StringUtils.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
           break;

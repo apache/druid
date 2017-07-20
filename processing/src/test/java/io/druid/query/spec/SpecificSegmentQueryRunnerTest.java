@@ -48,6 +48,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -202,7 +203,7 @@ public class SpecificSegmentQueryRunnerTest
   }
 
   private void validate(ObjectMapper mapper, SegmentDescriptor descriptor, Map<String, Object> responseContext)
-      throws java.io.IOException
+      throws IOException
   {
     Object missingSegments = responseContext.get(Result.MISSING_SEGMENTS_KEY);
 

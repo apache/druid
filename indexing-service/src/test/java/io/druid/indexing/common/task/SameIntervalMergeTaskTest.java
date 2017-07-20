@@ -140,7 +140,7 @@ public class SameIntervalMergeTaskTest
 
     mergeTask.run(
         new TaskToolbox(
-            null, null, new TaskActionClient()
+            null, new TaskActionClient()
         {
           @Override
           public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException

@@ -36,8 +36,6 @@ import java.util.List;
 
 public class HistogramAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x7;
-
   private final String name;
   private final String fieldName;
   private final List<Float> breaksList;
@@ -153,7 +151,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     ByteBuffer buf = ByteBuffer
         .allocate(1 + fieldNameBytes.length + Floats.BYTES * breaks.length)
-        .put(CACHE_TYPE_ID)
+        .put(AggregatorUtil.HIST_CACHE_TYPE_ID)
         .put(fieldNameBytes)
         .put((byte) 0xFF);
     buf.asFloatBuffer().put(breaks);

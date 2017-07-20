@@ -57,7 +57,7 @@ public class WorkerBehaviorConfig
   }
 
   @JsonProperty
-  public AutoScaler getAutoScaler()
+  public AutoScaler<?> getAutoScaler()
   {
     return autoScaler;
   }

@@ -31,6 +31,7 @@ import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
@@ -94,8 +95,6 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     return ((HyperLogLogCollector) object).estimateCardinality();
   }
 
-  private static final byte CACHE_TYPE_ID = (byte) 0x8;
-  private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
   private static final CardinalityAggregatorColumnSelectorStrategyFactory STRATEGY_FACTORY =
       new CardinalityAggregatorColumnSelectorStrategyFactory();
 
@@ -283,10 +282,10 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     }
 
     ByteBuffer retBuf = ByteBuffer.allocate(2 + dimSpecKeysLength);
-    retBuf.put(CACHE_TYPE_ID);
+    retBuf.put(AggregatorUtil.CARD_CACHE_TYPE_ID);
     for (byte[] dimSpecKey : dimSpecKeys) {
       retBuf.put(dimSpecKey);
-      retBuf.put(CACHE_KEY_SEPARATOR);
+      retBuf.put(AggregatorUtil.STRING_SEPARATOR);
     }
     retBuf.put((byte) (byRow ? 1 : 0));
     return retBuf.array();

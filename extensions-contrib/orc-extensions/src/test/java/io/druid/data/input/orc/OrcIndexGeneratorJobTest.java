@@ -59,6 +59,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.orc.CompressionKind;
 import org.apache.orc.OrcFile;
 import org.apache.orc.TypeDescription;
+import org.apache.orc.Writer;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
@@ -141,7 +142,7 @@ public class OrcIndexGeneratorJobTest
         .addField("host", TypeDescription.createString())
         .addField("visited_num", TypeDescription.createInt());
     Configuration conf = new Configuration();
-    org.apache.orc.Writer writer = OrcFile.createWriter(
+    Writer writer = OrcFile.createWriter(
         new Path(outputFile.getPath()),
         OrcFile.writerOptions(conf)
             .setSchema(schema)

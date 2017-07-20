@@ -60,7 +60,7 @@ public class HybridCacheTest
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("hybridTest");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
                 binder.install(new CacheModule(prefix));
               }
             }

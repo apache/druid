@@ -1,5 +1,7 @@
 language: java
 
+dist: precise
+
 jdk:
   - oraclejdk8
 
@@ -27,6 +29,7 @@ matrix:
 
       # run integration tests
     - sudo: required
+      dist: trusty
       services:
         - docker
       env:

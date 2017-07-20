@@ -89,7 +89,7 @@ public class EmitterModule implements Module
     );
     final ServiceEmitter retVal = new ServiceEmitter(
         config.getServiceName(),
-        config.getHostAndPort(),
+        config.getHostAndPortToUse(),
         emitter,
         otherServiceDimensions
     );

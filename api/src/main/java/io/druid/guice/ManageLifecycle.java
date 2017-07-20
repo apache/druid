@@ -29,7 +29,7 @@ import java.lang.annotation.Target;
 /**
  * Marks the object to be managed by {@link io.druid.java.util.common.lifecycle.Lifecycle}
  *
- * This Scope gets defined by {@link io.druid.guice.LifecycleModule}
+ * This Scope gets defined by {@link LifecycleModule}
  */
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

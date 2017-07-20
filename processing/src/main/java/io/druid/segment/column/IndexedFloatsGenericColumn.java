@@ -91,6 +91,12 @@ public class IndexedFloatsGenericColumn implements GenericColumn
   }
 
   @Override
+  public double getDoubleSingleValueRow(int rowNum)
+  {
+    return (double) column.get(rowNum);
+  }
+
+  @Override
   public void close()
   {
     column.close();

@@ -91,6 +91,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     final DruidServer druidServer = new DruidServer(
         "localhost:1234",
         "localhost:1234",
+        null,
         10000000L,
         ServerType.HISTORICAL,
         "default_tier",
@@ -149,7 +150,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     setupViews();
 
     final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.<String>of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        ImmutableList.<String>of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
         new Function<String, DruidServer>()
         {
           @Override
@@ -158,6 +159,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
             return new DruidServer(
                 input,
                 input,
+                null,
                 10000000L,
                 ServerType.HISTORICAL,
                 "default_tier",

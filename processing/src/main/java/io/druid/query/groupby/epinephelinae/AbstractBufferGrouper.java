@@ -195,7 +195,7 @@ public abstract class AbstractBufferGrouper<KeyType> implements Grouper<KeyType>
         aggregator.close();
       }
       catch (Exception e) {
-        log.warn(e, "Could not close aggregator, skipping.", aggregator);
+        log.warn(e, "Could not close aggregator [%s], skipping.", aggregator);
       }
     }
   }

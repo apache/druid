@@ -31,9 +31,7 @@ import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
@@ -48,6 +46,7 @@ public class PlannerFactory
       .setUnquotedCasing(Casing.UNCHANGED)
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
+      .setConformance(DruidConformance.instance())
       .build();
 
   private final SchemaPlus rootSchema;
@@ -87,7 +86,7 @@ public class PlannerFactory
         .convertletTable(new DruidConvertletTable(plannerContext))
         .operatorTable(operatorTable)
         .programs(Rules.programs(plannerContext, queryMaker))
-        .executor(new RexExecutorImpl(Schemas.createDataContext(null)))
+        .executor(new DruidRexExecutor(plannerContext))
         .context(Contexts.EMPTY_CONTEXT)
         .typeSystem(RelDataTypeSystem.DEFAULT)
         .defaultSchema(rootSchema.getSubSchema(DruidSchema.NAME))

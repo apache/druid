@@ -76,7 +76,7 @@ public class MetadataStorageConnectorConfigTest
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   @Test
-  public void testMetadaStorageConnectionConfigSimplePassword() throws Exception
+  public void testMetadataStorageConnectionConfigSimplePassword() throws Exception
   {
     testMetadataStorageConnectionConfig(
         true,
@@ -90,7 +90,7 @@ public class MetadataStorageConnectorConfigTest
   }
 
   @Test
-  public void testMetadaStorageConnectionConfigWithDefaultProviderPassword() throws Exception
+  public void testMetadataStorageConnectionConfigWithDefaultProviderPassword() throws Exception
   {
     testMetadataStorageConnectionConfig(
         true,

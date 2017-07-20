@@ -35,7 +35,7 @@ public class ImmutableWorkerInfoTest
   {
     ImmutableWorkerInfo workerInfo = new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -56,7 +56,7 @@ public class ImmutableWorkerInfoTest
     // Everything equal
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -64,7 +64,7 @@ public class ImmutableWorkerInfoTest
         new DateTime("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -75,7 +75,7 @@ public class ImmutableWorkerInfoTest
     // different worker same tasks
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker1", "192.0.0.1", 10, "v1"
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -83,7 +83,7 @@ public class ImmutableWorkerInfoTest
         new DateTime("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker2", "192.0.0.1", 10, "v1"
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -94,7 +94,7 @@ public class ImmutableWorkerInfoTest
     // same worker different task groups
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp3", "grp2"),
@@ -102,7 +102,7 @@ public class ImmutableWorkerInfoTest
         new DateTime("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -113,7 +113,7 @@ public class ImmutableWorkerInfoTest
     // same worker different tasks
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker1", "192.0.0.1", 10, "v1"
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -121,7 +121,7 @@ public class ImmutableWorkerInfoTest
         new DateTime("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker2", "192.0.0.1", 10, "v1"
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -132,7 +132,7 @@ public class ImmutableWorkerInfoTest
     // same worker different capacity
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker1", "192.0.0.1", 10, "v1"
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
         ),
         3,
         ImmutableSet.of("grp1", "grp2"),
@@ -140,7 +140,7 @@ public class ImmutableWorkerInfoTest
         new DateTime("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker2", "192.0.0.1", 10, "v1"
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
@@ -151,7 +151,7 @@ public class ImmutableWorkerInfoTest
     // same worker different lastCompletedTaskTime
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker1", "192.0.0.1", 10, "v1"
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
         ),
         3,
         ImmutableSet.of("grp1", "grp2"),
@@ -159,7 +159,7 @@ public class ImmutableWorkerInfoTest
         new DateTime("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker2", "192.0.0.1", 10, "v1"
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
