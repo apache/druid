@@ -32,7 +32,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.druid.common.guava.CombiningSequence;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;

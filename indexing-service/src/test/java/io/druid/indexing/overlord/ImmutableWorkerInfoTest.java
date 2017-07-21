@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
-import org.joda.time.DateTime;
+import io.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,7 +40,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     );
     ObjectMapper mapper = new DefaultObjectMapper();
     final ImmutableWorkerInfo serde = mapper.readValue(
@@ -61,7 +61,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
             "http", "testWorker", "192.0.0.1", 10, "v1"
@@ -69,7 +69,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), true);
 
     // different worker same tasks
@@ -80,7 +80,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
             "http", "testWorker2", "192.0.0.1", 10, "v1"
@@ -88,7 +88,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), false);
 
     // same worker different task groups
@@ -99,7 +99,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp3", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
             "http", "testWorker", "192.0.0.1", 10, "v1"
@@ -107,7 +107,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), false);
 
     // same worker different tasks
@@ -118,7 +118,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
             "http", "testWorker2", "192.0.0.1", 10, "v1"
@@ -126,7 +126,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task3"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), false);
 
     // same worker different capacity
@@ -137,7 +137,7 @@ public class ImmutableWorkerInfoTest
         3,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
             "http", "testWorker2", "192.0.0.1", 10, "v1"
@@ -145,7 +145,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), false);
 
     // same worker different lastCompletedTaskTime
@@ -156,7 +156,7 @@ public class ImmutableWorkerInfoTest
         3,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
             "http", "testWorker2", "192.0.0.1", 10, "v1"
@@ -164,7 +164,7 @@ public class ImmutableWorkerInfoTest
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:02Z")
+        DateTimes.of("2015-01-01T01:01:02Z")
     ), false);
 
   }

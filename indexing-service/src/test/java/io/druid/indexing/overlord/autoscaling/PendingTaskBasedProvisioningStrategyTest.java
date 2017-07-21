@@ -44,6 +44,7 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -338,7 +339,7 @@ public class PendingTaskBasedProvisioningStrategyTest
                 testTask.getId(),
                 null,
                 TaskLocation.unknown()
-            ).withQueueInsertionTime(new DateTime())
+            ).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(

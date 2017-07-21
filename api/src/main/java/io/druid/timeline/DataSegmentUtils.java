@@ -91,7 +91,7 @@ public class DataSegmentUtils
 
       return new SegmentIdentifierParts(
           dataSource,
-          new Interval(start.getMillis(), end.getMillis()),
+          new Interval(start, end),
           version,
           trail
       );

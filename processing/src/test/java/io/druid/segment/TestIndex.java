@@ -33,6 +33,8 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -49,7 +51,6 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;
@@ -113,7 +114,7 @@ public class TestIndex
   public static final String[] DOUBLE_METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
   public static final String[] FLOAT_METRICS = new String[]{"indexFloat", "indexMinFloat", "indexMaxFloat"};
   private static final Logger log = new Logger(TestIndex.class);
-  private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
+  private static final Interval DATA_INTERVAL = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       Collections.<VirtualColumn>singletonList(
           new ExpressionVirtualColumn("expr", "index + 10", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
@@ -265,7 +266,7 @@ public class TestIndex
   public static IncrementalIndex makeRealtimeIndex(final CharSource source, boolean rollup)
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+        .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
         .withTimestampSpec(new TimestampSpec("ds", "auto", null))
         .withDimensionsSpec(DIMENSIONS_SPEC)
         .withVirtualColumns(VIRTUAL_COLUMNS)

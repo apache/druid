@@ -32,6 +32,7 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -116,7 +117,7 @@ public class ProtobufInputRowParserTest
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
     //create binary of proto test event
-    DateTime dateTime = new DateTime(2012, 07, 12, 9, 30);
+    DateTime dateTime = new DateTime(2012, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
     ProtoTestEventWrapper.ProtoTestEvent event = ProtoTestEventWrapper.ProtoTestEvent.newBuilder()
                                                                                      .setDescription("description")
                                                                                      .setEventType(ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE)

@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.js.JavaScriptConfig;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -77,7 +77,7 @@ public class JavaScriptExtractionFnTest
   public void testTimeExample() throws Exception
   {
     String utcHour = "function(t) {\nreturn 'Second ' + Math.floor((t % 60000) / 1000);\n}";
-    final long millis = new DateTime("2015-01-02T13:00:59.999Z").getMillis();
+    final long millis = DateTimes.of("2015-01-02T13:00:59.999Z").getMillis();
     Assert.assertEquals("Second 59" , new JavaScriptExtractionFn(utcHour, false, JavaScriptConfig.getEnabledInstance()).apply(millis));
   }
 

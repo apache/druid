@@ -20,10 +20,10 @@
 package io.druid.query;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -53,7 +53,7 @@ public class LegacyApiQueryRunnerTest
   {
     final Query query = new TestQuery(
         new TableDataSource("test"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of(new Interval("0/100"))),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
         new HashMap()
     );

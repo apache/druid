@@ -51,6 +51,7 @@ import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
@@ -262,7 +263,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     log.info("Starting up!");
-    startTime = DateTime.now();
+    startTime = DateTimes.nowUtc();
     mapper = toolbox.getObjectMapper();
     status = Status.STARTING;
 

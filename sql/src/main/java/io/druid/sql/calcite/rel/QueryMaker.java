@@ -28,6 +28,7 @@ import com.google.common.primitives.Ints;
 import io.druid.client.DirectDruidClient;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -67,7 +68,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class QueryMaker
+public class
+
+QueryMaker
 {
   private final QuerySegmentWalker walker;
   private final PlannerContext plannerContext;
@@ -412,33 +415,9 @@ public class QueryMaker
     } else if (value == null) {
       coercedValue = null;
     } else if (sqlType == SqlTypeName.DATE) {
-      final DateTime dateTime;
-
-      if (value instanceof Number) {
-        dateTime = new DateTime(((Number) value).longValue());
-      } else if (value instanceof String) {
-        dateTime = new DateTime(Long.parseLong((String) value));
-      } else if (value instanceof DateTime) {
-        dateTime = (DateTime) value;
-      } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
-      }
-
-      return Calcites.jodaToCalciteDate(dateTime, plannerContext.getTimeZone());
+      return Calcites.jodaToCalciteDate(coerceDateTime(value, sqlType), plannerContext.getTimeZone());
     } else if (sqlType == SqlTypeName.TIMESTAMP) {
-      final DateTime dateTime;
-
-      if (value instanceof Number) {
-        dateTime = new DateTime(((Number) value).longValue());
-      } else if (value instanceof String) {
-        dateTime = new DateTime(Long.parseLong((String) value));
-      } else if (value instanceof DateTime) {
-        dateTime = (DateTime) value;
-      } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
-      }
-
-      return Calcites.jodaToCalciteTimestamp(dateTime, plannerContext.getTimeZone());
+      return Calcites.jodaToCalciteTimestamp(coerceDateTime(value, sqlType), plannerContext.getTimeZone());
     } else if (sqlType == SqlTypeName.BOOLEAN) {
       if (value instanceof String) {
         coercedValue = Evals.asBoolean(((String) value));
@@ -479,5 +458,21 @@ public class QueryMaker
     }
 
     return coercedValue;
+  }
+
+  private static DateTime coerceDateTime(Object value, SqlTypeName sqlType)
+  {
+    final DateTime dateTime;
+
+    if (value instanceof Number) {
+      dateTime = DateTimes.utc(((Number) value).longValue());
+    } else if (value instanceof String) {
+      dateTime = DateTimes.utc(Long.parseLong((String) value));
+    } else if (value instanceof DateTime) {
+      dateTime = (DateTime) value;
+    } else {
+      throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+    }
+    return dateTime;
   }
 }

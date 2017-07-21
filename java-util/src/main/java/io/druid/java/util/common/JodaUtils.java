@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.common.utils;
+package io.druid.java.util.common;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -38,7 +38,6 @@ public class JodaUtils
   // limit intervals such that duration millis fits in a long
   public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
   public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
-  public static final Interval ETERNITY = new Interval(MIN_INSTANT, MAX_INSTANT);
 
   public static ArrayList<Interval> condenseIntervals(Iterable<Interval> intervals)
   {

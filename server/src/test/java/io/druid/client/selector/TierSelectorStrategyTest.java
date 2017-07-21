@@ -23,13 +23,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.client.DirectDruidClient;
 import io.druid.client.DruidServer;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -118,8 +118,8 @@ public class TierSelectorStrategyTest
     final ServerSelector serverSelector = new ServerSelector(
         new DataSegment(
             "test",
-            new Interval("2013-01-01/2013-01-02"),
-            new DateTime("2013-01-01").toString(),
+            Intervals.of("2013-01-01/2013-01-02"),
+            DateTimes.of("2013-01-01").toString(),
             Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),

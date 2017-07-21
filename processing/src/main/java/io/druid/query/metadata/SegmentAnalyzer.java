@@ -50,6 +50,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -249,8 +250,8 @@ public class SegmentAnalyzer
     }
 
     if (analyzingSize()) {
-      final long start = storageAdapter.getMinTime().getMillis();
-      final long end = storageAdapter.getMaxTime().getMillis();
+      final DateTime start = storageAdapter.getMinTime();
+      final DateTime end = storageAdapter.getMaxTime();
 
       final Sequence<Cursor> cursors =
           storageAdapter.makeCursors(

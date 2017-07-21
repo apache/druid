@@ -22,6 +22,8 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Druids;
@@ -52,8 +54,6 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -117,7 +117,7 @@ public class SchemalessTestSimpleTest
   final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum, uniques);
 
   final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(new Interval("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+      Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
   private Segment segment;
@@ -152,7 +152,7 @@ public class SchemalessTestSimpleTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 11L)
@@ -198,7 +198,7 @@ public class SchemalessTestSimpleTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<DimensionAndMetricValueExtractor>asList(
                     new DimensionAndMetricValueExtractor(
@@ -256,7 +256,7 @@ public class SchemalessTestSimpleTest
 
     List<Result<SearchResultValue>> expectedResults = Arrays.asList(
         new Result<SearchResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -282,13 +282,13 @@ public class SchemalessTestSimpleTest
 
     List<Result<TimeBoundaryResultValue>> expectedResults = Arrays.asList(
         new Result<TimeBoundaryResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-13T00:00:00.000Z")
+                    DateTimes.of("2011-01-13T00:00:00.000Z")
                 )
             )
         )

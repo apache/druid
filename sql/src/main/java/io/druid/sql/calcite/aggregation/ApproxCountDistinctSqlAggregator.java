@@ -22,6 +22,7 @@ package io.druid.sql.calcite.aggregation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -104,7 +105,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         dimensionSpec = input.getSimpleExtraction().toDimensionSpec(null, ValueType.STRING);
       } else {
         final ExpressionVirtualColumn virtualColumn = input.toVirtualColumn(
-            String.format("%s:v", name),
+            StringUtils.format("%s:v", name),
             inputType,
             plannerContext.getExprMacroTable()
         );

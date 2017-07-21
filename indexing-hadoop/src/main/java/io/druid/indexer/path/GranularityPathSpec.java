@@ -168,7 +168,7 @@ public class GranularityPathSpec implements PathSpec
       end = inputInterval.getEndMillis();
       makeNew = true;
     }
-    return makeNew ? new Interval(start, end) : interval;
+    return makeNew ? new Interval(start, end, interval.getChronology()) : interval;
   }
 
 }

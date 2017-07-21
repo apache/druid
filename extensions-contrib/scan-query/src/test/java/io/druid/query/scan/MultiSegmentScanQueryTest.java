@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
@@ -43,7 +44,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -145,7 +145,7 @@ public class MultiSegmentScanQueryTest
   private static IncrementalIndex newIndex(String minTimeStamp, int maxRowCount)
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(new DateTime(minTimeStamp).getMillis())
+        .withMinTimestamp(DateTimes.of(minTimeStamp).getMillis())
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();

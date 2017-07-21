@@ -28,6 +28,7 @@ import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.Druids;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -114,7 +115,7 @@ public class TieredBrokerHostSelectorTest
               .dataSource("test")
               .granularity("all")
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
-              .intervals(Arrays.<Interval>asList(new Interval("2011-08-31/2011-09-01")))
+              .intervals(Arrays.<Interval>asList(Intervals.of("2011-08-31/2011-09-01")))
               .build()
     ).lhs;
 
@@ -130,7 +131,7 @@ public class TieredBrokerHostSelectorTest
               .dataSource("test")
               .granularity("all")
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
-              .intervals(Arrays.<Interval>asList(new Interval("2013-08-31/2013-09-01")))
+              .intervals(Arrays.<Interval>asList(Intervals.of("2013-08-31/2013-09-01")))
               .build()
     ).lhs;
 
@@ -145,7 +146,7 @@ public class TieredBrokerHostSelectorTest
               .dataSource("test")
               .granularity("all")
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
-              .intervals(Arrays.<Interval>asList(new Interval("2010-08-31/2010-09-01")))
+              .intervals(Arrays.<Interval>asList(Intervals.of("2010-08-31/2010-09-01")))
               .build()
     ).lhs;
 
@@ -162,9 +163,9 @@ public class TieredBrokerHostSelectorTest
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
-                          new Interval("2013-08-31/2013-09-01"),
-                          new Interval("2012-08-31/2012-09-01"),
-                          new Interval("2011-08-31/2011-09-01")
+                          Intervals.of("2013-08-31/2013-09-01"),
+                          Intervals.of("2012-08-31/2012-09-01"),
+                          Intervals.of("2011-08-31/2011-09-01")
                       )
                   )
               ).build()
@@ -183,9 +184,9 @@ public class TieredBrokerHostSelectorTest
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
-                          new Interval("2011-08-31/2011-09-01"),
-                          new Interval("2012-08-31/2012-09-01"),
-                          new Interval("2013-08-31/2013-09-01")
+                          Intervals.of("2011-08-31/2011-09-01"),
+                          Intervals.of("2012-08-31/2012-09-01"),
+                          Intervals.of("2013-08-31/2013-09-01")
                       )
                   )
               ).build()
@@ -204,9 +205,9 @@ public class TieredBrokerHostSelectorTest
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
-                          new Interval("2011-08-31/2011-09-01"),
-                          new Interval("2012-08-31/2012-09-01"),
-                          new Interval("2013-08-31/2013-09-01")
+                          Intervals.of("2011-08-31/2011-09-01"),
+                          Intervals.of("2012-08-31/2012-09-01"),
+                          Intervals.of("2013-08-31/2013-09-01")
                       )
                   )
               )
@@ -227,9 +228,9 @@ public class TieredBrokerHostSelectorTest
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
-                          new Interval("2011-08-31/2011-09-01"),
-                          new Interval("2012-08-31/2012-09-01"),
-                          new Interval("2013-08-31/2013-09-01")
+                          Intervals.of("2011-08-31/2011-09-01"),
+                          Intervals.of("2012-08-31/2012-09-01"),
+                          Intervals.of("2013-08-31/2013-09-01")
                       )
                   )
               )
@@ -262,10 +263,10 @@ public class TieredBrokerHostSelectorTest
     public List<Rule> getRulesWithDefault(String dataSource)
     {
       return Arrays.<Rule>asList(
-          new IntervalLoadRule(new Interval("2013/2014"), ImmutableMap.<String, Integer>of("hot", 1)),
-          new IntervalLoadRule(new Interval("2012/2013"), ImmutableMap.<String, Integer>of("medium", 1)),
+          new IntervalLoadRule(Intervals.of("2013/2014"), ImmutableMap.<String, Integer>of("hot", 1)),
+          new IntervalLoadRule(Intervals.of("2012/2013"), ImmutableMap.<String, Integer>of("medium", 1)),
           new IntervalLoadRule(
-              new Interval("2011/2012"),
+              Intervals.of("2011/2012"),
               ImmutableMap.<String, Integer>of(DruidServer.DEFAULT_TIER, 1)
           )
       );

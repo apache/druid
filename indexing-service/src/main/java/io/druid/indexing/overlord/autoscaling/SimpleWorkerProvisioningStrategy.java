@@ -36,6 +36,7 @@ import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -103,8 +104,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     private final Set<String> currentlyTerminating = Sets.newHashSet();
 
     private int targetWorkerCount = -1;
-    private DateTime lastProvisionTime = new DateTime();
-    private DateTime lastTerminateTime = new DateTime();
+    private DateTime lastProvisionTime = DateTimes.nowUtc();
+    private DateTime lastTerminateTime = DateTimes.nowUtc();
 
     SimpleProvisioner(WorkerTaskRunner runner)
     {
@@ -154,7 +155,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           break;
         } else {
           currentlyProvisioning.addAll(newNodes);
-          lastProvisionTime = new DateTime();
+          lastProvisionTime = DateTimes.nowUtc();
           scalingStats.addProvisionEvent(provisioned);
           want -= provisioned.getNodeIds().size();
           didProvision = true;
@@ -162,7 +163,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       }
 
       if (!currentlyProvisioning.isEmpty()) {
-        Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
+        Duration durSinceLastProvision = new Duration(lastProvisionTime, DateTimes.nowUtc());
         log.info("%s provisioning. Current wait time: %s", currentlyProvisioning, durSinceLastProvision);
         if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
           log.makeAlert("Worker node provisioning taking too long!")
@@ -250,14 +251,14 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
                                                            .terminate(ImmutableList.copyOf(laziestWorkerIps));
             if (terminated != null) {
               currentlyTerminating.addAll(terminated.getNodeIds());
-              lastTerminateTime = new DateTime();
+              lastTerminateTime = DateTimes.nowUtc();
               scalingStats.addTerminateEvent(terminated);
               didTerminate = true;
             }
           }
         }
       } else {
-        Duration durSinceLastTerminate = new Duration(lastTerminateTime, new DateTime());
+        Duration durSinceLastTerminate = new Duration(lastTerminateTime, DateTimes.nowUtc());
 
         log.info("%s terminating. Current wait time: %s", currentlyTerminating, durSinceLastTerminate);
 

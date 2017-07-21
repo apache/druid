@@ -55,7 +55,9 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
@@ -465,19 +467,19 @@ public class CachingClusteredClientTest
     testQueryCaching(
         runner,
         builder.build(),
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTimeResults(
-            new DateTime("2011-01-05"), 85, 102,
-            new DateTime("2011-01-06"), 412, 521,
-            new DateTime("2011-01-07"), 122, 21894,
-            new DateTime("2011-01-08"), 5, 20,
-            new DateTime("2011-01-09"), 18, 521
+            DateTimes.of("2011-01-05"), 85, 102,
+            DateTimes.of("2011-01-06"), 412, 521,
+            DateTimes.of("2011-01-07"), 122, 21894,
+            DateTimes.of("2011-01-08"), 5, 20,
+            DateTimes.of("2011-01-09"), 18, 521
         ),
-        new Interval("2011-01-10/2011-01-13"),
+        Intervals.of("2011-01-10/2011-01-13"),
         makeTimeResults(
-            new DateTime("2011-01-10"), 85, 102,
-            new DateTime("2011-01-11"), 412, 521,
-            new DateTime("2011-01-12"), 122, 21894
+            DateTimes.of("2011-01-10"), 85, 102,
+            DateTimes.of("2011-01-11"), 412, 521,
+            DateTimes.of("2011-01-12"), 122, 21894
         )
     );
   }
@@ -504,26 +506,26 @@ public class CachingClusteredClientTest
     testQueryCaching(
         runner,
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000),
-        new Interval("2011-01-02/2011-01-03"), makeTimeResults(new DateTime("2011-01-02"), 30, 6000),
-        new Interval("2011-01-04/2011-01-05"), makeTimeResults(new DateTime("2011-01-04"), 23, 85312),
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000),
+        Intervals.of("2011-01-02/2011-01-03"), makeTimeResults(DateTimes.of("2011-01-02"), 30, 6000),
+        Intervals.of("2011-01-04/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-04"), 23, 85312),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTimeResults(
-            new DateTime("2011-01-05"), 85, 102,
-            new DateTime("2011-01-06"), 412, 521,
-            new DateTime("2011-01-07"), 122, 21894,
-            new DateTime("2011-01-08"), 5, 20,
-            new DateTime("2011-01-09"), 18, 521
+            DateTimes.of("2011-01-05"), 85, 102,
+            DateTimes.of("2011-01-06"), 412, 521,
+            DateTimes.of("2011-01-07"), 122, 21894,
+            DateTimes.of("2011-01-08"), 5, 20,
+            DateTimes.of("2011-01-09"), 18, 521
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTimeResults(
-            new DateTime("2011-01-05T01"), 80, 100,
-            new DateTime("2011-01-06T01"), 420, 520,
-            new DateTime("2011-01-07T01"), 12, 2194,
-            new DateTime("2011-01-08T01"), 59, 201,
-            new DateTime("2011-01-09T01"), 181, 52
+            DateTimes.of("2011-01-05T01"), 80, 100,
+            DateTimes.of("2011-01-06T01"), 420, 520,
+            DateTimes.of("2011-01-07T01"), 12, 2194,
+            DateTimes.of("2011-01-08T01"), 59, 201,
+            DateTimes.of("2011-01-09T01"), 181, 52
         )
     );
 
@@ -531,19 +533,19 @@ public class CachingClusteredClientTest
     HashMap<String, List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
-            new DateTime("2011-01-01"), 50, 5000,
-            new DateTime("2011-01-02"), 30, 6000,
-            new DateTime("2011-01-04"), 23, 85312,
-            new DateTime("2011-01-05"), 85, 102,
-            new DateTime("2011-01-05T01"), 80, 100,
-            new DateTime("2011-01-06"), 412, 521,
-            new DateTime("2011-01-06T01"), 420, 520,
-            new DateTime("2011-01-07"), 122, 21894,
-            new DateTime("2011-01-07T01"), 12, 2194,
-            new DateTime("2011-01-08"), 5, 20,
-            new DateTime("2011-01-08T01"), 59, 201,
-            new DateTime("2011-01-09"), 18, 521,
-            new DateTime("2011-01-09T01"), 181, 52
+            DateTimes.of("2011-01-01"), 50, 5000,
+            DateTimes.of("2011-01-02"), 30, 6000,
+            DateTimes.of("2011-01-04"), 23, 85312,
+            DateTimes.of("2011-01-05"), 85, 102,
+            DateTimes.of("2011-01-05T01"), 80, 100,
+            DateTimes.of("2011-01-06"), 412, 521,
+            DateTimes.of("2011-01-06T01"), 420, 520,
+            DateTimes.of("2011-01-07"), 122, 21894,
+            DateTimes.of("2011-01-07T01"), 12, 2194,
+            DateTimes.of("2011-01-08"), 5, 20,
+            DateTimes.of("2011-01-08T01"), 59, 201,
+            DateTimes.of("2011-01-09"), 18, 521,
+            DateTimes.of("2011-01-09T01"), 181, 52
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -561,7 +563,7 @@ public class CachingClusteredClientTest
   public void testCachingOverBulkLimitEnforcesLimit() throws Exception
   {
     final int limit = 10;
-    final Interval interval = new Interval("2011-01-01/2011-01-02");
+    final Interval interval = Intervals.of("2011-01-01/2011-01-02");
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(DATA_SOURCE)
                                         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(interval)))
@@ -633,36 +635,36 @@ public class CachingClusteredClientTest
     testQueryCaching(
         runner,
         builder.build(),
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTimeResults(
-            new DateTime("2011-01-05T02"), 80, 100,
-            new DateTime("2011-01-06T02"), 420, 520,
-            new DateTime("2011-01-07T02"), 12, 2194,
-            new DateTime("2011-01-08T02"), 59, 201,
-            new DateTime("2011-01-09T02"), 181, 52
+            DateTimes.of("2011-01-05T02"), 80, 100,
+            DateTimes.of("2011-01-06T02"), 420, 520,
+            DateTimes.of("2011-01-07T02"), 12, 2194,
+            DateTimes.of("2011-01-08T02"), 59, 201,
+            DateTimes.of("2011-01-09T02"), 181, 52
         ),
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTimeResults(
-            new DateTime("2011-01-05T00"), 85, 102,
-            new DateTime("2011-01-06T00"), 412, 521,
-            new DateTime("2011-01-07T00"), 122, 21894,
-            new DateTime("2011-01-08T00"), 5, 20,
-            new DateTime("2011-01-09T00"), 18, 521
+            DateTimes.of("2011-01-05T00"), 85, 102,
+            DateTimes.of("2011-01-06T00"), 412, 521,
+            DateTimes.of("2011-01-07T00"), 122, 21894,
+            DateTimes.of("2011-01-08T00"), 5, 20,
+            DateTimes.of("2011-01-09T00"), 18, 521
         )
     );
 
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
-            new DateTime("2011-01-05T00"), 85, 102,
-            new DateTime("2011-01-05T02"), 80, 100,
-            new DateTime("2011-01-06T00"), 412, 521,
-            new DateTime("2011-01-06T02"), 420, 520,
-            new DateTime("2011-01-07T00"), 122, 21894,
-            new DateTime("2011-01-07T02"), 12, 2194,
-            new DateTime("2011-01-08T00"), 5, 20,
-            new DateTime("2011-01-08T02"), 59, 201,
-            new DateTime("2011-01-09T00"), 18, 521,
-            new DateTime("2011-01-09T02"), 181, 52
+            DateTimes.of("2011-01-05T00"), 85, 102,
+            DateTimes.of("2011-01-05T02"), 80, 100,
+            DateTimes.of("2011-01-06T00"), 412, 521,
+            DateTimes.of("2011-01-06T02"), 420, 520,
+            DateTimes.of("2011-01-07T00"), 122, 21894,
+            DateTimes.of("2011-01-07T02"), 12, 2194,
+            DateTimes.of("2011-01-08T00"), 5, 20,
+            DateTimes.of("2011-01-08T02"), 59, 201,
+            DateTimes.of("2011-01-09T00"), 18, 521,
+            DateTimes.of("2011-01-09T02"), 181, 52
         ),
         runner.run(
             builder.intervals("2011-01-05/2011-01-10")
@@ -696,7 +698,7 @@ public class CachingClusteredClientTest
     testQueryCaching(
         runner,
         builder.build(),
-        new Interval("2011-11-04/2011-11-08"),
+        Intervals.of("2011-11-04/2011-11-08"),
         makeTimeResults(
             new DateTime("2011-11-04", TIMEZONE), 50, 5000,
             new DateTime("2011-11-05", TIMEZONE), 30, 6000,
@@ -748,7 +750,7 @@ public class CachingClusteredClientTest
                 "populateCache", "true"
             )
         ).build(),
-        new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
     );
 
     Assert.assertEquals(1, cache.getStats().getNumEntries());
@@ -767,7 +769,7 @@ public class CachingClusteredClientTest
                 "populateCache", "false"
             )
         ).build(),
-        new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
     );
 
     Assert.assertEquals(0, cache.getStats().getNumEntries());
@@ -784,7 +786,7 @@ public class CachingClusteredClientTest
                 "populateCache", "false"
             )
         ).build(),
-        new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
     );
 
     Assert.assertEquals(0, cache.getStats().getNumEntries());
@@ -819,45 +821,45 @@ public class CachingClusteredClientTest
     testQueryCaching(
         runner,
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
-        makeTopNResultsWithoutRename(new DateTime("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998),
+        Intervals.of("2011-01-01/2011-01-02"),
+        makeTopNResultsWithoutRename(DateTimes.of("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998),
 
-        new Interval("2011-01-02/2011-01-03"),
-        makeTopNResultsWithoutRename(new DateTime("2011-01-02"), "a", 50, 4997, "b", 50, 4996, "c", 50, 4995),
+        Intervals.of("2011-01-02/2011-01-03"),
+        makeTopNResultsWithoutRename(DateTimes.of("2011-01-02"), "a", 50, 4997, "b", 50, 4996, "c", 50, 4995),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTopNResultsWithoutRename(
-            new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTopNResultsWithoutRename(
-            new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         )
     );
     HashMap<String, List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
-            new DateTime("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998,
-            new DateTime("2011-01-02"), "a", 50, 4997, "b", 50, 4996, "c", 50, 4995,
-            new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983,
-            new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998,
+            DateTimes.of("2011-01-02"), "a", 50, 4997, "b", 50, 4996, "c", 50, 4995,
+            DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983,
+            DateTimes.of("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -896,7 +898,7 @@ public class CachingClusteredClientTest
     testQueryCaching(
         runner,
         builder.build(),
-        new Interval("2011-11-04/2011-11-08"),
+        Intervals.of("2011-11-04/2011-11-08"),
         makeTopNResultsWithoutRename(
             new DateTime("2011-11-04", TIMEZONE), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-11-05", TIMEZONE), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -931,30 +933,30 @@ public class CachingClusteredClientTest
         ImmutableList.of(
             Sequences.simple(
                 makeTopNResultsWithoutRename(
-                    new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-                    new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-                    new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+                    DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+                    DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+                    DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
                 )
             ),
             Sequences.simple(
                 makeTopNResultsWithoutRename(
-                    new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-                    new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-                    new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-                    new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+                    DateTimes.of("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+                    DateTimes.of("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+                    DateTimes.of("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+                    DateTimes.of("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
                 )
             )
         );
 
     TestHelper.assertExpectedResults(
         makeTopNResultsWithoutRename(
-            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
-            new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
+            DateTimes.of("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
         client.mergeCachedAndUncachedSequences(
             new TopNQueryBuilder()
@@ -996,44 +998,44 @@ public class CachingClusteredClientTest
     testQueryCaching(
         runner,
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-01/2011-01-02"),
         makeTopNResultsWithoutRename(),
 
-        new Interval("2011-01-02/2011-01-03"),
+        Intervals.of("2011-01-02/2011-01-03"),
         makeTopNResultsWithoutRename(),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTopNResultsWithoutRename(
-            new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTopNResultsWithoutRename(
-            new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         )
     );
 
     HashMap<String, List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
-            new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
-            new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
+            DateTimes.of("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -1070,44 +1072,44 @@ public class CachingClusteredClientTest
     testQueryCaching(
         runner,
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-01/2011-01-02"),
         makeTopNResultsWithoutRename(),
 
-        new Interval("2011-01-02/2011-01-03"),
+        Intervals.of("2011-01-02/2011-01-03"),
         makeTopNResultsWithoutRename(),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTopNResultsWithoutRename(
-            new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeTopNResultsWithoutRename(
-            new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         )
     );
 
     HashMap<String, List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeTopNResultsWithoutRename(
-            new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-            new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983,
-            new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            DateTimes.of("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983,
+            DateTimes.of("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -1136,30 +1138,30 @@ public class CachingClusteredClientTest
     testQueryCaching(
         getDefaultQueryRunner(),
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
-        makeSearchResults(TOP_DIM, new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
+        Intervals.of("2011-01-01/2011-01-02"),
+        makeSearchResults(TOP_DIM, DateTimes.of("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
 
-        new Interval("2011-01-02/2011-01-03"),
-        makeSearchResults(TOP_DIM, new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
+        Intervals.of("2011-01-02/2011-01-03"),
+        makeSearchResults(TOP_DIM, DateTimes.of("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeSearchResults(
             TOP_DIM,
-            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+            DateTimes.of("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeSearchResults(
             TOP_DIM,
-            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+            DateTimes.of("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         )
     );
 
@@ -1173,18 +1175,18 @@ public class CachingClusteredClientTest
     TestHelper.assertExpectedResults(
         makeSearchResults(
             TOP_DIM,
-            new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
-            new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
-            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
-            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+            DateTimes.of("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
+            DateTimes.of("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
+            DateTimes.of("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
+            DateTimes.of("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -1210,30 +1212,30 @@ public class CachingClusteredClientTest
     testQueryCaching(
         getDefaultQueryRunner(),
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
-        makeSearchResults(TOP_DIM, new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
+        Intervals.of("2011-01-01/2011-01-02"),
+        makeSearchResults(TOP_DIM, DateTimes.of("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
 
-        new Interval("2011-01-02/2011-01-03"),
-        makeSearchResults(TOP_DIM, new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
+        Intervals.of("2011-01-02/2011-01-03"),
+        makeSearchResults(TOP_DIM, DateTimes.of("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeSearchResults(
             TOP_DIM,
-            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+            DateTimes.of("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeSearchResults(
             TOP_DIM,
-            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+            DateTimes.of("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         )
     );
 
@@ -1247,18 +1249,18 @@ public class CachingClusteredClientTest
     TestHelper.assertExpectedResults(
         makeSearchResults(
             TOP_DIM,
-            new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
-            new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
-            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
-            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+            DateTimes.of("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
+            DateTimes.of("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
+            DateTimes.of("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
+            DateTimes.of("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -1269,18 +1271,18 @@ public class CachingClusteredClientTest
     TestHelper.assertExpectedResults(
         makeSearchResults(
             "new_dim",
-            new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
-            new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
-            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
-            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
-            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
-            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
-            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
-            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+            DateTimes.of("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
+            DateTimes.of("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
+            DateTimes.of("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            DateTimes.of("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            DateTimes.of("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            DateTimes.of("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            DateTimes.of("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
+            DateTimes.of("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -1313,26 +1315,26 @@ public class CachingClusteredClientTest
     testQueryCaching(
         getDefaultQueryRunner(),
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
-        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
+        Intervals.of("2011-01-01/2011-01-02"),
+        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
 
-        new Interval("2011-01-02/2011-01-03"),
-        makeSelectResults(dimensions, metrics, new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
+        Intervals.of("2011-01-02/2011-01-03"),
+        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
 
-        new Interval("2011-01-05/2011-01-10"),
-        makeSelectResults(dimensions, metrics, new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
-            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
-            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
-            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
-            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9)
+        Intervals.of("2011-01-05/2011-01-10"),
+        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            DateTimes.of("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            DateTimes.of("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            DateTimes.of("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            DateTimes.of("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9)
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
-        makeSelectResults(dimensions, metrics, new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+        Intervals.of("2011-01-05/2011-01-10"),
+        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            DateTimes.of("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            DateTimes.of("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            DateTimes.of("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            DateTimes.of("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
         )
     );
 
@@ -1346,18 +1348,18 @@ public class CachingClusteredClientTest
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
-        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
-            new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
-            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
-            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
-            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
-            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
-            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
-            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
+            DateTimes.of("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
+            DateTimes.of("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            DateTimes.of("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            DateTimes.of("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            DateTimes.of("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            DateTimes.of("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            DateTimes.of("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            DateTimes.of("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            DateTimes.of("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            DateTimes.of("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9),
+            DateTimes.of("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -1386,30 +1388,30 @@ public class CachingClusteredClientTest
     testQueryCaching(
         getDefaultQueryRunner(),
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
-        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
+        Intervals.of("2011-01-01/2011-01-02"),
+        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
 
-        new Interval("2011-01-02/2011-01-03"),
-        makeSelectResults(dimensions, metrics, new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
+        Intervals.of("2011-01-02/2011-01-03"),
+        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeSelectResults(
             dimensions, metrics,
-            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
-            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
-            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
-            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
-            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9)
+            DateTimes.of("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            DateTimes.of("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            DateTimes.of("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            DateTimes.of("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            DateTimes.of("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9)
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeSelectResults(
             dimensions, metrics,
-            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+            DateTimes.of("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            DateTimes.of("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            DateTimes.of("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            DateTimes.of("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            DateTimes.of("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
         )
     );
 
@@ -1425,18 +1427,18 @@ public class CachingClusteredClientTest
     TestHelper.assertExpectedResults(
         makeSelectResults(
             dimensions, metrics,
-            new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
-            new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
-            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
-            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
-            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
-            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
-            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
-            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+            DateTimes.of("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
+            DateTimes.of("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
+            DateTimes.of("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            DateTimes.of("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            DateTimes.of("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            DateTimes.of("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            DateTimes.of("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            DateTimes.of("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            DateTimes.of("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            DateTimes.of("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            DateTimes.of("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9),
+            DateTimes.of("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -1448,18 +1450,18 @@ public class CachingClusteredClientTest
     TestHelper.assertExpectedResults(
         makeSelectResults(
             dimensions, metrics,
-            new DateTime("2011-01-01"), ImmutableMap.of("a2", "b", "rows", 1),
-            new DateTime("2011-01-02"), ImmutableMap.of("a2", "c", "rows", 5),
-            new DateTime("2011-01-05"), ImmutableMap.of("a2", "d", "rows", 5),
-            new DateTime("2011-01-05T01"), ImmutableMap.of("a2", "d", "rows", 5),
-            new DateTime("2011-01-06"), ImmutableMap.of("a2", "e", "rows", 6),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("a2", "e", "rows", 6),
-            new DateTime("2011-01-07"), ImmutableMap.of("a2", "f", "rows", 7),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("a2", "f", "rows", 7),
-            new DateTime("2011-01-08"), ImmutableMap.of("a2", "g", "rows", 8),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("a2", "g", "rows", 8),
-            new DateTime("2011-01-09"), ImmutableMap.of("a2", "h", "rows", 9),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("a2", "h", "rows", 9)
+            DateTimes.of("2011-01-01"), ImmutableMap.of("a2", "b", "rows", 1),
+            DateTimes.of("2011-01-02"), ImmutableMap.of("a2", "c", "rows", 5),
+            DateTimes.of("2011-01-05"), ImmutableMap.of("a2", "d", "rows", 5),
+            DateTimes.of("2011-01-05T01"), ImmutableMap.of("a2", "d", "rows", 5),
+            DateTimes.of("2011-01-06"), ImmutableMap.of("a2", "e", "rows", 6),
+            DateTimes.of("2011-01-06T01"), ImmutableMap.of("a2", "e", "rows", 6),
+            DateTimes.of("2011-01-07"), ImmutableMap.of("a2", "f", "rows", 7),
+            DateTimes.of("2011-01-07T01"), ImmutableMap.of("a2", "f", "rows", 7),
+            DateTimes.of("2011-01-08"), ImmutableMap.of("a2", "g", "rows", 8),
+            DateTimes.of("2011-01-08T01"), ImmutableMap.of("a2", "g", "rows", 8),
+            DateTimes.of("2011-01-09"), ImmutableMap.of("a2", "h", "rows", 9),
+            DateTimes.of("2011-01-09T01"), ImmutableMap.of("a2", "h", "rows", 9)
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -1497,43 +1499,43 @@ public class CachingClusteredClientTest
     testQueryCaching(
         getDefaultQueryRunner(),
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-01/2011-01-02"),
         makeGroupByResults(
-            new DateTime("2011-01-01"),
+            DateTimes.of("2011-01-01"),
             ImmutableMap.of("a", "a", "rows", 1, "imps", 1, "impers", 1, "uniques", collector)
         ),
 
-        new Interval("2011-01-02/2011-01-03"),
+        Intervals.of("2011-01-02/2011-01-03"),
         makeGroupByResults(
-            new DateTime("2011-01-02"),
+            DateTimes.of("2011-01-02"),
             ImmutableMap.of("a", "b", "rows", 2, "imps", 2, "impers", 2, "uniques", collector)
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeGroupByResults(
-            new DateTime("2011-01-05"),
+            DateTimes.of("2011-01-05"),
             ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3, "uniques", collector),
-            new DateTime("2011-01-06"),
+            DateTimes.of("2011-01-06"),
             ImmutableMap.of("a", "d", "rows", 4, "imps", 4, "impers", 4, "uniques", collector),
-            new DateTime("2011-01-07"),
+            DateTimes.of("2011-01-07"),
             ImmutableMap.of("a", "e", "rows", 5, "imps", 5, "impers", 5, "uniques", collector),
-            new DateTime("2011-01-08"),
+            DateTimes.of("2011-01-08"),
             ImmutableMap.of("a", "f", "rows", 6, "imps", 6, "impers", 6, "uniques", collector),
-            new DateTime("2011-01-09"),
+            DateTimes.of("2011-01-09"),
             ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7, "uniques", collector)
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeGroupByResults(
-            new DateTime("2011-01-05T01"),
+            DateTimes.of("2011-01-05T01"),
             ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3, "uniques", collector),
-            new DateTime("2011-01-06T01"),
+            DateTimes.of("2011-01-06T01"),
             ImmutableMap.of("a", "d", "rows", 4, "imps", 4, "impers", 4, "uniques", collector),
-            new DateTime("2011-01-07T01"),
+            DateTimes.of("2011-01-07T01"),
             ImmutableMap.of("a", "e", "rows", 5, "imps", 5, "impers", 5, "uniques", collector),
-            new DateTime("2011-01-08T01"),
+            DateTimes.of("2011-01-08T01"),
             ImmutableMap.of("a", "f", "rows", 6, "imps", 6, "impers", 6, "uniques", collector),
-            new DateTime("2011-01-09T01"),
+            DateTimes.of("2011-01-09T01"),
             ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7, "uniques", collector)
         )
     );
@@ -1545,25 +1547,25 @@ public class CachingClusteredClientTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
-            new DateTime("2011-01-05T"),
+            DateTimes.of("2011-01-05T"),
             ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3, "uniques", collector),
-            new DateTime("2011-01-05T01"),
+            DateTimes.of("2011-01-05T01"),
             ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3, "uniques", collector),
-            new DateTime("2011-01-06T"),
+            DateTimes.of("2011-01-06T"),
             ImmutableMap.of("a", "d", "rows", 4, "imps", 4, "impers", 4, "uniques", collector),
-            new DateTime("2011-01-06T01"),
+            DateTimes.of("2011-01-06T01"),
             ImmutableMap.of("a", "d", "rows", 4, "imps", 4, "impers", 4, "uniques", collector),
-            new DateTime("2011-01-07T"),
+            DateTimes.of("2011-01-07T"),
             ImmutableMap.of("a", "e", "rows", 5, "imps", 5, "impers", 5, "uniques", collector),
-            new DateTime("2011-01-07T01"),
+            DateTimes.of("2011-01-07T01"),
             ImmutableMap.of("a", "e", "rows", 5, "imps", 5, "impers", 5, "uniques", collector),
-            new DateTime("2011-01-08T"),
+            DateTimes.of("2011-01-08T"),
             ImmutableMap.of("a", "f", "rows", 6, "imps", 6, "impers", 6, "uniques", collector),
-            new DateTime("2011-01-08T01"),
+            DateTimes.of("2011-01-08T01"),
             ImmutableMap.of("a", "f", "rows", 6, "imps", 6, "impers", 6, "uniques", collector),
-            new DateTime("2011-01-09T"),
+            DateTimes.of("2011-01-09T"),
             ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7, "uniques", collector),
-            new DateTime("2011-01-09T01"),
+            DateTimes.of("2011-01-09T01"),
             ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7, "uniques", collector)
         ),
         runner.run(
@@ -1585,17 +1587,17 @@ public class CachingClusteredClientTest
               .intervals(CachingClusteredClientTest.SEG_SPEC)
               .context(CachingClusteredClientTest.CONTEXT)
               .build(),
-        new Interval("2011-01-01/2011-01-02"),
-        makeTimeBoundaryResult(new DateTime("2011-01-01"), new DateTime("2011-01-01"), new DateTime("2011-01-02")),
+        Intervals.of("2011-01-01/2011-01-02"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-01"), DateTimes.of("2011-01-01"), DateTimes.of("2011-01-02")),
 
-        new Interval("2011-01-01/2011-01-03"),
-        makeTimeBoundaryResult(new DateTime("2011-01-02"), new DateTime("2011-01-02"), new DateTime("2011-01-03")),
+        Intervals.of("2011-01-01/2011-01-03"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-02"), DateTimes.of("2011-01-02"), DateTimes.of("2011-01-03")),
 
-        new Interval("2011-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("2011-01-05"), new DateTime("2011-01-05"), new DateTime("2011-01-10")),
+        Intervals.of("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-05"), DateTimes.of("2011-01-05"), DateTimes.of("2011-01-10")),
 
-        new Interval("2011-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("2011-01-05T01"), new DateTime("2011-01-05T01"), new DateTime("2011-01-10"))
+        Intervals.of("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-05T01"), DateTimes.of("2011-01-05T01"), DateTimes.of("2011-01-10"))
     );
 
     testQueryCaching(
@@ -1606,17 +1608,17 @@ public class CachingClusteredClientTest
               .context(CachingClusteredClientTest.CONTEXT)
               .bound(TimeBoundaryQuery.MAX_TIME)
               .build(),
-        new Interval("2011-01-01/2011-01-02"),
-        makeTimeBoundaryResult(new DateTime("2011-01-01"), null, new DateTime("2011-01-02")),
+        Intervals.of("2011-01-01/2011-01-02"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-01"), null, DateTimes.of("2011-01-02")),
 
-        new Interval("2011-01-01/2011-01-03"),
-        makeTimeBoundaryResult(new DateTime("2011-01-02"), null, new DateTime("2011-01-03")),
+        Intervals.of("2011-01-01/2011-01-03"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-02"), null, DateTimes.of("2011-01-03")),
 
-        new Interval("2011-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("2011-01-05"), null, new DateTime("2011-01-10")),
+        Intervals.of("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-05"), null, DateTimes.of("2011-01-10")),
 
-        new Interval("2011-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("2011-01-05T01"), null, new DateTime("2011-01-10"))
+        Intervals.of("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-05T01"), null, DateTimes.of("2011-01-10"))
     );
 
     testQueryCaching(
@@ -1627,17 +1629,17 @@ public class CachingClusteredClientTest
               .context(CachingClusteredClientTest.CONTEXT)
               .bound(TimeBoundaryQuery.MIN_TIME)
               .build(),
-        new Interval("2011-01-01/2011-01-02"),
-        makeTimeBoundaryResult(new DateTime("2011-01-01"), new DateTime("2011-01-01"), null),
+        Intervals.of("2011-01-01/2011-01-02"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-01"), DateTimes.of("2011-01-01"), null),
 
-        new Interval("2011-01-01/2011-01-03"),
-        makeTimeBoundaryResult(new DateTime("2011-01-02"), new DateTime("2011-01-02"), null),
+        Intervals.of("2011-01-01/2011-01-03"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-02"), DateTimes.of("2011-01-02"), null),
 
-        new Interval("2011-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("2011-01-05"), new DateTime("2011-01-05"), null),
+        Intervals.of("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-05"), DateTimes.of("2011-01-05"), null),
 
-        new Interval("2011-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("2011-01-05T01"), new DateTime("2011-01-05T01"), null)
+        Intervals.of("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-05T01"), DateTimes.of("2011-01-05T01"), null)
     );
   }
 
@@ -1692,12 +1694,12 @@ public class CachingClusteredClientTest
     filter result in {[2,2]}, so segments [1,2] and [2,3] is needed
     */
     List<Iterable<Result<TimeseriesResultValue>>> expectedResult = Arrays.asList(
-        makeTimeResults(new DateTime("2011-01-01"), 50, 5000,
-                        new DateTime("2011-01-02"), 10, 1252,
-                        new DateTime("2011-01-03"), 20, 6213,
-                        new DateTime("2011-01-04"), 30, 743),
-        makeTimeResults(new DateTime("2011-01-07"), 60, 6020,
-                        new DateTime("2011-01-08"), 70, 250)
+        makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000,
+                        DateTimes.of("2011-01-02"), 10, 1252,
+                        DateTimes.of("2011-01-03"), 20, 6213,
+                        DateTimes.of("2011-01-04"), 30, 743),
+        makeTimeResults(DateTimes.of("2011-01-07"), 60, 6020,
+                        DateTimes.of("2011-01-08"), 70, 250)
     );
 
     testQueryCachingWithFilter(
@@ -1705,16 +1707,16 @@ public class CachingClusteredClientTest
         3,
         builder.build(),
         expectedResult,
-        new Interval("2011-01-01/2011-01-05"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000),
-        new Interval("2011-01-01/2011-01-05"), makeTimeResults(new DateTime("2011-01-02"), 10, 1252),
-        new Interval("2011-01-01/2011-01-05"), makeTimeResults(new DateTime("2011-01-03"), 20, 6213),
-        new Interval("2011-01-01/2011-01-05"), makeTimeResults(new DateTime("2011-01-04"), 30, 743),
-        new Interval("2011-01-01/2011-01-05"), makeTimeResults(new DateTime("2011-01-05"), 40, 6000),
-        new Interval("2011-01-06/2011-01-10"), makeTimeResults(new DateTime("2011-01-06"), 50, 425),
-        new Interval("2011-01-06/2011-01-10"), makeTimeResults(new DateTime("2011-01-07"), 60, 6020),
-        new Interval("2011-01-06/2011-01-10"), makeTimeResults(new DateTime("2011-01-08"), 70, 250),
-        new Interval("2011-01-06/2011-01-10"), makeTimeResults(new DateTime("2011-01-09"), 23, 85312),
-        new Interval("2011-01-06/2011-01-10"), makeTimeResults(new DateTime("2011-01-10"), 100, 512)
+        Intervals.of("2011-01-01/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000),
+        Intervals.of("2011-01-01/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-02"), 10, 1252),
+        Intervals.of("2011-01-01/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-03"), 20, 6213),
+        Intervals.of("2011-01-01/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-04"), 30, 743),
+        Intervals.of("2011-01-01/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-05"), 40, 6000),
+        Intervals.of("2011-01-06/2011-01-10"), makeTimeResults(DateTimes.of("2011-01-06"), 50, 425),
+        Intervals.of("2011-01-06/2011-01-10"), makeTimeResults(DateTimes.of("2011-01-07"), 60, 6020),
+        Intervals.of("2011-01-06/2011-01-10"), makeTimeResults(DateTimes.of("2011-01-08"), 70, 250),
+        Intervals.of("2011-01-06/2011-01-10"), makeTimeResults(DateTimes.of("2011-01-09"), 23, 85312),
+        Intervals.of("2011-01-06/2011-01-10"), makeTimeResults(DateTimes.of("2011-01-10"), 100, 512)
     );
 
   }
@@ -1761,9 +1763,9 @@ public class CachingClusteredClientTest
     TimeseriesQuery query = builder.build();
     Map<String, Object> context = new HashMap<>();
 
-    final Interval interval1 = new Interval("2011-01-06/2011-01-07");
-    final Interval interval2 = new Interval("2011-01-07/2011-01-08");
-    final Interval interval3 = new Interval("2011-01-08/2011-01-09");
+    final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
+    final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
+    final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
@@ -2847,7 +2849,7 @@ public class CachingClusteredClientTest
       {
         super(
             "",
-            new Interval(0, 1),
+            Intervals.utc(0, 1),
             "",
             null,
             null,
@@ -3013,17 +3015,17 @@ public class CachingClusteredClientTest
               .intervals(CachingClusteredClientTest.SEG_SPEC)
               .context(CachingClusteredClientTest.CONTEXT)
               .build(),
-        new Interval("1970-01-01/1970-01-02"),
-        makeTimeBoundaryResult(new DateTime("1970-01-01"), new DateTime("1970-01-01"), new DateTime("1970-01-02")),
+        Intervals.of("1970-01-01/1970-01-02"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-01"), DateTimes.of("1970-01-01"), DateTimes.of("1970-01-02")),
 
-        new Interval("1970-01-01/2011-01-03"),
-        makeTimeBoundaryResult(new DateTime("1970-01-02"), new DateTime("1970-01-02"), new DateTime("1970-01-03")),
+        Intervals.of("1970-01-01/2011-01-03"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-02"), DateTimes.of("1970-01-02"), DateTimes.of("1970-01-03")),
 
-        new Interval("1970-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("1970-01-05"), new DateTime("1970-01-05"), new DateTime("1970-01-10")),
+        Intervals.of("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-05"), DateTimes.of("1970-01-05"), DateTimes.of("1970-01-10")),
 
-        new Interval("1970-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("1970-01-05T01"), new DateTime("1970-01-05T01"), new DateTime("1970-01-10"))
+        Intervals.of("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-05T01"), DateTimes.of("1970-01-05T01"), DateTimes.of("1970-01-10"))
     );
 
     testQueryCaching(
@@ -3034,17 +3036,17 @@ public class CachingClusteredClientTest
               .context(CachingClusteredClientTest.CONTEXT)
               .bound(TimeBoundaryQuery.MAX_TIME)
               .build(),
-        new Interval("1970-01-01/2011-01-02"),
-        makeTimeBoundaryResult(new DateTime("1970-01-01"), null, new DateTime("1970-01-02")),
+        Intervals.of("1970-01-01/2011-01-02"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-01"), null, DateTimes.of("1970-01-02")),
 
-        new Interval("1970-01-01/2011-01-03"),
-        makeTimeBoundaryResult(new DateTime("1970-01-02"), null, new DateTime("1970-01-03")),
+        Intervals.of("1970-01-01/2011-01-03"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-02"), null, DateTimes.of("1970-01-03")),
 
-        new Interval("1970-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("1970-01-05"), null, new DateTime("1970-01-10")),
+        Intervals.of("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-05"), null, DateTimes.of("1970-01-10")),
 
-        new Interval("1970-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("1970-01-05T01"), null, new DateTime("1970-01-10"))
+        Intervals.of("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-05T01"), null, DateTimes.of("1970-01-10"))
     );
 
     testQueryCaching(
@@ -3055,17 +3057,17 @@ public class CachingClusteredClientTest
               .context(CachingClusteredClientTest.CONTEXT)
               .bound(TimeBoundaryQuery.MIN_TIME)
               .build(),
-        new Interval("1970-01-01/2011-01-02"),
-        makeTimeBoundaryResult(new DateTime("1970-01-01"), new DateTime("1970-01-01"), null),
+        Intervals.of("1970-01-01/2011-01-02"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-01"), DateTimes.of("1970-01-01"), null),
 
-        new Interval("1970-01-01/2011-01-03"),
-        makeTimeBoundaryResult(new DateTime("1970-01-02"), new DateTime("1970-01-02"), null),
+        Intervals.of("1970-01-01/2011-01-03"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-02"), DateTimes.of("1970-01-02"), null),
 
-        new Interval("1970-01-01/1970-01-10"),
-        makeTimeBoundaryResult(new DateTime("1970-01-05"), new DateTime("1970-01-05"), null),
+        Intervals.of("1970-01-01/1970-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-05"), DateTimes.of("1970-01-05"), null),
 
-        new Interval("1970-01-01/2011-01-10"),
-        makeTimeBoundaryResult(new DateTime("1970-01-05T01"), new DateTime("1970-01-05T01"), null)
+        Intervals.of("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-05T01"), DateTimes.of("1970-01-05T01"), null)
     );
   }
 
@@ -3084,34 +3086,34 @@ public class CachingClusteredClientTest
     testQueryCaching(
         getDefaultQueryRunner(),
         builder.build(),
-        new Interval("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-01/2011-01-02"),
         makeGroupByResults(
-            new DateTime("2011-01-01"),
+            DateTimes.of("2011-01-01"),
             ImmutableMap.of("output", "a", "rows", 1, "imps", 1, "impers", 1)
         ),
 
-        new Interval("2011-01-02/2011-01-03"),
+        Intervals.of("2011-01-02/2011-01-03"),
         makeGroupByResults(
-            new DateTime("2011-01-02"),
+            DateTimes.of("2011-01-02"),
             ImmutableMap.of("output", "b", "rows", 2, "imps", 2, "impers", 2)
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeGroupByResults(
-            new DateTime("2011-01-05"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
-            new DateTime("2011-01-06"), ImmutableMap.of("output", "d", "rows", 4, "imps", 4, "impers", 4),
-            new DateTime("2011-01-07"), ImmutableMap.of("output", "e", "rows", 5, "imps", 5, "impers", 5),
-            new DateTime("2011-01-08"), ImmutableMap.of("output", "f", "rows", 6, "imps", 6, "impers", 6),
-            new DateTime("2011-01-09"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7)
+            DateTimes.of("2011-01-05"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
+            DateTimes.of("2011-01-06"), ImmutableMap.of("output", "d", "rows", 4, "imps", 4, "impers", 4),
+            DateTimes.of("2011-01-07"), ImmutableMap.of("output", "e", "rows", 5, "imps", 5, "impers", 5),
+            DateTimes.of("2011-01-08"), ImmutableMap.of("output", "f", "rows", 6, "imps", 6, "impers", 6),
+            DateTimes.of("2011-01-09"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7)
         ),
 
-        new Interval("2011-01-05/2011-01-10"),
+        Intervals.of("2011-01-05/2011-01-10"),
         makeGroupByResults(
-            new DateTime("2011-01-05T01"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("output", "d", "rows", 4, "imps", 4, "impers", 4),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("output", "e", "rows", 5, "imps", 5, "impers", 5),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("output", "f", "rows", 6, "imps", 6, "impers", 6),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7)
+            DateTimes.of("2011-01-05T01"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
+            DateTimes.of("2011-01-06T01"), ImmutableMap.of("output", "d", "rows", 4, "imps", 4, "impers", 4),
+            DateTimes.of("2011-01-07T01"), ImmutableMap.of("output", "e", "rows", 5, "imps", 5, "impers", 5),
+            DateTimes.of("2011-01-08T01"), ImmutableMap.of("output", "f", "rows", 6, "imps", 6, "impers", 6),
+            DateTimes.of("2011-01-09T01"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7)
         )
     );
 
@@ -3122,16 +3124,16 @@ public class CachingClusteredClientTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
-            new DateTime("2011-01-05T"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
-            new DateTime("2011-01-05T01"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
-            new DateTime("2011-01-06T"), ImmutableMap.of("output", "d", "rows", 4, "imps", 4, "impers", 4),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("output", "d", "rows", 4, "imps", 4, "impers", 4),
-            new DateTime("2011-01-07T"), ImmutableMap.of("output", "e", "rows", 5, "imps", 5, "impers", 5),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("output", "e", "rows", 5, "imps", 5, "impers", 5),
-            new DateTime("2011-01-08T"), ImmutableMap.of("output", "f", "rows", 6, "imps", 6, "impers", 6),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("output", "f", "rows", 6, "imps", 6, "impers", 6),
-            new DateTime("2011-01-09T"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7)
+            DateTimes.of("2011-01-05T"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
+            DateTimes.of("2011-01-05T01"), ImmutableMap.of("output", "c", "rows", 3, "imps", 3, "impers", 3),
+            DateTimes.of("2011-01-06T"), ImmutableMap.of("output", "d", "rows", 4, "imps", 4, "impers", 4),
+            DateTimes.of("2011-01-06T01"), ImmutableMap.of("output", "d", "rows", 4, "imps", 4, "impers", 4),
+            DateTimes.of("2011-01-07T"), ImmutableMap.of("output", "e", "rows", 5, "imps", 5, "impers", 5),
+            DateTimes.of("2011-01-07T01"), ImmutableMap.of("output", "e", "rows", 5, "imps", 5, "impers", 5),
+            DateTimes.of("2011-01-08T"), ImmutableMap.of("output", "f", "rows", 6, "imps", 6, "impers", 6),
+            DateTimes.of("2011-01-08T01"), ImmutableMap.of("output", "f", "rows", 6, "imps", 6, "impers", 6),
+            DateTimes.of("2011-01-09T"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7),
+            DateTimes.of("2011-01-09T01"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7)
         ),
         runner.run(
             builder.setInterval("2011-01-05/2011-01-10")
@@ -3143,16 +3145,16 @@ public class CachingClusteredClientTest
 
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
-            new DateTime("2011-01-05T"), ImmutableMap.of("output2", "c", "rows", 3, "imps", 3, "impers2", 3),
-            new DateTime("2011-01-05T01"), ImmutableMap.of("output2", "c", "rows", 3, "imps", 3, "impers2", 3),
-            new DateTime("2011-01-06T"), ImmutableMap.of("output2", "d", "rows", 4, "imps", 4, "impers2", 4),
-            new DateTime("2011-01-06T01"), ImmutableMap.of("output2", "d", "rows", 4, "imps", 4, "impers2", 4),
-            new DateTime("2011-01-07T"), ImmutableMap.of("output2", "e", "rows", 5, "imps", 5, "impers2", 5),
-            new DateTime("2011-01-07T01"), ImmutableMap.of("output2", "e", "rows", 5, "imps", 5, "impers2", 5),
-            new DateTime("2011-01-08T"), ImmutableMap.of("output2", "f", "rows", 6, "imps", 6, "impers2", 6),
-            new DateTime("2011-01-08T01"), ImmutableMap.of("output2", "f", "rows", 6, "imps", 6, "impers2", 6),
-            new DateTime("2011-01-09T"), ImmutableMap.of("output2", "g", "rows", 7, "imps", 7, "impers2", 7),
-            new DateTime("2011-01-09T01"), ImmutableMap.of("output2", "g", "rows", 7, "imps", 7, "impers2", 7)
+            DateTimes.of("2011-01-05T"), ImmutableMap.of("output2", "c", "rows", 3, "imps", 3, "impers2", 3),
+            DateTimes.of("2011-01-05T01"), ImmutableMap.of("output2", "c", "rows", 3, "imps", 3, "impers2", 3),
+            DateTimes.of("2011-01-06T"), ImmutableMap.of("output2", "d", "rows", 4, "imps", 4, "impers2", 4),
+            DateTimes.of("2011-01-06T01"), ImmutableMap.of("output2", "d", "rows", 4, "imps", 4, "impers2", 4),
+            DateTimes.of("2011-01-07T"), ImmutableMap.of("output2", "e", "rows", 5, "imps", 5, "impers2", 5),
+            DateTimes.of("2011-01-07T01"), ImmutableMap.of("output2", "e", "rows", 5, "imps", 5, "impers2", 5),
+            DateTimes.of("2011-01-08T"), ImmutableMap.of("output2", "f", "rows", 6, "imps", 6, "impers2", 6),
+            DateTimes.of("2011-01-08T01"), ImmutableMap.of("output2", "f", "rows", 6, "imps", 6, "impers2", 6),
+            DateTimes.of("2011-01-09T"), ImmutableMap.of("output2", "g", "rows", 7, "imps", 7, "impers2", 7),
+            DateTimes.of("2011-01-09T01"), ImmutableMap.of("output2", "g", "rows", 7, "imps", 7, "impers2", 7)
         ),
         runner.run(
             builder.setInterval("2011-01-05/2011-01-10")
@@ -3168,7 +3170,7 @@ public class CachingClusteredClientTest
   @Test
   public void testIfNoneMatch() throws Exception
   {
-    Interval interval = new Interval("2016/2017");
+    Interval interval = Intervals.of("2016/2017");
     final DataSegment dataSegment = new DataSegment(
         "dataSource",
         interval,

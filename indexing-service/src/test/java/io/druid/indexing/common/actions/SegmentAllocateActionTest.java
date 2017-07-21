@@ -31,6 +31,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -56,8 +57,8 @@ public class SegmentAllocateActionTest
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private static final String DATA_SOURCE = "none";
-  private static final DateTime PARTY_TIME = new DateTime("1999");
-  private static final DateTime THE_DISTANT_FUTURE = new DateTime("3000");
+  private static final DateTime PARTY_TIME = DateTimes.of("1999");
+  private static final DateTime THE_DISTANT_FUTURE = DateTimes.of("3000");
 
   @Before
   public void setUp()

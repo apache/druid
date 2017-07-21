@@ -66,11 +66,11 @@ public class GroupByQueryHelper
   {
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final Granularity gran = query.getGranularity();
-    final long timeStart = query.getIntervals().get(0).getStartMillis();
+    final DateTime timeStart = query.getIntervals().get(0).getStart();
 
-    long granTimeStart = timeStart;
+    DateTime granTimeStart = timeStart;
     if (!(Granularities.ALL.equals(gran))) {
-      granTimeStart = gran.bucketStart(new DateTime(timeStart)).getMillis();
+      granTimeStart = gran.bucketStart(timeStart);
     }
 
     final List<AggregatorFactory> aggs;
@@ -115,7 +115,7 @@ public class GroupByQueryHelper
         .withDimensionsSpec(new DimensionsSpec(dimensionSchemas, null, null))
         .withMetrics(aggs.toArray(new AggregatorFactory[aggs.size()]))
         .withQueryGranularity(gran)
-        .withMinTimestamp(granTimeStart)
+        .withMinTimestamp(granTimeStart.getMillis())
         .build();
 
     if (query.getContextValue("useOffheap", false)) {

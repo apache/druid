@@ -23,8 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.java.util.common.StringUtils;
 import com.google.common.primitives.Doubles;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -144,7 +146,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
-            new DateTime("2020-04-02"),
+            DateTimes.of("2020-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
@@ -286,8 +288,8 @@ public class TimeseriesQueryRunnerTest
                                   .descending(descending)
                                   .build();
 
-    DateTime expectedEarliest = new DateTime("2011-01-12");
-    DateTime expectedLast = new DateTime("2011-04-15");
+    DateTime expectedEarliest = DateTimes.of("2011-01-12");
+    DateTime expectedLast = DateTimes.of("2011-04-15");
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
         runner.run(query, CONTEXT),
@@ -389,13 +391,13 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
@@ -437,13 +439,13 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
@@ -513,11 +515,7 @@ public class TimeseriesQueryRunnerTest
                                    .dataSource(QueryRunnerTestHelper.dataSource)
                                    .granularity(new PeriodGranularity(new Period("P1M"), null, null))
                                    .intervals(
-                                       Arrays.asList(
-                                           new Interval(
-                                               "2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z"
-                                           )
-                                       )
+                                       Arrays.asList(Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
                                    )
                                    .aggregators(
                                        Arrays.<AggregatorFactory>asList(
@@ -534,7 +532,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
@@ -551,11 +549,7 @@ public class TimeseriesQueryRunnerTest
                                    .dataSource(QueryRunnerTestHelper.dataSource)
                                    .granularity("DAY")
                                    .intervals(
-                                       Arrays.asList(
-                                           new Interval(
-                                               "2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z"
-                                           )
-                                       )
+                                       Arrays.asList(Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
                                    )
                                    .aggregators(
                                        Arrays.<AggregatorFactory>asList(
@@ -571,7 +565,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults2 = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
@@ -600,9 +594,7 @@ public class TimeseriesQueryRunnerTest
                                    )
                                    .intervals(
                                        Arrays.asList(
-                                           new Interval(
-                                               "2011-01-12T00:00:00.000-08:00/2011-01-20T00:00:00.000-08:00"
-                                           )
+                                           Intervals.of("2011-01-12T00:00:00.000-08:00/2011-01-20T00:00:00.000-08:00")
                                        )
                                    )
                                    .aggregators(
@@ -647,11 +639,7 @@ public class TimeseriesQueryRunnerTest
                                    .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(Granularities.HOUR)
                                    .intervals(
-                                       Arrays.asList(
-                                           new Interval(
-                                               "2011-04-14T00:00:00.000Z/2011-05-01T00:00:00.000Z"
-                                           )
-                                       )
+                                       Arrays.asList(Intervals.of("2011-04-14T00:00:00.000Z/2011-05-01T00:00:00.000Z"))
                                    )
                                    .aggregators(
                                        Arrays.<AggregatorFactory>asList(
@@ -666,7 +654,9 @@ public class TimeseriesQueryRunnerTest
                                    .build();
 
     List<Result<TimeseriesResultValue>> lotsOfZeroes = Lists.newArrayList();
-    final Iterable<Interval> iterable = Granularities.HOUR.getIterable(new Interval(new DateTime("2011-04-14T01").getMillis(), new DateTime("2011-04-15").getMillis()));
+    final Iterable<Interval> iterable = Granularities.HOUR.getIterable(
+        new Interval(DateTimes.of("2011-04-14T01"), DateTimes.of("2011-04-15"))
+    );
     for (Interval interval : iterable) {
         lotsOfZeroes.add(
                 new Result<>(
@@ -682,7 +672,7 @@ public class TimeseriesQueryRunnerTest
         Iterables.concat(
             Arrays.asList(
                 new Result<>(
-                    new DateTime("2011-04-14T00"),
+                    DateTimes.of("2011-04-14T00"),
                     new TimeseriesResultValue(
                         ImmutableMap.<String, Object>of("rows", 13L, "idx", 4907L)
                     )
@@ -691,7 +681,7 @@ public class TimeseriesQueryRunnerTest
             lotsOfZeroes,
             Arrays.asList(
                 new Result<>(
-                    new DateTime("2011-04-15T00"),
+                    DateTimes.of("2011-04-15T00"),
                     new TimeseriesResultValue(
                         ImmutableMap.<String, Object>of("rows", 13L, "idx", 4717L)
                     )
@@ -716,17 +706,11 @@ public class TimeseriesQueryRunnerTest
                                    .granularity(
                                        new PeriodGranularity(
                                            new Period("PT1H"),
-                                           new DateTime(60000),
+                                           DateTimes.utc(60000),
                                            DateTimeZone.UTC
                                        )
                                    )
-                                   .intervals(
-                                       Arrays.asList(
-                                           new Interval(
-                                               "2011-04-15T00:00:00.000Z/2012"
-                                           )
-                                       )
-                                   )
+                                   .intervals(Arrays.asList(Intervals.of("2011-04-15T00:00:00.000Z/2012")))
                                    .aggregators(
                                        Arrays.<AggregatorFactory>asList(
                                            QueryRunnerTestHelper.rowsCount,
@@ -741,7 +725,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-14T23:01Z"),
+            DateTimes.of("2011-04-14T23:01Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 4717L)
             )
@@ -763,11 +747,7 @@ public class TimeseriesQueryRunnerTest
                                    .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(new PeriodGranularity(new Period("P1M"), null, null))
                                    .intervals(
-                                       Arrays.asList(
-                                           new Interval(
-                                               "2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z"
-                                           )
-                                       )
+                                       Arrays.asList(Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
                                    )
                                    .aggregators(
                                        Arrays.<AggregatorFactory>asList(
@@ -784,7 +764,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
@@ -801,11 +781,7 @@ public class TimeseriesQueryRunnerTest
                                    .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity("DAY")
                                    .intervals(
-                                       Arrays.asList(
-                                           new Interval(
-                                               "2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z"
-                                           )
-                                       )
+                                       Arrays.asList(Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
                                    )
                                    .aggregators(
                                        Arrays.<AggregatorFactory>asList(
@@ -821,7 +797,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults2 = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
@@ -843,11 +819,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .intervals(
                                       new MultipleIntervalSegmentSpec(
-                                          Arrays.asList(
-                                              new Interval(
-                                                  "2015-01-01/2015-01-10"
-                                              )
-                                          )
+                                          Arrays.asList(Intervals.of("2015-01-01/2015-01-10"))
                                       )
                                   )
                                   .aggregators(
@@ -892,7 +864,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -903,7 +875,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -943,7 +915,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 11L,
@@ -954,7 +926,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 11L,
@@ -994,7 +966,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 9L,
@@ -1005,7 +977,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 9L,
@@ -1045,7 +1017,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
@@ -1056,7 +1028,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
@@ -1096,7 +1068,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
@@ -1107,7 +1079,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
@@ -1155,7 +1127,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
@@ -1166,7 +1138,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
@@ -1214,7 +1186,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
@@ -1225,7 +1197,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
@@ -1273,7 +1245,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
@@ -1284,7 +1256,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
@@ -1330,7 +1302,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -1341,7 +1313,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -1393,7 +1365,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -1404,7 +1376,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -1456,7 +1428,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
@@ -1467,7 +1439,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
@@ -1501,7 +1473,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
@@ -1512,7 +1484,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
@@ -1569,7 +1541,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -1580,7 +1552,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -1614,7 +1586,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -1625,7 +1597,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
@@ -1659,7 +1631,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
@@ -1670,7 +1642,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
@@ -1718,7 +1690,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
@@ -1729,7 +1701,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
@@ -1767,11 +1739,7 @@ public class TimeseriesQueryRunnerTest
 
     Iterable<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
-            new DateTime(
-                QueryRunnerTestHelper.firstToThird.getIntervals()
-                                                  .get(0)
-                                                  .getStart()
-            ),
+            QueryRunnerTestHelper.firstToThird.getIntervals().get(0).getStart(),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "index", 12459.361190795898d,
@@ -1809,11 +1777,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
-            new DateTime(
-                QueryRunnerTestHelper.firstToThird.getIntervals()
-                                                  .get(0)
-                                                  .getStart()
-            ),
+            QueryRunnerTestHelper.firstToThird.getIntervals().get(0).getStart(),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "index", 283.31103515625d,
@@ -1852,7 +1816,7 @@ public class TimeseriesQueryRunnerTest
     // to select different value from the list of first and last dates
     List<Result<TimeseriesResultValue>> expectedAscendingResults = ImmutableList.of(
         new Result<>(
-            new DateTime("2011-01-01"),
+            DateTimes.of("2011-01-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "first", new Float(100.000000).doubleValue(),
@@ -1861,7 +1825,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-02-01"),
+            DateTimes.of("2011-02-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "first", new Float(132.123776).doubleValue(),
@@ -1870,7 +1834,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-03-01"),
+            DateTimes.of("2011-03-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "first", new Float(153.059937).doubleValue(),
@@ -1879,7 +1843,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "first", new Float(135.885094).doubleValue(),
@@ -1891,7 +1855,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedDescendingResults = ImmutableList.of(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "first", new Float(1234.247546).doubleValue(),
@@ -1900,7 +1864,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-03-01"),
+            DateTimes.of("2011-03-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "first", new Float(1004.940887).doubleValue(),
@@ -1909,7 +1873,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-02-01"),
+            DateTimes.of("2011-02-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "first", new Float(913.561076).doubleValue(),
@@ -1918,7 +1882,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-01-01"),
+            DateTimes.of("2011-01-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "first", new Float(800.000000).doubleValue(),
@@ -2171,7 +2135,7 @@ public class TimeseriesQueryRunnerTest
     );
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "filteredAgg", 18L,
@@ -2221,7 +2185,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "filteredAgg", 0L,
@@ -2271,7 +2235,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "filteredAgg", 26L,
@@ -2322,7 +2286,7 @@ public class TimeseriesQueryRunnerTest
     );
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "filteredAgg", 26L,
@@ -2373,7 +2337,7 @@ public class TimeseriesQueryRunnerTest
     );
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "filteredAgg", 26L,
@@ -2408,7 +2372,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows",
@@ -2485,7 +2449,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 9L,
@@ -2496,7 +2460,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 9L,
@@ -2542,7 +2506,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 11L,
@@ -2553,7 +2517,7 @@ public class TimeseriesQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of(
                     "rows", 11L,

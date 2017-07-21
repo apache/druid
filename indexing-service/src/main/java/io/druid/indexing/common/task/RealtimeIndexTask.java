@@ -37,6 +37,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.DruidMetrics;
@@ -86,7 +87,7 @@ public class RealtimeIndexTask extends AbstractTask
     return makeTaskId(
         fireDepartment.getDataSchema().getDataSource(),
         fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
-        new DateTime(),
+        DateTimes.nowUtc(),
         random.nextInt()
     );
   }

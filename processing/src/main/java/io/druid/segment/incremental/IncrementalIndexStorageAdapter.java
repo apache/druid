@@ -208,10 +208,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     Interval actualIntervalTmp = interval;
 
-    final Interval dataInterval = new Interval(
-        getMinTime().getMillis(),
-        gran.bucketEnd(getMaxTime()).getMillis()
-    );
+    final Interval dataInterval = new Interval(getMinTime(), gran.bucketEnd(getMaxTime()));
 
     if (!actualIntervalTmp.overlaps(dataInterval)) {
       return Sequences.empty();

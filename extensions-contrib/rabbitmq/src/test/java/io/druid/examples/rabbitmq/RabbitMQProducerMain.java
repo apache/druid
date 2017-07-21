@@ -38,6 +38,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.TimeZone;
 
 /**
  *
@@ -179,7 +180,7 @@ public class RabbitMQProducerMain
     Date stop = sdf.parse(cmd.getOptionValue("stop", sdf.format(new Date())));
 
     Random r = new Random();
-    Calendar timer = Calendar.getInstance(Locale.ENGLISH);
+    Calendar timer = Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale.ENGLISH);
     timer.setTime(sdf.parse(cmd.getOptionValue("start", "2010-01-01T00:00:00")));
 
     String msg_template = "{\"utcdt\": \"%s\", \"wp\": %d, \"gender\": \"%s\", \"age\": %d}";

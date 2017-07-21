@@ -35,6 +35,7 @@ import io.druid.client.DirectDruidClient;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
@@ -325,7 +326,7 @@ public class QueryResource implements QueryCountStatsProvider
 
                         requestLogger.log(
                             new RequestLogLine(
-                                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
+                                DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(startNs)),
                                 req.getRemoteAddr(),
                                 theQuery,
                                 new QueryStats(
@@ -393,7 +394,7 @@ public class QueryResource implements QueryCountStatsProvider
         queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
+                DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(startNs)),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
@@ -438,7 +439,7 @@ public class QueryResource implements QueryCountStatsProvider
         queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
+                DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(startNs)),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(ImmutableMap.<String, Object>of(

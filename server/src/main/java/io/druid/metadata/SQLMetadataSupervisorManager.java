@@ -27,16 +27,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
-
-import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -95,7 +93,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                 )
             )
                   .bind("spec_id", id)
-                  .bind("created_date", new DateTime().toString())
+                  .bind("created_date", DateTimes.nowUtc().toString())
                   .bind("payload", jsonMapper.writeValueAsBytes(spec))
                   .execute();
 

@@ -17,46 +17,43 @@
  * under the License.
  */
 
-package io.druid.indexing.overlord.autoscaling;
+package io.druid.java.util.common;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
-import org.joda.time.Period;
+import org.joda.time.chrono.ISOChronology;
 
-/**
- */
-public class ProvisioningSchedulerConfig
+public final class DateTimes
 {
-  @JsonProperty
-  private boolean doAutoscale = false;
+  public static final DateTime EPOCH = utc(0);
+  public static final DateTime MAX = utc(JodaUtils.MAX_INSTANT);
+  public static final DateTime MIN = utc(JodaUtils.MIN_INSTANT);
 
-  @JsonProperty
-  private Period provisionPeriod = new Period("PT1M");
-
-  @JsonProperty
-  private Period terminatePeriod = new Period("PT5M");
-
-  @JsonProperty
-  private DateTime originTime = DateTimes.of("2012-01-01T00:55:00.000Z");
-
-  public boolean isDoAutoscale()
+  public static DateTime utc(long instant)
   {
-    return doAutoscale;
+    return new DateTime(instant, ISOChronology.getInstanceUTC());
   }
 
-  public Period getProvisionPeriod()
+  public static DateTime of(String instant)
   {
-    return provisionPeriod;
+    return new DateTime(instant, ISOChronology.getInstanceUTC());
   }
 
-  public Period getTerminatePeriod()
+  public static DateTime nowUtc()
   {
-    return terminatePeriod;
+    return DateTime.now(ISOChronology.getInstanceUTC());
   }
 
-  public DateTime getOriginTime()
+  public static DateTime max(DateTime dt1, DateTime dt2)
   {
-    return originTime;
+    return dt1.compareTo(dt2) >= 0 ? dt1 : dt2;
+  }
+
+  public static DateTime min(DateTime dt1, DateTime dt2)
+  {
+    return dt1.compareTo(dt2) < 0 ? dt1 : dt2;
+  }
+
+  private DateTimes()
+  {
   }
 }

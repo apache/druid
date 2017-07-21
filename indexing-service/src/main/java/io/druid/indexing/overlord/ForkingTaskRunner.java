@@ -53,6 +53,7 @@ import io.druid.indexing.common.tasklogs.LogUtils;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
@@ -560,7 +561,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
     }
 
-    final DateTime start = new DateTime();
+    final DateTime start = DateTimes.nowUtc();
     final long timeout = new Interval(start, taskConfig.getGracefulShutdownTimeout()).toDurationMillis();
 
     // Things should be terminating now. Wait for it to happen so logs can be uploaded and all that good stuff.

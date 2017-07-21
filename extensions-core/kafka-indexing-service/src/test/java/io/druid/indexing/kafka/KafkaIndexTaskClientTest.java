@@ -35,6 +35,7 @@ import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import org.easymock.Capture;
@@ -344,7 +345,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   public void testGetStartTime() throws Exception
   {
     client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
-    DateTime now = DateTime.now();
+    DateTime now = DateTimes.nowUtc();
 
     Capture<Request> captured = Capture.newInstance();
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
@@ -787,7 +788,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testGetStartTimeAsync() throws Exception
   {
-    final DateTime now = DateTime.now();
+    final DateTime now = DateTimes.nowUtc();
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();

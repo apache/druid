@@ -26,6 +26,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.DateTimes;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -71,9 +72,9 @@ public class DruidCoordinatorBalancerTest
     segment3 = EasyMock.createMock(DataSegment.class);
     segment4 = EasyMock.createMock(DataSegment.class);
 
-    DateTime start1 = new DateTime("2012-01-01");
-    DateTime start2 = new DateTime("2012-02-01");
-    DateTime version = new DateTime("2012-03-01");
+    DateTime start1 = DateTimes.of("2012-01-01");
+    DateTime start2 = DateTimes.of("2012-02-01");
+    DateTime version = DateTimes.of("2012-03-01");
     segment1 = new DataSegment(
         "datasource1",
         new Interval(start1, start1.plusHours(1)),
@@ -207,7 +208,7 @@ public class DruidCoordinatorBalancerTest
                                     ).build()
                                 )
                                      .withBalancerStrategy(balancerStrategy)
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
@@ -288,7 +289,7 @@ public class DruidCoordinatorBalancerTest
                                                                      .build()
                                 )
                                      .withBalancerStrategy(balancerStrategy)
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
@@ -390,7 +391,7 @@ public class DruidCoordinatorBalancerTest
                                     ).build()
                                 )
                                      .withBalancerStrategy(balancerStrategy)
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);

@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -43,7 +44,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import io.druid.utils.Runnables;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -125,7 +125,7 @@ public class IngestSegmentFirehose implements Firehose
                                       {
                                         final Map<String, Object> theEvent = Maps.newLinkedHashMap();
                                         final long timestamp = timestampColumnSelector.get();
-                                        theEvent.put(EventHolder.timestampKey, new DateTime(timestamp));
+                                        theEvent.put(EventHolder.timestampKey, DateTimes.utc(timestamp));
 
                                         for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
                                           final String dim = dimSelector.getKey();

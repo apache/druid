@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
@@ -154,8 +155,8 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                                   .descending(descending)
                                   .build();
 
-    DateTime expectedEarliest = new DateTime("1970-01-01");
-    DateTime expectedLast = new DateTime("2011-04-15");
+    DateTime expectedEarliest = DateTimes.of("1970-01-01");
+    DateTime expectedLast = DateTimes.of("2011-04-15");
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
         runner.run(query, CONTEXT),

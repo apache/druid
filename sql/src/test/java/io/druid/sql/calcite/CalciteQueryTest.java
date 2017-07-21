@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.hll.HLLCV1;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -100,6 +102,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -2276,7 +2279,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-01/2001-01-01")))
+                  .intervals(QSS(Intervals.of("2000-01-01/2001-01-01")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2299,7 +2302,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-01/2001-01-01")))
+                  .intervals(QSS(Intervals.of("2000-01-01/2001-01-01")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2319,7 +2322,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-01/2000-01-01T00:00:00.001")))
+                  .intervals(QSS(Intervals.of("2000-01-01/2000-01-01T00:00:00.001")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2342,8 +2345,8 @@ public class CalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(
                       QSS(
-                          new Interval("2000-01-01/2000-01-01T00:00:00.001"),
-                          new Interval("2000-01-02/2000-01-02T00:00:00.001")
+                          Intervals.of("2000-01-01/2000-01-01T00:00:00.001"),
+                          Intervals.of("2000-01-02/2000-01-02T00:00:00.001")
                       )
                   )
                   .granularity(Granularities.ALL)
@@ -2373,7 +2376,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000/2001"), new Interval("2002-05-01/2003-05-01")))
+                  .intervals(QSS(Intervals.of("2000/2001"), Intervals.of("2002-05-01/2003-05-01")))
                   .granularity(Granularities.ALL)
                   .filters(
                       AND(
@@ -2451,9 +2454,9 @@ public class CalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(
                       QSS(
-                          new Interval(Filtration.eternity().getStart(), new DateTime("2000")),
-                          new Interval("2001/2003"),
-                          new Interval(new DateTime("2004"), Filtration.eternity().getEnd())
+                          new Interval(DateTimes.MIN, DateTimes.of("2000")),
+                          Intervals.of("2001/2003"),
+                          new Interval(DateTimes.of("2004"), DateTimes.MAX)
                       )
                   )
                   .filters(NOT(SELECTOR("dim1", "xxx", null)))
@@ -2478,7 +2481,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-01/2001-01-01")))
+                  .intervals(QSS(Intervals.of("2000-01-01/2001-01-01")))
                   .filters(NOT(SELECTOR("dim2", "a", null)))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
@@ -2542,8 +2545,8 @@ public class CalciteQueryTest
                   .filters(
                       BOUND(
                           "cnt",
-                          String.valueOf(new DateTime("1970-01-01").getMillis()),
-                          String.valueOf(new DateTime("1970-01-02").getMillis()),
+                          String.valueOf(DateTimes.of("1970-01-01").getMillis()),
+                          String.valueOf(DateTimes.of("1970-01-02").getMillis()),
                           false,
                           true,
                           null,
@@ -2575,8 +2578,8 @@ public class CalciteQueryTest
                   .filters(
                       BOUND(
                           "cnt",
-                          String.valueOf(new DateTime("1970-01-01").getMillis()),
-                          String.valueOf(new DateTime("1970-01-02").getMillis()),
+                          String.valueOf(DateTimes.of("1970-01-01").getMillis()),
+                          String.valueOf(DateTimes.of("1970-01-02").getMillis()),
                           false,
                           true,
                           null,
@@ -2673,8 +2676,8 @@ public class CalciteQueryTest
                 .setDimFilter(
                     BOUND(
                         "cnt",
-                        String.valueOf(new DateTime("1970-01-01").getMillis()),
-                        String.valueOf(new DateTime("1970-01-02").getMillis()),
+                        String.valueOf(DateTimes.of("1970-01-01").getMillis()),
+                        String.valueOf(DateTimes.of("1970-01-02").getMillis()),
                         false,
                         true,
                         null,
@@ -3824,7 +3827,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000/P2M")))
+                  .intervals(QSS(Intervals.of("2000/P2M")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -3847,7 +3850,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-01T01:02/2002")))
+                  .intervals(QSS(Intervals.of("2000-01-01T01:02/2002")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -3884,7 +3887,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-02T00Z/2002-01-01T08Z")))
+                  .intervals(QSS(Intervals.of("2000-01-02T00Z/2002-01-01T08Z")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
@@ -3904,7 +3907,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-02/2002")))
+                  .intervals(QSS(Intervals.of("2000-01-02/2002")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -3929,7 +3932,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-02T00Z/2002-01-01T08Z")))
+                  .intervals(QSS(Intervals.of("2000-01-02T00Z/2002-01-01T08Z")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
@@ -3952,8 +3955,8 @@ public class CalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(
-                      new Interval(Filtration.eternity().getStart(), new DateTime("2001-01-01")),
-                      new Interval(new DateTime("2001-02-01"), Filtration.eternity().getEnd())
+                      new Interval(DateTimes.MIN, DateTimes.of("2001-01-01")),
+                      new Interval(DateTimes.of("2001-02-01"), DateTimes.MAX)
                   ))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
@@ -3976,7 +3979,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval(Filtration.eternity().getStart(), new DateTime("2000-02-01"))))
+                  .intervals(QSS(new Interval(DateTimes.MIN, DateTimes.of("2000-02-01"))))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -3998,7 +4001,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval(Filtration.eternity().getStart(), new DateTime("2000-03-01"))))
+                  .intervals(QSS(new Interval(DateTimes.MIN, DateTimes.of("2000-03-01"))))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -4021,7 +4024,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000/P1M")))
+                  .intervals(QSS(Intervals.of("2000/P1M")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -4044,7 +4047,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-02-01/P2M"), new Interval("2000-05-01/P1M")))
+                  .intervals(QSS(Intervals.of("2000-02-01/P2M"), Intervals.of("2000-05-01/P1M")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -4373,7 +4376,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-01/2001-02-01")))
+                  .intervals(QSS(Intervals.of("2000-01-01/2001-02-01")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(
                       new FilteredAggregatorFactory(
@@ -4531,7 +4534,7 @@ public class CalciteQueryTest
                   .granularity(
                       new PeriodGranularity(
                           Period.months(1),
-                          new DateTime("1970-01-01T01:02:03"),
+                          DateTimes.of("1970-01-01T01:02:03"),
                           DateTimeZone.UTC
                       )
                   )
@@ -4623,7 +4626,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000/2000-01-02")))
+                  .intervals(QSS(Intervals.of("2000/2000-01-02")))
                   .granularity(new PeriodGranularity(Period.hours(1), null, DateTimeZone.UTC))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
@@ -5421,7 +5424,7 @@ public class CalciteQueryTest
   // Generate timestamps for expected results
   private static long T(final String timeString)
   {
-    return Calcites.jodaToCalciteTimestamp(new DateTime(timeString), DateTimeZone.UTC);
+    return Calcites.jodaToCalciteTimestamp(DateTimes.of(timeString), DateTimeZone.UTC);
   }
 
   // Generate timestamps for expected results
@@ -5434,7 +5437,7 @@ public class CalciteQueryTest
   // Generate day numbers for expected results
   private static int D(final String dayString)
   {
-    return (int) (new Interval(T("1970"), T(dayString)).toDurationMillis() / (86400L * 1000L));
+    return (int) (Intervals.utc(T("1970"), T(dayString)).toDurationMillis() / (86400L * 1000L));
   }
 
   private static QuerySegmentSpec QSS(final Interval... intervals)
@@ -5497,7 +5500,7 @@ public class CalciteQueryTest
 
   private static BoundDimFilter TIME_BOUND(final Object intervalObj)
   {
-    final Interval interval = new Interval(intervalObj);
+    final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
     return new BoundDimFilter(
         Column.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),

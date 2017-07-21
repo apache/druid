@@ -36,6 +36,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.SettableStructObjectInspector;
@@ -43,7 +44,6 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -166,7 +166,7 @@ public class OrcHadoopInputRowParserTest
     oi.setStructFieldData(struct, oi.getStructFieldRef("col5"), new HiveDecimalWritable(3));
 
     final InputRow row = parser.parse(struct);
-    Assert.assertEquals("timestamp", new DateTime("2000-01-01"), row.getTimestamp());
+    Assert.assertEquals("timestamp", DateTimes.of("2000-01-01"), row.getTimestamp());
     Assert.assertEquals("col1", "foo", row.getRaw("col1"));
     Assert.assertEquals("col2", ImmutableList.of("foo", "bar"), row.getRaw("col2"));
     Assert.assertEquals("col3", 1.0f, row.getRaw("col3"));

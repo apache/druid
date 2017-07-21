@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.DateTimes;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -51,7 +52,7 @@ public class ZkWorker implements Closeable
   private final Function<ChildData, TaskAnnouncement> cacheConverter;
 
   private AtomicReference<Worker> worker;
-  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
+  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(DateTimes.nowUtc());
   private AtomicInteger countinouslyFailedTasksCount = new AtomicInteger(0);
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)

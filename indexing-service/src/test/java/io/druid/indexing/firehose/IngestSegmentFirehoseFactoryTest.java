@@ -33,7 +33,8 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Module;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -319,7 +320,7 @@ public class IngestSegmentFirehoseFactoryTest
               new Object[]{
                   new IngestSegmentFirehoseFactory(
                       DATA_SOURCE_NAME,
-                      FOREVER,
+                      Intervals.ETERNITY,
                       new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
                       dim_names,
                       metric_names,
@@ -395,7 +396,6 @@ public class IngestSegmentFirehoseFactoryTest
   }
 
   private static final Logger log = new Logger(IngestSegmentFirehoseFactoryTest.class);
-  private static final Interval FOREVER = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
   private static final String DATA_SOURCE_NAME = "testDataSource";
   private static final String DATA_SOURCE_VERSION = "version";
   private static final Integer BINARY_VERSION = -1;
@@ -446,7 +446,7 @@ public class IngestSegmentFirehoseFactoryTest
     Preconditions.checkArgument(shardNumber >= 0);
     return new DataSegment(
         DATA_SOURCE_NAME,
-        FOREVER,
+        Intervals.ETERNITY,
         DATA_SOURCE_VERSION,
         ImmutableMap.<String, Object>of(
             "type", "local",
@@ -502,7 +502,7 @@ public class IngestSegmentFirehoseFactoryTest
     if (factory.getDimensions() != null) {
       Assert.assertArrayEquals(new String[]{DIM_NAME}, factory.getDimensions().toArray());
     }
-    Assert.assertEquals(FOREVER, factory.getInterval());
+    Assert.assertEquals(Intervals.ETERNITY, factory.getInterval());
     if (factory.getMetrics() != null) {
       Assert.assertEquals(
           ImmutableSet.of(METRIC_LONG_NAME, METRIC_FLOAT_NAME),
