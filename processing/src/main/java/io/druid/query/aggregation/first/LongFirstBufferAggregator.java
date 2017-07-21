@@ -59,19 +59,25 @@ public class LongFirstBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(buf.getLong(position), buf.getLong(position + Longs.BYTES));
+    return new SerializablePair<>(buf.getLong(position), buf.getLong(position + Long.BYTES));
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getLong(position + Longs.BYTES);
+    return (float) buf.getLong(position + Long.BYTES);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return buf.getLong(position + Longs.BYTES);
+    return buf.getLong(position + Long.BYTES);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return (double) buf.getLong(position + Long.BYTES);
   }
 
   @Override

@@ -22,13 +22,13 @@ package io.druid.query.aggregation.last;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
@@ -42,10 +42,10 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class DoubleLastAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 18;
 
   private final String fieldName;
   private final String name;
@@ -68,7 +68,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
     return new DoubleLastAggregator(
         name,
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeDoubleColumnSelector(fieldName)
     );
   }
 
@@ -77,7 +77,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   {
     return new DoubleLastBufferAggregator(
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeDoubleColumnSelector(fieldName)
     );
   }
 
@@ -196,23 +196,22 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(2 + fieldNameBytes.length)
-                     .put(CACHE_TYPE_ID)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length)
+                     .put(AggregatorUtil.DOUBLE_LAST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
-                     .put((byte)0xff)
                      .array();
   }
 
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "double";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES + Doubles.BYTES;
+    return Long.BYTES + Double.BYTES;
   }
 
   @Override
@@ -233,9 +232,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    int result = name.hashCode();
-    result = 31 * result + fieldName.hashCode();
-    return result;
+    return Objects.hash(name, fieldName);
   }
 
   @Override

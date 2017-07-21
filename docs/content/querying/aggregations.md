@@ -36,10 +36,18 @@ computes the sum of values as a 64-bit, signed integer
 
 #### `doubleSum` aggregator
 
-Computes the sum of values as 64-bit floating point value. Similar to `longSum`
+Computes and stores the sum of values as 64-bit floating point value. Similar to `longSum`
 
 ```json
 { "type" : "doubleSum", "name" : <output_name>, "fieldName" : <metric_name> }
+```
+
+#### `floatSum` aggregator
+
+Computes and stores the sum of values as 32-bit floating point value. Similar to `longSum` and `doubleSum`
+
+```json
+{ "type" : "floatSum", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
 ### Min / Max aggregators
@@ -58,6 +66,22 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 
 ```json
 { "type" : "doubleMax", "name" : <output_name>, "fieldName" : <metric_name> }
+```
+
+#### `floatMin` aggregator
+
+`floatMin` computes the minimum of all metric values and Float.POSITIVE_INFINITY
+
+```json
+{ "type" : "floatMin", "name" : <output_name>, "fieldName" : <metric_name> }
+```
+
+#### `floatMax` aggregator
+
+`floatMax` computes the maximum of all metric values and Float.NEGATIVE_INFINITY
+
+```json
+{ "type" : "floatMax", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
 #### `longMin` aggregator
@@ -101,6 +125,30 @@ Note that queries with first/last aggregators on a segment created with rollup e
 ```json
 {
   "type" : "doubleLast",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `floatFirst` aggregator
+
+`floatFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "floatFirst",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `floatLast` aggregator
+
+`floatLast` computes the metric value with the maximum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "floatLast",
   "name" : <output_name>,
   "fieldName" : <metric_name>
 }

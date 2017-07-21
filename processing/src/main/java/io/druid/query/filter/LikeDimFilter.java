@@ -205,23 +205,9 @@ public class LikeDimFilter implements DimFilter
         public DruidLongPredicate makeLongPredicate()
         {
           if (extractionFn != null) {
-            return new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return matches(extractionFn.apply(input));
-              }
-            };
+            return input -> matches(extractionFn.apply(input));
           } else {
-            return new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return matches(String.valueOf(input));
-              }
-            };
+            return input -> matches(String.valueOf(input));
           }
         }
 
@@ -229,23 +215,19 @@ public class LikeDimFilter implements DimFilter
         public DruidFloatPredicate makeFloatPredicate()
         {
           if (extractionFn != null) {
-            return new DruidFloatPredicate()
-            {
-              @Override
-              public boolean applyFloat(float input)
-              {
-                return matches(extractionFn.apply(input));
-              }
-            };
+            return input -> matches(extractionFn.apply(input));
           } else {
-            return new DruidFloatPredicate()
-            {
-              @Override
-              public boolean applyFloat(float input)
-              {
-                return matches(String.valueOf(input));
-              }
-            };
+            return input -> matches(String.valueOf(input));
+          }
+        }
+
+        @Override
+        public DruidDoublePredicate makeDoublePredicate()
+        {
+          if (extractionFn != null) {
+            return input -> matches(extractionFn.apply(input));
+          } else {
+            return input -> matches(String.valueOf(input));
           }
         }
       };

@@ -124,17 +124,41 @@ public class PolygonBound extends RectangularBound
     int j = polyCorners - 1;
     boolean oddNodes = false;
     for (int i = 0; i < polyCorners; i++) {
-      if ((ordinate[i] < coords[1] && ordinate[j] >= coords[1]
-           || ordinate[j] < coords[1] && ordinate[i] >= coords[1])
-          && (abscissa[i] <= coords[0] || abscissa[j] <= coords[0])) {
-        if (abscissa[i] + (coords[1] - ordinate[i]) / (ordinate[j] - ordinate[i]) * (abscissa[j] - abscissa[i])
-            < coords[0]) {
+
+      if (abscissa[i] == coords[0] && ordinate[i] == coords[1]) {
+        return true;
+      }
+
+      if (isPointLayingOnHorizontalBound(i, j, coords)) {
+        return true;
+      }
+
+      if (between(ordinate[i], ordinate[j], coords[1]) && (abscissa[j] <= coords[0] || abscissa[i] <= coords[0])) {
+        float intersectionPointX = abscissa[i] + (coords[1] - ordinate[i]) / (ordinate[j] - ordinate[i]) * (abscissa[j] - abscissa[i]);
+
+        if (intersectionPointX == coords[0]) {
+          return true;
+        } else if (intersectionPointX < coords[0]) {
           oddNodes = !oddNodes;
         }
       }
       j = i;
     }
     return oddNodes;
+  }
+
+  private boolean isPointLayingOnHorizontalBound(int i, int j, float[] coords)
+  {
+    return ordinate[i] == ordinate[j] && ordinate[j] == coords[1] && between(abscissa[i], abscissa[j], coords[0]);
+  }
+
+  private static boolean between(float a, float b, float x)
+  {
+    if (a <= b) {
+      return a <= x && x <= b;
+    } else {
+      return b <= x && x <= a;
+    }
   }
 
   @Override

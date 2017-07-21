@@ -68,6 +68,12 @@ public class FilteredBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return delegate.getDouble(buf, position);
+  }
+
+  @Override
   public void close()
   {
     delegate.close();

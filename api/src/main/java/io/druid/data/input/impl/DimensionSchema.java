@@ -35,6 +35,7 @@ import io.druid.java.util.common.StringUtils;
     @JsonSubTypes.Type(name = DimensionSchema.STRING_TYPE_NAME, value = StringDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.LONG_TYPE_NAME, value = LongDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.FLOAT_TYPE_NAME, value = FloatDimensionSchema.class),
+    @JsonSubTypes.Type(name = DimensionSchema.DOUBLE_TYPE_NAME, value = DoubleDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.SPATIAL_TYPE_NAME, value = NewSpatialDimensionSchema.class),
 })
 public abstract class DimensionSchema
@@ -43,6 +44,7 @@ public abstract class DimensionSchema
   public static final String LONG_TYPE_NAME = "long";
   public static final String FLOAT_TYPE_NAME = "float";
   public static final String SPATIAL_TYPE_NAME = "spatial";
+  public static final String DOUBLE_TYPE_NAME = "double";
 
 
   // main druid and druid-api should really use the same ValueType enum.
@@ -52,6 +54,7 @@ public abstract class DimensionSchema
     FLOAT,
     LONG,
     STRING,
+    DOUBLE,
     COMPLEX;
 
     @JsonValue

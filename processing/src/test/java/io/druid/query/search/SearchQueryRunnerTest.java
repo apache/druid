@@ -700,7 +700,7 @@ public class SearchQueryRunnerTest
                                     .dimensions(
                                         new DefaultDimensionSpec(
                                             QueryRunnerTestHelper.indexMetric, QueryRunnerTestHelper.indexMetric,
-                                            ValueType.FLOAT
+                                            ValueType.DOUBLE
                                         )
                                     )
                                     .dataSource(QueryRunnerTestHelper.dataSource)
@@ -710,8 +710,8 @@ public class SearchQueryRunnerTest
                                     .build();
 
     List<SearchHit> expectedHits = Lists.newLinkedList();
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.706055", 1));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.7756", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.706057", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.775597", 1));
     checkSearchQuery(searchQuery, expectedHits);
   }
 
@@ -735,8 +735,8 @@ public class SearchQueryRunnerTest
                                     .build();
 
     List<SearchHit> expectedHits = Lists.newLinkedList();
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.7060546875", 1));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.77559661865234", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.706057", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.775597", 1));
     checkSearchQuery(searchQuery, expectedHits);
   }
 

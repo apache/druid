@@ -28,7 +28,7 @@ import java.util.Comparator;
  */
 public class DoubleSumAggregatorTest
 {
-  private void aggregate(TestFloatColumnSelector selector, DoubleSumAggregator agg)
+  private void aggregate(TestDoubleColumnSelectorImpl selector, DoubleSumAggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -37,12 +37,12 @@ public class DoubleSumAggregatorTest
   @Test
   public void testAggregate()
   {
-    final float[] values = {0.15f, 0.27f};
-    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
+    final double[] values = {0.15d, 0.27d};
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
     DoubleSumAggregator agg = new DoubleSumAggregator(selector);
 
-    double expectedFirst = new Float(values[0]).doubleValue();
-    double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
+    double expectedFirst = new Double(values[0]).doubleValue();
+    double expectedSecond = new Double(values[1]).doubleValue() + expectedFirst;
 
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());
@@ -60,7 +60,7 @@ public class DoubleSumAggregatorTest
   @Test
   public void testComparator()
   {
-    final TestFloatColumnSelector selector = new TestFloatColumnSelector(new float[]{0.15f, 0.27f});
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(new double[]{0.15d, 0.27d});
     DoubleSumAggregator agg = new DoubleSumAggregator(selector);
 
     Object first = agg.get();

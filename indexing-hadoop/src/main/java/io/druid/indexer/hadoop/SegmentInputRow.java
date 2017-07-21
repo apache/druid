@@ -83,6 +83,12 @@ public class SegmentInputRow implements InputRow
   }
 
   @Override
+  public double getDoubleMetric(String metric)
+  {
+    return delegate.getDoubleMetric(metric);
+  }
+
+  @Override
   public int compareTo(Row row)
   {
     return delegate.compareTo(row);

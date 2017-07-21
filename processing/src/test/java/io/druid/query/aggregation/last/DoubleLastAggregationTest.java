@@ -23,7 +23,7 @@ import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.TestFloatColumnSelector;
+import io.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -41,10 +41,10 @@ public class DoubleLastAggregationTest
   private DoubleLastAggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
-  private TestFloatColumnSelector valueSelector;
+  private TestDoubleColumnSelectorImpl valueSelector;
   private TestObjectColumnSelector objectSelector;
 
-  private float[] floatValues = {1.1897f, 0.001f, 86.23f, 166.228f};
+  private double[] doubles = {1.1897d, 0.001d, 86.23d, 166.228d};
   private long[] times = {8224, 6879, 2436, 7888};
   private SerializablePair[] pairs = {
       new SerializablePair<>(52782L, 134.3d),
@@ -59,11 +59,11 @@ public class DoubleLastAggregationTest
     doubleLastAggFactory = new DoubleLastAggregatorFactory("billy", "nilly");
     combiningAggFactory = (DoubleLastAggregatorFactory) doubleLastAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
-    valueSelector = new TestFloatColumnSelector(floatValues);
+    valueSelector = new TestDoubleColumnSelectorImpl(doubles);
     objectSelector = new TestObjectColumnSelector(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
-    EasyMock.expect(colSelectorFactory.makeFloatColumnSelector("nilly")).andReturn(valueSelector);
+    EasyMock.expect(colSelectorFactory.makeDoubleColumnSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeObjectColumnSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);
   }
@@ -81,9 +81,9 @@ public class DoubleLastAggregationTest
     Pair<Long, Double> result = (Pair<Long, Double>) agg.get();
 
     Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(floatValues[0], result.rhs, 0.0001);
-    Assert.assertEquals((long) floatValues[0], agg.getLong());
-    Assert.assertEquals(floatValues[0], agg.getFloat(), 0.0001);
+    Assert.assertEquals(doubles[0], result.rhs, 0.0001);
+    Assert.assertEquals((long) doubles[0], agg.getLong());
+    Assert.assertEquals(doubles[0], agg.getDouble(), 0.0001);
 
     agg.reset();
     Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
@@ -106,9 +106,9 @@ public class DoubleLastAggregationTest
     Pair<Long, Double> result = (Pair<Long, Double>) agg.get(buffer, 0);
 
     Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(floatValues[0], result.rhs, 0.0001);
-    Assert.assertEquals((long) floatValues[0], agg.getLong(buffer, 0));
-    Assert.assertEquals(floatValues[0], agg.getFloat(buffer, 0), 0.0001);
+    Assert.assertEquals(doubles[0], result.rhs, 0.0001);
+    Assert.assertEquals((long) doubles[0], agg.getLong(buffer, 0));
+    Assert.assertEquals(doubles[0], agg.getDouble(buffer, 0), 0.0001);
   }
 
   @Test
@@ -135,7 +135,7 @@ public class DoubleLastAggregationTest
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
-    Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
+    Assert.assertEquals(expected.rhs, agg.getDouble(), 0.0001);
 
     agg.reset();
     Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
@@ -161,7 +161,7 @@ public class DoubleLastAggregationTest
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 0.0001);
+    Assert.assertEquals(expected.rhs, agg.getDouble(buffer, 0), 0.0001);
   }
 
 
