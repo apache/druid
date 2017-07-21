@@ -683,7 +683,6 @@ public class IndexTask extends AbstractTask
 
             final Interval interval = optInterval.get();
             final ShardSpec shardSpec = shardSpecs.getShardSpec(interval, inputRow);
-            // TODO: validate versions if appendToExisting? => need to test
             final String sequenceName = Appenderators.getSequenceName(interval, findVersion(versions, interval), shardSpec);
             final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 

@@ -135,7 +135,7 @@ public class TaskLockBoxConcurrencyTest
 
     final LockResult resultOfLowPriorityLock = lowUpgradeFuture.get();
     Assert.assertFalse(resultOfLowPriorityLock.isOk());
-    Assert.assertTrue(resultOfLowPriorityLock.isWasRevoked());
+    Assert.assertTrue(resultOfLowPriorityLock.isRevoked());
   }
 
   private static void assertEqualsExceptUpgraded(TaskLock expected, TaskLock actual)

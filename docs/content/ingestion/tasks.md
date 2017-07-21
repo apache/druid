@@ -336,11 +336,11 @@ Once an overlord node accepts a task, the task acquires locks for the data sourc
 There are two locks types, i.e., _shared lock_ and _exclusive lock_.
 
 - A task needs to acquire a shared lock before it reads segments of an interval. Multiple shared locks can be acquired for the same dataSource and interval. Shared locks are always preemptable, but they don't preempt each other.
-- A task needs to acquire an exclusive lock before it writes segemtns for an interval. An exclusive lock is acquired as preemptable and can be upgraded as non-preemptable when publishing segments.
+- A task needs to acquire an exclusive lock before it writes segments for an interval. An exclusive lock is acquired as preemptable and can be upgraded as non-preemptable when publishing segments.
 
-Each task can have different lock priorities. The locks of higher-priority tasks can preempt the locks of lower-priority tasks. The lock preemption works based on _optimistic locking_. When a lock is preempted, it is not notified to the owner task immediately. Instead, it's notified when the owner task tries to acquire the same lock again or upgrade it. (Note that lock acquisition is idempotent unless the lock is preempted.) In general, tasks don't content to acquire locks because they usually targets different dataSources or intervals.
+Each task can have different lock priorities. The locks of higher-priority tasks can preempt the locks of lower-priority tasks. The lock preemption works based on _optimistic locking_. When a lock is preempted, it is not notified to the owner task immediately. Instead, it's notified when the owner task tries to acquire the same lock again or upgrade it. (Note that lock acquisition is idempotent unless the lock is preempted.) In general, tasks don't contend to acquire locks because they usually targets different dataSources or intervals.
 
-A task writing data into a dataSource must acquire exclusive locks for target intervals. Note that execlusive locks are still preemptable. As a result, the task must _upgrade_ its locks as non-preemptable when it executes a critical operation, _publishing segments_. Once the lock is upgraded, it can't be preempted by even higher-priority locks. After publishing segments, the task downgrades its locks as preemptable.
+A task writing data into a dataSource must acquire exclusive locks for target intervals. Note that exclusive locks are still preemptable. As a result, the task must _upgrade_ its locks as non-preemptable when it executes a critical operation, _publishing segments_. Once the lock is upgraded, it can't be preempted by even higher-priority locks. After publishing segments, the task downgrades its locks as preemptable.
 
 Tasks do not need to explicitly release locks, they are released upon task completion. Tasks may potentially release 
 locks early if they desire. Tasks ids are unique by naming them using UUIDs or the timestamp in which the task was created. 

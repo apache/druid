@@ -393,7 +393,7 @@ public class TaskLockboxTest
 
     final LockResult upgradeResult = lockbox.upgrade(lowPriorityTask, interval);
     Assert.assertFalse(upgradeResult.isOk());
-    Assert.assertTrue(upgradeResult.isWasRevoked());
+    Assert.assertTrue(upgradeResult.isRevoked());
   }
 
   @Test
@@ -417,7 +417,7 @@ public class TaskLockboxTest
     // Acquire again
     final LockResult lockResult = lockbox.tryLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
     Assert.assertFalse(lockResult.isOk());
-    Assert.assertTrue(lockResult.isWasRevoked());
+    Assert.assertTrue(lockResult.isRevoked());
     Assert.assertTrue(Iterables.getOnlyElement(lockbox.findLocksForTask(lowPriorityTask)).isRevoked());
   }
 

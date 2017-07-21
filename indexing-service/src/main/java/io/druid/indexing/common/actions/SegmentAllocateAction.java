@@ -176,7 +176,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
               tryInterval
           );
           final LockResult lockResult = toolbox.getTaskLockbox().tryLock(TaskLockType.EXCLUSIVE, task, tryInterval);
-          if (lockResult.isWasRevoked()) {
+          if (lockResult.isRevoked()) {
             // We had acquired a lock but it was preempted by other locks
             throw new ISE("The lock for interval[%s] is preempted and no longer valid", tryInterval);
           }

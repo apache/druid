@@ -31,9 +31,9 @@ import javax.annotation.Nullable;
 /**
  * This class represents the result of {@link TaskLockbox#tryLock(TaskLockType, Task, Interval)}. If the lock
  * acquisition fails, the callers can tell that it was failed because it was preempted by other locks of higher
- * priorities or not by checking the {@link #wasRevoked} flag.
+ * priorities or not by checking the {@link #revoked} flag.
  *
- * The {@link #wasRevoked} flag means that consecutive lock acquisitions for the same dataSource and interval are
+ * The {@link #revoked} flag means that consecutive lock acquisitions for the same dataSource and interval are
  * returning different locks because another lock of a higher priority preempted your lock at some point. In this case,
  * the lock acquisition must fail.
  *
@@ -42,26 +42,26 @@ import javax.annotation.Nullable;
 public class LockResult
 {
   private final TaskLock taskLock;
-  private final boolean wasRevoked;
+  private final boolean revoked;
 
   public static LockResult ok(TaskLock taskLock)
   {
     return new LockResult(taskLock, false);
   }
 
-  public static LockResult fail(boolean wasRevoked)
+  public static LockResult fail(boolean revoked)
   {
-    return new LockResult(null, wasRevoked);
+    return new LockResult(null, revoked);
   }
 
   @JsonCreator
   public LockResult(
       @JsonProperty("taskLock") @Nullable TaskLock taskLock,
-      @JsonProperty("wasRevoked") boolean wasRevoked
+      @JsonProperty("revoked") boolean revoked
   )
   {
     this.taskLock = taskLock;
-    this.wasRevoked = wasRevoked;
+    this.revoked = revoked;
   }
 
   @JsonProperty("taskLock")
@@ -70,10 +70,10 @@ public class LockResult
     return taskLock;
   }
 
-  @JsonProperty("wasRevoked")
-  public boolean isWasRevoked()
+  @JsonProperty("revoked")
+  public boolean isRevoked()
   {
-    return wasRevoked;
+    return revoked;
   }
 
   public boolean isOk()
