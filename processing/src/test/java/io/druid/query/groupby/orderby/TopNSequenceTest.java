@@ -53,7 +53,8 @@ public class TopNSequenceTest
   private int limit;
 
   @Parameterized.Parameters
-  public static Collection<Object[]> makeTestData(){
+  public static Collection<Object[]> makeTestData()
+  {
     Object[][] data = new Object[][] {
       { ASC, RAW_ASC, RAW_ASC.size() - 2},
       { ASC, RAW_ASC, RAW_ASC.size()},
@@ -80,7 +81,8 @@ public class TopNSequenceTest
     return Arrays.asList(data);
   }
 
-  public TopNSequenceTest(Ordering<String> ordering, List<String> rawInput, int limit){
+  public TopNSequenceTest(Ordering<String> ordering, List<String> rawInput, int limit)
+  {
     this.ordering = ordering;
     this.rawInput = rawInput;
     this.limit = limit;

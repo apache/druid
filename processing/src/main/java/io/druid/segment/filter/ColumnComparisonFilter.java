@@ -75,7 +75,8 @@ public class ColumnComparisonFilter implements Filter
     return makeValueMatcher(valueGetters);
   }
 
-  public static ValueMatcher makeValueMatcher(final ValueGetter[] valueGetters) {
+  public static ValueMatcher makeValueMatcher(final ValueGetter[] valueGetters)
+  {
     if (valueGetters.length == 0) {
       return BooleanValueMatcher.of(true);
     }
@@ -110,7 +111,8 @@ public class ColumnComparisonFilter implements Filter
 
   // overlap returns true when: a and b have one or more elements in common,
   // a and b are both null, or a and b are both empty.
-  public static boolean overlap(String[] a, String[] b) {
+  public static boolean overlap(String[] a, String[] b)
+  {
     if (a == null || b == null) {
       // They only have overlap if both are null.
       return a == null && b == null;

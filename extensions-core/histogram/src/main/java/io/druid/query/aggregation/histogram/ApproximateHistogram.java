@@ -191,17 +191,35 @@ public class ApproximateHistogram
     );
   }
 
-  public long count() { return count; }
+  public long count()
+  {
+    return count;
+  }
 
-  public float min() { return min; }
+  public float min()
+  {
+    return min;
+  }
 
-  public float max() { return max; }
+  public float max()
+  {
+    return max;
+  }
 
-  public int binCount() { return binCount; }
+  public int binCount()
+  {
+    return binCount;
+  }
 
-  public int capacity() { return size; }
+  public int capacity()
+  {
+    return size;
+  }
 
-  public float[] positions() { return Arrays.copyOfRange(positions, 0, binCount); }
+  public float[] positions()
+  {
+    return Arrays.copyOfRange(positions, 0, binCount);
+  }
 
   public long[] bins()
   {
@@ -239,9 +257,15 @@ public class ApproximateHistogram
     return exactCount;
   }
 
-  public float getMin() { return this.min;}
+  public float getMin()
+  {
+    return this.min;
+  }
 
-  public float getMax() { return this.max;}
+  public float getMax()
+  {
+    return this.max;
+  }
 
   private static long sumBins(long[] bins, int binCount)
   {
@@ -1491,10 +1515,8 @@ public class ApproximateHistogram
     // add full bin count if left bin count is exact
     if (exact0) {
       return (s + m0);
-    }
-
-    // otherwise add only the left half of the bin
-    else {
+    } else {
+      // otherwise add only the left half of the bin
       return (s + 0.5 * m0);
     }
   }

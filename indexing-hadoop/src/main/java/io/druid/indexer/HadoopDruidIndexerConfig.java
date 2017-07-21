@@ -192,8 +192,7 @@ public class HadoopDruidIndexerConfig
   @SuppressWarnings("unchecked")
   public static HadoopDruidIndexerConfig fromDistributedFileSystem(String path)
   {
-    try
-    {
+    try {
       Path pt = new Path(path);
       FileSystem fs = pt.getFileSystem(new Configuration());
       Reader reader = new InputStreamReader(fs.open(pt), StandardCharsets.UTF_8);

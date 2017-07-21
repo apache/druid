@@ -172,7 +172,8 @@ public class LookupReferencesManager
     for (Notice notice : swappedState.noticesBeingHandled) {
       try {
         notice.handle(lookupMap);
-      } catch (Exception ex) {
+      }
+      catch (Exception ex) {
         LOG.error(ex, "Exception occured while handling lookup notice [%s].", notice);
         LOG.makeAlert("Exception occured while handling lookup notice, with message [%s].", ex.getMessage()).emit();
       }

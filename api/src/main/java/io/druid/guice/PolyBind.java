@@ -123,13 +123,11 @@ public class PolyBind
       return MapBinder.newMapBinder(
           binder, TypeLiteral.get(String.class), interfaceType, interfaceKey.getAnnotation()
       );
-    }
-    else if (interfaceKey.getAnnotationType() != null) {
+    } else if (interfaceKey.getAnnotationType() != null) {
       return MapBinder.newMapBinder(
           binder, TypeLiteral.get(String.class), interfaceType, interfaceKey.getAnnotationType()
       );
-    }
-    else {
+    } else {
       return MapBinder.newMapBinder(binder, TypeLiteral.get(String.class), interfaceType);
     }
   }
@@ -177,11 +175,9 @@ public class PolyBind
       final Map<String, Provider<T>> implsMap;
       if (key.getAnnotation() != null) {
         implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType, key.getAnnotation()));
-      }
-      else if (key.getAnnotationType() != null) {
+      } else if (key.getAnnotationType() != null) {
         implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType, key.getAnnotation()));
-      }
-      else {
+      } else {
         implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType));
       }
 

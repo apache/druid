@@ -31,7 +31,10 @@ public class DoubleColumn extends AbstractColumn
 
   private final CompressedDoublesIndexedSupplier column;
 
-  public DoubleColumn(CompressedDoublesIndexedSupplier column) {this.column = column;}
+  public DoubleColumn(CompressedDoublesIndexedSupplier column)
+  {
+    this.column = column;
+  }
 
   @Override
   public int getLength()

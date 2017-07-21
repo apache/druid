@@ -56,6 +56,7 @@ import org.apache.curator.x.discovery.details.ServiceCacheListener;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -351,33 +352,31 @@ public class DiscoveryModule implements Module
       @Override
       public void start() throws Exception
       {
-
+        // nothing
       }
 
       @Override
       public void close() throws IOException
       {
-
+        // nothing
       }
 
       @Override
       public void addListener(ServiceCacheListener listener)
       {
-
+        // nothing
       }
 
       @Override
-      public void addListener(
-          ServiceCacheListener listener, Executor executor
-      )
+      public void addListener(ServiceCacheListener listener, Executor executor)
       {
-
+        // nothing
       }
 
       @Override
       public void removeListener(ServiceCacheListener listener)
       {
-
+        // nothing
       }
     }
   }
@@ -409,12 +408,14 @@ public class DiscoveryModule implements Module
     }
 
     @Override
-    public ServiceProviderBuilder<T> downInstancePolicy(DownInstancePolicy downInstancePolicy) {
+    public ServiceProviderBuilder<T> downInstancePolicy(DownInstancePolicy downInstancePolicy)
+    {
       return this;
     }
 
     @Override
-    public ServiceProviderBuilder<T> additionalFilter(InstanceFilter<T> tInstanceFilter) {
+    public ServiceProviderBuilder<T> additionalFilter(InstanceFilter<T> tInstanceFilter)
+    {
       return this;
     }
   }
@@ -424,7 +425,7 @@ public class DiscoveryModule implements Module
     @Override
     public void start() throws Exception
     {
-
+      // nothing
     }
 
     @Override
@@ -436,18 +437,19 @@ public class DiscoveryModule implements Module
     @Override
     public Collection<ServiceInstance<T>> getAllInstances() throws Exception
     {
-      return null;
+      return Collections.emptyList();
     }
 
     @Override
-    public void noteError(ServiceInstance<T> tServiceInstance) {
-
+    public void noteError(ServiceInstance<T> tServiceInstance)
+    {
+      // nothing
     }
 
     @Override
     public void close() throws IOException
     {
-
+      // nothing
     }
   }
 }

@@ -284,11 +284,13 @@ public class QueryResource implements QueryCountStatsProvider
                       os.close();
 
                       success = true;
-                    } catch (Exception ex) {
+                    }
+                    catch (Exception ex) {
                       exceptionStr = ex.toString();
                       log.error(ex, "Unable to send query response.");
                       throw Throwables.propagate(ex);
-                    } finally {
+                    }
+                    finally {
                       try {
                         if (success) {
                           successfulQueryCount.incrementAndGet();
@@ -331,9 +333,11 @@ public class QueryResource implements QueryCountStatsProvider
                                 )
                             )
                         );
-                      } catch (Exception ex) {
+                      }
+                      catch (Exception ex) {
                         log.error(ex, "Unable to log query [%s]!", theQuery);
-                      } finally {
+                      }
+                      finally {
                         Thread.currentThread().setName(currThreadName);
                       }
                     }

@@ -166,8 +166,7 @@ public class TestHelper
         // Special to allow a floating point delta to be used in result comparison due to legacy expected results
         assertTopNResultValue(failMsg, (Result) expectedNext, (Result) next);
         assertTopNResultValue(String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg), (Result) expectedNext, (Result) next2);
-      }
-      else {
+      } else {
         assertResult(failMsg, (Result) expectedNext, (Result) next);
         assertResult(
             StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),

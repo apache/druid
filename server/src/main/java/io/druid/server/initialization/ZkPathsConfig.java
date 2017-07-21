@@ -96,27 +96,26 @@ public class ZkPathsConfig
   }
 
   @Override
-  public boolean equals(Object other){
-    if(null == other){
+  public boolean equals(Object other)
+  {
+    if (null == other) {
       return false;
     }
-    if(this == other){
+    if (this == other) {
       return true;
     }
-    if(!(other instanceof ZkPathsConfig)){
+    if (!(other instanceof ZkPathsConfig)) {
       return false;
     }
     ZkPathsConfig otherConfig = (ZkPathsConfig) other;
-    if(
-        this.getBase().equals(otherConfig.getBase()) &&
+    if (this.getBase().equals(otherConfig.getBase()) &&
         this.getAnnouncementsPath().equals(otherConfig.getAnnouncementsPath()) &&
         this.getConnectorPath().equals(otherConfig.getConnectorPath()) &&
         this.getLiveSegmentsPath().equals(otherConfig.getLiveSegmentsPath()) &&
         this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath()) &&
         this.getLoadQueuePath().equals(otherConfig.getLoadQueuePath()) &&
         this.getPropertiesPath().equals(otherConfig.getPropertiesPath()) &&
-        this.getServedSegmentsPath().equals(otherConfig.getServedSegmentsPath())
-        ){
+        this.getServedSegmentsPath().equals(otherConfig.getServedSegmentsPath())) {
       return true;
     }
     return false;

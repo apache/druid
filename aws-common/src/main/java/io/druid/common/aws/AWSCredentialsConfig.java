@@ -44,5 +44,8 @@ public class AWSCredentialsConfig
     return secretKey;
   }
 
-  public String getFileSessionCredentials() { return fileSessionCredentials; }
+  public String getFileSessionCredentials()
+  {
+    return fileSessionCredentials;
+  }
 }

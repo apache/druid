@@ -46,7 +46,8 @@ public class CompressedDoublesIndexedSupplier implements Supplier<IndexedDoubles
       ByteBuffer buffer,
       Supplier<IndexedDoubles> supplier,
       CompressedObjectStrategy.CompressionStrategy compression
-  ) {
+  )
+  {
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.buffer = buffer;

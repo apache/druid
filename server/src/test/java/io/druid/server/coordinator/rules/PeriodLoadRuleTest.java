@@ -96,7 +96,8 @@ public class PeriodLoadRuleTest
   }
 
   @Test
-  public void testMappingNullTieredReplicants() throws Exception{
+  public void testMappingNullTieredReplicants() throws Exception
+  {
     String inputJson = "{\n"
                        + "      \"period\": \"P1D\",\n"
                        + "      \"type\": \"loadByPeriod\"\n"

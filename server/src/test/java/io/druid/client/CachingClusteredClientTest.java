@@ -2873,7 +2873,8 @@ public class CachingClusteredClientTest
       {
         try {
           return baseSegment.getShardSpec();
-        } catch (IllegalStateException e) {
+        }
+        catch (IllegalStateException e) {
           return NoneShardSpec.instance();
         }
       }

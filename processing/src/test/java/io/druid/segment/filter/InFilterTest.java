@@ -247,7 +247,8 @@ public class InFilterTest extends BaseFilterTest
   }
 
   @Test
-  public void testMatchWithLookupExtractionFn() {
+  public void testMatchWithLookupExtractionFn()
+  {
     final Map<String, String> stringMap = ImmutableMap.of(
         "a", "HELLO",
         "10", "HELLO",

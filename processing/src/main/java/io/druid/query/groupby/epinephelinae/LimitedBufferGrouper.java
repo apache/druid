@@ -236,7 +236,8 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       this.indexPosition = indexPosition;
     }
 
-    public void setHashTableBuffer(ByteBuffer newTableBuffer) {
+    public void setHashTableBuffer(ByteBuffer newTableBuffer)
+    {
       hashTableBuffer = newTableBuffer;
     }
 

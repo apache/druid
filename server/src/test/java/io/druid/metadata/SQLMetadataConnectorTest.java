@@ -38,7 +38,8 @@ public class SQLMetadataConnectorTest
   private MetadataStorageTablesConfig tablesConfig;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() throws Exception
+  {
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
   }

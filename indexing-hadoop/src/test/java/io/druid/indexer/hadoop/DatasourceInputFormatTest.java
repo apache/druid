@@ -174,7 +174,8 @@ public class DatasourceInputFormatTest
       return new TextInputFormat()
       {
         @Override
-        protected boolean isSplitable(FileSystem fs, Path file) {
+        protected boolean isSplitable(FileSystem fs, Path file)
+        {
           return false;
         }
 

@@ -88,7 +88,8 @@ public class FilteredAggregatorTest
     assertValues(agg, selector, expectedFirst, expectedSecond, expectedThird);
   }
 
-  private ColumnSelectorFactory makeColumnSelector(final TestFloatColumnSelector selector){
+  private ColumnSelectorFactory makeColumnSelector(final TestFloatColumnSelector selector)
+  {
 
     return new ColumnSelectorFactory()
     {
@@ -247,7 +248,8 @@ public class FilteredAggregatorTest
     };
   }
 
-  private void assertValues(FilteredAggregator agg,TestFloatColumnSelector selector, double... expectedVals){
+  private void assertValues(FilteredAggregator agg,TestFloatColumnSelector selector, double... expectedVals)
+  {
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());

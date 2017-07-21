@@ -106,12 +106,14 @@ public class DruidServer implements Comparable
   }
 
   @JsonProperty("host")
-  public String getHostAndPort() {
+  public String getHostAndPort()
+  {
     return metadata.getHostAndPort();
   }
 
   @JsonProperty
-  public String getHostAndTlsPort() {
+  public String getHostAndTlsPort()
+  {
     return metadata.getHostAndTlsPort();
   }
 

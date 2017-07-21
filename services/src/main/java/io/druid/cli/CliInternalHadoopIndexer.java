@@ -154,7 +154,8 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
               // File URI.
               localConfigFile = new File(argumentSpecUri.getPath());
             }
-          } catch (URISyntaxException e) {
+          }
+          catch (URISyntaxException e) {
             // Not a URI, assume it's a local file.
             localConfigFile = new File(argumentSpec);
           }

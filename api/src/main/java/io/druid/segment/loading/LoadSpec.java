@@ -37,12 +37,17 @@ public interface LoadSpec
   public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException;
 
   // Hold interesting data about the results of the segment load
-  public static class LoadSpecResult{
+  public static class LoadSpecResult
+  {
     private final long size;
-    public LoadSpecResult(long size){
+
+    public LoadSpecResult(long size)
+    {
       this.size = size;
     }
-    public long getSize(){
+
+    public long getSize()
+    {
       return this.size;
     }
   }

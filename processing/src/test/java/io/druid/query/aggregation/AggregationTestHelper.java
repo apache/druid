@@ -507,8 +507,9 @@ public class AggregationTestHelper
 
     try {
       return runQueryOnSegmentsObjs(segments, query);
-    } finally {
-      for(Segment segment: segments) {
+    }
+    finally {
+      for (Segment segment : segments) {
         CloseQuietly.close(segment);
       }
     }
@@ -587,7 +588,8 @@ public class AggregationTestHelper
               )
           );
           return Sequences.simple(resultRows);
-        } catch(Exception ex) {
+        }
+        catch (Exception ex) {
           throw Throwables.propagate(ex);
         }
       }
