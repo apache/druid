@@ -59,9 +59,12 @@ to `<MiddleManager_IP:PORT>/druid/worker/v1/enable`.
 
 ### Autoscaling-based replacement
 
-If autoscaling is enabled on your Overlord, then Overlord nodes can launch new Middle Manager nodes en masse and then gracefully terminate old ones as their tasks finish. This process is configured by setting druid.indexer.runner.minWorkerVersion=#{VERSION}. Each time you update your overlord node, the VERSION value should be increased, which will trigger a mass launch of new Middle Managers.
+If autoscaling is enabled on your Overlord, then Overlord nodes can launch new Middle Manager nodes
+en masse and then gracefully terminate old ones as their tasks finish. This process is configured by
+setting `druid.indexer.runner.minWorkerVersion=#{VERSION}`. Each time you update your overlord node,
+the `VERSION` value should be increased, which will trigger a mass launch of new Middle Managers.
 
-The config druid.indexer.autoscale.workerVersion=#{VERSION} also needs to be set.
+The config `druid.indexer.autoscale.workerVersion=#{VERSION}` also needs to be set.
 
 ## Standalone Real-time
 
