@@ -369,13 +369,10 @@ public class CompressionFactory
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
-    if (compression == CompressedObjectStrategy.CompressionStrategy.NONE)
-    {
+    if (compression == CompressedObjectStrategy.CompressionStrategy.NONE) {
       return new EntireLayoutDoubleSupplierSerializer(ioPeon, filenameBase, byteOrder);
     } else {
       return new BlockLayoutDoubleSupplierSerializer(ioPeon, filenameBase, byteOrder, compression);
     }
   }
-
-
 }

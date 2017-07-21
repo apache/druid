@@ -85,7 +85,8 @@ public class GetDimensionRangeSetTest
   private static final RangeSet empty = rangeSet(ImmutableList.<Range<String>>of());
 
   @Test
-  public void testSimpleFilter () {
+  public void testSimpleFilter()
+  {
     RangeSet expected1 = rangeSet(point("a"));
     Assert.assertEquals(expected1, selector1.getDimensionRangeSet("dim1"));
     Assert.assertNull(selector1.getDimensionRangeSet("dim2"));
@@ -117,7 +118,8 @@ public class GetDimensionRangeSetTest
   }
 
   @Test
-  public void testAndFilter () {
+  public void testAndFilter()
+  {
     DimFilter and1 = new AndDimFilter(ImmutableList.of(selector1, selector2, in1));
     Assert.assertEquals(empty, and1.getDimensionRangeSet("dim1"));
     Assert.assertNull(and1.getDimensionRangeSet("dim2"));
@@ -141,7 +143,8 @@ public class GetDimensionRangeSetTest
   }
 
   @Test
-  public void testOrFilter () {
+  public void testOrFilter()
+  {
     DimFilter or1 = new OrDimFilter(ImmutableList.of(selector1, selector2, selector5));
     RangeSet expected1 = rangeSet(ImmutableList.of(point(""), point("a"), point("z")));
     Assert.assertEquals(expected1, or1.getDimensionRangeSet("dim1"));
@@ -165,7 +168,8 @@ public class GetDimensionRangeSetTest
   }
 
   @Test
-  public void testNotFilter () {
+  public void testNotFilter()
+  {
     DimFilter not1 = new NotDimFilter(selector1);
     RangeSet expected1 = rangeSet(ImmutableList.of(Range.lessThan("a"), Range.greaterThan("a")));
     Assert.assertEquals(expected1, not1.getDimensionRangeSet("dim1"));
@@ -210,15 +214,18 @@ public class GetDimensionRangeSetTest
 
   }
 
-  private static Range<String> point(String s) {
+  private static Range<String> point(String s)
+  {
     return Range.singleton(s);
   }
 
-  private static RangeSet<String> rangeSet (Range<String> ranges) {
+  private static RangeSet<String> rangeSet(Range<String> ranges)
+  {
     return ImmutableRangeSet.of(ranges);
   }
 
-  private static RangeSet<String> rangeSet (List<Range<String>> ranges) {
+  private static RangeSet<String> rangeSet(List<Range<String>> ranges)
+  {
     ImmutableRangeSet.Builder<String> builder = ImmutableRangeSet.builder();
     for (Range<String> range : ranges) {
       builder.add(range);

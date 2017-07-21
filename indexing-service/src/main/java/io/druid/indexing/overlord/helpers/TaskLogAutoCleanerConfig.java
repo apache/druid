@@ -47,7 +47,8 @@ public class TaskLogAutoCleanerConfig
       @JsonProperty("initialDelay") Long initialDelay,
       @JsonProperty("delay") Long delay,
       @JsonProperty("durationToRetain") Long durationToRetain
-  ){
+  )
+  {
     if (enabled) {
       Preconditions.checkNotNull(durationToRetain, "durationToRetain must be provided.");
     }

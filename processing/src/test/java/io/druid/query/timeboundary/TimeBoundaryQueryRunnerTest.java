@@ -140,7 +140,8 @@ public class TimeBoundaryQueryRunnerTest
     );
   }
 
-  private QueryRunner getCustomRunner() throws IOException {
+  private QueryRunner getCustomRunner() throws IOException
+  {
     CharSource v_0112 = CharSource.wrap(StringUtils.join(V_0112, "\n"));
     CharSource v_0113 = CharSource.wrap(StringUtils.join(V_0113, "\n"));
 

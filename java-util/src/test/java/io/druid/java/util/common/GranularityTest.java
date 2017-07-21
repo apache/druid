@@ -34,7 +34,8 @@ import org.junit.Test;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class GranularityTest {
+public class GranularityTest
+{
 
     final Granularity SECOND = Granularities.SECOND;
     final Granularity MINUTE = Granularities.MINUTE;
@@ -47,7 +48,8 @@ public class GranularityTest {
     final Granularity YEAR = Granularities.YEAR;
 
     @Test
-    public void testHiveFormat() {
+    public void testHiveFormat()
+    {
         PathDate[] secondChecks = {
                 new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "dt=2011-03-15-20-50-43/Test0"),
                 new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "/dt=2011-03-15-20-50-43/Test0"),
@@ -123,7 +125,8 @@ public class GranularityTest {
     }
 
     @Test
-    public void testFifteenMinuteToDate() {
+    public void testFifteenMinuteToDate()
+    {
 
         PathDate[] minuteChecks = {
                 new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),

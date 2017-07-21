@@ -30,7 +30,8 @@ public class EntireLayoutIndexedDoubleSupplier implements Supplier<IndexedDouble
   private final int totalSize;
   private final DoubleBuffer buffer;
 
-  public EntireLayoutIndexedDoubleSupplier(int totalSize, ByteBuffer fromBuffer, ByteOrder byteOrder) {
+  public EntireLayoutIndexedDoubleSupplier(int totalSize, ByteBuffer fromBuffer, ByteOrder byteOrder)
+  {
     this.totalSize = totalSize;
     this.buffer = fromBuffer.asReadOnlyBuffer().order(byteOrder).asDoubleBuffer();
   }

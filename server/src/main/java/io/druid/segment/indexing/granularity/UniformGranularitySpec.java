@@ -180,7 +180,8 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public GranularitySpec withIntervals(List<Interval> inputIntervals) {
+  public GranularitySpec withIntervals(List<Interval> inputIntervals)
+  {
     return new UniformGranularitySpec(segmentGranularity, queryGranularity, rollup, inputIntervals);
   }
 }

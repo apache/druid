@@ -464,7 +464,8 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testDeleteDataSource() {
+  public void testDeleteDataSource()
+  {
     IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
     EasyMock.replay(indexingServiceClient, server);
     DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient, new AuthConfig());

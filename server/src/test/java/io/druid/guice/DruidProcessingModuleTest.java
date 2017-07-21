@@ -27,7 +27,8 @@ public class DruidProcessingModuleTest
 {
 
   @Test(expected=ProvisionException.class)
-  public void testMemoryCheckThrowsException() {
+  public void testMemoryCheckThrowsException()
+  {
     DruidProcessingModule module = new DruidProcessingModule();
     module.getIntermediateResultsPool(new DruidProcessingConfig()
     {

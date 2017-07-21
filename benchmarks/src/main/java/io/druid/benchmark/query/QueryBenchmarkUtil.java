@@ -55,8 +55,8 @@ public class QueryBenchmarkUtil
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
       @Override
-      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate,
-                                         QueryToolChest<T, ? extends Query<T>> toolChest) {
+      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
+      {
         return new QueryRunner<T>() {
           @Override
           public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)

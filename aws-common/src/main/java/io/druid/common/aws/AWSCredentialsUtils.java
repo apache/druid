@@ -27,7 +27,8 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 
 public class AWSCredentialsUtils
 {
-  public static AWSCredentialsProviderChain defaultAWSCredentialsProviderChain(final AWSCredentialsConfig config) {
+  public static AWSCredentialsProviderChain defaultAWSCredentialsProviderChain(final AWSCredentialsConfig config)
+  {
     return new AWSCredentialsProviderChain(
         new ConfigDrivenAwsCredentialsConfigProvider(config),
         new LazyFileSessionCredentialsProvider(config),

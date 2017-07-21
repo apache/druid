@@ -194,7 +194,8 @@ public class SQLServerConnector extends SQLMetadataConnector
   }
 
   @Override
-  public String getQuoteString() {
+  public String getQuoteString()
+  {
     return QUOTE_STRING;
   }
 

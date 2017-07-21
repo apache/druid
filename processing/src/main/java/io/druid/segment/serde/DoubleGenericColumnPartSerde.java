@@ -66,8 +66,7 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return (Deserializer) (buffer, builder, columnConfig) ->
-    {
+    return (buffer, builder, columnConfig) -> {
       final CompressedDoublesIndexedSupplier column = CompressedDoublesIndexedSupplier.fromByteBuffer(
             buffer,
             byteOrder,
@@ -75,7 +74,7 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
         );
         builder.setType(ValueType.DOUBLE)
                .setHasMultipleValues(false)
-               .setGenericColumn(new DoubleGenericColumnSupplier(column, byteOrder));
+               .setGenericColumn(new DoubleGenericColumnSupplier(column));
 
     };
   }

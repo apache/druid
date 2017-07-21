@@ -53,7 +53,8 @@ public class CacheDistributionTest
   public static final int KEY_COUNT = 1_000_000;
 
   @Parameterized.Parameters(name = "repetitions={0}, hash={1}")
-  public static Iterable<Object[]> data() {
+  public static Iterable<Object[]> data()
+  {
     List<HashAlgorithm> hash = ImmutableList.of(
         DefaultHashAlgorithm.FNV1A_64_HASH, DefaultHashAlgorithm.KETAMA_HASH, MemcachedCache.MURMUR3_128
     );
@@ -80,7 +81,8 @@ public class CacheDistributionTest
   final int reps;
 
   @BeforeClass
-  public static void header() {
+  public static void header()
+  {
     System.out.printf(
         Locale.ENGLISH,
         "%25s\t%5s\t%10s\t%10s\t%10s\t%10s\t%10s\t%7s\t%5s%n",
@@ -145,7 +147,8 @@ public class CacheDistributionTest
     System.out.printf(Locale.ENGLISH, "%7.2f\t%5.0f%n", (double) min / (double) max, (double)t / KEY_COUNT);
   }
 
-  private static MemcachedNode dummyNode(String host, int port) {
+  private static MemcachedNode dummyNode(String host, int port)
+  {
     SocketAddress address = InetSocketAddress.createUnresolved(host, port);
     MemcachedNode node = EasyMock.createNiceMock(MemcachedNode.class);
     EasyMock.expect(node.getSocketAddress()).andReturn(address).anyTimes();

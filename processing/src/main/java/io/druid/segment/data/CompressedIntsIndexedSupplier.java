@@ -76,7 +76,8 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
     if(powerOf2) {
-      return new CompressedIndexedInts() {
+      return new CompressedIndexedInts()
+      {
         @Override
         public int get(int index)
         {

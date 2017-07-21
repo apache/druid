@@ -77,7 +77,8 @@ public class SegmentLoaderConfig
     return numLoadingThreads;
   }
 
-  public int getNumBootstrapThreads() {
+  public int getNumBootstrapThreads()
+  {
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
   }
 

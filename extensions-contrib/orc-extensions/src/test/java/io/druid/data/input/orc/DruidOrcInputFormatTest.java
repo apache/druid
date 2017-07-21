@@ -141,8 +141,7 @@ public class DruidOrcInputFormatTest
     ListColumnVector listColumnVector = (ListColumnVector) batch.cols[2];
     listColumnVector.childCount = col2.length;
     listColumnVector.lengths[0] = 3;
-    for (int idx = 0; idx < col2.length; idx++)
-    {
+    for (int idx = 0; idx < col2.length; idx++) {
       ((BytesColumnVector) listColumnVector.child).setRef(
           idx,
           StringUtils.toUtf8(col2[idx]),

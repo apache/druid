@@ -220,7 +220,8 @@ public class TaskLockboxTest
     Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
   }
 
-  public static class SomeTask extends NoopTask {
+  public static class SomeTask extends NoopTask
+  {
 
     public SomeTask(
         @JsonProperty("id") String id,
@@ -241,7 +242,9 @@ public class TaskLockboxTest
     }
 
     @Override
-    public  String getGroupId() { return "someGroupId";}
-
+    public  String getGroupId()
+    {
+      return "someGroupId";
+    }
   }
 }

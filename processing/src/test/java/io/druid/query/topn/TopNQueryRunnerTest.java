@@ -106,7 +106,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -1921,15 +1920,14 @@ public class TopNQueryRunnerTest
         new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    new LinkedHashMap<String, Object>()
-                    {{
-                        put("doesn't exist", null);
-                        put("rows", 26L);
-                        put("index", 12459.361190795898D);
-                        put("addRowsIndexConstant", 12486.361190795898D);
-                        put("uniques", QueryRunnerTestHelper.UNIQUES_9);
-                      }}
+                Collections.<Map<String, Object>>singletonList(
+                    QueryRunnerTestHelper.orderedMap(
+                        "doesn't exist", null,
+                        "rows", 26L,
+                        "index", 12459.361190795898D,
+                        "addRowsIndexConstant", 12486.361190795898D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    )
                 )
             )
         )
@@ -1956,15 +1954,14 @@ public class TopNQueryRunnerTest
         new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    new LinkedHashMap<String, Object>()
-                    {{
-                        put("doesn't exist", null);
-                        put("rows", 4L);
-                        put("index", 4875.669692D);
-                        put("addRowsIndexConstant", 4880.669692D);
-                        put("uniques", QueryRunnerTestHelper.UNIQUES_2);
-                      }}
+                Collections.<Map<String, Object>>singletonList(
+                    QueryRunnerTestHelper.orderedMap(
+                        "doesn't exist", null,
+                        "rows", 4L,
+                        "index", 4875.669692D,
+                        "addRowsIndexConstant", 4880.669692D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
                 )
             )
         )
@@ -1991,15 +1988,14 @@ public class TopNQueryRunnerTest
         new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    new LinkedHashMap<String, Object>()
-                    {{
-                        put("doesn't exist", null);
-                        put("rows", 26L);
-                        put("index", 12459.361190795898D);
-                        put("addRowsIndexConstant", 12486.361190795898D);
-                        put("uniques", QueryRunnerTestHelper.UNIQUES_9);
-                      }}
+                Collections.<Map<String, Object>>singletonList(
+                    QueryRunnerTestHelper.orderedMap(
+                        "doesn't exist", null,
+                        "rows", 26L,
+                        "index", 12459.361190795898D,
+                        "addRowsIndexConstant", 12486.361190795898D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    )
                 )
             )
         )
@@ -3289,14 +3285,13 @@ public class TopNQueryRunnerTest
                         "addRowsIndexConstant", 2250.876812D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
-                    new LinkedHashMap<String, Object>()
-                    {{
-                        put(QueryRunnerTestHelper.marketDimension, null);
-                        put("rows", 4L);
-                        put("index", 5351.814783D);
-                        put("addRowsIndexConstant", 5356.814783D);
-                        put("uniques", QueryRunnerTestHelper.UNIQUES_2);
-                      }},
+                    QueryRunnerTestHelper.orderedMap(
+                        QueryRunnerTestHelper.marketDimension, null,
+                        "rows", 4L,
+                        "index", 5351.814783D,
+                        "addRowsIndexConstant", 5356.814783D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    ),
                     ImmutableMap.<String, Object>of(
                         QueryRunnerTestHelper.marketDimension, "upfront",
                         "rows", 4L,
@@ -3378,14 +3373,13 @@ public class TopNQueryRunnerTest
                         "addRowsIndexConstant", 2250.876812D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
-                    new LinkedHashMap<String, Object>()
-                    {{
-                        put(QueryRunnerTestHelper.marketDimension, "");
-                        put("rows", 4L);
-                        put("index", 5351.814783D);
-                        put("addRowsIndexConstant", 5356.814783D);
-                        put("uniques", QueryRunnerTestHelper.UNIQUES_2);
-                      }},
+                    QueryRunnerTestHelper.orderedMap(
+                        QueryRunnerTestHelper.marketDimension, "",
+                        "rows", 4L,
+                        "index", 5351.814783D,
+                        "addRowsIndexConstant", 5356.814783D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    ),
                     ImmutableMap.<String, Object>of(
                         QueryRunnerTestHelper.marketDimension, "upfront",
                         "rows", 4L,
@@ -4200,7 +4194,8 @@ public class TopNQueryRunnerTest
     assertExpectedResults(expectedResults, topNQueryWithNULLValueExtraction);
   }
 
-  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query){
+  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query)
+  {
     return runWithPreMergeAndMerge(query, ImmutableMap.<String, Object>of());
   }
 

@@ -27,16 +27,19 @@ public class HostAndPortWithScheme
   private String scheme;
   private HostAndPort hostAndPort;
 
-  public HostAndPortWithScheme(String scheme, HostAndPort hostAndPort) {
+  public HostAndPortWithScheme(String scheme, HostAndPort hostAndPort)
+  {
     this.scheme = scheme;
     this.hostAndPort = hostAndPort;
   }
 
-  public static HostAndPortWithScheme fromParts(String scheme, String host, int port) {
+  public static HostAndPortWithScheme fromParts(String scheme, String host, int port)
+  {
     return new HostAndPortWithScheme(scheme, HostAndPort.fromParts(host, port));
   }
 
-  public static HostAndPortWithScheme fromString(String hostPortMaybeSchemeString) {
+  public static HostAndPortWithScheme fromString(String hostPortMaybeSchemeString)
+  {
     if (hostPortMaybeSchemeString.startsWith("http")) {
       return HostAndPortWithScheme.fromString(
           hostPortMaybeSchemeString.substring(0, hostPortMaybeSchemeString.indexOf(':')),
@@ -46,28 +49,34 @@ public class HostAndPortWithScheme
     return HostAndPortWithScheme.fromString("http", hostPortMaybeSchemeString);
   }
 
-  public static HostAndPortWithScheme fromString(String scheme, String hostPortString) {
+  public static HostAndPortWithScheme fromString(String scheme, String hostPortString)
+  {
     return new HostAndPortWithScheme(checkAndGetScheme(scheme), HostAndPort.fromString(hostPortString));
   }
 
-  private static String checkAndGetScheme(String scheme) {
+  private static String checkAndGetScheme(String scheme)
+  {
     Preconditions.checkState(scheme.toLowerCase().equals("http") || scheme.toLowerCase().equals("https"));
     return scheme.toLowerCase();
   }
 
-  public String getScheme() {
+  public String getScheme()
+  {
     return scheme;
   }
 
-  public String getHostText() {
+  public String getHostText()
+  {
     return hostAndPort.getHostText();
   }
 
-  public int getPort() {
+  public int getPort()
+  {
     return hostAndPort.getPort();
   }
 
-  public int getPortOrDefault(int defaultPort) {
+  public int getPortOrDefault(int defaultPort)
+  {
     return hostAndPort.getPortOrDefault(defaultPort);
   }
 
@@ -77,7 +86,8 @@ public class HostAndPortWithScheme
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return String.format("%s:%s", scheme, hostAndPort.toString());
   }
 

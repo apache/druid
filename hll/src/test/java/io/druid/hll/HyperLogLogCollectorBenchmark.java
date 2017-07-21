@@ -132,8 +132,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
       buf.put(EMPTY_BYTES);
       buf.reset();
-    }
-    else {
+    } else {
       buf = ByteBuffer.allocate(size);
       buf.limit(size);
       buf.put(EMPTY_BYTES);
@@ -165,12 +164,14 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     return HyperLogLogCollector.makeCollector(buf.duplicate()).estimateCardinality();
   }
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) throws Exception
+  {
     Runner.main(HyperLogLogCollectorBenchmark.class, args);
   }
 }
 
-class ByteBuffers {
+class ByteBuffers
+{
   private static final Unsafe UNSAFE;
   private static final long ADDRESS_OFFSET;
 
@@ -180,16 +181,19 @@ class ByteBuffers {
       theUnsafe.setAccessible(true);
       UNSAFE = (Unsafe) theUnsafe.get(null);
       ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer.class.getDeclaredField("address"));
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new RuntimeException("Cannot access Unsafe methods", e);
     }
   }
 
-  public static long getAddress(ByteBuffer buf) {
+  public static long getAddress(ByteBuffer buf)
+  {
     return UNSAFE.getLong(buf, ADDRESS_OFFSET);
   }
 
-  public static ByteBuffer allocateAlignedByteBuffer(int capacity, int align) {
+  public static ByteBuffer allocateAlignedByteBuffer(int capacity, int align)
+  {
     Preconditions.checkArgument(Long.bitCount(align) == 1, "Alignment must be a power of 2");
     final ByteBuffer buf = ByteBuffer.allocateDirect(capacity + align);
     long address = getAddress(buf);

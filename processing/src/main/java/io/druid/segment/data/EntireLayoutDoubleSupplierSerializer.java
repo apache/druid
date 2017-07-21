@@ -47,15 +47,14 @@ public class EntireLayoutDoubleSupplierSerializer implements DoubleSupplierSeria
 
   private int numInserted = 0;
 
-  public EntireLayoutDoubleSupplierSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order) {
+  public EntireLayoutDoubleSupplierSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order)
+  {
     this.ioPeon = ioPeon;
     this.valueFile = filenameBase + ".value";
     this.metaFile = filenameBase + ".format";
     this.orderBuffer = ByteBuffer.allocate(Doubles.BYTES);
     orderBuffer.order(order);
-
   }
-
 
   @Override
   public void open() throws IOException
