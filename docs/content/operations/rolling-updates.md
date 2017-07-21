@@ -9,11 +9,11 @@ For rolling Druid cluster updates with no downtime, we recommend updating Druid 
 following order:
 
 1. Historical
-2. Middle Manager (if any)
-3. Standalone Real-time (if any)
-4. Broker
-5. Overlord (if any)
-6. Coordinator
+2. Overlord (if any)
+3. Middle Manager (if any)
+4. Standalone Real-time (if any)
+5. Broker
+6. Coordinator ( or merged Coordinator+Overlord )
 
 ## Historical
 
