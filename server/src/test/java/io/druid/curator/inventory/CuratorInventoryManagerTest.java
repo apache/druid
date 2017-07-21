@@ -23,6 +23,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import io.druid.concurrent.Execs;
+import io.druid.curator.CuratorTestBase;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
@@ -40,7 +41,7 @@ import java.util.concurrent.ExecutorService;
 
 /**
  */
-public class CuratorInventoryManagerTest extends io.druid.curator.CuratorTestBase
+public class CuratorInventoryManagerTest extends CuratorTestBase
 {
   private ExecutorService exec;
 

@@ -47,6 +47,8 @@ public interface GenericColumn extends HotLoopCallee, Closeable
   public long getLongSingleValueRow(int rowNum);
   @CalledFromHotLoop
   public IndexedLongs getLongMultiValueRow(int rowNum);
+  @CalledFromHotLoop
+  double getDoubleSingleValueRow(int rowNum);
 
   @Override
   void close();

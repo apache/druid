@@ -22,7 +22,6 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
-
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.PathChildrenCacheFactory;
@@ -31,7 +30,8 @@ import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
+import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
@@ -57,7 +57,7 @@ public class RemoteTaskRunnerTestUtils
   static final String announcementsPath = StringUtils.format("%s/indexer/announcements", basePath);
   static final String tasksPath = StringUtils.format("%s/indexer/tasks", basePath);
   static final String statusPath = StringUtils.format("%s/indexer/status", basePath);
-  static final TaskLocation DUMMY_LOCATION = TaskLocation.create("dummy", 9000);
+  static final TaskLocation DUMMY_LOCATION = TaskLocation.create("dummy", 9000, -1);
 
   private TestingCluster testingCluster;
 
@@ -104,6 +104,15 @@ public class RemoteTaskRunnerTestUtils
 
   RemoteTaskRunner makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
   {
+    NoopProvisioningStrategy<WorkerTaskRunner> resourceManagement = new NoopProvisioningStrategy<>();
+    return makeRemoteTaskRunner(config, resourceManagement);
+  }
+
+  public RemoteTaskRunner makeRemoteTaskRunner(
+      RemoteTaskRunnerConfig config,
+      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
+  )
+  {
     RemoteTaskRunner remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
         config,
@@ -122,7 +131,7 @@ public class RemoteTaskRunnerTestUtils
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
         ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
-        new NoopResourceManagementStrategy<WorkerTaskRunner>()
+        provisioningStrategy
     );
 
     remoteTaskRunner.start();
@@ -132,6 +141,7 @@ public class RemoteTaskRunnerTestUtils
   Worker makeWorker(final String workerId) throws Exception
   {
     Worker worker = new Worker(
+        "http",
         workerId,
         workerId,
         3,
@@ -151,7 +161,7 @@ public class RemoteTaskRunnerTestUtils
   {
     cf.setData().forPath(
         joiner.join(announcementsPath, worker.getHost()),
-        jsonMapper.writeValueAsBytes(new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), ""))
+        jsonMapper.writeValueAsBytes(new Worker(worker.getScheme(), worker.getHost(), worker.getIp(), worker.getCapacity(), ""))
     );
   }
 

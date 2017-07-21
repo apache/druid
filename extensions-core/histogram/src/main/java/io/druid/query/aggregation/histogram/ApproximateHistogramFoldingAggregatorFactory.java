@@ -29,6 +29,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
@@ -38,7 +39,6 @@ import java.nio.ByteBuffer;
 @JsonTypeName("approxHistogramFold")
 public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHistogramAggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 13;
 
   @JsonCreator
   public ApproximateHistogramFoldingAggregatorFactory(
@@ -141,7 +141,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + fieldNameBytes.length + Ints.BYTES * 2 + Floats.BYTES * 2)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.APPROX_HIST_FOLDING_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .putInt(resolution)
                      .putInt(numBuckets)

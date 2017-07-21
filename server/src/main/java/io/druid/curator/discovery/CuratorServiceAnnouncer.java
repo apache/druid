@@ -61,10 +61,11 @@ public class CuratorServiceAnnouncer implements ServiceAnnouncer
       } else {
         try {
           instance = ServiceInstance.<Void>builder()
-                                    .name(serviceName)
-                                    .address(service.getHost())
-                                    .port(service.getPort())
-                                    .build();
+              .name(serviceName)
+              .address(service.getHost())
+              .port(service.getPlaintextPort())
+              .sslPort(service.getTlsPort())
+              .build();
         }
         catch (Exception e) {
           throw Throwables.propagate(e);

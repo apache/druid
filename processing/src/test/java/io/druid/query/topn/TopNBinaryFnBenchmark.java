@@ -115,7 +115,6 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
         new TopNResultValue(list2)
     );
     fn = new TopNBinaryFn(
-        TopNResultMerger.identity,
         Granularities.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),

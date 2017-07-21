@@ -167,11 +167,11 @@ public class ExecutorLifecycle
     // Won't hurt in remote mode, and is required for setting up locks in local mode:
     try {
       if (!task.isReady(taskActionClientFactory.create(task))) {
-        throw new ISE("Task is not ready to run yet!", task.getId());
+        throw new ISE("Task[%s] is not ready to run yet!", task.getId());
       }
     }
     catch (Exception e) {
-      throw new ISE(e, "Failed to run isReady", task.getId());
+      throw new ISE(e, "Failed to run task[%s] isReady", task.getId());
     }
 
     statusFuture = Futures.transform(

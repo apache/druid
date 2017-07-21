@@ -37,6 +37,7 @@ import io.druid.server.QueryStats;
 import io.druid.server.RequestLogLine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.appender.OutputStreamAppender;
 import org.apache.logging.log4j.core.layout.JsonLayout;
 import org.joda.time.DateTime;
@@ -98,7 +99,7 @@ public class LoggingRequestLoggerTest
         .setTarget(baos)
         .setLayout(JsonLayout.createLayout(false, true, false, true, true, Charsets.UTF_8))
         .build();
-    final org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger)
+    final Logger logger = (Logger)
         LogManager.getLogger(LoggingRequestLogger.class);
     appender.start();
     logger.addAppender(appender);
@@ -113,7 +114,7 @@ public class LoggingRequestLoggerTest
   @AfterClass
   public static void tearDownStatic()
   {
-    final org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger) LogManager.getLogger(
+    final Logger logger = (Logger) LogManager.getLogger(
         LoggingRequestLogger.class);
     logger.removeAppender(appender);
     appender.stop();

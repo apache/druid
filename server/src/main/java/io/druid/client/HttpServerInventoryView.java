@@ -288,7 +288,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   {
     synchronized (servers) {
       return Iterables.transform(
-          servers.values(), new com.google.common.base.Function<DruidServerHolder, DruidServer>()
+          servers.values(), new Function<DruidServerHolder, DruidServer>()
           {
             @Override
             public DruidServer apply(DruidServerHolder input)
@@ -520,7 +520,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               config.getServerTimeout()
           );
         }
-        URL url = new URL("http", serverHostAndPort.getHostText(), serverHostAndPort.getPort(), req);
+        URL url = new URL(druidServer.getScheme(), serverHostAndPort.getHostText(), serverHostAndPort.getPort(), req);
 
         BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
 

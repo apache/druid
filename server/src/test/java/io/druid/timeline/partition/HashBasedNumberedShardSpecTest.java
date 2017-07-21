@@ -248,6 +248,12 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
+    public double getDoubleMetric(String metric)
+    {
+      return 0.0d;
+    }
+
+    @Override
     public int compareTo(Row o)
     {
       return 0;

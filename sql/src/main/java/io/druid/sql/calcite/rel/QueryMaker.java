@@ -27,15 +27,16 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import io.druid.client.DirectDruidClient;
 import io.druid.common.guava.GuavaUtils;
+import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.math.expr.Evals;
 import io.druid.query.DataSource;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.Result;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
@@ -95,12 +96,7 @@ public class QueryMaker
   )
   {
     if (dataSource instanceof QueryDataSource) {
-      final GroupByQuery outerQuery = queryBuilder.toGroupByQuery(
-          dataSource,
-          sourceRowSignature,
-          plannerContext.getQueryContext()
-      );
-
+      final GroupByQuery outerQuery = queryBuilder.toGroupByQuery(dataSource, plannerContext);
       if (outerQuery == null) {
         // Bug in the planner rules. They shouldn't allow this to happen.
         throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
@@ -109,40 +105,22 @@ public class QueryMaker
       return executeGroupBy(queryBuilder, outerQuery);
     }
 
-    final TimeseriesQuery timeseriesQuery = queryBuilder.toTimeseriesQuery(
-        dataSource,
-        sourceRowSignature,
-        plannerContext.getQueryContext()
-    );
-    if (timeseriesQuery != null) {
-      return executeTimeseries(queryBuilder, timeseriesQuery);
+    final TimeseriesQuery tsQuery = queryBuilder.toTimeseriesQuery(dataSource, plannerContext);
+    if (tsQuery != null) {
+      return executeTimeseries(queryBuilder, tsQuery);
     }
 
-    final TopNQuery topNQuery = queryBuilder.toTopNQuery(
-        dataSource,
-        sourceRowSignature,
-        plannerContext.getQueryContext(),
-        plannerContext.getPlannerConfig().getMaxTopNLimit(),
-        plannerContext.getPlannerConfig().isUseApproximateTopN()
-    );
+    final TopNQuery topNQuery = queryBuilder.toTopNQuery(dataSource, plannerContext);
     if (topNQuery != null) {
       return executeTopN(queryBuilder, topNQuery);
     }
 
-    final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(
-        dataSource,
-        sourceRowSignature,
-        plannerContext.getQueryContext()
-    );
+    final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(dataSource, plannerContext);
     if (groupByQuery != null) {
       return executeGroupBy(queryBuilder, groupByQuery);
     }
 
-    final SelectQuery selectQuery = queryBuilder.toSelectQuery(
-        dataSource,
-        sourceRowSignature,
-        plannerContext.getQueryContext()
-    );
+    final SelectQuery selectQuery = queryBuilder.toSelectQuery(dataSource, plannerContext);
     if (selectQuery != null) {
       return executeSelect(queryBuilder, selectQuery);
     }
@@ -277,8 +255,10 @@ public class QueryMaker
     );
 
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
-    final List<DimensionSpec> dimensions = queryBuilder.getGrouping().getDimensions();
-    final String timeOutputName = dimensions.isEmpty() ? null : Iterables.getOnlyElement(dimensions).getOutputName();
+    final String timeOutputName = queryBuilder.getGrouping().getDimensions().isEmpty()
+                                  ? null
+                                  : Iterables.getOnlyElement(queryBuilder.getGrouping().getDimensions())
+                                             .getOutputName();
 
     Hook.QUERY_PLAN.run(query);
 
@@ -376,10 +356,10 @@ public class QueryMaker
                      walker,
                      DirectDruidClient.makeResponseContextForQuery(query, plannerContext.getQueryStartTimeMillis())
                  ),
-        new Function<io.druid.data.input.Row, Object[]>()
+        new Function<Row, Object[]>()
         {
           @Override
-          public Object[] apply(final io.druid.data.input.Row row)
+          public Object[] apply(final Row row)
           {
             final Object[] retVal = new Object[fieldList.size()];
             for (RelDataTypeField field : fieldList) {
@@ -459,6 +439,14 @@ public class QueryMaker
       }
 
       return Calcites.jodaToCalciteTimestamp(dateTime, plannerContext.getTimeZone());
+    } else if (sqlType == SqlTypeName.BOOLEAN) {
+      if (value instanceof String) {
+        coercedValue = Evals.asBoolean(((String) value));
+      } else if (value instanceof Number) {
+        coercedValue = Evals.asBoolean(((Number) value).longValue());
+      } else {
+        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+      }
     } else if (sqlType == SqlTypeName.INTEGER) {
       if (value instanceof String) {
         coercedValue = Ints.tryParse((String) value);

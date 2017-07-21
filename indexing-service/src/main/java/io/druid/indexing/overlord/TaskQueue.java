@@ -305,7 +305,7 @@ public class TaskQueue
    *
    * @return true
    *
-   * @throws io.druid.metadata.EntryExistsException if the task already exists
+   * @throws EntryExistsException if the task already exists
    */
   public boolean add(final Task task) throws EntryExistsException
   {

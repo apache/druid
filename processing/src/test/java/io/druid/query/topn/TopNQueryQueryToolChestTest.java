@@ -211,7 +211,7 @@ public class TopNQueryQueryToolChestTest
         .dimension(QueryRunnerTestHelper.placementishDimension)
         .metric(QueryRunnerTestHelper.indexMetric)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(QueryRunnerTestHelper.commonAggregators);
+        .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
 
     TopNQuery query1 = builder.threshold(10).context(null).build();
     MockQueryRunner mockRunner = new MockQueryRunner(runner);

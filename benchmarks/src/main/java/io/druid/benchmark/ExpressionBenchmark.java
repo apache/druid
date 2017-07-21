@@ -239,6 +239,11 @@ public class ExpressionBenchmark
     }
 
     @Override
+    public double getDouble(ByteBuffer buf, int position)
+    {
+      throw new UnsupportedOperationException();
+    }
+    @Override
     public void close()
     {
 

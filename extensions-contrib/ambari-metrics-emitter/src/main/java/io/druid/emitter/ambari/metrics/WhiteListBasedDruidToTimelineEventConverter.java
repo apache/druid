@@ -33,8 +33,8 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
 import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 
 import java.io.File;

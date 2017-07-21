@@ -178,6 +178,23 @@ Adding new Jersey resources to a module requires calling the following code to b
 Jerseys.addResource(binder, NewResource.class);
 ```
 
+### Adding a new Password Provider implementation
+
+You will need to implement `io.druid.metadata.PasswordProvider` interface. For every place where Druid uses PasswordProvider, a new instance of the implementation will be created,
+thus make sure all the necessary information required for fetching each password is supplied during object instantiation.
+In your implementation of `io.druid.initialization.DruidModule`, `getJacksonModules` should look something like this -
+
+``` java
+    return ImmutableList.of(
+        new SimpleModule("SomePasswordProviderModule")
+            .registerSubtypes(
+                new NamedType(SomePasswordProvider.class, "some")
+            )
+    );
+```
+
+where `SomePasswordProvider` is the implementation of `PasswordProvider` interface, you can have a look at `io.druid.metadata.EnvironmentVariablePasswordProvider` for example.
+
 ### Bundle your extension with all the other Druid extensions
 
 When you do `mvn install`, Druid extensions will be packaged within the Druid tarball and `extensions` directory, which are both underneath `distribution/target/`.

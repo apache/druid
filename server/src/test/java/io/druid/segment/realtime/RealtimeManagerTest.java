@@ -822,6 +822,12 @@ public class RealtimeManagerTest
         }
 
         @Override
+        public double getDoubleMetric(String metric)
+        {
+          return 0.0d;
+        }
+
+        @Override
         public Object getRaw(String dimension)
         {
           return null;

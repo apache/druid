@@ -21,7 +21,9 @@ package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+//CHECKSTYLE.OFF: Regexp
 import com.metamx.common.logger.Logger;
+//CHECKSTYLE.ON: Regexp
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -89,12 +91,21 @@ public class AppenderatorTester implements AutoCloseable
       final int maxRowsInMemory
   )
   {
-    this(maxRowsInMemory, null);
+    this(maxRowsInMemory, null, false);
   }
 
   public AppenderatorTester(
       final int maxRowsInMemory,
-      final File basePersistDirectory
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, null, enablePushFailure);
+  }
+
+  public AppenderatorTester(
+      final int maxRowsInMemory,
+      final File basePersistDirectory,
+      final boolean enablePushFailure
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -169,6 +180,8 @@ public class AppenderatorTester implements AutoCloseable
     EmittingLogger.registerEmitter(emitter);
     dataSegmentPusher = new DataSegmentPusher()
     {
+      private boolean mustFail = true;
+
       @Deprecated
       @Override
       public String getPathForHadoop(String dataSource)
@@ -185,6 +198,12 @@ public class AppenderatorTester implements AutoCloseable
       @Override
       public DataSegment push(File file, DataSegment segment) throws IOException
       {
+        if (enablePushFailure && mustFail) {
+          mustFail = false;
+          throw new IOException("Push failure test");
+        } else if (enablePushFailure) {
+          mustFail = true;
+        }
         pushedSegments.add(segment);
         return segment;
       }

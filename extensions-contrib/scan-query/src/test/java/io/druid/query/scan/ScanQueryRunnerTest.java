@@ -148,7 +148,10 @@ public class ScanQueryRunnerTest
         "index",
         "indexMin",
         "indexMaxPlusTen",
-        "quality_uniques"
+        "quality_uniques",
+        "indexFloat",
+        "indexMaxFloat",
+        "indexMinFloat"
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
@@ -186,7 +189,10 @@ public class ScanQueryRunnerTest
         "index",
         "indexMin",
         "indexMaxPlusTen",
-        "quality_uniques"
+        "quality_uniques",
+        "indexFloat",
+        "indexMaxFloat",
+        "indexMinFloat"
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)

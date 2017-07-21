@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
@@ -112,6 +113,9 @@ public class SegmentAnalyzer
           break;
         case FLOAT:
           analysis = analyzeNumericColumn(capabilities, length, NUM_BYTES_IN_TEXT_FLOAT);
+          break;
+        case DOUBLE:
+          analysis = analyzeNumericColumn(capabilities, length, Doubles.BYTES);
           break;
         case STRING:
           if (index != null) {

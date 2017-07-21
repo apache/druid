@@ -69,7 +69,7 @@ public class SchemaEvolutionTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final String TIMESTAMP_COLUMN = "t";
-  private static final double THIRTY_ONE_POINT_ONE = 31.100000381469727d;
+  private static final double THIRTY_ONE_POINT_ONE = 31.1d;
 
   public static List<Result<TimeseriesResultValue>> timeseriesResult(final Map<String, ?> map)
   {
@@ -350,7 +350,7 @@ public class SchemaEvolutionTest
 
     // Only float(3) -- which we can't filter, but can aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.100000381469727, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L)),
         runQuery(query, factory, ImmutableList.of(index3))
     );
 
@@ -364,7 +364,7 @@ public class SchemaEvolutionTest
     Assert.assertEquals(
         timeseriesResult(ImmutableMap.of(
             "a", 38L,
-            "b", 38.10000038146973,
+            "b", 38.1,
             "c", 6L
         )),
         runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))

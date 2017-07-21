@@ -72,7 +72,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
       .aggregators(
           Lists.<AggregatorFactory>newArrayList(
               Iterables.concat(
-                  QueryRunnerTestHelper.commonAggregators,
+                  QueryRunnerTestHelper.commonDoubleAggregators,
                   Lists.newArrayList(
                       new DoubleMaxAggregatorFactory("maxIndex", "index"),
                       new DoubleMinAggregatorFactory("minIndex", "index")

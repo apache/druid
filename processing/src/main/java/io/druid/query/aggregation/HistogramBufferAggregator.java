@@ -50,8 +50,8 @@ public class HistogramBufferAggregator implements BufferAggregator
 
     final long[] bins = new long[breaks.length + 1];
     mutationBuffer.asLongBuffer().put(bins);
-    mutationBuffer.putFloat(position + minOffset, Float.MAX_VALUE);
-    mutationBuffer.putFloat(position + maxOffset, Float.MIN_VALUE);
+    mutationBuffer.putFloat(position + minOffset, Float.POSITIVE_INFINITY);
+    mutationBuffer.putFloat(position + maxOffset, Float.NEGATIVE_INFINITY);
   }
 
   @Override
@@ -99,6 +99,12 @@ public class HistogramBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     throw new UnsupportedOperationException("HistogramBufferAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getDouble");
   }
 
   @Override
