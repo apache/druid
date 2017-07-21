@@ -29,6 +29,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -58,8 +59,8 @@ import org.joda.time.Interval;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -418,16 +419,15 @@ public class SchemalessTestFullTest
                                 .put("maxIndex", 100.0)
                                 .put("minIndex", 100.0)
                                 .build(),
-                    new HashMap<String, Object>()
-                    {{
-                        put("market", null);
-                        put("rows", 1L);
-                        put("index", 0.0D);
-                        put("addRowsIndexConstant", 2.0D);
-                        put("uniques", 0.0D);
-                        put("maxIndex", 0.0);
-                        put("minIndex", 0.0);
-                      }}
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 1L,
+                        "index", 0.0D,
+                        "addRowsIndexConstant", 2.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 0.0,
+                        "minIndex", 0.0
+                    )
                 )
             )
         )
@@ -766,16 +766,15 @@ public class SchemalessTestFullTest
                                 .put("maxIndex", 100.0)
                                 .put("minIndex", 100.0)
                                 .build(),
-                    new HashMap<String, Object>()
-                    {{
-                        put("market", null);
-                        put("rows", 1L);
-                        put("index", 0.0D);
-                        put("addRowsIndexConstant", 2.0D);
-                        put("uniques", 0.0D);
-                        put("maxIndex", 0.0);
-                        put("minIndex", 0.0);
-                      }}
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 1L,
+                        "index", 0.0D,
+                        "addRowsIndexConstant", 2.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 0.0,
+                        "minIndex", 0.0
+                    )
                 )
             )
         )
@@ -880,17 +879,16 @@ public class SchemalessTestFullTest
         new Result<>(
             new DateTime("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    new LinkedHashMap<String, Object>(){{
-                      put("market", null);
-                      put("rows", 1L);
-                      put("index", 0.0D);
-                      put("addRowsIndexConstant", 2.0D);
-                      put("uniques", 0.0D);
-                      put("maxIndex", 0.0);
-                      put("minIndex", 0.0);
-
-                    }}
+                Collections.singletonList(
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 1L,
+                        "index", 0.0D,
+                        "addRowsIndexConstant", 2.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 0.0,
+                        "minIndex", 0.0
+                    )
                 )
             )
         )
@@ -899,7 +897,7 @@ public class SchemalessTestFullTest
         new Result<>(
             new DateTime("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<SearchHit>asList()
+                Collections.<SearchHit>emptyList()
             )
         )
     );
@@ -908,7 +906,7 @@ public class SchemalessTestFullTest
         new Result<>(
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList()
+                Collections.<SearchHit>emptyList()
             )
         )
     );
@@ -1068,16 +1066,15 @@ public class SchemalessTestFullTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
-                    new HashMap<String, Object>()
-                    {{
-                        put("market", null);
-                        put("rows", 2L);
-                        put("index", 200.0D);
-                        put("addRowsIndexConstant", 203.0D);
-                        put("uniques", 0.0D);
-                        put("maxIndex", 100.0);
-                        put("minIndex", 100.0);
-                      }},
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 2L,
+                        "index", 200.0D,
+                        "addRowsIndexConstant", 203.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 100.0,
+                        "minIndex", 100.0
+                    ),
                     ImmutableMap.<String, Object>builder()
                                 .put("market", "spot")
                                 .put("rows", 1L)

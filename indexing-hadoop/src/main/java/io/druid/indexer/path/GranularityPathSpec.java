@@ -131,11 +131,10 @@ public class GranularityPathSpec implements PathSpec
 
     for (Interval interval : intervals) {
       DateTime t = interval.getStart();
-      String intervalPath = null;
-      if(customFormatter != null) {
+      String intervalPath;
+      if (customFormatter != null) {
         intervalPath = customFormatter.print(t);
-      }
-      else {
+      } else {
         intervalPath = dataGranularity.toPath(t);
       }
 

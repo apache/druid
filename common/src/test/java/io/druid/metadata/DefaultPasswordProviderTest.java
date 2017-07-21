@@ -29,26 +29,30 @@ public class DefaultPasswordProviderTest
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   @Test
-  public void testExplicitConstruction() {
+  public void testExplicitConstruction()
+  {
     DefaultPasswordProvider pp = new DefaultPasswordProvider(pwd);
     Assert.assertEquals(pwd, pp.getPassword());
   }
   
   @Test
-  public void testFromStringConstruction() {
+  public void testFromStringConstruction()
+  {
     DefaultPasswordProvider pp = DefaultPasswordProvider.fromString(pwd);
     Assert.assertEquals(pwd, pp.getPassword());
   }
 
   @Test
-  public void testDeserializationFromJsonString() throws Exception {
+  public void testDeserializationFromJsonString() throws Exception
+  {
     PasswordProvider pp = jsonMapper.readValue("\"" + pwd + "\"",
         PasswordProvider.class);
     Assert.assertEquals(pwd, pp.getPassword());
   }
 
   @Test
-  public void testDeserializationFromJson() throws Exception {
+  public void testDeserializationFromJson() throws Exception
+  {
     PasswordProvider pp = jsonMapper.readValue(
         "{\"type\": \"default\", \"password\": \"" + pwd + "\"}",
         PasswordProvider.class);

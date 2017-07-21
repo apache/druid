@@ -29,7 +29,8 @@ import java.util.Map;
 
 public class Utils
 {
-  public static <K, V> Map<K, V> zipMap(K[] keys, V[] values) {
+  public static <K, V> Map<K, V> zipMap(K[] keys, V[] values)
+  {
     Preconditions.checkArgument(values.length == keys.length,
                                 "number of values[%s] different than number of keys[%s]",
                                 values.length, keys.length);
@@ -45,8 +46,7 @@ public class Utils
 
     Map<K, V> retVal = new LinkedHashMap<>();
 
-    for(int i = 0; i < values.length; ++i)
-    {
+    for(int i = 0; i < values.length; ++i) {
       retVal.put(keys[i], values[i]);
     }
 
@@ -55,7 +55,8 @@ public class Utils
 
   /** Create a Map from iterables of keys and values. Will throw an exception if there are more keys than values,
    *  or more values than keys. */
-  public static <K, V> Map<K, V> zipMap(Iterable<K> keys, Iterable<V> values) {
+  public static <K, V> Map<K, V> zipMap(Iterable<K> keys, Iterable<V> values)
+  {
     Map<K, V> retVal = new LinkedHashMap<>();
 
     Iterator<K> keysIter = keys.iterator();
@@ -90,11 +91,9 @@ public class Utils
     while (keysIter.hasNext()) {
       final K key = keysIter.next();
 
-      if(valsIter.hasNext())
-      {
+      if(valsIter.hasNext()) {
         retVal.put(key, valsIter.next());
-      }
-      else {
+      } else {
         break;
       }
 

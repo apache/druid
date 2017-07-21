@@ -158,7 +158,8 @@ public class S3DataSegmentMoverTest
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
   }
 
-  private static class MockStorageService extends RestS3Service {
+  private static class MockStorageService extends RestS3Service
+  {
     Map<String, Set<String>> storage = Maps.newHashMap();
     boolean moved = false;
 
@@ -167,7 +168,8 @@ public class S3DataSegmentMoverTest
       super(null);
     }
 
-    public boolean didMove() {
+    public boolean didMove()
+    {
       return moved;
     }
 
@@ -187,7 +189,8 @@ public class S3DataSegmentMoverTest
           object.setStorageClass(S3Object.STORAGE_CLASS_STANDARD);
           return new S3Object[]{object};
         }
-      } catch (ServiceException e) {
+      }
+      catch (ServiceException e) {
         // return empty list
       }
       return new S3Object[]{};

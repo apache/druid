@@ -166,7 +166,8 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     return makeLoadSpec(config.getBucket(),finalIndexZipFilePath.getPath().substring(1));
   }
 
-  private Map<String, Object> makeLoadSpec(String bucket, String path) {
+  private Map<String, Object> makeLoadSpec(String bucket, String path)
+  {
     return ImmutableMap.<String, Object>of(
         "type", GoogleStorageDruidModule.SCHEME,
         "bucket", bucket,

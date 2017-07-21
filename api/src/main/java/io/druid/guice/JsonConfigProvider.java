@@ -146,11 +146,9 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
 
     if (bindKey.getAnnotationType() != null) {
       supplierKey = Key.get(supType, bindKey.getAnnotationType());
-    }
-    else if (bindKey.getAnnotation() != null) {
+    } else if (bindKey.getAnnotation() != null) {
       supplierKey = Key.get(supType, bindKey.getAnnotation());
-    }
-    else {
+    } else {
       supplierKey = Key.get(supType);
     }
 

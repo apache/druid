@@ -52,9 +52,14 @@ public class PollingLookupSerDeserTest
     });
   }
 
-  public PollingLookupSerDeserTest(PollingCacheFactory cacheFactory) {this.cacheFactory = cacheFactory;}
-  private final PollingCacheFactory cacheFactory ;
+  private final PollingCacheFactory cacheFactory;
   private DataFetcher dataFetcher = new MockDataFetcher();
+
+  public PollingLookupSerDeserTest(PollingCacheFactory cacheFactory)
+  {
+    this.cacheFactory = cacheFactory;
+  }
+
   @Test
   public void testSerDeser() throws IOException
   {

@@ -702,7 +702,8 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testMaxOverflow() {
+  public void testMaxOverflow()
+  {
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     collector.add((short)23, (byte)16);
     Assert.assertEquals(23, collector.getMaxOverflowRegister());
@@ -722,7 +723,8 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testMergeMaxOverflow() {
+  public void testMergeMaxOverflow()
+  {
     // no offset
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     collector.add((short)23, (byte)16);

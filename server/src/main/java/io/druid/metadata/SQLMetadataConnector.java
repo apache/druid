@@ -113,7 +113,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   public abstract String getQuoteString();
 
-  public String getValidationQuery() { return "SELECT 1"; }
+  public String getValidationQuery()
+  {
+    return "SELECT 1";
+  }
 
   public abstract boolean tableExists(Handle handle, final String tableName);
 
@@ -554,7 +557,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return matched.get(0);
   }
 
-  public MetadataStorageConnectorConfig getConfig() { return config.get(); }
+  public MetadataStorageConnectorConfig getConfig()
+  {
+    return config.get();
+  }
 
   protected BasicDataSource getDatasource()
   {

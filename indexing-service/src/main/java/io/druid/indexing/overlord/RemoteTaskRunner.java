@@ -1097,9 +1097,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             new Runnable()
             {
               @Override
-              public void run() {
+              public void run()
+              {
                 long currentTimeStamp = System.currentTimeMillis();
-                for(ZkWorker zkWorker : blackListedWorkers){
+                for (ZkWorker zkWorker : blackListedWorkers) {
                   cleanBlackListedNode(zkWorker, currentTimeStamp);
                 }
               }

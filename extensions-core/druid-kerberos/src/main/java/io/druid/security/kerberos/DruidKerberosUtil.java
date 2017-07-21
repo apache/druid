@@ -113,7 +113,8 @@ public class DruidKerberosUtil
     }
   }
 
-  public static boolean needToSendCredentials(CookieStore cookieStore, URI uri){
+  public static boolean needToSendCredentials(CookieStore cookieStore, URI uri)
+  {
     return getAuthCookie(cookieStore, uri) == null;
   }
 

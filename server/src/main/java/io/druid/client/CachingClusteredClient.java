@@ -328,8 +328,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     final byte[] queryCacheKey;
 
     if ((populateCache || useCache) // implies strategy != null
-        && !isBySegment) // explicit bySegment queries are never cached
-    {
+        && !isBySegment) /* explicit bySegment queries are never cached */ {
       queryCacheKey = strategy.computeCacheKey(query);
     } else {
       queryCacheKey = null;

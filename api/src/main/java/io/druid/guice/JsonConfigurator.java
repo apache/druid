@@ -112,7 +112,7 @@ public class JsonConfigurator
       List<String> messages = Lists.newArrayList();
 
       for (ConstraintViolation<T> violation : violations) {
-        String path = "";
+        StringBuilder path = new StringBuilder();
         try {
           Class<?> beanClazz = violation.getRootBeanClass();
           final Iterator<Path.Node> iter = violation.getPropertyPath().iterator();
@@ -123,18 +123,17 @@ public class JsonConfigurator
               final Field theField = beanClazz.getDeclaredField(fieldName);
 
               if (theField.getAnnotation(JacksonInject.class) != null) {
-                path = StringUtils.format(" -- Injected field[%s] not bound!?", fieldName);
+                path = new StringBuilder(StringUtils.format(" -- Injected field[%s] not bound!?", fieldName));
                 break;
               }
 
               JsonProperty annotation = theField.getAnnotation(JsonProperty.class);
               final boolean noAnnotationValue = annotation == null || Strings.isNullOrEmpty(annotation.value());
               final String pathPart = noAnnotationValue ? fieldName : annotation.value();
-              if (path.isEmpty()) {
-                path += pathPart;
-              }
-              else {
-                path += "." + pathPart;
+              if (path.length() == 0) {
+                path.append(pathPart);
+              } else {
+                path.append(".").append(pathPart);
               }
             }
           }
@@ -143,7 +142,7 @@ public class JsonConfigurator
           throw Throwables.propagate(e);
         }
 
-        messages.add(StringUtils.format("%s - %s", path, violation.getMessage()));
+        messages.add(StringUtils.format("%s - %s", path.toString(), violation.getMessage()));
       }
 
       throw new ProvisionException(

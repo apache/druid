@@ -213,7 +213,8 @@ public class DruidNode
     return null;
   }
 
-  public String getHostAndPortToUse() {
+  public String getHostAndPortToUse()
+  {
     return getHostAndTlsPort() != null ? getHostAndTlsPort() : getHostAndPort();
   }
 

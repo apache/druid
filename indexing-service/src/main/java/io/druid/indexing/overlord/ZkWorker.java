@@ -170,15 +170,18 @@ public class ZkWorker implements Closeable
     statusCache.close();
   }
 
-  public int getCountinouslyFailedTasksCount() {
+  public int getCountinouslyFailedTasksCount()
+  {
     return countinouslyFailedTasksCount.get();
   }
 
-  public void resetCountinouslyFailedTasksCount() {
+  public void resetCountinouslyFailedTasksCount()
+  {
     this.countinouslyFailedTasksCount.set(0);
   }
 
-  public void incrementCountinouslyFailedTasksCount() {
+  public void incrementCountinouslyFailedTasksCount()
+  {
     this.countinouslyFailedTasksCount.incrementAndGet();
   }
 

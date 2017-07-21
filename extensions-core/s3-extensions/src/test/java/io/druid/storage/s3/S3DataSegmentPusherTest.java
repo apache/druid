@@ -44,14 +44,17 @@ import java.io.File;
  */
 public class S3DataSegmentPusherTest
 {
-  private static class ValueContainer<T> {
+  private static class ValueContainer<T>
+  {
     private T value;
 
-    public T getValue() {
+    public T getValue()
+    {
       return value;
     }
 
-    public void setValue(T value) {
+    public void setValue(T value)
+    {
       this.value = value;
     }
   }
@@ -68,9 +71,11 @@ public class S3DataSegmentPusherTest
     ValueContainer<String> capturedS3SegmentJson = new ValueContainer<>();
     EasyMock.expect(s3Client.putObject(EasyMock.anyString(), EasyMock.capture(capturedS3Object)))
             .andAnswer(
-                new IAnswer<S3Object>() {
+                new IAnswer<S3Object>()
+                {
                   @Override
-                  public S3Object answer() throws Throwable {
+                  public S3Object answer() throws Throwable
+                  {
                     capturedS3SegmentJson.setValue(
                         IOUtils.toString(capturedS3Object.getValue().getDataInputStream(), "utf-8")
                     );

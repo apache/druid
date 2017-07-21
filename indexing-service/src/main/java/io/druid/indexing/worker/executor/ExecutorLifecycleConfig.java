@@ -81,8 +81,7 @@ public class ExecutorLifecycleConfig
   {
    if ("stdin".equals(parentStreamName)) {
      return System.in;
-   }
-   else {
+   } else {
      throw new ISE("Unknown stream name[%s]", parentStreamName);
    }
   }

@@ -819,7 +819,10 @@ public final class ProtoTestEventWrapper
             .parseWithIOException(PARSER, input, extensionRegistry);
       }
 
-      public Builder newBuilderForType() { return newBuilder(); }
+      public Builder newBuilderForType()
+      {
+        return newBuilder();
+      }
 
       public static Builder newBuilder()
       {
@@ -1848,7 +1851,10 @@ public final class ProtoTestEventWrapper
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
-    public Builder newBuilderForType() { return newBuilder(); }
+    public Builder newBuilderForType()
+    {
+      return newBuilder();
+    }
 
     public static Builder newBuilder()
     {

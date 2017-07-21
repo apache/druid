@@ -107,8 +107,7 @@ public class CombiningSequence<T> implements Sequence<T>
         } else {
           finalYielder = Yielders.done(null, yielder);
         }
-      }
-      else {
+      } else {
         return Yielders.done(combiningAccumulator.getRetVal(), yielder);
       }
     }
