@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
@@ -59,6 +60,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
@@ -71,7 +73,9 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
+import io.druid.timeline.partition.PartitionHolder;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.Interval;
 
@@ -86,11 +90,12 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
  */
-public class CachingClusteredClient<T> implements QueryRunner<T>
+public class CachingClusteredClient implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
   private final QueryToolChestWarehouse warehouse;
@@ -139,17 +144,68 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    return new SpecificQueryRunnable(queryPlus, responseContext).run();
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      {
+        return CachingClusteredClient.this.run(queryPlus, responseContext, timeline -> timeline);
+      }
+    };
   }
 
   /**
-   * This class essentially incapsulates the whole logic of {@link CachingClusteredClient}. It's state and methods
-   * couldn't belong to {@link CachingClusteredClient} itself, because they depend on the specific query object being
-   * run, but {@link QueryRunner} API is designed so that implementations should be able to accept arbitrary queries.
+   * Run a query. The timelineConverter will be given the "master" timeline and can be used to return a different
+   * timeline, if desired. This is used by getQueryRunnerForSegments.
    */
-  private class SpecificQueryRunnable
+  private <T> Sequence<T> run(
+      final QueryPlus<T> queryPlus,
+      final Map<String, Object> responseContext,
+      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
+  )
+  {
+    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+  }
+
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
+  {
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      {
+        return CachingClusteredClient.this.run(
+            queryPlus,
+            responseContext,
+            timeline -> {
+              final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
+                  new VersionedIntervalTimeline<>(Ordering.natural());
+              for (SegmentDescriptor spec : specs) {
+                final PartitionHolder<ServerSelector> entry = timeline.findEntry(spec.getInterval(), spec.getVersion());
+                if (entry != null) {
+                  final PartitionChunk<ServerSelector> chunk = entry.getChunk(spec.getPartitionNumber());
+                  if (chunk != null) {
+                    timeline2.add(spec.getInterval(), spec.getVersion(), chunk);
+                  }
+                }
+              }
+              return timeline2;
+            }
+        );
+      }
+    };
+  }
+
+  /**
+   * This class essentially incapsulates the major part of the logic of {@link CachingClusteredClient}. It's state and
+   * methods couldn't belong to {@link CachingClusteredClient} itself, because they depend on the specific query object
+   * being run, but {@link QuerySegmentWalker} API is designed so that implementations should be able to accept
+   * arbitrary queries.
+   */
+  private class SpecificQueryRunnable<T>
   {
     private final QueryPlus<T> queryPlus;
     private final Map<String, Object> responseContext;
@@ -196,11 +252,15 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       return contextBuilder.build();
     }
 
-    Sequence<T> run()
+    Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
-      @Nullable final TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+      @Nullable TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
       if (timeline == null) {
         return Sequences.empty();
+      }
+      timeline = timelineConverter.apply(timeline);
+      if (uncoveredIntervalsLimit > 0) {
+        computeUncoveredIntervals(timeline);
       }
 
       final Set<ServerToSegment> segments = computeSegmentsToQuery(timeline);
@@ -227,8 +287,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     private Set<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
     {
-      final List<TimelineObjectHolder<String, ServerSelector>> serversLookup =
-          toolChest.filterSegments(query, computeServersLookup(timeline));
+      final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
+          query,
+          query.getIntervals().stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
+      );
 
       final Set<ServerToSegment> segments = Sets.newLinkedHashSet();
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = Maps.newHashMap();
@@ -253,26 +315,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       return segments;
     }
 
-    private List<TimelineObjectHolder<String, ServerSelector>> computeServersLookup(
-        TimelineLookup<String, ServerSelector> timeline
-    )
+    private void computeUncoveredIntervals(TimelineLookup<String, ServerSelector> timeline)
     {
-      if (uncoveredIntervalsLimit <= 0) {
-        return query
-            .getIntervals()
-            .stream()
-            .flatMap(interval -> timeline.lookup(interval).stream())
-            .collect(Collectors.toList());
-      } else {
-        return computeServersLookupAndCountUncoveredIntervals(timeline);
-      }
-    }
-
-    private List<TimelineObjectHolder<String, ServerSelector>> computeServersLookupAndCountUncoveredIntervals(
-        TimelineLookup<String, ServerSelector> timeline
-    )
-    {
-      final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = new ArrayList<>();
       final List<Interval> uncoveredIntervals = new ArrayList<>(uncoveredIntervalsLimit);
       boolean uncoveredIntervalsOverflowed = false;
 
@@ -291,7 +335,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             }
           }
           startMillis = holderInterval.getEndMillis();
-          serversLookup.add(holder);
         }
 
         if (!uncoveredIntervalsOverflowed && startMillis < endMillis) {
@@ -311,7 +354,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         responseContext.put("uncoveredIntervals", uncoveredIntervals);
         responseContext.put("uncoveredIntervalsOverflowed", uncoveredIntervalsOverflowed);
       }
-      return serversLookup;
     }
 
     @Nullable
