@@ -429,17 +429,17 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = Maps.newTreeMap();
       for (ServerToSegment serverToSegment : segments) {
-        final QueryableDruidServer queryableDruidServer = serverToSegment.lhs.pick();
+        final QueryableDruidServer queryableDruidServer = serverToSegment.getServer().pick();
 
         if (queryableDruidServer == null) {
           log.makeAlert(
               "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
-              serverToSegment.rhs,
+              serverToSegment.getSegmentDescriptor(),
               query.getDataSource()
           ).emit();
         } else {
           final DruidServer server = queryableDruidServer.getServer();
-          serverSegments.computeIfAbsent(server, s -> new ArrayList<>()).add(serverToSegment.rhs);
+          serverSegments.computeIfAbsent(server, s -> new ArrayList<>()).add(serverToSegment.getSegmentDescriptor());
         }
       }
       return serverSegments;
