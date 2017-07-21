@@ -17,29 +17,15 @@
  * under the License.
  */
 
-package io.druid.query.timeseries;
+package io.druid.query.search.search;
 
 import io.druid.query.QueryMetrics;
 
-/**
- * Specialization of {@link QueryMetrics} for {@link TimeseriesQuery}.
- */
-public interface TimeseriesQueryMetrics extends QueryMetrics<TimeseriesQuery>
+public interface SearchQueryMetrics extends QueryMetrics<SearchQuery>
 {
   /**
-   * Sets the number of metrics of the given timeseries query as dimension.
+   * Sets the granularity of {@link SearchQuery#getGranularity()} of the given query as dimension.
    */
-  void numMetrics(TimeseriesQuery query);
+  void granularity(SearchQuery query);
 
-  /**
-   * Sets the number of "complex" metrics of the given timeseries query as dimension. By default it is assumed that
-   * "complex" metric is a metric of not long or double type, but it could be redefined in the implementation of this
-   * method.
-   */
-  void numComplexMetrics(TimeseriesQuery query);
-
-  /**
-   * Sets the granularity of {@link TimeseriesQuery#getGranularity()} of the given query as dimension.
-   */
-  void granularity(TimeseriesQuery query);
 }

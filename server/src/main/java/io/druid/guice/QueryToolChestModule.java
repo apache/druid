@@ -41,10 +41,14 @@ import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchQueryQueryToolChest;
+import io.druid.query.search.search.DefaultSearchQueryMetricsFactory;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
+import io.druid.query.search.search.SearchQueryMetricsFactory;
+import io.druid.query.select.DefaultSelectQueryMetricsFactory;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.select.SelectQueryConfig;
+import io.druid.query.select.SelectQueryMetricsFactory;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
@@ -68,6 +72,8 @@ public class QueryToolChestModule implements Module
   public static final String GROUPBY_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.groupBy.queryMetricsFactory";
   public static final String TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.timeseries.queryMetricsFactory";
   public static final String TOPN_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.topN.queryMetricsFactory";
+  public static final String SELECT_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.select.queryMetricsFactory";
+  public static final String SEARCH_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.search.queryMetricsFactory";
 
   public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
@@ -142,5 +148,27 @@ public class QueryToolChestModule implements Module
         .optionBinder(binder, Key.get(TopNQueryMetricsFactory.class))
         .addBinding("default")
         .to(DefaultTopNQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
+        binder,
+        SELECT_QUERY_METRICS_FACTORY_PROPERTY,
+        Key.get(SelectQueryMetricsFactory.class),
+        Key.get(DefaultSelectQueryMetricsFactory.class)
+    );
+    PolyBind
+        .optionBinder(binder, Key.get(SelectQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultSelectQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
+        binder,
+        SEARCH_QUERY_METRICS_FACTORY_PROPERTY,
+        Key.get(SearchQueryMetricsFactory.class),
+        Key.get(DefaultSearchQueryMetricsFactory.class)
+    );
+    PolyBind
+        .optionBinder(binder, Key.get(SearchQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultSearchQueryMetricsFactory.class);
   }
 }

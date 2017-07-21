@@ -37,12 +37,9 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DefaultGenericQueryMetricsFactory;
-import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
-import io.druid.query.QueryMetrics;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -52,9 +49,12 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.search.search.DefaultSearchQueryMetricsFactory;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
+import io.druid.query.search.search.SearchQueryMetrics;
+import io.druid.query.search.search.SearchQueryMetricsFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -76,7 +76,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
   private final SearchQueryConfig config;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
-  private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final SearchQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
   public SearchQueryQueryToolChest(
@@ -84,14 +84,14 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this(config, intervalChunkingQueryRunnerDecorator, DefaultGenericQueryMetricsFactory.instance());
+    this(config, intervalChunkingQueryRunnerDecorator, DefaultSearchQueryMetricsFactory.instance());
   }
 
   @Inject
   public SearchQueryQueryToolChest(
       SearchQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      GenericQueryMetricsFactory queryMetricsFactory
+      SearchQueryMetricsFactory queryMetricsFactory
   )
   {
     this.config = config;
@@ -127,9 +127,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public QueryMetrics<Query<?>> makeMetrics(SearchQuery query)
+  public SearchQueryMetrics makeMetrics(SearchQuery query)
   {
-    return queryMetricsFactory.makeMetrics(query).granularity(query.getGranularity());
+    SearchQueryMetrics metrics = queryMetricsFactory.makeMetrics();
+    metrics.query(query);
+    return metrics;
   }
 
   @Override

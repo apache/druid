@@ -85,7 +85,7 @@ public class DefaultTimeseriesQueryMetricsTest
     // Timeseries-specific dimensions
     Assert.assertEquals("2", actualEvent.get("numMetrics"));
     Assert.assertEquals("0", actualEvent.get("numComplexMetrics"));
-    Assert.assertEquals("\"DAY\"", actualEvent.get("granularity"));
+    Assert.assertEquals("{type=period, period=P1D, timeZone=UTC, origin=null}", actualEvent.get("granularity"));
 
     // Metric
     Assert.assertEquals("query/time", actualEvent.get("metric"));

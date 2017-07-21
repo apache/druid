@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.bitmap.BitmapFactory;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
@@ -291,24 +290,5 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
       emitter.emit(builder.build(metric.getKey(), metric.getValue()));
     }
     metrics.clear();
-  }
-
-  // sets "query granularity".
-  @Override
-  public QueryMetrics<QueryType> granularity(Granularity granularity)
-  {
-    try {
-      setDimension(
-          "granularity",
-          jsonMapper.writeValueAsString(granularity == null
-                                        ? ImmutableMap.of()
-                                        : granularity
-          )
-      );
-      return this;
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
   }
 }

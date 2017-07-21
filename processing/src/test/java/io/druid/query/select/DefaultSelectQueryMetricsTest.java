@@ -17,81 +17,64 @@
  * under the License.
  */
 
-package io.druid.query.topn;
+package io.druid.query.select;
 
-import com.google.common.collect.ImmutableSet;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.CachingEmitter;
 import io.druid.query.DefaultQueryMetricsTest;
 import io.druid.query.DruidMetrics;
+import io.druid.query.Druids;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.ListFilteredDimensionSpec;
-import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class DefaultTopNQueryMetricsTest
+public class DefaultSelectQueryMetricsTest
 {
 
   /**
-   * Tests that passed a query {@link DefaultTopNQueryMetrics} produces events with a certain set of dimensions,
-   * no more, no less.
+   * Tests that passed a query {@link DefaultSelectQueryMetrics} produces events with a certain set of dimensions.
    */
   @Test
-  public void testDefaultTopNQueryMetricsQuery()
+  public void testDefaultSelectQueryMetricsQuery()
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.getJsonMapper());
-    TopNQuery query = new TopNQueryBuilder()
-        .dataSource("xx")
-        .granularity(Granularities.ALL)
-        .dimension(new ListFilteredDimensionSpec(
-            new DefaultDimensionSpec("tags", "tags"),
-            ImmutableSet.of("t3"),
-            null
-        ))
-        .metric("count")
+    DefaultSelectQueryMetrics queryMetrics = new DefaultSelectQueryMetrics(TestHelper.getJsonMapper());
+    SelectQuery query = Druids
+        .newSelectQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.dayGran)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
-        .threshold(5)
-        .filters(new SelectorDimFilter("tags", "t3", null))
+        .descending(true)
+        .pagingSpec(PagingSpec.newSpec(1))
         .build();
     queryMetrics.query(query);
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(17, actualEvent.size());
+    Assert.assertEquals(13, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(QueryRunnerTestHelper.dataSource, actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnInterval.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
-    Assert.assertEquals("true", actualEvent.get("hasFilters"));
+    Assert.assertEquals("false", actualEvent.get("hasFilters"));
     Assert.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
 
-    // TopN-specific dimensions
-    Assert.assertEquals("5", actualEvent.get("threshold"));
-    Assert.assertEquals("tags", actualEvent.get("dimension"));
-    Assert.assertEquals("1", actualEvent.get("numMetrics"));
-    Assert.assertEquals("0", actualEvent.get("numComplexMetrics"));
-    Assert.assertEquals("AllGranularity", actualEvent.get("granularity"));
+    // Timeseries-specific dimensions
+    Assert.assertEquals("{type=period, period=P1D, timeZone=UTC, origin=null}", actualEvent.get("granularity"));
 
     // Metric
     Assert.assertEquals("query/time", actualEvent.get("metric"));
@@ -99,11 +82,11 @@ public class DefaultTopNQueryMetricsTest
   }
 
   @Test
-  public void testDefaultTopNQueryMetricsMetricNamesAndUnits()
+  public void testDefaultSelectQueryMetricsMetricNamesAndUnits()
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.getJsonMapper());
+    DefaultSelectQueryMetrics queryMetrics = new DefaultSelectQueryMetrics(TestHelper.getJsonMapper());
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

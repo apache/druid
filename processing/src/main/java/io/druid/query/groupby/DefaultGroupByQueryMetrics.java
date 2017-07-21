@@ -38,7 +38,7 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
     numDimensions(query);
     numMetrics(query);
     numComplexMetrics(query);
-    granularity(query.getGranularity());
+    granularity(query);
   }
 
   @Override
@@ -58,5 +58,11 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   {
     int numComplexAggs = DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs());
     setDimension("numComplexMetrics", String.valueOf(numComplexAggs));
+  }
+
+  @Override
+  public void granularity(GroupByQuery query)
+  {
+    setDimension("granularity", query.getGranularity().toString());
   }
 }

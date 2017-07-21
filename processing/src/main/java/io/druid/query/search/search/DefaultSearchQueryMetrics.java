@@ -17,44 +17,27 @@
  * under the License.
  */
 
-package io.druid.query.timeseries;
+package io.druid.query.search.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.query.DefaultQueryMetrics;
-import io.druid.query.DruidMetrics;
 
-public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<TimeseriesQuery>
-    implements TimeseriesQueryMetrics
+public class DefaultSearchQueryMetrics extends DefaultQueryMetrics<SearchQuery> implements SearchQueryMetrics
 {
-  public DefaultTimeseriesQueryMetrics(ObjectMapper jsonMapper)
+  public DefaultSearchQueryMetrics(ObjectMapper jsonMapper)
   {
     super(jsonMapper);
   }
 
   @Override
-  public void query(TimeseriesQuery query)
+  public void query (SearchQuery query)
   {
     super.query(query);
-    numMetrics(query);
-    numComplexMetrics(query);
     granularity(query);
   }
 
   @Override
-  public void numMetrics(TimeseriesQuery query)
-  {
-    setDimension("numMetrics", String.valueOf(query.getAggregatorSpecs().size()));
-  }
-
-  @Override
-  public void numComplexMetrics(TimeseriesQuery query)
-  {
-    int numComplexAggs = DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs());
-    setDimension("numComplexMetrics", String.valueOf(numComplexAggs));
-  }
-
-  @Override
-  public void granularity(TimeseriesQuery query)
+  public void granularity(SearchQuery query)
   {
     setDimension("granularity", query.getGranularity().toString());
   }

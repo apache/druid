@@ -17,29 +17,20 @@
  * under the License.
  */
 
-package io.druid.query.timeseries;
-
-import io.druid.query.QueryMetrics;
+package io.druid.query.select;
 
 /**
- * Specialization of {@link QueryMetrics} for {@link TimeseriesQuery}.
+ * Implementations could be injected using
+ *
+ * PolyBind
+ *    .optionBinder(binder, Key.get(SelectQueryMetricsFactory.class))
+ *    .addBinding("myCustomSelectQueryMetricsFactory")
+ *    .to(MyCustomSelectQueryMetricsFactory.class);
+ *
+ * And then setting property:
+ * druid.query.select.queryMetricsFactory=myCustomSelectQueryMetricsFactory
  */
-public interface TimeseriesQueryMetrics extends QueryMetrics<TimeseriesQuery>
+public interface SelectQueryMetricsFactory
 {
-  /**
-   * Sets the number of metrics of the given timeseries query as dimension.
-   */
-  void numMetrics(TimeseriesQuery query);
-
-  /**
-   * Sets the number of "complex" metrics of the given timeseries query as dimension. By default it is assumed that
-   * "complex" metric is a metric of not long or double type, but it could be redefined in the implementation of this
-   * method.
-   */
-  void numComplexMetrics(TimeseriesQuery query);
-
-  /**
-   * Sets the granularity of {@link TimeseriesQuery#getGranularity()} of the given query as dimension.
-   */
-  void granularity(TimeseriesQuery query);
+  SelectQueryMetrics makeMetrics();
 }

@@ -42,4 +42,9 @@ public interface GroupByQueryMetrics extends QueryMetrics<GroupByQuery>
    * method.
    */
   void numComplexMetrics(GroupByQuery query);
+
+  /**
+   * Sets the granularity of {@link GroupByQuery#getGranularity()} of the given query as dimension.
+   */
+  void granularity(GroupByQuery query);
 }

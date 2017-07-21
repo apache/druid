@@ -110,7 +110,7 @@ public class DefaultGroupByQueryMetricsTest
     Assert.assertEquals("1", actualEvent.get("numDimensions"));
     Assert.assertEquals("2", actualEvent.get("numMetrics"));
     Assert.assertEquals("0", actualEvent.get("numComplexMetrics"));
-    Assert.assertEquals("\"MONTH\"", actualEvent.get("granularity"));
+    Assert.assertEquals("{type=period, period=P1M, timeZone=UTC, origin=null}", actualEvent.get("granularity"));
 
     // Metric
     Assert.assertEquals("query/time", actualEvent.get("metric"));
