@@ -60,7 +60,8 @@ public class DruidServerMetadata
     return name;
   }
 
-  public String getHost() {
+  public String getHost()
+  {
     return getHostAndTlsPort() != null ? getHostAndTlsPort() : getHostAndPort();
   }
 

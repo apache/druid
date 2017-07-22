@@ -40,7 +40,8 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
   private final ListeningExecutorService executor;
   private final QueryWatcher queryWatcher;
 
-  public AsyncQueryRunner(QueryRunner<T> baseRunner, ExecutorService executor, QueryWatcher queryWatcher) {
+  public AsyncQueryRunner(QueryRunner<T> baseRunner, ExecutorService executor, QueryWatcher queryWatcher)
+  {
     this.baseRunner = baseRunner;
     this.executor = MoreExecutors.listeningDecorator(executor);
     this.queryWatcher = queryWatcher;
@@ -52,7 +53,8 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
     final Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
-    final ListenableFuture<Sequence<T>> future = executor.submit(new AbstractPrioritizedCallable<Sequence<T>>(priority)
+    final ListenableFuture<Sequence<T>> future = executor.submit(
+        new AbstractPrioritizedCallable<Sequence<T>>(priority)
         {
           @Override
           public Sequence<T> call() throws Exception
@@ -61,7 +63,8 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
             //run() method and resulting sequence accumulate/yield is fast.
             return baseRunner.run(threadSafeQueryPlus, responseContext);
           }
-        });
+        }
+    );
     queryWatcher.registerQuery(query, future);
     
     return new LazySequence<>(new Supplier<Sequence<T>>()
@@ -75,7 +78,8 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
           } else {
             return future.get();
           }
-        } catch (ExecutionException | InterruptedException | TimeoutException ex) {
+        }
+        catch (ExecutionException | InterruptedException | TimeoutException ex) {
           throw Throwables.propagate(ex);
         }
       }

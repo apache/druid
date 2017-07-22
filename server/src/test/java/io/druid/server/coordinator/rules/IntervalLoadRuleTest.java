@@ -60,7 +60,8 @@ import org.junit.Test;
    }
 
    @Test
-   public void testMappingNullTieredReplicants() throws Exception{
+   public void testMappingNullTieredReplicants() throws Exception
+   {
      String inputJson = "    {\n"
                         + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
                         + "      \"type\": \"loadByInterval\"\n"

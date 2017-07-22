@@ -95,7 +95,8 @@ public class DataSegmentUtils
           version,
           trail
       );
-    } catch (IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       return null;
     }
   }

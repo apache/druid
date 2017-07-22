@@ -252,7 +252,8 @@ public class TaskToolbox
     return cacheConfig;
   }
 
-  public IndexMergerV9 getIndexMergerV9() {
+  public IndexMergerV9 getIndexMergerV9()
+  {
     return indexMergerV9;
   }
 

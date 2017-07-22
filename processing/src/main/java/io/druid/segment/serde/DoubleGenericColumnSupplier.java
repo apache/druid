@@ -24,17 +24,14 @@ import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.IndexedDoublesGenericColumn;
 import io.druid.segment.data.CompressedDoublesIndexedSupplier;
 
-import java.nio.ByteOrder;
-
 
 public class DoubleGenericColumnSupplier implements Supplier<GenericColumn>
 {
   private final CompressedDoublesIndexedSupplier column;
-  private final ByteOrder byteOrder;
-  public DoubleGenericColumnSupplier(CompressedDoublesIndexedSupplier column, ByteOrder byteOrder) {
 
+  public DoubleGenericColumnSupplier(CompressedDoublesIndexedSupplier column)
+  {
     this.column = column;
-    this.byteOrder = byteOrder;
   }
 
   @Override

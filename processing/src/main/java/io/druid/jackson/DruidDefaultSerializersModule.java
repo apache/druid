@@ -59,7 +59,8 @@ public class DruidDefaultSerializersModule extends SimpleModule
             String tzId = jp.getText();
             try {
               return DateTimeZone.forID(tzId);
-            } catch(IllegalArgumentException e) {
+            }
+            catch (IllegalArgumentException e) {
               // also support Java timezone strings
               return DateTimeZone.forTimeZone(TimeZone.getTimeZone(tzId));
             }
@@ -128,7 +129,8 @@ public class DruidDefaultSerializersModule extends SimpleModule
                 yielder = yielder.next(null);
               }
               jgen.writeEndArray();
-            } finally {
+            }
+            finally {
               yielder.close();
             }
           }

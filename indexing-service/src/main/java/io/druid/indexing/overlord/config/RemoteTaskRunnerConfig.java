@@ -72,7 +72,8 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     return taskAssignmentTimeout;
   }
 
-  public Period getTaskCleanupTimeout(){
+  public Period getTaskCleanupTimeout()
+  {
     return taskCleanupTimeout;
   }
 
@@ -92,35 +93,43 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     return pendingTasksRunnerNumThreads;
   }
 
-  public int getMaxRetriesBeforeBlacklist() {
+  public int getMaxRetriesBeforeBlacklist()
+  {
     return maxRetriesBeforeBlacklist;
   }
 
-  public void setMaxRetriesBeforeBlacklist(int maxRetriesBeforeBlacklist) {
+  public void setMaxRetriesBeforeBlacklist(int maxRetriesBeforeBlacklist)
+  {
     this.maxRetriesBeforeBlacklist = maxRetriesBeforeBlacklist;
   }
 
-  public Period getWorkerBlackListBackoffTime() {
+  public Period getWorkerBlackListBackoffTime()
+  {
     return workerBlackListBackoffTime;
   }
 
-  public void setWorkerBlackListBackoffTime(Period taskBlackListBackoffTime) {
+  public void setWorkerBlackListBackoffTime(Period taskBlackListBackoffTime)
+  {
     this.workerBlackListBackoffTime = taskBlackListBackoffTime;
   }
 
-  public Period getWorkerBlackListCleanupPeriod() {
+  public Period getWorkerBlackListCleanupPeriod()
+  {
     return workerBlackListCleanupPeriod;
   }
 
-  public void setWorkerBlackListCleanupPeriod(Period workerBlackListCleanupPeriod) {
+  public void setWorkerBlackListCleanupPeriod(Period workerBlackListCleanupPeriod)
+  {
     this.workerBlackListCleanupPeriod = workerBlackListCleanupPeriod;
   }
 
-  public double getMaxPercentageBlacklistWorkers() {
+  public double getMaxPercentageBlacklistWorkers()
+  {
     return maxPercentageBlacklistWorkers;
   }
 
-  public void setMaxPercentageBlacklistWorkers(int maxPercentageBlacklistWorkers) {
+  public void setMaxPercentageBlacklistWorkers(int maxPercentageBlacklistWorkers)
+  {
     this.maxPercentageBlacklistWorkers = maxPercentageBlacklistWorkers;
   }
 

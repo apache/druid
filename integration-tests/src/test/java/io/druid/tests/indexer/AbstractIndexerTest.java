@@ -88,7 +88,8 @@ public abstract class AbstractIndexerTest
     waitForAllTasksToComplete();
   }
 
-  protected void waitForAllTasksToComplete(){
+  protected void waitForAllTasksToComplete()
+  {
     RetryUtil.retryUntilTrue(
       new Callable<Boolean>()
       {

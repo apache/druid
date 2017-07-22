@@ -891,7 +891,7 @@ public class IndexTask extends AbstractTask
   public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
   {
     private static final int DEFAULT_MAX_ROWS_IN_MEMORY = 75_000;
-    private static final int DEFAULT_MAX_TOTAL_ROWS = 150_000;
+    private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
     private static final boolean DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS = false;

@@ -261,7 +261,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test(timeout = 60_000L)
-  public void testCoordinatorRun() throws Exception{
+  public void testCoordinatorRun() throws Exception
+  {
     String dataSource = "dataSource1";
     String tier= "hot";
 

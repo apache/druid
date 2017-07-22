@@ -65,9 +65,15 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     MULTI_VALUE,
     MULTI_VALUE_V3;
 
-    public boolean isSet(int flags) { return (getMask() & flags) != 0; }
+    public boolean isSet(int flags)
+    {
+      return (getMask() & flags) != 0;
+    }
 
-    public int getMask() { return (1 << ordinal()); }
+    public int getMask()
+    {
+      return (1 << ordinal());
+    }
   }
 
   enum VERSION

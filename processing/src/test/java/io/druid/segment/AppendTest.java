@@ -27,6 +27,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -326,16 +327,15 @@ public class AppendTest
                                 .put("maxIndex", 100.0)
                                 .put("minIndex", 100.0)
                                 .build(),
-                    new HashMap<String, Object>()
-                    {{
-                        put("market", null);
-                        put("rows", 3L);
-                        put("index", 200.0D);
-                        put("addRowsIndexConstant", 204.0D);
-                        put("uniques", 0.0D);
-                        put("maxIndex", 100.0);
-                        put("minIndex", 0.0);
-                      }},
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 3L,
+                        "index", 200.0D,
+                        "addRowsIndexConstant", 204.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 100.0,
+                        "minIndex", 0.0
+                    ),
                     ImmutableMap.<String, Object>builder()
                                 .put("market", "total_market")
                                 .put("rows", 2L)
@@ -373,16 +373,15 @@ public class AppendTest
                                 .put("maxIndex", 100.0D)
                                 .put("minIndex", 100.0D)
                                 .build(),
-                    new HashMap<String, Object>()
-                    {{
-                        put("market", null);
-                        put("rows", 3L);
-                        put("index", 100.0D);
-                        put("addRowsIndexConstant", 104.0D);
-                        put("uniques", 0.0D);
-                        put("maxIndex", 100.0);
-                        put("minIndex", 0.0);
-                      }},
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 3L,
+                        "index", 100.0D,
+                        "addRowsIndexConstant", 104.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 100.0,
+                        "minIndex", 0.0
+                    ),
                     ImmutableMap.<String, Object>builder()
                                 .put("market", "spot")
                                 .put("rows", 1L)

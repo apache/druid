@@ -982,6 +982,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
 
     @Override
-    void checkConnection(String host, int port) throws IOException { }
+    void checkConnection(String host, int port) throws IOException
+    {
+    }
   }
 }

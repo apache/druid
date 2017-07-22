@@ -30,14 +30,14 @@ public class AuthConfig
    * */
   public static final String DRUID_AUTH_TOKEN = "Druid-Auth-Token";
 
-  public AuthConfig() {
+  public AuthConfig()
+  {
     this(false);
   }
 
   @JsonCreator
-  public AuthConfig(
-      @JsonProperty("enabled") boolean enabled
-  ){
+  public AuthConfig(@JsonProperty("enabled") boolean enabled)
+  {
     this.enabled = enabled;
   }
   /**

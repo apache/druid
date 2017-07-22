@@ -162,10 +162,13 @@ public class SelectQueryEngine
       }
     }
   }
-  public static class DoubleSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<DoubleColumnSelector> {
+  public static class DoubleSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<DoubleColumnSelector>
+  {
     @Override
     public void addRowValuesToSelectResult(
-        String outputName, DoubleColumnSelector dimSelector, Map<String, Object> resultMap
+        String outputName,
+        DoubleColumnSelector dimSelector,
+        Map<String, Object> resultMap
     )
     {
       if (dimSelector == null) {

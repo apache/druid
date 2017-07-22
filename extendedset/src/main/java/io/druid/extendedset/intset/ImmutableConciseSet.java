@@ -928,10 +928,9 @@ public class ImmutableConciseSet
             }
           } else {
             setBitsInCurrentWord = sequenceLength - 1;
-            if (position < setBitsInCurrentWord)
-            // check whether the desired set bit is after the
-            // flipped bit (or after the first block)
-            {
+            if (position < setBitsInCurrentWord) {
+              // check whether the desired set bit is after the
+              // flipped bit (or after the first block)
               return firstSetBitInWord + position + (position < ConciseSetUtils.getFlippedBit(w) ? 0 : 1);
             }
           }

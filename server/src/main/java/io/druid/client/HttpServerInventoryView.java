@@ -215,7 +215,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         log.info("Started HttpServerInventoryView.");
         lifecycleLock.started();
-      } finally {
+      }
+      finally {
         lifecycleLock.exitStart();
       }
     }
@@ -490,7 +491,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         if (!initializationLatch.await(serverHttpTimeout, TimeUnit.MILLISECONDS)) {
           log.warn("Await initialization timed out for server [%s].", druidServer.getName());
         }
-      } catch (InterruptedException ex) {
+      }
+      catch (InterruptedException ex) {
         log.warn("Await initialization interrupted while waiting on server [%s].", druidServer.getName());
         Thread.currentThread().interrupt();
       }
@@ -619,7 +621,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                   // sleep for a bit so that retry does not happen immediately.
                   try {
                     Thread.sleep(5000);
-                  } catch (InterruptedException ex) {
+                  }
+                  catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                   }
                 }
@@ -632,14 +635,16 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         );
 
         return future;
-      } catch (Throwable th) {
+      }
+      catch (Throwable th) {
         queue.add(druidServer.getName());
         log.makeAlert(th, "Fatal error while fetching segment list from server [%s].", druidServer.getName()).emit();
 
         // sleep for a bit so that retry does not happen immediately.
         try {
           Thread.sleep(5000);
-        } catch (InterruptedException ex) {
+        }
+        catch (InterruptedException ex) {
           Thread.currentThread().interrupt();
         }
 

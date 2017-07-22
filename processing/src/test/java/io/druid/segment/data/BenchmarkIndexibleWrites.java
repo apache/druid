@@ -95,7 +95,8 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     }
 
     @Override
-    public void clear(){
+    public void clear()
+    {
       delegate.clear();
     }
   }

@@ -31,7 +31,8 @@ import java.util.Map;
 public class HistogramTest
 {
   @Test
-  public void testOffer() {
+  public void testOffer()
+  {
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
@@ -50,7 +51,8 @@ public class HistogramTest
    * expose the issue of using Float's MIN_VALUE that is actually positive as initial value for {@link Histogram#max}.
    */
   @Test
-  public void testOfferOnlyNegative() {
+  public void testOfferOnlyNegative()
+  {
     final float[] values = {-0.3f, -.1f, -0.8f, -.7f, -.5f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
@@ -65,7 +67,8 @@ public class HistogramTest
   }
 
   @Test
-  public void testToFromBytes() {
+  public void testToFromBytes()
+  {
     float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
     long [] bins   = { 23, 123, 4, 56, 7, 493210};
     Histogram h = new Histogram(breaks, bins, -1f, 1f);
@@ -74,7 +77,8 @@ public class HistogramTest
   }
 
   @Test
-  public void testAsVisual() throws Exception {
+  public void testAsVisual() throws Exception
+  {
     float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
     long [] bins   = { 23, 123, 4, 56, 7, 493210};
     Histogram h = new Histogram(breaks, bins, -1f, 1f);
