@@ -29,7 +29,8 @@ import java.util.Map;
 public class FlattenJSONBenchmarkUtilTest
 {
   @Test
-  public void testOne() throws Exception {
+  public void testOne() throws Exception
+  {
     FlattenJSONBenchmarkUtil eventGen = new FlattenJSONBenchmarkUtil();
 
     String newEvent = eventGen.generateFlatEvent();
@@ -45,7 +46,8 @@ public class FlattenJSONBenchmarkUtilTest
     checkEvent2(event2);
   }
 
-  public void checkEvent1(Map<String, Object> event) {
+  public void checkEvent1(Map<String, Object> event)
+  {
     Assert.assertEquals("2015-09-12T12:10:53.155Z", event.get("ts").toString());
     Assert.assertEquals("-1170723877", event.get("d1").toString());
     Assert.assertEquals("238976084", event.get("d2").toString());
@@ -74,7 +76,8 @@ public class FlattenJSONBenchmarkUtilTest
     Assert.assertEquals("1414285347", event.get("ae1[2].e1.d2").toString());
   }
 
-  public void checkEvent2(Map<String, Object> event2) {
+  public void checkEvent2(Map<String, Object> event2)
+  {
     Assert.assertEquals("728062074", event2.get("ae1[0].d1").toString());
     Assert.assertEquals("1701675101", event2.get("ae1[1].d1").toString());
     Assert.assertEquals("1887775139", event2.get("ae1[2].e1.d2").toString());

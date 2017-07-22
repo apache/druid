@@ -28,10 +28,8 @@ public class MappingAccumulator<OutType, InType, MappedType> implements Accumula
   private final Function<InType, MappedType> fn;
   private final Accumulator<OutType, MappedType> accumulator;
 
-  public MappingAccumulator(
-      Function<InType, MappedType> fn,
-      Accumulator<OutType, MappedType> accumulator
-  ) {
+  public MappingAccumulator(Function<InType, MappedType> fn, Accumulator<OutType, MappedType> accumulator)
+  {
     this.fn = fn;
     this.accumulator = accumulator;
   }

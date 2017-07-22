@@ -50,7 +50,9 @@ public final class NoopLimitSpec implements LimitSpec
 
   @Override
   public Function<Sequence<Row>, Sequence<Row>> build(
-      List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggs,
+      List<PostAggregator> postAggs
   )
   {
     return Functions.identity();
@@ -75,7 +77,8 @@ public final class NoopLimitSpec implements LimitSpec
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     return 0;
   }
 

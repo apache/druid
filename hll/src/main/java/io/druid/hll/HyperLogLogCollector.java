@@ -118,7 +118,8 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
    * @param otherCollector collector which buffer will be shared
    * @return collector
    */
-  public static HyperLogLogCollector makeCollectorSharingStorage(HyperLogLogCollector otherCollector) {
+  public static HyperLogLogCollector makeCollectorSharingStorage(HyperLogLogCollector otherCollector)
+  {
     return makeCollector(otherCollector.getStorageBuffer().duplicate());
   }
 

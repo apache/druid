@@ -53,7 +53,8 @@ public class CacheModule implements Module
     binder.install(new HybridCacheModule(prefix));
   }
 
-  public static class HybridCacheModule implements Module {
+  public static class HybridCacheModule implements Module
+  {
 
     private final String prefix;
 

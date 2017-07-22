@@ -105,7 +105,8 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     this.segments = segments;
   }
 
-  protected void verifyInputSegments(List<DataSegment> segments) {
+  protected void verifyInputSegments(List<DataSegment> segments)
+  {
     // Verify segments are all unsharded
     Preconditions.checkArgument(
         Iterables.size(

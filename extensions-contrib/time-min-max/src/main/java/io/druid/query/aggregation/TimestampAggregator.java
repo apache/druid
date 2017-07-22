@@ -59,7 +59,8 @@ public class TimestampAggregator implements Aggregator
   }
 
   @Override
-  public void aggregate() {
+  public void aggregate()
+  {
     Long value = TimestampAggregatorFactory.convertLong(timestampSpec, selector.get());
 
     if (value != null) {

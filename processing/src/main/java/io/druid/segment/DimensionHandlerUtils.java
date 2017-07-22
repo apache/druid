@@ -324,15 +324,18 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Double nullToZero(@Nullable Double number) {
+  public static Double nullToZero(@Nullable Double number)
+  {
     return number == null ? ZERO_DOUBLE : number;
   }
 
-  public static Long nullToZero(@Nullable Long number) {
+  public static Long nullToZero(@Nullable Long number)
+  {
     return number == null ? ZERO_LONG : number;
   }
 
-  public static Float nullToZero(@Nullable Float number) {
+  public static Float nullToZero(@Nullable Float number)
+  {
     return number == null ? ZERO_FLOAT : number;
   }
 }

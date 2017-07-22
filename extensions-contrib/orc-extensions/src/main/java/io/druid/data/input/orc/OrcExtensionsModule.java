@@ -30,7 +30,8 @@ import java.util.List;
 public class OrcExtensionsModule implements DruidModule
 {
   @Override
-  public List<? extends Module> getJacksonModules() {
+  public List<? extends Module> getJacksonModules()
+  {
     return Collections.singletonList(
         new SimpleModule("OrcInputRowParserModule")
             .registerSubtypes(
@@ -40,7 +41,7 @@ public class OrcExtensionsModule implements DruidModule
   }
 
   @Override
-  public void configure(Binder binder) {
-
+  public void configure(Binder binder)
+  {
   }
 }

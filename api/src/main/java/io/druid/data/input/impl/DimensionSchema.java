@@ -77,7 +77,10 @@ public abstract class DimensionSchema
     SORTED_SET,
     ARRAY {
       @Override
-      public boolean needSorting() { return false;}
+      public boolean needSorting()
+      {
+        return false;
+      }
     };
 
     public boolean needSorting()

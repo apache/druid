@@ -46,8 +46,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import io.druid.server.initialization.ServerConfig;
-import io.druid.sql.calcite.aggregation.SqlAggregator;
-import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -55,12 +53,12 @@ import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
+import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.apache.calcite.schema.SchemaPlus;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -126,18 +124,13 @@ public class QuantileSqlAggregatorTest
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema = Calcites.createRootSchema(
-        CalciteTests.createMockSchema(
-            walker,
-            plannerConfig
-        )
-    );
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.<SqlAggregator>of(new QuantileSqlAggregator()),
-        ImmutableSet.<SqlOperatorConversion>of()
+        ImmutableSet.of(new QuantileSqlAggregator()),
+        ImmutableSet.of()
     );
     plannerFactory = new PlannerFactory(
-        rootSchema,
+        druidSchema,
         walker,
         operatorTable,
         CalciteTests.createExprMacroTable(),

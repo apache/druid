@@ -213,7 +213,8 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
       try {
         setupLargeChunks(maxChunkSize + 1, 10 * (maxChunkSize + 1), maxValue);
         Assert.fail();
-      } catch(IllegalArgumentException e) {
+      }
+      catch (IllegalArgumentException e) {
         Assert.assertTrue("chunk too big for maxValue " + maxValue, true);
       }
     }

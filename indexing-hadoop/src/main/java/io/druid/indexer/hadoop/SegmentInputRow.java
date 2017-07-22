@@ -35,7 +35,8 @@ public class SegmentInputRow implements InputRow
 {
   private final InputRow delegate;
 
-  public SegmentInputRow(InputRow delegate){
+  public SegmentInputRow(InputRow delegate)
+  {
     this.delegate = delegate;
   }
 

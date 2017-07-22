@@ -543,8 +543,7 @@ public class BoundDimFilter implements DimFilter
           if (matchesNothing) {
             predicate = DruidFloatPredicate.ALWAYS_FALSE;
           } else {
-            predicate = input ->
-            {
+            predicate = input -> {
               final DruidDoublePredicate druidDoublePredicate = makeDoublePredicateFromBounds(
                   hasLowerFloatBound,
                   hasUpperFloatBound,

@@ -78,7 +78,8 @@ public class WithEffectSequenceTest
   }
 
   @Test
-  public void testEffectExecutedIfWrappedSequenceThrowsExceptionFromClose() {
+  public void testEffectExecutedIfWrappedSequenceThrowsExceptionFromClose()
+  {
     Sequence<Integer> baseSeq = Sequences.simple(Arrays.asList(1, 2, 3));
     Sequence<Integer> throwingSeq = Sequences.withBaggage(baseSeq, new Closeable()
     {
@@ -101,7 +102,8 @@ public class WithEffectSequenceTest
     try {
       Sequences.toList(seqWithEffect, new ArrayList<Integer>());
       Assert.fail("expected RuntimeException");
-    } catch (RuntimeException e) {
+    }
+    catch (RuntimeException e) {
       // expected
       Assert.assertTrue(effectExecuted.get());
     }

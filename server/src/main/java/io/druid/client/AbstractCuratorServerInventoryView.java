@@ -334,7 +334,8 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
           segment.getIdentifier()
       );
       return curator.checkExists().forPath(toServedSegPath) != null;
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       throw Throwables.propagate(ex);
     }
   }

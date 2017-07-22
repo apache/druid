@@ -87,8 +87,7 @@ public class ScanQueryEngine
       allColumns.addAll(query.getColumns());
       allDims.retainAll(query.getColumns());
       allMetrics.retainAll(query.getColumns());
-    }
-    else {
+    } else {
       if (!allDims.contains(ScanResultValue.timestampKey)) {
         allColumns.add(ScanResultValue.timestampKey);
       }

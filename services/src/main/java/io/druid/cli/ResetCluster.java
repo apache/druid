@@ -163,7 +163,8 @@ public class ResetCluster extends GuiceRunnable
 
       DataSegmentKiller segmentKiller = injector.getInstance(DataSegmentKiller.class);
       segmentKiller.killAll();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       log.error(ex, "Failed to cleanup Segment Files.");
     }
   }
@@ -177,7 +178,8 @@ public class ResetCluster extends GuiceRunnable
 
       TaskLogKiller taskLogKiller = injector.getInstance(TaskLogKiller.class);;
       taskLogKiller.killAll();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       log.error(ex, "Failed to cleanup TaskLogs.");
     }
   }
