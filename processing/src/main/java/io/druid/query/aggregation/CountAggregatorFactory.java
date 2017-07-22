@@ -34,7 +34,6 @@ import java.util.List;
  */
 public class CountAggregatorFactory extends AggregatorFactory
 {
-  private static final byte[] CACHE_KEY = new byte[]{0x0};
   private final String name;
 
   @JsonCreator
@@ -111,7 +110,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    return CACHE_KEY;
+    return new byte[]{AggregatorUtil.COUNT_CACHE_TYPE_ID};
   }
 
   @Override

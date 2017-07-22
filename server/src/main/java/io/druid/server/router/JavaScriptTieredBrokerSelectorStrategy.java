@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-
 import io.druid.java.util.common.ISE;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Query;
@@ -61,8 +59,9 @@ public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelec
     final ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
     try {
       ((Compilable)engine).compile("var apply = " + fn).eval();
-    } catch(ScriptException e) {
-      Throwables.propagate(e);
+    }
+    catch (ScriptException e) {
+      throw new RuntimeException(e);
     }
     this.function = fn;
     this.fnSelector = ((Invocable)engine).getInterface(SelectorFunction.class);

@@ -23,7 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
 
-public class GoogleTaskLogsConfig {
+public class GoogleTaskLogsConfig
+{
   @JsonProperty
   @NotNull
   private final String bucket;
@@ -32,16 +33,19 @@ public class GoogleTaskLogsConfig {
   @NotNull
   private final String prefix;
 
-  public GoogleTaskLogsConfig(@JsonProperty("bucket") String bucket, @JsonProperty("prefix") String prefix) {
+  public GoogleTaskLogsConfig(@JsonProperty("bucket") String bucket, @JsonProperty("prefix") String prefix)
+  {
     this.bucket = bucket;
     this.prefix = prefix;
   }
 
-  public String getBucket() {
+  public String getBucket()
+  {
     return bucket;
   }
 
-  public String getPrefix() {
+  public String getPrefix()
+  {
     return prefix;
   }
 }

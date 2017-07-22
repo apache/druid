@@ -146,7 +146,8 @@ public class LifecycleModule implements Module
     final Key<Set<KeyHolder>> keyHolderKey = Key.get(new TypeLiteral<Set<KeyHolder>>(){}, Names.named("lifecycle"));
     final Set<KeyHolder> eagerClasses = injector.getInstance(keyHolderKey);
 
-    Lifecycle lifecycle = new Lifecycle(){
+    Lifecycle lifecycle = new Lifecycle()
+    {
       @Override
       public void start() throws Exception
       {

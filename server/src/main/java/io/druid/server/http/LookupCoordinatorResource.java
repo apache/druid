@@ -335,7 +335,8 @@ public class LookupCoordinatorResource
       }
 
       return Response.ok(result).build();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status");
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
     }
@@ -378,7 +379,8 @@ public class LookupCoordinatorResource
       }
 
       return Response.ok(lookupStatusMap).build();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status for tier [%s].", tier);
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
     }
@@ -424,7 +426,8 @@ public class LookupCoordinatorResource
               detailed
           )
       ).build();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       LOG.error(ex, "Error getting lookups status for tier [%s] and lookup [%s].", tier, lookup);
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
     }
@@ -502,7 +505,8 @@ public class LookupCoordinatorResource
       }
 
       return Response.ok(result).build();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       LOG.error(ex, "Error getting node status.");
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
     }
@@ -532,7 +536,8 @@ public class LookupCoordinatorResource
       }
 
       return Response.ok(tierNodesStatus).build();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       LOG.error(ex, "Error getting node status for tier [%s].", tier);
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
     }
@@ -558,7 +563,8 @@ public class LookupCoordinatorResource
         return Response.ok(lookupsState).build();
       }
 
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       LOG.error(ex, "Error getting node status for [%s].", hostAndPort);
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
     }

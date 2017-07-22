@@ -163,7 +163,8 @@ public class OrderByColumnSpec
     return null;
   }
 
-  public static int getDimIndexForOrderBy(OrderByColumnSpec orderSpec, List<DimensionSpec> dimensions) {
+  public static int getDimIndexForOrderBy(OrderByColumnSpec orderSpec, List<DimensionSpec> dimensions)
+  {
     int i = 0;
     for (DimensionSpec dimSpec : dimensions) {
       if (orderSpec.getDimension().equals((dimSpec.getOutputName()))) {
@@ -174,7 +175,8 @@ public class OrderByColumnSpec
     return -1;
   }
 
-  public static int getAggIndexForOrderBy(OrderByColumnSpec orderSpec, List<AggregatorFactory> aggregatorFactories) {
+  public static int getAggIndexForOrderBy(OrderByColumnSpec orderSpec, List<AggregatorFactory> aggregatorFactories)
+  {
     int i = 0;
     for (AggregatorFactory agg : aggregatorFactories) {
       if (orderSpec.getDimension().equals((agg.getName()))) {
@@ -185,7 +187,8 @@ public class OrderByColumnSpec
     return -1;
   }
 
-  public static int getPostAggIndexForOrderBy(OrderByColumnSpec orderSpec, List<PostAggregator> postAggs) {
+  public static int getPostAggIndexForOrderBy(OrderByColumnSpec orderSpec, List<PostAggregator> postAggs)
+  {
     int i = 0;
     for (PostAggregator postAgg : postAggs) {
       if (orderSpec.getDimension().equals((postAgg.getName()))) {
@@ -196,10 +199,7 @@ public class OrderByColumnSpec
     return -1;
   }
 
-  public OrderByColumnSpec(
-      String dimension,
-      Direction direction
-  )
+  public OrderByColumnSpec(String dimension, Direction direction)
   {
     this(dimension, direction, null);
   }

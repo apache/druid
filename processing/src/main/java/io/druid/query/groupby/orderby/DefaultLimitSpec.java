@@ -76,7 +76,8 @@ public class DefaultLimitSpec implements LimitSpec
     return false;
   }
 
-  public static StringComparator getComparatorForDimName(DefaultLimitSpec limitSpec, String dimName) {
+  public static StringComparator getComparatorForDimName(DefaultLimitSpec limitSpec, String dimName)
+  {
     final OrderByColumnSpec orderBy = OrderByColumnSpec.getOrderByForDimName(limitSpec.getColumns(), dimName);
     if (orderBy == null) {
       return null;
@@ -145,7 +146,7 @@ public class DefaultLimitSpec implements LimitSpec
         final StringComparator naturalComparator;
         if (columnType == ValueType.STRING) {
           naturalComparator = StringComparators.LEXICOGRAPHIC;
-        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
+        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT || columnType == ValueType.DOUBLE) {
           naturalComparator = StringComparators.NUMERIC;
         } else {
           sortingNeeded = true;

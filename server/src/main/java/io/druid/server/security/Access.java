@@ -26,16 +26,19 @@ public class Access
   private final boolean allowed;
   private String message;
 
-  public Access(boolean allowed) {
+  public Access(boolean allowed)
+  {
     this(allowed, "");
   }
 
-  public Access(boolean allowed, String message) {
+  public Access(boolean allowed, String message)
+  {
     this.allowed = allowed;
     this.message = message;
   }
 
-  public boolean isAllowed() {
+  public boolean isAllowed()
+  {
     return allowed;
   }
 

@@ -17,42 +17,33 @@
  * under the License.
  */
 
-package io.druid.cli.convert;
+package io.druid.segment;
 
-import com.google.common.collect.ImmutableMap;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import java.util.Map;
-import java.util.Properties;
-
-/**
- *
- */
-public class ValueConverter implements PropertyConverter
+public final class ZeroDoubleColumnSelector implements DoubleColumnSelector
 {
-  private final Map<String, String> valueMap;
-  private final String property;
-  public ValueConverter(String property, Map<String, String> valueMap){
-    this.property = property;
-    this.valueMap = valueMap;
+  private static final ZeroDoubleColumnSelector INSTANCE = new ZeroDoubleColumnSelector();
+
+  private ZeroDoubleColumnSelector()
+  {
+    // No instantiation.
+  }
+
+  public static ZeroDoubleColumnSelector instance()
+  {
+    return INSTANCE;
   }
 
   @Override
-  public boolean canHandle(String property)
+  public double get()
   {
-    return this.property.equals(property);
+    return 0.0d;
   }
 
   @Override
-  public Map<String, String> convert(Properties properties)
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    final String oldValue = properties.getProperty(this.property);
-    if(null == oldValue){
-      return ImmutableMap.of();
-    }
-    final String newValue = valueMap.get(oldValue);
-    if(null == newValue){
-      return ImmutableMap.of();
-    }
-    return ImmutableMap.of(this.property, newValue);
+    // nothing to inspect
   }
 }

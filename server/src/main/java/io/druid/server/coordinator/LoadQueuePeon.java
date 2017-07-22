@@ -191,7 +191,8 @@ public class LoadQueuePeon
     segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
   }
 
-  private void processSegmentChangeRequest() {
+  private void processSegmentChangeRequest()
+  {
     if (currentlyProcessing == null) {
       if (!segmentsToDrop.isEmpty()) {
         currentlyProcessing = segmentsToDrop.firstEntry().getValue();
@@ -275,7 +276,8 @@ public class LoadQueuePeon
 
           entryRemoved(path);
         }
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         failAssign(e);
       }
     } else {

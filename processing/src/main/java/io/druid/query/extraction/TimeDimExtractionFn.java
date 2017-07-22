@@ -48,23 +48,17 @@ public class TimeDimExtractionFn extends DimExtractionFn
     Preconditions.checkNotNull(resultFormat, "resultFormat must not be null");
 
     this.timeFormat = timeFormat;
-    this.timeFormatter = new ThreadLocal<SimpleDateFormat>() {
-      @Override
-      public SimpleDateFormat initialValue() {
-        SimpleDateFormat formatter = new SimpleDateFormat(TimeDimExtractionFn.this.timeFormat);
-        formatter.setLenient(true);
-        return formatter;
-      }
-    };
+    this.timeFormatter = ThreadLocal.withInitial(() -> {
+      SimpleDateFormat formatter = new SimpleDateFormat(TimeDimExtractionFn.this.timeFormat);
+      formatter.setLenient(true);
+      return formatter;
+    });
 
     this.resultFormat = resultFormat;
-    this.resultFormatter = new ThreadLocal<SimpleDateFormat>() {
-      @Override
-      public SimpleDateFormat initialValue() {
-        SimpleDateFormat formatter = new SimpleDateFormat(TimeDimExtractionFn.this.resultFormat);
-        return formatter;
-      }
-    };
+    this.resultFormatter = ThreadLocal.withInitial(() -> {
+      SimpleDateFormat formatter = new SimpleDateFormat(TimeDimExtractionFn.this.resultFormat);
+      return formatter;
+    });
   }
 
   @Override

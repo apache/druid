@@ -36,8 +36,6 @@ import java.util.Objects;
 
 public class TimestampAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 31;
-
   final String name;
   final String fieldName;
   final String timeFormat;
@@ -152,7 +150,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
     return ByteBuffer.allocate(1 + fieldNameBytes.length)
-        .put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+                     .put(AggregatorUtil.TIMESTAMP_CACHE_TYPE_ID).put(fieldNameBytes).array();
   }
 
   @Override

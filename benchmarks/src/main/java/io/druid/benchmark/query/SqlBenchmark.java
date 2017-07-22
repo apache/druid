@@ -19,7 +19,6 @@
 
 package io.druid.benchmark.query;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -33,29 +32,21 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.column.ValueType;
 import io.druid.server.initialization.ServerConfig;
-import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
-import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.RowSignature;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.Table;
-import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -76,7 +67,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -124,28 +114,8 @@ public class SqlBenchmark
 
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
 
-    final Map<String, Table> tableMap = ImmutableMap.<String, Table>of(
-        "foo",
-        new DruidTable(
-            new TableDataSource("foo"),
-            RowSignature.builder()
-                        .add("__time", ValueType.LONG)
-                        .add("dimSequential", ValueType.STRING)
-                        .add("dimZipf", ValueType.STRING)
-                        .add("dimUniform", ValueType.STRING)
-                        .build()
-        )
-    );
-    final Schema druidSchema = new AbstractSchema()
-    {
-      @Override
-      protected Map<String, Table> getTableMap()
-      {
-        return tableMap;
-      }
-    };
     plannerFactory = new PlannerFactory(
-        Calcites.createRootSchema(druidSchema),
+        CalciteTests.createMockSchema(walker, plannerConfig),
         walker,
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),

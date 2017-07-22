@@ -345,4 +345,34 @@ public class CompressionFactory
     }
   }
 
+  public static Supplier<IndexedDoubles> getDoubleSupplier(
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy strategy,
+      SmooshedFileMapper fileMapper
+  )
+  {
+    switch (strategy) {
+      case NONE:
+        return new EntireLayoutIndexedDoubleSupplier(totalSize, fromBuffer, byteOrder);
+      default:
+        return new BlockLayoutIndexedDoubleSupplier(totalSize, sizePer, fromBuffer, byteOrder, strategy, fileMapper);
+    }
+
+  }
+  public static DoubleSupplierSerializer getDoubleSerializer(
+      IOPeon ioPeon,
+      String filenameBase,
+      ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
+  )
+  {
+    if (compression == CompressedObjectStrategy.CompressionStrategy.NONE) {
+      return new EntireLayoutDoubleSupplierSerializer(ioPeon, filenameBase, byteOrder);
+    } else {
+      return new BlockLayoutDoubleSupplierSerializer(ioPeon, filenameBase, byteOrder, compression);
+    }
+  }
 }

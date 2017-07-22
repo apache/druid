@@ -84,6 +84,12 @@ public class LongSumAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) sum;
+  }
+
+  @Override
   public Aggregator clone()
   {
     return new LongSumAggregator(selector);

@@ -165,7 +165,9 @@ public class IntervalsResource
 
   private void setProperties(
       final Map<Interval, Map<String, Map<String, Object>>> retVal,
-      DruidDataSource dataSource, DataSegment dataSegment) {
+      DruidDataSource dataSource, DataSegment dataSegment
+  )
+  {
     Map<String, Object> properties = retVal.get(dataSegment.getInterval()).get(dataSource.getName());
     if (properties == null) {
       properties = Maps.newHashMap();

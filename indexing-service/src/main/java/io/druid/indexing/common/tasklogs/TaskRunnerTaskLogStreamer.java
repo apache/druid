@@ -35,9 +35,8 @@ public class TaskRunnerTaskLogStreamer implements TaskLogStreamer
   private final TaskMaster taskMaster;
 
   @Inject
-  public TaskRunnerTaskLogStreamer(
-      final TaskMaster taskMaster
-  ) {
+  public TaskRunnerTaskLogStreamer(final TaskMaster taskMaster)
+  {
     this.taskMaster = taskMaster;
   }
 

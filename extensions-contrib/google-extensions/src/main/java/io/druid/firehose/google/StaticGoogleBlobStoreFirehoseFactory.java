@@ -54,7 +54,8 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
   }
 
   @JsonProperty
-  public List<GoogleBlob> getBlobs() {
+  public List<GoogleBlob> getBlobs()
+  {
     return blobs;
   }
 

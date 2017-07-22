@@ -191,7 +191,8 @@ public class TaskLockbox
           activeTasks.size(),
           storedLocks.size() - taskLockCount
       );
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -282,7 +283,8 @@ public class TaskLockbox
             // The task newly acquired a lock even though the lock itself might not be a new one.
             // The revokedState is maintained per task, so it should be updated here.
             return LockResult.ok(posseToUse.getTaskLock());
-          } catch(Exception e) {
+          }
+          catch (Exception e) {
             log.makeAlert("Failed to persist lock in storage")
                .addData("task", task.getId())
                .addData("dataSource", posseToUse.getTaskLock().getDataSource())
@@ -663,7 +665,8 @@ public class TaskLockbox
             }
           }
       );
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -722,7 +725,8 @@ public class TaskLockbox
         // Remove lock from storage. If it cannot be removed, just ignore the failure.
         try {
           taskStorage.removeLock(task.getId(), taskLock);
-        } catch(Exception e) {
+        }
+          catch (Exception e) {
           log.makeAlert(e, "Failed to clean up lock from storage")
              .addData("task", task.getId())
              .addData("dataSource", taskLock.getDataSource())
@@ -731,14 +735,15 @@ public class TaskLockbox
              .emit();
         }
 
-        if(!removed) {
+        if (!removed) {
           log.makeAlert("Lock release without acquire")
              .addData("task", task.getId())
              .addData("interval", interval)
              .emit();
         }
       }
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -853,7 +858,8 @@ public class TaskLockbox
     try {
       log.info("Adding task[%s] to activeTasks", task.getId());
       activeTasks.add(task.getId());
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }

@@ -223,7 +223,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       synchronized (agg) {
         try {
           agg.aggregate(aggBuffer, bufferOffset + aggOffsetInBuffer[i]);
-        } catch (ParseException e) {
+        }
+        catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
           if (reportParseExceptions) {
             throw new ParseException(e, "Encountered parse error for aggregator[%s]", getMetricAggs()[i].getName());
@@ -298,6 +299,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     int[] indexAndOffset = indexAndOffsets.get(rowOffset);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+  }
+
+  @Override
+  public double getMetricDoubleValue(int rowOffset, int aggOffset)
+  {
+    BufferAggregator agg = getAggs()[aggOffset];
+    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
+    return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   /**

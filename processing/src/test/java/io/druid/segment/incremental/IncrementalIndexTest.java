@@ -28,6 +28,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.DoubleDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
@@ -77,7 +78,8 @@ public class IncrementalIndexTest
         Arrays.<DimensionSchema>asList(
             new StringDimensionSchema("string"),
             new StringDimensionSchema("float"),
-            new StringDimensionSchema("long")
+            new StringDimensionSchema("long"),
+            new DoubleDimensionSchema("double")
         ), null, null
     );
     AggregatorFactory[] metrics = {
@@ -211,11 +213,12 @@ public class IncrementalIndexTest
     index.add(
         new MapBasedInputRow(
             new DateTime().minus(1).getMillis(),
-            Lists.newArrayList("string", "float", "long"),
+            Lists.newArrayList("string", "float", "long", "double"),
             ImmutableMap.<String, Object>of(
                 "string", Arrays.asList("A", null, ""),
                 "float", Arrays.asList(Float.POSITIVE_INFINITY, null, ""),
-                "long", Arrays.asList(Long.MIN_VALUE, null, "")
+                "long", Arrays.asList(Long.MIN_VALUE, null, ""),
+                "double", ""
             )
         )
     );
@@ -225,6 +228,7 @@ public class IncrementalIndexTest
     Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
     Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.POSITIVE_INFINITY)}), row.getRaw("float"));
     Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}), row.getRaw("long"));
+    Assert.assertEquals(0.0, row.getRaw("double"));
   }
 
   @Test

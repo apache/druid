@@ -29,6 +29,7 @@ import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -40,28 +41,19 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class DoubleFirstAggregatorFactory extends AggregatorFactory
 {
-  public static final Comparator VALUE_COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o1, Object o2)
-    {
-      return Doubles.compare(((SerializablePair<Long, Double>) o1).rhs, ((SerializablePair<Long, Double>) o2).rhs);
-    }
-  };
+  public static final Comparator VALUE_COMPARATOR = (o1, o2) -> Doubles.compare(
+      ((SerializablePair<Long, Double>) o1).rhs,
+      ((SerializablePair<Long, Double>) o2).rhs
+  );
 
-  public static final Comparator TIME_COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o1, Object o2)
-    {
-      return Longs.compare(((SerializablePair<Long, Object>) o1).lhs, ((SerializablePair<Long, Object>) o2).lhs);
-    }
-  };
-
-  private static final byte CACHE_TYPE_ID = 16;
+  public static final Comparator TIME_COMPARATOR = (o1, o2) -> Longs.compare(
+      ((SerializablePair<Long, Object>) o1).lhs,
+      ((SerializablePair<Long, Object>) o2).lhs
+  );
 
   private final String fieldName;
   private final String name;
@@ -85,7 +77,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
     return new DoubleFirstAggregator(
         name,
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeDoubleColumnSelector(fieldName)
     );
   }
 
@@ -94,7 +86,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   {
     return new DoubleFirstBufferAggregator(
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeDoubleColumnSelector(fieldName)
     );
   }
 
@@ -213,23 +205,22 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(2 + fieldNameBytes.length)
-                     .put(CACHE_TYPE_ID)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length)
+                     .put(AggregatorUtil.DOUBLE_FIRST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
-                     .put((byte)0xff)
                      .array();
   }
 
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "double";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES + Doubles.BYTES;
+    return Long.BYTES + Double.BYTES;
   }
 
   @Override
@@ -250,9 +241,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    int result = name.hashCode();
-    result = 31 * result + fieldName.hashCode();
-    return result;
+    return Objects.hash(fieldName, name);
   }
 
   @Override

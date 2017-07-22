@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -31,6 +32,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
@@ -62,6 +64,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
@@ -74,7 +77,9 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
+import io.druid.timeline.partition.PartitionHolder;
 import io.druid.timeline.partition.ShardSpec;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.Interval;
@@ -82,6 +87,7 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -89,10 +95,12 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  */
-public class CachingClusteredClient<T> implements QueryRunner<T>
+public class CachingClusteredClient implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
   private final QueryToolChestWarehouse warehouse;
@@ -141,7 +149,69 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(
+      final Query<T> query,
+      final Iterable<Interval> intervals
+  )
+  {
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      {
+        return CachingClusteredClient.this.run(
+            queryPlus,
+            responseContext,
+            timeline -> timeline
+        );
+      }
+    };
+  }
+
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForSegments(
+      final Query<T> query,
+      final Iterable<SegmentDescriptor> specs
+  )
+  {
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      {
+        return CachingClusteredClient.this.run(
+            queryPlus,
+            responseContext,
+            timeline -> {
+              final List<TimelineObjectHolder<String, ServerSelector>> retVal = new LinkedList<>();
+              final VersionedIntervalTimeline<String, ServerSelector> timeline2 = new VersionedIntervalTimeline<>(
+                  Ordering.natural()
+              );
+              for (SegmentDescriptor spec : specs) {
+                final PartitionHolder<ServerSelector> entry = timeline.findEntry(spec.getInterval(), spec.getVersion());
+                if (entry != null) {
+                  final PartitionChunk<ServerSelector> chunk = entry.getChunk(spec.getPartitionNumber());
+                  if (chunk != null) {
+                    timeline2.add(spec.getInterval(), spec.getVersion(), chunk);
+                  }
+                }
+              }
+              return timeline2;
+            }
+        );
+      }
+    };
+  }
+
+  /**
+   * Run a query. The timelineFunction will be given the "master" timeline and can be used to return a different
+   * timeline, if desired. This is used by getQueryRunnerForSegments.
+   */
+  private <T> Sequence<T> run(
+      final QueryPlus<T> queryPlus,
+      final Map<String, Object> responseContext,
+      final Function<TimelineLookup<String, ServerSelector>, TimelineLookup<String, ServerSelector>> timelineFunction
+  )
   {
     final Query<T> query = queryPlus.getQuery();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
@@ -176,7 +246,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     // build set of segments to query
     Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
 
-    List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
+    timeline = timelineFunction.apply(timeline);
+    List<TimelineObjectHolder<String, ServerSelector>> serversLookup = CachingClusteredClient.lookupIntervalsInTimeline(
+        timeline,
+        query.getIntervals()
+    );
 
     // Note that enabling this leads to putting uncovered intervals information in the response headers
     // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
@@ -201,7 +275,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             }
           }
           startMillis = holderInterval.getEndMillis();
-          serversLookup.add(holder);
         }
 
         if (!uncoveredIntervalsOverflowed && startMillis < endMillis) {
@@ -220,10 +293,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         // case, though, this query will not include any data from the identified intervals.
         responseContext.put("uncoveredIntervals", uncoveredIntervals);
         responseContext.put("uncoveredIntervalsOverflowed", uncoveredIntervalsOverflowed);
-      }
-    } else {
-      for (Interval interval : query.getIntervals()) {
-        Iterables.addAll(serversLookup, timeline.lookup(interval));
       }
     }
 
@@ -259,8 +328,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final byte[] queryCacheKey;
 
     if ((populateCache || useCache) // implies strategy != null
-        && !isBySegment) // explicit bySegment queries are never cached
-    {
+        && !isBySegment) /* explicit bySegment queries are never cached */ {
       queryCacheKey = strategy.computeCacheKey(query);
     } else {
       queryCacheKey = null;
@@ -571,7 +639,18 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     );
   }
 
-  protected Sequence<T> mergeCachedAndUncachedSequences(
+  private static <VersionType, ObjectType> List<TimelineObjectHolder<VersionType, ObjectType>> lookupIntervalsInTimeline(
+      final TimelineLookup<VersionType, ObjectType> timeline,
+      final Iterable<Interval> intervals
+  )
+  {
+    return StreamSupport.stream(intervals.spliterator(), false)
+                        .flatMap(interval -> StreamSupport.stream(timeline.lookup(interval).spliterator(), false))
+                        .collect(Collectors.toList());
+  }
+
+  @VisibleForTesting
+  static <T> Sequence<T> mergeCachedAndUncachedSequences(
       Query<T> query,
       List<Sequence<T>> sequencesByInterval
   )

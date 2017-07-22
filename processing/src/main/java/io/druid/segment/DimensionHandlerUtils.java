@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
@@ -40,6 +41,13 @@ import java.util.List;
 
 public final class DimensionHandlerUtils
 {
+
+  // use these values to ensure that convertObjectToLong(), convertObjectToDouble() and convertObjectToFloat()
+  // return the same boxed object when returning a constant zero.
+  public static final Double ZERO_DOUBLE = 0.0d;
+  public static final Float ZERO_FLOAT = 0.0f;
+  public static final Long ZERO_LONG = 0L;
+
   private DimensionHandlerUtils() {}
 
   public final static ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
@@ -72,6 +80,10 @@ public final class DimensionHandlerUtils
 
     if (capabilities.getType() == ValueType.FLOAT) {
       return new FloatDimensionHandler(dimensionName);
+    }
+
+    if (capabilities.getType() == ValueType.DOUBLE) {
+      return new DoubleDimensionHandler(dimensionName);
     }
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
@@ -172,6 +184,8 @@ public final class DimensionHandlerUtils
         return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
       case FLOAT:
         return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
+      case DOUBLE:
+        return columnSelectorFactory.makeDoubleColumnSelector(dimSpec.getDimension());
       default:
         return null;
     }
@@ -202,7 +216,7 @@ public final class DimensionHandlerUtils
 
     // DimensionSpec's decorate only operates on DimensionSelectors, so if a spec mustDecorate(),
     // we need to wrap selectors on numeric columns with a string casting DimensionSelector.
-    if (capabilities.getType() == ValueType.LONG || capabilities.getType() == ValueType.FLOAT) {
+    if (ValueType.isNumeric(capabilities.getType())) {
       if (dimSpec.mustDecorate()) {
         capabilities = DEFAULT_STRING_CAPABILITIES;
       }
@@ -222,10 +236,10 @@ public final class DimensionHandlerUtils
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
-  public static Long convertObjectToLong(Object valObj)
+  public static Long convertObjectToLong(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return 0L;
+      return ZERO_LONG;
     }
 
     if (valObj instanceof Long) {
@@ -239,10 +253,10 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Float convertObjectToFloat(Object valObj)
+  public static Float convertObjectToFloat(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return 0.0f;
+      return ZERO_FLOAT;
     }
 
     if (valObj instanceof Float) {
@@ -251,6 +265,24 @@ public final class DimensionHandlerUtils
       return ((Number) valObj).floatValue();
     } else if (valObj instanceof String) {
       return Floats.tryParse((String) valObj);
+    } else {
+      throw new ParseException("Unknown type[%s]", valObj.getClass());
+    }
+  }
+
+  public static Double convertObjectToDouble(@Nullable Object valObj)
+  {
+    if (valObj == null) {
+      return ZERO_DOUBLE;
+    }
+
+    if (valObj instanceof Double) {
+      return (Double) valObj;
+    } else if (valObj instanceof Number) {
+      return ((Number) valObj).doubleValue();
+    } else if (valObj instanceof String) {
+      Double doubleValue = Doubles.tryParse((String) valObj);
+      return  doubleValue == null ? ZERO_DOUBLE : doubleValue;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -290,5 +322,20 @@ public final class DimensionHandlerUtils
       // indicates there was a non-integral part, or the BigDecimal was too big for a long
       return null;
     }
+  }
+
+  public static Double nullToZero(@Nullable Double number)
+  {
+    return number == null ? ZERO_DOUBLE : number;
+  }
+
+  public static Long nullToZero(@Nullable Long number)
+  {
+    return number == null ? ZERO_LONG : number;
+  }
+
+  public static Float nullToZero(@Nullable Float number)
+  {
+    return number == null ? ZERO_FLOAT : number;
   }
 }

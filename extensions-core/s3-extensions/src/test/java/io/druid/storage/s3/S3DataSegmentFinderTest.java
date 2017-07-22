@@ -296,7 +296,8 @@ public class S3DataSegmentFinderTest
   }
 
   @Test
-  public void testFindSegmentsUpdateLoadSpec() throws Exception {
+  public void testFindSegmentsUpdateLoadSpec() throws Exception
+  {
     config.setBucket("amazing");
     final DataSegment segmentMissingLoadSpec = DataSegment.builder(SEGMENT_1)
         .loadSpec(ImmutableMap.of())

@@ -38,7 +38,8 @@ public class HttpServerInventoryViewConfig
   public HttpServerInventoryViewConfig(
       @JsonProperty("serverTimeout") Period serverTimeout,
       @JsonProperty("numThreads") Integer numThreads
-  ){
+  )
+  {
     this.serverTimeout = serverTimeout != null
                          ? serverTimeout.toStandardDuration().getMillis()
                          : 4*60*1000; //4 mins

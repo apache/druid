@@ -102,10 +102,12 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                   if (value instanceof TimeBoundaryResultValue) {
                     TimeBoundaryResultValue boundary = (TimeBoundaryResultValue) value;
 
-                    DateTime minTime = null;
+                    DateTime minTime;
                     try {
                       minTime = boundary.getMinTime();
-                    } catch (IllegalArgumentException e) {
+                    }
+                    catch (IllegalArgumentException e) {
+                      minTime = null;
                     }
 
                     final DateTime maxTime = boundary.getMaxTime();

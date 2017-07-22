@@ -87,7 +87,8 @@ class JodaStuff
 
   private static class DateTimeDeserializer extends StdDeserializer<DateTime>
   {
-      public DateTimeDeserializer() {
+      public DateTimeDeserializer()
+      {
         super(DateTime.class);
       }
 
