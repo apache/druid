@@ -313,7 +313,14 @@ public class JobHelper
   public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
   {
     String mapJavaOpts = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
+    if (mapJavaOpts == null) {
+      mapJavaOpts = "";
+    }
+
     String reduceJavaOpts = configuration.get(MRJobConfig.REDUCE_JAVA_OPTS);
+    if (reduceJavaOpts == null) {
+      reduceJavaOpts = "";
+    }
 
     for (String propName : System.getProperties().stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {
