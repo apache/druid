@@ -41,7 +41,10 @@ public interface Aggregator extends Closeable
   Object get();
   float getFloat();
   long getLong();
-  double getDouble();
+  default double getDouble()
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   @Override
   void close();

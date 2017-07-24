@@ -127,7 +127,10 @@ public interface BufferAggregator extends HotLoopCallee
    * @param position offset within the byte buffer at which the aggregate value is stored
    * @return the double representation of the aggregate
    */
-  double getDouble(ByteBuffer buf, int position);
+  default double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   /**
    * Release any resources used by the aggregator
