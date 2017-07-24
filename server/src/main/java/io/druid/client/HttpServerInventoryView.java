@@ -413,6 +413,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
+    private volatile boolean isUnstable = false;
+    private volatile long unstableStartTime = -1;
+
     DruidServerHolder(DruidServer druidServer)
     {
       this(druidServer, null);
@@ -570,6 +573,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                   }
 
                   initializationLatch.countDown();
+                  isUnstable = false;
                 }
                 catch (Exception ex) {
                   log.error(ex, "error processing segment list response from server [%s]", druidServer.getName());
@@ -583,21 +587,26 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               public void onFailure(Throwable t)
               {
                 try {
-                  if (t != null) {
-                    log.error(
-                        t,
-                        "failed to fetch segment list from server [%s]. Return code [%s], Reason: [%s]",
-                        druidServer.getName(),
-                        responseHandler.status,
-                        responseHandler.description
-                    );
+                  String logMsg = StringUtils.nonStrictFormat(
+                      "failed to fetch segment list from server [%s]. Return code [%s], Reason: [%s]",
+                      druidServer.getName(),
+                      responseHandler.status,
+                      responseHandler.description
+                  );
+
+                  if (hasUnstabilityTimeoutPassed()) {
+                    if (t != null) {
+                      log.error(t, logMsg);
+                    } else {
+                      log.error(logMsg);
+                    }
                   } else {
-                    log.error(
-                        "failed to fetch segment list from server [%s]. Return code [%s], Reason: [%s]",
-                        druidServer.getName(),
-                        responseHandler.status,
-                        responseHandler.description
-                    );
+                    log.info("Temporary Failure. %s", logMsg);
+                    if (t != null) {
+                      log.debug(t, logMsg);
+                    } else {
+                      log.debug(logMsg);
+                    }
                   }
 
                   // sleep for a bit so that retry does not happen immediately.
@@ -620,7 +629,17 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
       catch (Throwable th) {
         queue.add(druidServer.getName());
-        log.makeAlert(th, "Fatal error while fetching segment list from server [%s].", druidServer.getName()).emit();
+
+        String logMsg = StringUtils.nonStrictFormat(
+            "Fatal error while fetching segment list from server [%s].", druidServer.getName()
+        );
+
+        if (hasUnstabilityTimeoutPassed()) {
+          log.makeAlert(th, logMsg).emit();
+        } else {
+          log.info("Temporary Failure. %s", logMsg);
+          log.debug(th, logMsg);
+        }
 
         // sleep for a bit so that retry does not happen immediately.
         try {
@@ -632,6 +651,20 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         throw Throwables.propagate(th);
       }
+    }
+
+    private boolean hasUnstabilityTimeoutPassed()
+    {
+      if (isUnstable && (System.currentTimeMillis() - unstableStartTime) > config.getServerUnstabilityTimeout()) {
+        return true;
+      }
+
+      if (!isUnstable) {
+        isUnstable = true;
+        unstableStartTime = System.currentTimeMillis();
+      }
+
+      return false;
     }
   }
 
