@@ -164,7 +164,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public Sequence<Object[]> runQuery()
   {
-    return getQueryMaker().runQuery(druidTable.getDataSource(), druidTable.getRowSignature(), queryBuilder);
+    return getQueryMaker().runQuery(druidTable.getDataSource(), queryBuilder);
   }
 
   @Override

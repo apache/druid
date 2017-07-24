@@ -30,6 +30,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.metamx.emitter.core.NoopEmitter;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -40,12 +42,16 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.ExpressionModule;
 import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryToolChest;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -77,7 +83,10 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.log.NoopRequestLogger;
+import io.druid.server.security.AuthConfig;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -272,6 +281,26 @@ public class CalciteTests
     return CONGLOMERATE;
   }
 
+  public static QueryLifecycleFactory createMockQueryLifecycleFactory(final QuerySegmentWalker walker)
+  {
+    return new QueryLifecycleFactory(
+        new QueryToolChestWarehouse()
+        {
+          @Override
+          public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
+          {
+            return CONGLOMERATE.findFactory(query).getToolchest();
+          }
+        },
+        walker,
+        new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
+        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
+        new NoopRequestLogger(),
+        new ServerConfig(),
+        new AuthConfig()
+    );
+  }
+
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(final File tmpDir)
   {
     final QueryableIndex index1 = IndexBuilder.create()
@@ -353,11 +382,10 @@ public class CalciteTests
   )
   {
     final DruidSchema schema = new DruidSchema(
-        walker,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
-        viewManager,
-        new ServerConfig()
+        viewManager
     );
 
     schema.start();

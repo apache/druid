@@ -45,7 +45,6 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -131,11 +130,10 @@ public class QuantileSqlAggregatorTest
     );
     plannerFactory = new PlannerFactory(
         druidSchema,
-        walker,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         CalciteTests.createExprMacroTable(),
-        plannerConfig,
-        new ServerConfig()
+        plannerConfig
     );
   }
 
