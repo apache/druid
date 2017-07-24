@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.Row;
@@ -346,7 +347,9 @@ public class QueryMaker
       return ColumnMetaData.Rep.of(Integer.class);
     } else if (sqlType == SqlTypeName.BIGINT) {
       return ColumnMetaData.Rep.of(Long.class);
-    } else if (sqlType == SqlTypeName.FLOAT || sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
+    } else if (sqlType == SqlTypeName.FLOAT) {
+      return ColumnMetaData.Rep.of(Float.class);
+    } else if (sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
       return ColumnMetaData.Rep.of(Double.class);
     } else if (sqlType == SqlTypeName.OTHER) {
       return ColumnMetaData.Rep.of(Object.class);
@@ -423,7 +426,15 @@ public class QueryMaker
       } else {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
-    } else if (sqlType == SqlTypeName.FLOAT || sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
+    } else if (sqlType == SqlTypeName.FLOAT) {
+      if (value instanceof String) {
+        coercedValue = Floats.tryParse((String) value);
+      } else if (value instanceof Number) {
+        coercedValue = ((Number) value).floatValue();
+      } else {
+        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+      }
+    } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlType)) {
       if (value instanceof String) {
         coercedValue = Doubles.tryParse((String) value);
       } else if (value instanceof Number) {
