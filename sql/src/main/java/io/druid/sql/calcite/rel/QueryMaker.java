@@ -47,7 +47,6 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.Column;
 import io.druid.server.QueryLifecycleFactory;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.ColumnMetaData;
