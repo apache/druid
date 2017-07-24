@@ -212,11 +212,13 @@ public class QueryResource implements QueryCountStatsProvider
 
                       os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
                       os.close();
-                    } catch (Exception ex) {
+                    }
+                    catch (Exception ex) {
                       e = ex;
                       log.error(ex, "Unable to send query response.");
                       throw Throwables.propagate(ex);
-                    } finally {
+                    }
+                    finally {
                       Thread.currentThread().setName(currThreadName);
 
                       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), os.getCount());
