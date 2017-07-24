@@ -679,7 +679,7 @@ public class RowBasedGrouperHelper
           needsReverses.add(needsReverse);
           aggFlags.add(false);
           final ValueType type = dimensions.get(dimIndex).getOutputType();
-          isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE);
+          isNumericField.add(ValueType.isNumeric(type));
           comparators.add(orderSpec.getDimensionComparator());
         } else {
           int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
@@ -1072,8 +1072,13 @@ public class RowBasedGrouperHelper
               } else {
                 serdeHelper = new LimitPushDownLongRowBasedKeySerdeHelper(aggOffset, cmp);
               }
-            } else if (typeName.equals("float") || typeName.equals("double")) {
-              // called "float", but the aggs really return doubles
+            } else if (typeName.equals("float")) {
+              if (cmpIsNumeric) {
+                serdeHelper = new FloatRowBasedKeySerdeHelper(aggOffset);
+              } else {
+                serdeHelper = new LimitPushDownFloatRowBasedKeySerdeHelper(aggOffset, cmp);
+              }
+            } else if (typeName.equals("double")) {
               if (cmpIsNumeric) {
                 serdeHelper = new DoubleRowBasedKeySerdeHelper(aggOffset);
               } else {
@@ -1308,6 +1313,9 @@ public class RowBasedGrouperHelper
           case FLOAT:
             helper = new FloatRowBasedKeySerdeHelper(keyBufferPosition);
             break;
+          case DOUBLE:
+            helper = new DoubleRowBasedKeySerdeHelper(keyBufferPosition);
+            break;
           default:
             throw new IAE("invalid type: %s", valType);
         }
@@ -1348,6 +1356,13 @@ public class RowBasedGrouperHelper
               helper = new FloatRowBasedKeySerdeHelper(keyBufferPosition);
             } else {
               helper = new LimitPushDownFloatRowBasedKeySerdeHelper(keyBufferPosition, cmp);
+            }
+            break;
+          case DOUBLE:
+            if (cmp == null || cmpIsNumeric) {
+              helper = new DoubleRowBasedKeySerdeHelper(keyBufferPosition);
+            } else {
+              helper = new LimitPushDownDoubleRowBasedKeySerdeHelper(keyBufferPosition, cmp);
             }
             break;
           default:
