@@ -96,8 +96,8 @@ public class QueryResource implements QueryCountStatsProvider
 
   protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
-  public static final String HDR_IF_NONE_MATCH = "If-None-Match";
-  public static final String HDR_ETAG = "ETag";
+  public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
+  public static final String HEADER_ETAG = "ETag";
 
   protected final QueryToolChestWarehouse warehouse;
   protected final ServerConfig config;
@@ -235,16 +235,16 @@ public class QueryResource implements QueryCountStatsProvider
         }
       }
 
-      String prevEtag = req.getHeader(HDR_IF_NONE_MATCH);
+      String prevEtag = req.getHeader(HEADER_IF_NONE_MATCH);
       if (prevEtag != null) {
         query = query.withOverriddenContext(
-            ImmutableMap.of (HDR_IF_NONE_MATCH, prevEtag)
+            ImmutableMap.of (HEADER_IF_NONE_MATCH, prevEtag)
         );
       }
 
       final Sequence res = QueryPlus.wrap(query).run(texasRanger, responseContext);
 
-      if (prevEtag != null && prevEtag.equals(responseContext.get(HDR_ETAG))) {
+      if (prevEtag != null && prevEtag.equals(responseContext.get(HEADER_ETAG))) {
         return Response.notModified().build();
       }
 
@@ -347,9 +347,9 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header("X-Druid-Query-Id", queryId);
 
-        if (responseContext.get(HDR_ETAG) != null) {
-          builder.header(HDR_ETAG, responseContext.get(HDR_ETAG));
-          responseContext.remove(HDR_ETAG);
+        if (responseContext.get(HEADER_ETAG) != null) {
+          builder.header(HEADER_ETAG, responseContext.get(HEADER_ETAG));
+          responseContext.remove(HEADER_ETAG);
         }
 
         responseContext.remove(DirectDruidClient.QUERY_FAIL_TIME);
