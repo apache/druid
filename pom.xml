@@ -155,7 +155,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>server-metrics</artifactId>
-                <version>0.2.8</version>
+                <version>0.5.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>com.metamx</groupId>
