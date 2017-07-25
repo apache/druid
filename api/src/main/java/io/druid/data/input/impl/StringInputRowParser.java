@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
-import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.common.parsers.Parser;
 
