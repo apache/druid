@@ -419,19 +419,22 @@ public class QueryMaker
     } else if (sqlType == SqlTypeName.BIGINT) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToLong(value);
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.FLOAT) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToFloat(value);
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlType)) {
       try {
         coercedValue = DimensionHandlerUtils.convertObjectToDouble(value);
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.OTHER) {
