@@ -931,7 +931,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false",
+                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start "
+                        + "and start <= :end and %2$send%2$s <= :end and used = false",
                         dbTables.getSegmentsTable(), connector.getQuoteString()
                     )
                 )
