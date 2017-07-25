@@ -127,6 +127,7 @@ public class CliCoordinator extends ServerRunnable
                   .annotatedWith(Names.named("serviceName"))
                   .to(TieredBrokerConfig.DEFAULT_COORDINATOR_SERVICE_NAME);
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8081);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8281);
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 

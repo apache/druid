@@ -70,8 +70,7 @@ public class LifecycleScope implements Scope
           synchronized (instances) {
             if (lifecycle == null) {
               instances.add(retVal);
-            }
-            else {
+            } else {
               try {
                 lifecycle.addMaybeStartManagedInstance(retVal, stage);
               }

@@ -608,6 +608,12 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
+      public double getDoubleMetric(String metric)
+      {
+        return 0;
+      }
+
+      @Override
       public Object getRaw(String dimension)
       {
         return null;
@@ -665,6 +671,12 @@ public class RealtimePlumberSchoolTest
       public Object getRaw(String dimension)
       {
         return dimVals;
+      }
+
+      @Override
+      public double getDoubleMetric(String metric)
+      {
+        return 0;
       }
 
       @Override

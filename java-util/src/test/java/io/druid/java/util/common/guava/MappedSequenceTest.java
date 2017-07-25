@@ -19,12 +19,12 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.StringUtils;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  */
@@ -51,7 +51,7 @@ public class MappedSequenceTest
       SequenceTestHelper.testAll(
           StringUtils.format("Run %,d: ", i),
           new MappedSequence<>(Sequences.simple(vals), fn),
-          Lists.transform(vals, fn)
+          Lists.transform(vals, fn::apply)
       );
     }
   }

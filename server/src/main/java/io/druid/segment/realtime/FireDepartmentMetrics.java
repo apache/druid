@@ -94,23 +94,28 @@ public class FireDepartmentMetrics
     mergeTimeMillis.addAndGet(millis);
   }
 
-  public void incrementMergeCpuTime(long mergeTime){
+  public void incrementMergeCpuTime(long mergeTime)
+  {
     mergeCpuTime.addAndGet(mergeTime);
   }
 
-  public void incrementPersistCpuTime(long persistTime){
+  public void incrementPersistCpuTime(long persistTime)
+  {
     persistCpuTime.addAndGet(persistTime);
   }
 
-  public void incrementHandOffCount(){
+  public void incrementHandOffCount()
+  {
     handOffCount.incrementAndGet();
   }
 
-  public void setSinkCount(long sinkCount){
+  public void setSinkCount(long sinkCount)
+  {
     this.sinkCount.set(sinkCount);
   }
 
-  public void reportMessageMaxTimestamp(long messageMaxTimestamp){
+  public void reportMessageMaxTimestamp(long messageMaxTimestamp)
+  {
     this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
   }
 

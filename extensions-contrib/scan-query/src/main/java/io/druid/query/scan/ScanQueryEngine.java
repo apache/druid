@@ -67,7 +67,7 @@ public class ScanQueryEngine
       }
     }
     final boolean hasTimeout = QueryContexts.hasTimeout(query);
-    final Long timeoutAt = (long) responseContext.get(ScanQueryRunnerFactory.CTX_TIMEOUT_AT);
+    final long timeoutAt = (long) responseContext.get(ScanQueryRunnerFactory.CTX_TIMEOUT_AT);
     final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
 
@@ -87,8 +87,7 @@ public class ScanQueryEngine
       allColumns.addAll(query.getColumns());
       allDims.retainAll(query.getColumns());
       allMetrics.retainAll(query.getColumns());
-    }
-    else {
+    } else {
       if (!allDims.contains(ScanResultValue.timestampKey)) {
         allColumns.add(ScanResultValue.timestampKey);
       }

@@ -578,7 +578,9 @@ public class ApproximateHistogramTest
     );
   }
 
-  @Test public void testEmptyHistogram() {
+  @Test
+  public void testEmptyHistogram()
+  {
     ApproximateHistogram h = new ApproximateHistogram(50);
     Assert.assertArrayEquals(
         new float[]{Float.NaN, Float.NaN},

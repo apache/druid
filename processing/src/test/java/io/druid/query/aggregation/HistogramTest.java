@@ -31,7 +31,8 @@ import java.util.Map;
 public class HistogramTest
 {
   @Test
-  public void testOffer() {
+  public void testOffer()
+  {
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
@@ -45,8 +46,29 @@ public class HistogramTest
     Assert.assertEquals("histogram matches expected histogram", hExpected, h);
   }
 
+  /**
+   * This test differs from {@link #testOffer()} only in that it offers only negative values into Histogram. It's to
+   * expose the issue of using Float's MIN_VALUE that is actually positive as initial value for {@link Histogram#max}.
+   */
   @Test
-  public void testToFromBytes() {
+  public void testOfferOnlyNegative()
+  {
+    final float[] values = {-0.3f, -.1f, -0.8f, -.7f, -.5f, -3f};
+    final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
+
+    Histogram hExpected = new Histogram(breaks, new long[]{1,3,2,0,0,0}, -3f, -0.1f);
+
+    Histogram h = new Histogram(breaks);
+    for(float v : values) {
+      h.offer(v);
+    }
+
+    Assert.assertEquals("histogram matches expected histogram", hExpected, h);
+  }
+
+  @Test
+  public void testToFromBytes()
+  {
     float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
     long [] bins   = { 23, 123, 4, 56, 7, 493210};
     Histogram h = new Histogram(breaks, bins, -1f, 1f);
@@ -55,7 +77,8 @@ public class HistogramTest
   }
 
   @Test
-  public void testAsVisual() throws Exception {
+  public void testAsVisual() throws Exception
+  {
     float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
     long [] bins   = { 23, 123, 4, 56, 7, 493210};
     Histogram h = new Histogram(breaks, bins, -1f, 1f);

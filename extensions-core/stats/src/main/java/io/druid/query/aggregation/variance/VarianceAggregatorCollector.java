@@ -48,7 +48,8 @@ import java.util.Comparator;
  */
 public class VarianceAggregatorCollector
 {
-  public static boolean isVariancePop(String estimator) {
+  public static boolean isVariancePop(String estimator)
+  {
     return estimator != null && estimator.equalsIgnoreCase("population");
   }
 

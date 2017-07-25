@@ -16,7 +16,8 @@ The realtime node uses several of the global configs in [Configuration](../confi
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
-|`druid.port`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8084|
+|`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8084|
+|`druid.tlsPort`|TLS port for HTTPS connector, if [druid.server.http.tls](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8284|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/realtime|
 
 ### Realtime Operation

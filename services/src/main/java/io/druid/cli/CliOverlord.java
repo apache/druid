@@ -60,12 +60,12 @@ import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunnerFactory;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
-import io.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerResourceManagementConfig;
-import io.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementConfig;
-import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerProvisioningConfig;
+import io.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerProvisioningStrategy;
+import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
+import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelper;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
@@ -131,6 +131,7 @@ public class CliOverlord extends ServerRunnable
                     .annotatedWith(Names.named("serviceName"))
                     .to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
             }
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);
@@ -229,26 +230,26 @@ public class CliOverlord extends ServerRunnable
 
           private void configureAutoscale(Binder binder)
           {
-            JsonConfigProvider.bind(binder, "druid.indexer.autoscale", ResourceManagementSchedulerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.indexer.autoscale", ProvisioningSchedulerConfig.class);
             JsonConfigProvider.bind(
                 binder,
                 "druid.indexer.autoscale",
-                PendingTaskBasedWorkerResourceManagementConfig.class
+                PendingTaskBasedWorkerProvisioningConfig.class
             );
-            JsonConfigProvider.bind(binder, "druid.indexer.autoscale", SimpleWorkerResourceManagementConfig.class);
+            JsonConfigProvider.bind(binder, "druid.indexer.autoscale", SimpleWorkerProvisioningConfig.class);
 
             PolyBind.createChoice(
                 binder,
                 "druid.indexer.autoscale.strategy.type",
-                Key.get(ResourceManagementStrategy.class),
-                Key.get(SimpleWorkerResourceManagementStrategy.class)
+                Key.get(ProvisioningStrategy.class),
+                Key.get(SimpleWorkerProvisioningStrategy.class)
             );
-            final MapBinder<String, ResourceManagementStrategy> biddy = PolyBind.optionBinder(
+            final MapBinder<String, ProvisioningStrategy> biddy = PolyBind.optionBinder(
                 binder,
-                Key.get(ResourceManagementStrategy.class)
+                Key.get(ProvisioningStrategy.class)
             );
-            biddy.addBinding("simple").to(SimpleWorkerResourceManagementStrategy.class);
-            biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerResourceManagementStrategy.class);
+            biddy.addBinding("simple").to(SimpleWorkerProvisioningStrategy.class);
+            biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerProvisioningStrategy.class);
 
           }
 

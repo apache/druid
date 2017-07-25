@@ -215,7 +215,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         log.info("Started HttpServerInventoryView.");
         lifecycleLock.started();
-      } finally {
+      }
+      finally {
         lifecycleLock.exitStart();
       }
     }
@@ -288,7 +289,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   {
     synchronized (servers) {
       return Iterables.transform(
-          servers.values(), new com.google.common.base.Function<DruidServerHolder, DruidServer>()
+          servers.values(), new Function<DruidServerHolder, DruidServer>()
           {
             @Override
             public DruidServer apply(DruidServerHolder input)
@@ -490,7 +491,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         if (!initializationLatch.await(serverHttpTimeout, TimeUnit.MILLISECONDS)) {
           log.warn("Await initialization timed out for server [%s].", druidServer.getName());
         }
-      } catch (InterruptedException ex) {
+      }
+      catch (InterruptedException ex) {
         log.warn("Await initialization interrupted while waiting on server [%s].", druidServer.getName());
         Thread.currentThread().interrupt();
       }
@@ -520,7 +522,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               config.getServerTimeout()
           );
         }
-        URL url = new URL("http", serverHostAndPort.getHostText(), serverHostAndPort.getPort(), req);
+        URL url = new URL(druidServer.getScheme(), serverHostAndPort.getHostText(), serverHostAndPort.getPort(), req);
 
         BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
 
@@ -619,7 +621,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                   // sleep for a bit so that retry does not happen immediately.
                   try {
                     Thread.sleep(5000);
-                  } catch (InterruptedException ex) {
+                  }
+                  catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                   }
                 }
@@ -632,14 +635,16 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         );
 
         return future;
-      } catch (Throwable th) {
+      }
+      catch (Throwable th) {
         queue.add(druidServer.getName());
         log.makeAlert(th, "Fatal error while fetching segment list from server [%s].", druidServer.getName()).emit();
 
         // sleep for a bit so that retry does not happen immediately.
         try {
           Thread.sleep(5000);
-        } catch (InterruptedException ex) {
+        }
+        catch (InterruptedException ex) {
           Thread.currentThread().interrupt();
         }
 

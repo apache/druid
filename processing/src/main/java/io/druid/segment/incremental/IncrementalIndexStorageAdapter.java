@@ -37,6 +37,8 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.DoubleWrappingDimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.FloatWrappingDimensionSelector;
 import io.druid.segment.LongColumnSelector;
@@ -47,6 +49,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
+import io.druid.segment.ZeroDoubleColumnSelector;
 import io.druid.segment.ZeroFloatColumnSelector;
 import io.druid.segment.ZeroLongColumnSelector;
 import io.druid.segment.column.Column;
@@ -369,7 +372,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 done = !foundMatched && (emptyRange || !baseIter.hasNext());
               }
 
-              private boolean beyondMaxRowIndex(int rowIndex) {
+              private boolean beyondMaxRowIndex(int rowIndex)
+              {
                 // ignore rows whose rowIndex is beyond the maxRowIndex
                 // rows are order by timestamp, not rowIndex,
                 // so we still need to go through all rows to skip rows added after cursor created
@@ -416,6 +420,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   }
                   if (capabilities.getType() == ValueType.FLOAT) {
                     return new FloatWrappingDimensionSelector(makeFloatColumnSelector(dimension), extractionFn);
+                  }
+                  if (capabilities.getType() == ValueType.DOUBLE) {
+                    return new DoubleWrappingDimensionSelector(makeDoubleColumnSelector(dimension), extractionFn);
                   }
 
                   // if we can't wrap the base column, just return a column of all nulls
@@ -539,7 +546,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public Class classOfObject()
                     {
-                      return Long.TYPE;
+                      return Long.class;
                     }
 
                     @Override
@@ -609,6 +616,45 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     }
                   };
                 }
+              }
+
+              @Override
+              public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+              {
+                if (virtualColumns.exists(columnName)) {
+                  return virtualColumns.makeDoubleColumnSelector(columnName, this);
+                }
+
+                final Integer dimIndex = index.getDimensionIndex(columnName);
+                if (dimIndex != null) {
+                  final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
+                  final DimensionIndexer indexer = dimensionDesc.getIndexer();
+                  return indexer.makeDoubleColumnSelector(
+                      currEntry,
+                      dimensionDesc
+                  );
+                }
+
+                final Integer metricIndexInt = index.getMetricIndex(columnName);
+                if (metricIndexInt == null) {
+                  return ZeroDoubleColumnSelector.instance();
+                }
+
+                final int metricIndex = metricIndexInt;
+                return new DoubleColumnSelector()
+                {
+                  @Override
+                  public double get()
+                  {
+                    return index.getMetricDoubleValue(currEntry.getValue(), metricIndex);
+                  }
+
+                  @Override
+                  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                  {
+                    inspector.visit("index", index);
+                  }
+                };
               }
 
               @Nullable

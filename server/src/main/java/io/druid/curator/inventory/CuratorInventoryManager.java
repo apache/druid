@@ -175,10 +175,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     );
   }
 
-  private byte[] getZkDataForNode(String path) {
+  private byte[] getZkDataForNode(String path)
+  {
     try {
       return curatorFramework.getData().decompressed().forPath(path);
-    } catch(Exception ex) {
+    }
+    catch (Exception ex) {
       log.warn(ex, "Exception while getting data for node %s", path);
       return null;
     }

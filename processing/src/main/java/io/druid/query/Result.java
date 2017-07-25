@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.guice.annotations.PublicApi;
 import org.joda.time.DateTime;
 
+import java.util.function.Function;
+
 /**
  */
 @PublicApi
@@ -42,6 +44,11 @@ public class Result<T> implements Comparable<Result<T>>
   {
     this.timestamp = timestamp;
     this.value = value;
+  }
+
+  public <U> Result<U> map(Function<? super T, ? extends U> mapper)
+  {
+    return new Result<>(timestamp, mapper.apply(value));
   }
 
   @Override

@@ -21,7 +21,6 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.MapMaker;
@@ -38,8 +37,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -106,9 +103,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
               return jsonMapper.readValue(bytes, typeReference);
             }
             catch (IOException e) {
-              CharBuffer.wrap(StringUtils.fromUtf8(bytes).toCharArray());
-              CharBuffer charBuffer = Charsets.UTF_8.decode(ByteBuffer.wrap(bytes));
-              log.error(e, "Could not parse json: %s", charBuffer.toString());
+              log.error(e, "Could not parse json: %s", StringUtils.fromUtf8(bytes));
               throw Throwables.propagate(e);
             }
           }
@@ -339,7 +334,8 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
           segment.getIdentifier()
       );
       return curator.checkExists().forPath(toServedSegPath) != null;
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       throw Throwables.propagate(ex);
     }
   }

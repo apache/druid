@@ -55,7 +55,8 @@ public class GraphiteEmitterModule implements DruidModule
   @Provides
   @ManageLifecycle
   @Named(EMITTER_TYPE)
-  public Emitter getEmitter(GraphiteEmitterConfig graphiteEmitterConfig, ObjectMapper mapper, final Injector injector){
+  public Emitter getEmitter(GraphiteEmitterConfig graphiteEmitterConfig, ObjectMapper mapper, final Injector injector)
+  {
     List<Emitter> emitters = Lists.transform(
         graphiteEmitterConfig.getAlertEmitters(),
         new Function<String, Emitter>()

@@ -47,7 +47,10 @@ public class ValidateSegments extends GuiceRunnable
 {
   private static final Logger log = new Logger(ValidateSegments.class);
 
-  public ValidateSegments() { super(log); }
+  public ValidateSegments()
+  {
+    super(log);
+  }
 
   @Arguments(
       description = "Two directories where each directory contains segment files to validate.",
@@ -55,7 +58,8 @@ public class ValidateSegments extends GuiceRunnable
   public List<String> directories;
 
   @Override
-  public void run() {
+  public void run()
+  {
     if (directories.size() != 2) {
       throw new IAE("Please provide two segment directories to compare");
     }
@@ -66,7 +70,8 @@ public class ValidateSegments extends GuiceRunnable
       String dir2 = directories.get(1);
       indexIO.validateTwoSegments(new File(dir1), new File(dir2));
       log.info("Segments [%s] and [%s] are identical", dir1, dir2);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }
@@ -88,6 +93,7 @@ public class ValidateSegments extends GuiceRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(DruidProcessingConfig.class).toInstance(
                 new DruidProcessingConfig()
                 {

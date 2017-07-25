@@ -29,7 +29,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 
-public class JSONParseSpecTest {
+public class JSONParseSpecTest
+{
   private final ObjectMapper jsonMapper = new TestObjectMapper();
 
   @Test

@@ -117,6 +117,7 @@ public class HttpClientModule implements Module
       if (getSslContextBinding() != null) {
         builder.withSslContext(getSslContextBinding().getProvider().get());
       }
+
       return HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(getLifecycleProvider().get()));
     }
   }

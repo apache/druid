@@ -30,7 +30,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.net.HostAndPort;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import io.druid.common.utils.ServletResourceUtils;
@@ -47,6 +46,7 @@ import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.expression.LookupExprMacro;
 import io.druid.server.DruidNode;
+import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.listener.announcer.ListenerResourceAnnouncer;
@@ -138,7 +138,9 @@ class LookupListeningResource extends ListenerResource
             }
             catch (final IOException ex) {
               LOG.debug(ex, "Bad request");
-              return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(ex)).build();
+              return Response.status(Response.Status.BAD_REQUEST)
+                             .entity(ServletResourceUtils.sanitizeException(ex))
+                             .build();
             }
 
             try {
@@ -206,7 +208,7 @@ class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
         announcer,
         lookupListeningAnnouncerConfig,
         lookupListeningAnnouncerConfig.getLookupKey(),
-        HostAndPort.fromString(node.getHostAndPort())
+        HostAndPortWithScheme.fromString(node.getServiceScheme(), node.getHostAndPortToUse())
     );
   }
 }

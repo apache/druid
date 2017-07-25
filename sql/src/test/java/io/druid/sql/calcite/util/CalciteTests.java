@@ -30,6 +30,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.metamx.emitter.core.NoopEmitter;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -40,24 +42,25 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.ExpressionModule;
 import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryToolChest;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.expression.LookupExprMacro;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
-import io.druid.query.lookup.LookupExtractor;
-import io.druid.query.lookup.LookupExtractorFactory;
-import io.druid.query.lookup.LookupExtractorFactoryContainer;
-import io.druid.query.lookup.LookupIntrospectHandler;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
@@ -80,9 +83,12 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.log.NoopRequestLogger;
+import io.druid.server.security.AuthConfig;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
-import io.druid.sql.calcite.expression.SqlExtractionOperator;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
@@ -91,10 +97,8 @@ import io.druid.sql.calcite.view.ViewManager;
 import io.druid.sql.guice.SqlModule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -112,7 +116,9 @@ public class CalciteTests
   public static final String DATASOURCE2 = "foo2";
 
   private static final String TIMESTAMP_COLUMN = "t";
-  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+  private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
+      new SelectQueryConfig(true)
+  );
 
   private static final Injector INJECTOR = Guice.createInjector(
       new Module()
@@ -124,52 +130,15 @@ public class CalciteTests
 
           // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
 
-          final LookupReferencesManager mock = EasyMock.createMock(LookupReferencesManager.class);
-          EasyMock.expect(mock.get(EasyMock.eq("lookyloo"))).andReturn(
-              new LookupExtractorFactoryContainer(
-                  "v0",
-                  new LookupExtractorFactory()
-                  {
-                    @Override
-                    public boolean start()
-                    {
-                      throw new UnsupportedOperationException();
-                    }
-
-                    @Override
-                    public boolean close()
-                    {
-                      throw new UnsupportedOperationException();
-                    }
-
-                    @Override
-                    public boolean replaces(@Nullable final LookupExtractorFactory other)
-                    {
-                      throw new UnsupportedOperationException();
-                    }
-
-                    @Override
-                    public LookupIntrospectHandler getIntrospectHandler()
-                    {
-                      throw new UnsupportedOperationException();
-                    }
-
-                    @Override
-                    public LookupExtractor get()
-                    {
-                      return new MapLookupExtractor(
-                          ImmutableMap.of(
-                              "a", "xa",
-                              "abc", "xabc"
-                          ),
-                          false
-                      );
-                    }
-                  }
-              )
-          ).anyTimes();
-          EasyMock.replay(mock);
-          binder.bind(LookupReferencesManager.class).toInstance(mock);
+          binder.bind(LookupReferencesManager.class)
+                .toInstance(
+                    TestExprMacroTable.createTestLookupReferencesManager(
+                        ImmutableMap.of(
+                            "a", "xa",
+                            "abc", "xabc"
+                        )
+                    )
+                );
         }
       }
   );
@@ -191,9 +160,9 @@ public class CalciteTests
                   new SelectQueryQueryToolChest(
                       TestHelper.getJsonMapper(),
                       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
-                      selectConfigSupplier
+                      SELECT_CONFIG_SUPPLIER
                   ),
-                  new SelectQueryEngine(selectConfigSupplier),
+                  new SelectQueryEngine(SELECT_CONFIG_SUPPLIER),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
               )
           )
@@ -312,6 +281,26 @@ public class CalciteTests
     return CONGLOMERATE;
   }
 
+  public static QueryLifecycleFactory createMockQueryLifecycleFactory(final QuerySegmentWalker walker)
+  {
+    return new QueryLifecycleFactory(
+        new QueryToolChestWarehouse()
+        {
+          @Override
+          public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
+          {
+            return CONGLOMERATE.findFactory(query).getToolchest();
+          }
+        },
+        walker,
+        new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
+        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
+        new NoopRequestLogger(),
+        new ServerConfig(),
+        new AuthConfig()
+    );
+  }
+
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(final File tmpDir)
   {
     final QueryableIndex index1 = IndexBuilder.create()
@@ -353,6 +342,7 @@ public class CalciteTests
     for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
       exprMacros.add(INJECTOR.getInstance(clazz));
     }
+    exprMacros.add(INJECTOR.getInstance(LookupExprMacro.class));
     return new ExprMacroTable(exprMacros);
   }
 
@@ -360,13 +350,13 @@ public class CalciteTests
   {
     try {
       final Set<SqlAggregator> aggregators = new HashSet<>();
-      final Set<SqlExtractionOperator> extractionOperators = new HashSet<>();
+      final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
 
       for (Class<? extends SqlAggregator> clazz : SqlModule.DEFAULT_AGGREGATOR_CLASSES) {
         aggregators.add(INJECTOR.getInstance(clazz));
       }
 
-      for (Class<? extends SqlExtractionOperator> clazz : SqlModule.DEFAULT_EXTRACTION_OPERATOR_CLASSES) {
+      for (Class<? extends SqlOperatorConversion> clazz : SqlModule.DEFAULT_OPERATOR_CONVERSION_CLASSES) {
         extractionOperators.add(INJECTOR.getInstance(clazz));
       }
 
@@ -392,11 +382,10 @@ public class CalciteTests
   )
   {
     final DruidSchema schema = new DruidSchema(
-        walker,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
-        viewManager,
-        new ServerConfig()
+        viewManager
     );
 
     schema.start();

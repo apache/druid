@@ -137,9 +137,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.forceExtendableShardSpecs = forceExtendableShardSpecs;
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
     this.useExplicitVersion = useExplicitVersion;
-    this.allowedHadoopPrefix = allowedHadoopPrefix == null
-                               ? ImmutableList.of("druid.storage.", "druid.javascript.")
-                               : allowedHadoopPrefix;
+    this.allowedHadoopPrefix = allowedHadoopPrefix == null ? ImmutableList.of() : allowedHadoopPrefix;
   }
 
   @JsonProperty
@@ -269,7 +267,7 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        null
+        allowedHadoopPrefix
     );
   }
 
@@ -294,7 +292,7 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        null
+        allowedHadoopPrefix
     );
   }
 
@@ -319,13 +317,14 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
         useExplicitVersion,
-        null
+        allowedHadoopPrefix
     );
   }
 
-  @JsonProperty
-  public List<String> getAllowedHadoopPrefix()
+  @JsonProperty("allowedHadoopPrefix")
+  public List<String> getUserAllowedHadoopPrefix()
   {
+    // Just the user-specified list. More are added in HadoopDruidIndexerConfig.
     return allowedHadoopPrefix;
   }
 }

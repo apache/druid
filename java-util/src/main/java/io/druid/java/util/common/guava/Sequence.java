@@ -19,6 +19,11 @@
 
 package io.druid.java.util.common.guava;
 
+import com.google.common.collect.Ordering;
+
+import java.util.concurrent.Executor;
+import java.util.function.Function;
+
 /**
  * A Sequence represents an iterable sequence of elements. Unlike normal Iterators however, it doesn't expose
  * a way for you to extract values from it, instead you provide it with a worker (an Accumulator) and that defines
@@ -57,4 +62,22 @@ public interface Sequence<T>
    * @see Yielder
    */
   <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator);
+
+  default <U> Sequence<U> map(Function<? super T, ? extends U> mapper)
+  {
+    return new MappedSequence<>(this, mapper);
+  }
+
+  default <R> Sequence<R> flatMerge(
+      Function<? super T, ? extends Sequence<? extends R>> mapper,
+      Ordering<? super R> ordering
+  )
+  {
+    return new MergeSequence<>(ordering, this.map(mapper));
+  }
+
+  default Sequence<T> withEffect(Runnable effect, Executor effectExecutor)
+  {
+    return Sequences.withEffect(this, effect, effectExecutor);
+  }
 }

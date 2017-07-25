@@ -30,6 +30,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
@@ -454,6 +455,39 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         public Object get()
         {
           return row.get().getRaw(columnName);
+        }
+      };
+    }
+  }
+
+  @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+  {
+    abstract class RowBasedDoubleColumnSelector implements DoubleColumnSelector
+    {
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("row", row);
+      }
+    }
+    if (columnName.equals(Column.TIME_COLUMN_NAME)) {
+      class TimeDoubleColumnSelector extends RowBasedDoubleColumnSelector
+      {
+        @Override
+        public double get()
+        {
+          return (double) row.get().getTimestampFromEpoch();
+        }
+      }
+      return new TimeDoubleColumnSelector();
+    } else {
+      return new RowBasedDoubleColumnSelector()
+      {
+        @Override
+        public double get()
+        {
+          return row.get().getDoubleMetric(columnName);
         }
       };
     }

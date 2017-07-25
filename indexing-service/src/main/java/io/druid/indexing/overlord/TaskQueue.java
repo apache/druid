@@ -305,7 +305,7 @@ public class TaskQueue
    *
    * @return true
    *
-   * @throws io.druid.metadata.EntryExistsException if the task already exists
+   * @throws EntryExistsException if the task already exists
    */
   public boolean add(final Task task) throws EntryExistsException
   {
@@ -329,13 +329,15 @@ public class TaskQueue
   }
 
   // Should always be called after taking giantLock
-  private void addTaskInternal(final Task task){
+  private void addTaskInternal(final Task task)
+  {
     tasks.add(task);
     taskLockbox.add(task);
   }
 
   // Should always be called after taking giantLock
-  private void removeTaskInternal(final Task task){
+  private void removeTaskInternal(final Task task)
+  {
     taskLockbox.remove(task);
     tasks.remove(task);
   }
@@ -563,7 +565,8 @@ public class TaskQueue
     }
   }
 
-  private static Map<String,Task> toTaskIDMap(List<Task> taskList){
+  private static Map<String,Task> toTaskIDMap(List<Task> taskList)
+  {
     Map<String,Task> rv = Maps.newHashMap();
     for(Task task : taskList){
       rv.put(task.getId(), task);

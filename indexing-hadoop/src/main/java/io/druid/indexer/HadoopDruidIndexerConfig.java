@@ -56,6 +56,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
@@ -73,6 +74,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -108,7 +110,7 @@ public class HadoopDruidIndexerConfig
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null, null, new ServerConfig())
                 );
                 JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
               }
@@ -190,8 +192,7 @@ public class HadoopDruidIndexerConfig
   @SuppressWarnings("unchecked")
   public static HadoopDruidIndexerConfig fromDistributedFileSystem(String path)
   {
-    try
-    {
+    try {
       Path pt = new Path(path);
       FileSystem fs = pt.getFileSystem(new Configuration());
       Reader reader = new InputStreamReader(fs.open(pt), StandardCharsets.UTF_8);
@@ -258,7 +259,13 @@ public class HadoopDruidIndexerConfig
 
     }
     this.rollupGran = spec.getDataSchema().getGranularitySpec().getQueryGranularity();
-    this.allowedHadoopPrefix = spec.getTuningConfig().getAllowedHadoopPrefix();
+
+    // User-specified list plus our additional bonus list.
+    this.allowedHadoopPrefix = new ArrayList<>();
+    this.allowedHadoopPrefix.add("druid.storage");
+    this.allowedHadoopPrefix.add("druid.javascript");
+    this.allowedHadoopPrefix.addAll(DATA_SEGMENT_PUSHER.getAllowedPropertyPrefixesForHadoop());
+    this.allowedHadoopPrefix.addAll(spec.getTuningConfig().getUserAllowedHadoopPrefix());
   }
 
   @JsonProperty(value = "spec")

@@ -329,7 +329,7 @@ public class DatasourcesResourceTest
   @Test
   public void testGetSegmentDataSourceIntervals()
   {
-    server = new DruidServer("who", "host", 1234, ServerType.HISTORICAL, "tier1", 0);
+    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0);
     server.addDataSegment(dataSegmentList.get(0).getIdentifier(), dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1).getIdentifier(), dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2).getIdentifier(), dataSegmentList.get(2));
@@ -379,7 +379,7 @@ public class DatasourcesResourceTest
   @Test
   public void testGetSegmentDataSourceSpecificInterval()
   {
-    server = new DruidServer("who", "host", 1234, ServerType.HISTORICAL, "tier1", 0);
+    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0);
     server.addDataSegment(dataSegmentList.get(0).getIdentifier(), dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1).getIdentifier(), dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2).getIdentifier(), dataSegmentList.get(2));
@@ -464,7 +464,8 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testDeleteDataSource() {
+  public void testDeleteDataSource()
+  {
     IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
     EasyMock.replay(indexingServiceClient, server);
     DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient, new AuthConfig());

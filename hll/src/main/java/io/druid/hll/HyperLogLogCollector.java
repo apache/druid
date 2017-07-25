@@ -118,7 +118,8 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
    * @param otherCollector collector which buffer will be shared
    * @return collector
    */
-  public static HyperLogLogCollector makeCollectorSharingStorage(HyperLogLogCollector otherCollector) {
+  public static HyperLogLogCollector makeCollectorSharingStorage(HyperLogLogCollector otherCollector)
+  {
     return makeCollector(otherCollector.getStorageBuffer().duplicate());
   }
 
@@ -146,7 +147,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       final double ratio = e / TWO_TO_THE_SIXTY_FOUR;
       if (ratio >= 1) {
         // handle very unlikely case that value is > 2^64
-        return Double.MAX_VALUE;
+        return Double.POSITIVE_INFINITY;
       } else {
         return -TWO_TO_THE_SIXTY_FOUR * Math.log(1 - ratio);
       }

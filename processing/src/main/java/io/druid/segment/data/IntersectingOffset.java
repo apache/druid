@@ -23,14 +23,12 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 /**
  */
-public class IntersectingOffset extends Offset {
+public class IntersectingOffset extends Offset
+{
   private final Offset lhs;
   private final Offset rhs;
 
-  public IntersectingOffset(
-      Offset lhs,
-      Offset rhs
-  )
+  public IntersectingOffset(Offset lhs, Offset rhs)
   {
     this.lhs = lhs;
     this.rhs = rhs;
@@ -39,12 +37,14 @@ public class IntersectingOffset extends Offset {
   }
 
   @Override
-  public int getOffset() {
+  public int getOffset()
+  {
     return lhs.getOffset();
   }
 
   @Override
-  public void increment() {
+  public void increment()
+  {
     lhs.increment();
     rhs.increment();
 
@@ -53,7 +53,7 @@ public class IntersectingOffset extends Offset {
 
   private void findIntersection()
   {
-    if (! (lhs.withinBounds() && rhs.withinBounds())) {
+    if (!(lhs.withinBounds() && rhs.withinBounds())) {
       return;
     }
 
@@ -82,7 +82,8 @@ public class IntersectingOffset extends Offset {
   }
 
   @Override
-  public boolean withinBounds() {
+  public boolean withinBounds()
+  {
     return lhs.withinBounds() && rhs.withinBounds();
   }
 

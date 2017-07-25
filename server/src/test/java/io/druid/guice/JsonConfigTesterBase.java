@@ -56,7 +56,8 @@ public abstract class JsonConfigTesterBase<T>
   protected int assertions = 0;
   protected Properties testProperties = new Properties();
 
-  protected static String getPropertyKey(String fieldName){
+  protected static String getPropertyKey(String fieldName)
+  {
     return StringUtils.format(
         "%s.%s",
         configPrefix, fieldName
@@ -82,6 +83,7 @@ public abstract class JsonConfigTesterBase<T>
     {
       binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
       binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+      binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
       JsonConfigProvider.bind(binder, configPrefix, clazz);
     }
   };

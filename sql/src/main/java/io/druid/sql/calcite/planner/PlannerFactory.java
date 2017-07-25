@@ -21,8 +21,7 @@ package io.druid.sql.calcite.planner;
 
 import com.google.inject.Inject;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.server.initialization.ServerConfig;
+import io.druid.server.QueryLifecycleFactory;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
@@ -31,9 +30,7 @@ import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
@@ -48,46 +45,44 @@ public class PlannerFactory
       .setUnquotedCasing(Casing.UNCHANGED)
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
+      .setConformance(DruidConformance.instance())
       .build();
 
-  private final SchemaPlus rootSchema;
-  private final QuerySegmentWalker walker;
+  private final DruidSchema druidSchema;
+  private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
-  private final ServerConfig serverConfig;
 
   @Inject
   public PlannerFactory(
-      final SchemaPlus rootSchema,
-      final QuerySegmentWalker walker,
+      final DruidSchema druidSchema,
+      final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
-      final PlannerConfig plannerConfig,
-      final ServerConfig serverConfig
+      final PlannerConfig plannerConfig
   )
   {
-    this.rootSchema = rootSchema;
-    this.walker = walker;
+    this.druidSchema = druidSchema;
+    this.queryLifecycleFactory = queryLifecycleFactory;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = plannerConfig;
-    this.serverConfig = serverConfig;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
+    final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema);
     final PlannerContext plannerContext = PlannerContext.create(operatorTable, macroTable, plannerConfig, queryContext);
-    final QueryMaker queryMaker = new QueryMaker(walker, plannerContext, serverConfig);
+    final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext);
     final FrameworkConfig frameworkConfig = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
-        .defaultSchema(rootSchema)
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
         .convertletTable(new DruidConvertletTable(plannerContext))
         .operatorTable(operatorTable)
         .programs(Rules.programs(plannerContext, queryMaker))
-        .executor(new RexExecutorImpl(Schemas.createDataContext(null)))
+        .executor(new DruidRexExecutor(plannerContext))
         .context(Contexts.EMPTY_CONTEXT)
         .typeSystem(RelDataTypeSystem.DEFAULT)
         .defaultSchema(rootSchema.getSubSchema(DruidSchema.NAME))

@@ -46,6 +46,7 @@ import io.druid.guice.JavaScriptModule;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.MetadataConfigModule;
+import io.druid.guice.ModulesConfig;
 import io.druid.guice.ParsersModule;
 import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
@@ -75,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -121,8 +123,8 @@ public class Initialization
 
   /**
    * Look for implementations for the given class from both classpath and extensions directory, using {@link
-   * java.util.ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if
-   * he/she does that, the one that is in the classpath will be loaded, the other will be ignored.
+   * ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if he/she
+   * does that, the one that is in the classpath will be loaded, the other will be ignored.
    *
    * @param config        Extensions configuration
    * @param serviceClass  The class to look the implementations of (e.g., DruidModule)
@@ -185,8 +187,6 @@ public class Initialization
             + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
         );
-      } else if (extensionsConfig.getModuleExcludeList().contains(serviceImplName)) {
-        log.info("Not loading module [%s] because it is present in moduleExcludeList", serviceImplName);
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
         log.info(
             "Adding implementation [%s] for class [%s] from %s extension",
@@ -220,7 +220,7 @@ public class Initialization
       throw new ISE("Root extensions directory [%s] is not a directory!?", rootExtensionsDir);
     }
     File[] extensionsToLoad;
-    final List<String> toLoad = config.getLoadList();
+    final LinkedHashSet<String> toLoad = config.getLoadList();
     if (toLoad == null) {
       extensionsToLoad = rootExtensionsDir.listFiles();
     } else {
@@ -331,7 +331,8 @@ public class Initialization
         }
       }
       return urls;
-    } catch (IOException ex) {
+    }
+    catch (IOException ex) {
       throw Throwables.propagate(ex);
     }
   }
@@ -390,6 +391,7 @@ public class Initialization
   private static class ModuleList
   {
     private final Injector baseInjector;
+    private final ModulesConfig modulesConfig;
     private final ObjectMapper jsonMapper;
     private final ObjectMapper smileMapper;
     private final List<Module> modules;
@@ -397,6 +399,7 @@ public class Initialization
     public ModuleList(Injector baseInjector)
     {
       this.baseInjector = baseInjector;
+      this.modulesConfig = baseInjector.getInstance(ModulesConfig.class);
       this.jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
       this.smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
       this.modules = Lists.newArrayList();
@@ -410,12 +413,21 @@ public class Initialization
     public void addModule(Object input)
     {
       if (input instanceof DruidModule) {
+        if (!checkModuleClass(input.getClass())) {
+          return;
+        }
         baseInjector.injectMembers(input);
         modules.add(registerJacksonModules(((DruidModule) input)));
       } else if (input instanceof Module) {
+        if (!checkModuleClass(input.getClass())) {
+          return;
+        }
         baseInjector.injectMembers(input);
         modules.add((Module) input);
       } else if (input instanceof Class) {
+        if (!checkModuleClass((Class<?>) input)) {
+          return;
+        }
         if (DruidModule.class.isAssignableFrom((Class) input)) {
           modules.add(registerJacksonModules(baseInjector.getInstance((Class<? extends DruidModule>) input)));
         } else if (Module.class.isAssignableFrom((Class) input)) {
@@ -427,6 +439,16 @@ public class Initialization
       } else {
         throw new ISE("Unknown module type[%s]", input.getClass());
       }
+    }
+
+    private boolean checkModuleClass(Class<?> moduleClass)
+    {
+      String moduleClassName = moduleClass.getCanonicalName();
+      if (moduleClassName != null && modulesConfig.getExcludeList().contains(moduleClassName)) {
+        log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
+        return false;
+      }
+      return true;
     }
 
     public void addModules(Object... object)

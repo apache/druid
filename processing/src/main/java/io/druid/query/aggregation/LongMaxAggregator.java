@@ -76,6 +76,12 @@ public class LongMaxAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) max;
+  }
+
+  @Override
   public Aggregator clone()
   {
     return new LongMaxAggregator(selector);

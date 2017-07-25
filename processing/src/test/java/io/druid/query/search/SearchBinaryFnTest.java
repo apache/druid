@@ -302,7 +302,8 @@ public class SearchBinaryFnTest
   }  
 
   // merge function expects input to be sorted as per comparator
-  private List<SearchHit> toHits(Comparator<SearchHit> comparator, String... hits) {
+  private List<SearchHit> toHits(Comparator<SearchHit> comparator, String... hits)
+  {
     List<SearchHit> result = new ArrayList<>();
     for (String hit : hits) {
       int index = hit.indexOf(':');
@@ -337,7 +338,8 @@ public class SearchBinaryFnTest
   }
 
   @Test
-  public void testMergeLimit(){
+  public void testMergeLimit()
+  {
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
@@ -368,7 +370,8 @@ public class SearchBinaryFnTest
   }
 
   @Test
-  public void testMergeCountWithNull() {
+  public void testMergeCountWithNull()
+  {
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
             currTime,
             new SearchResultValue(

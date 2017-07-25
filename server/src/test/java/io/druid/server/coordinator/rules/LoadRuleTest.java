@@ -28,7 +28,9 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+//CHECKSTYLE.OFF: Regexp
 import com.metamx.common.logger.Logger;
+//CHECKSTYLE.ON: Regexp
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -161,6 +163,7 @@ public class LoadRuleTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -177,6 +180,7 @@ public class LoadRuleTest
                         new DruidServer(
                             "serverNorm",
                             "hostNorm",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             DruidServer.DEFAULT_TIER,
@@ -262,6 +266,7 @@ public class LoadRuleTest
     DruidServer server1 = new DruidServer(
         "serverHot",
         "hostHot",
+        null,
         1000,
         ServerType.HISTORICAL,
         "hot",
@@ -271,6 +276,7 @@ public class LoadRuleTest
     DruidServer server2 = new DruidServer(
         "serverNorm",
         "hostNorm",
+        null,
         1000,
         ServerType.HISTORICAL,
         DruidServer.DEFAULT_TIER,
@@ -381,6 +387,7 @@ public class LoadRuleTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -465,6 +472,7 @@ public class LoadRuleTest
     DruidServer server1 = new DruidServer(
         "serverHot",
         "hostHot",
+        null,
         1000,
         ServerType.HISTORICAL,
         "hot",
@@ -473,6 +481,7 @@ public class LoadRuleTest
     DruidServer server2 = new DruidServer(
         "serverHo2t",
         "hostHot2",
+        null,
         1000,
         ServerType.HISTORICAL,
         "hot",
@@ -574,6 +583,7 @@ public class LoadRuleTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",

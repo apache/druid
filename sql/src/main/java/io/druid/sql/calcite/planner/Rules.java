@@ -21,6 +21,7 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.sql.calcite.rel.QueryMaker;
+import io.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
 import io.druid.sql.calcite.rule.DruidFilterRule;
 import io.druid.sql.calcite.rule.DruidRelToBindableRule;
 import io.druid.sql.calcite.rule.DruidRelToDruidRule;
@@ -215,6 +216,7 @@ public class Rules
     }
 
     rules.add(SortCollapseRule.instance());
+    rules.add(CaseFilteredAggregatorRule.instance());
 
     // Druid-specific rules.
     rules.add(new DruidTableScanRule(plannerContext, queryMaker));

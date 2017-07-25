@@ -63,7 +63,8 @@ public class PollingLookupFactoryTest
   }
 
   @Test
-  public void testGet(){
+  public void testGet()
+  {
     Assert.assertEquals(pollingLookup, pollingLookupFactory.get());
   }
 

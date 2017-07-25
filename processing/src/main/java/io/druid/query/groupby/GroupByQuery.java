@@ -411,7 +411,7 @@ public class GroupByQuery extends BaseQuery<Row>
         dimsInOrderBy.add(dimIndex);
         needsReverseList.add(needsReverse);
         final ValueType type = dimensions.get(dimIndex).getOutputType();
-        isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT);
+        isNumericField.add(ValueType.isNumeric(type));
         comparators.add(orderSpec.getDimensionComparator());
       }
     }
@@ -421,7 +421,7 @@ public class GroupByQuery extends BaseQuery<Row>
         orderedFieldNames.add(dimensions.get(i).getOutputName());
         needsReverseList.add(false);
         final ValueType type = dimensions.get(i).getOutputType();
-        isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT);
+        isNumericField.add(ValueType.isNumeric(type));
         comparators.add(StringComparators.LEXICOGRAPHIC);
       }
     }
@@ -559,6 +559,11 @@ public class GroupByQuery extends BaseQuery<Row>
             ((Number) rhs.getRaw(dimension.getOutputName())).longValue()
         );
       } else if (dimension.getOutputType() == ValueType.FLOAT) {
+        dimCompare = Float.compare(
+            ((Number) lhs.getRaw(dimension.getOutputName())).floatValue(),
+            ((Number) rhs.getRaw(dimension.getOutputName())).floatValue()
+        );
+      } else if (dimension.getOutputType() == ValueType.DOUBLE) {
         dimCompare = Double.compare(
             ((Number) lhs.getRaw(dimension.getOutputName())).doubleValue(),
             ((Number) rhs.getRaw(dimension.getOutputName())).doubleValue()

@@ -698,11 +698,12 @@ public class HyperLogLogCollectorTest
     fillBuckets(collector, (byte) 0, (byte) 63);
     collector.add(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-    Assert.assertEquals(Double.MAX_VALUE, collector.estimateCardinality(), 1000);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, collector.estimateCardinality(), 1000);
   }
 
   @Test
-  public void testMaxOverflow() {
+  public void testMaxOverflow()
+  {
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     collector.add((short)23, (byte)16);
     Assert.assertEquals(23, collector.getMaxOverflowRegister());
@@ -722,7 +723,8 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testMergeMaxOverflow() {
+  public void testMergeMaxOverflow()
+  {
     // no offset
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     collector.add((short)23, (byte)16);

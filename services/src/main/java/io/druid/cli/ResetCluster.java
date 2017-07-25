@@ -39,6 +39,7 @@ import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.tasklogs.TaskLogKiller;
 
 import java.util.List;
@@ -91,7 +92,7 @@ public class ResetCluster extends GuiceRunnable
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1)
+                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, new ServerConfig())
             );
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
           }
@@ -162,7 +163,8 @@ public class ResetCluster extends GuiceRunnable
 
       DataSegmentKiller segmentKiller = injector.getInstance(DataSegmentKiller.class);
       segmentKiller.killAll();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       log.error(ex, "Failed to cleanup Segment Files.");
     }
   }
@@ -176,7 +178,8 @@ public class ResetCluster extends GuiceRunnable
 
       TaskLogKiller taskLogKiller = injector.getInstance(TaskLogKiller.class);;
       taskLogKiller.killAll();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       log.error(ex, "Failed to cleanup TaskLogs.");
     }
   }

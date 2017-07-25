@@ -104,6 +104,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -513,7 +514,7 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage);
+    taskLockbox = new TaskLockbox(taskStorage, 300);
     tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
         SupervisorManager.class)));
     File tmpDir = temporaryFolder.newFolder();
@@ -576,7 +577,7 @@ public class TaskLifecycleTest
         }, // segment announcer
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
-        queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
+        () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         MoreExecutors.sameThreadExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
@@ -609,7 +610,7 @@ public class TaskLifecycleTest
         tb,
         taskConfig,
         emitter,
-        new DruidNode("dummy", "dummy", 10000)
+        new DruidNode("dummy", "dummy", 10000, null, new ServerConfig())
     );
   }
 
@@ -654,10 +655,9 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -712,10 +712,9 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -1077,10 +1076,9 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final long startTime = System.currentTimeMillis();

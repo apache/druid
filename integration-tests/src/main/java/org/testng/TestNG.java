@@ -283,7 +283,7 @@ public class TestNG
    *
    * @see org.testng.reporters.TestHTMLReporter
    * @see org.testng.reporters.JUnitXMLReporter
-   * @see org.testng.reporters.XMLReporter
+   * @see XMLReporter
    */
   public void setUseDefaultListeners(boolean useDefaultListeners)
   {
@@ -701,7 +701,7 @@ public class TestNG
    *
    * @param suites
    *
-   * @see org.testng.xml.XmlSuite
+   * @see XmlSuite
    */
   public void setXmlSuites(List<XmlSuite> suites)
   {
@@ -1148,25 +1148,21 @@ public class TestNG
 
     m_start = System.currentTimeMillis();
 
-    //
-    // Slave mode
-    //
     if (m_slavefileName != null) {
+      //
+      // Slave mode
+      //
       SuiteSlave slave = new SuiteSlave(m_slavefileName, this);
       slave.waitForSuites();
-    }
-
-    //
-    // Regular mode
-    //
-    else if (m_masterfileName == null) {
+    } else if (m_masterfileName == null) {
+      //
+      // Regular mode
+      //
       suiteRunners = runSuitesLocally();
-    }
-
-    //
-    // Master mode
-    //
-    else {
+    } else {
+      //
+      // Master mode
+      //
       SuiteDispatcher dispatcher = new SuiteDispatcher(m_masterfileName);
       suiteRunners = dispatcher.dispatch(
           getConfiguration(),
@@ -2116,7 +2112,7 @@ public class TestNG
     }
 
     /**
-     * @see org.testng.IConfigurationListener#onConfigurationFailure(org.testng.ITestResult)
+     * @see IConfigurationListener#onConfigurationFailure(ITestResult)
      */
     @Override
     public void onConfigurationFailure(ITestResult itr)
@@ -2125,7 +2121,7 @@ public class TestNG
     }
 
     /**
-     * @see org.testng.IConfigurationListener#onConfigurationSkip(org.testng.ITestResult)
+     * @see IConfigurationListener#onConfigurationSkip(ITestResult)
      */
     @Override
     public void onConfigurationSkip(ITestResult itr)
@@ -2134,7 +2130,7 @@ public class TestNG
     }
 
     /**
-     * @see org.testng.IConfigurationListener#onConfigurationSuccess(org.testng.ITestResult)
+     * @see IConfigurationListener#onConfigurationSuccess(ITestResult)
      */
     @Override
     public void onConfigurationSuccess(ITestResult itr)

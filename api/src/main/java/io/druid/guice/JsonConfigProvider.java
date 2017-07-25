@@ -49,7 +49,7 @@ import java.util.Properties;
  * <h3>Implementation</h3>
  * <br/>
  * The state of {@code <T>} is defined by the value of the property {@code propertyBase}.
- * This value is a json structure, decoded via {@link JsonConfigurator#configurate(java.util.Properties, String, Class)}.
+ * This value is a json structure, decoded via {@link JsonConfigurator#configurate(Properties, String, Class)}.
  * <br/>
  *
  * An example might be if DruidServerConfig.class were
@@ -148,11 +148,9 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
 
     if (bindKey.getAnnotationType() != null) {
       supplierKey = Key.get(supType, bindKey.getAnnotationType());
-    }
-    else if (bindKey.getAnnotation() != null) {
+    } else if (bindKey.getAnnotation() != null) {
       supplierKey = Key.get(supType, bindKey.getAnnotation());
-    }
-    else {
+    } else {
       supplierKey = Key.get(supType);
     }
 

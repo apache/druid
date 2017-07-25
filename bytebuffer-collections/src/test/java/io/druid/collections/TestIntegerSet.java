@@ -189,7 +189,7 @@ public class TestIntegerSet
         IntegerSet integerSet = IntegerSet.wrap(wrappedBitmap);
         integerSet.add(Integer.MAX_VALUE + 1);
       }
-      catch (java.lang.IllegalArgumentException ex) {
+      catch (IllegalArgumentException ex) {
         e = ex;
       }
       Assert.assertNotNull(e);

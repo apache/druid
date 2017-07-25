@@ -29,9 +29,11 @@ import io.druid.client.cache.MapCache;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -95,47 +97,47 @@ public class CachingClusteredClientFunctionalityTest
                                                         ));
 
     Map<String, Object> responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     Assert.assertNull(responseContext.get("uncoveredIntervals"));
 
     builder.intervals("2015-01-01/2015-01-03");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02");
 
     builder.intervals("2015-01-01/2015-01-04");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-02/2015-01-04");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-01/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-02/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-04/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-10/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-10/2015-01-30");
 
     builder.intervals("2015-01-01/2015-02-25");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, true, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-02-04");
   }
 
@@ -173,7 +175,7 @@ public class CachingClusteredClientFunctionalityTest
               )
               {
                 return new QueryableDruidServer(
-                    new DruidServer("localhost", "localhost", 100, ServerType.HISTORICAL, "a", 10),
+                    new DruidServer("localhost", "localhost", null, 100, ServerType.HISTORICAL, "a", 10),
                     EasyMock.createNiceMock(DirectDruidClient.class)
                 );
               }
@@ -187,7 +189,7 @@ public class CachingClusteredClientFunctionalityTest
               {
                 return Collections.singletonList(
                     new QueryableDruidServer(
-                        new DruidServer("localhost", "localhost", 100, ServerType.HISTORICAL, "a", 10),
+                        new DruidServer("localhost", "localhost", null, 100, ServerType.HISTORICAL, "a", 10),
                         EasyMock.createNiceMock(DirectDruidClient.class)
                     )
                 );
@@ -221,6 +223,12 @@ public class CachingClusteredClientFunctionalityTest
           public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
           {
             return timeline;
+          }
+
+          @Override
+          public void registerTimelineCallback(final Executor exec, final TimelineCallback callback)
+          {
+            throw new UnsupportedOperationException();
           }
 
           @Override
@@ -264,6 +272,18 @@ public class CachingClusteredClientFunctionalityTest
             return mergeLimit;
           }
         }
+    );
+  }
+
+  private static <T> Sequence<T> runQuery(
+      CachingClusteredClient client,
+      final Query<T> query,
+      final Map<String, Object> responseContext
+  )
+  {
+    return client.getQueryRunnerForIntervals(query, query.getIntervals()).run(
+        QueryPlus.wrap(query),
+        responseContext
     );
   }
 }

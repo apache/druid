@@ -99,6 +99,12 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HyperUniquesBufferAggregator does not support getDouble()");
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

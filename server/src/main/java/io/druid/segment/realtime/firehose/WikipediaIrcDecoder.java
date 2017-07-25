@@ -102,7 +102,8 @@ class WikipediaIrcDecoder implements IrcDecoder
     }
   }
 
-  private DatabaseReader openDefaultGeoIpDb() {
+  private DatabaseReader openDefaultGeoIpDb()
+  {
     File geoDb = new File(System.getProperty("java.io.tmpdir"),
                           this.getClass().getCanonicalName() + ".GeoLite2-City.mmdb");
     try {
@@ -118,22 +119,26 @@ class WikipediaIrcDecoder implements IrcDecoder
     }
   }
 
-  private DatabaseReader openDefaultGeoIpDb(File geoDb) {
+  private DatabaseReader openDefaultGeoIpDb(File geoDb)
+  {
     downloadGeoLiteDbToFile(geoDb);
     return openGeoIpDb(geoDb);
   }
 
-  private DatabaseReader openGeoIpDb(File geoDb) {
+  private DatabaseReader openGeoIpDb(File geoDb)
+  {
     try {
       DatabaseReader reader = new DatabaseReader(geoDb);
       log.info("Using geo ip database at [%s].", geoDb);
       return reader;
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       throw new RuntimeException("Could not open geo db at ["+ geoDb.getAbsolutePath() +"].", e);
     }
   }
 
-  private void downloadGeoLiteDbToFile(File geoDb) {
+  private void downloadGeoLiteDbToFile(File geoDb)
+  {
     if (geoDb.exists()) {
       return;
     }
@@ -278,6 +283,12 @@ class WikipediaIrcDecoder implements IrcDecoder
         return dimensions.get(dimension);
       }
 
+
+      @Override
+      public double getDoubleMetric(String metric)
+      {
+        return new Double(metrics.get(metric)).doubleValue();
+      }
 
       @Override
       public float getFloatMetric(String metric)

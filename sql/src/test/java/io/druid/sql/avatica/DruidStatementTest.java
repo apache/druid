@@ -22,17 +22,16 @@ package io.druid.sql.avatica;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
+import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.schema.SchemaPlus;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
@@ -60,21 +59,18 @@ public class DruidStatementTest
     Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema = Calcites.createRootSchema(
-        CalciteTests.createMockSchema(
-            walker,
-            plannerConfig
-        )
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(
+        walker,
+        plannerConfig
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     plannerFactory = new PlannerFactory(
-        rootSchema,
-        walker,
+        druidSchema,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         macroTable,
-        plannerConfig,
-        new ServerConfig()
+        plannerConfig
     );
   }
 
@@ -102,7 +98,7 @@ public class DruidStatementTest
             Lists.newArrayList("cnt", "BIGINT", "java.lang.Long"),
             Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
-            Lists.newArrayList("m1", "FLOAT", "java.lang.Double"),
+            Lists.newArrayList("m1", "DOUBLE", "java.lang.Double"),
             Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
         ),
         Lists.transform(

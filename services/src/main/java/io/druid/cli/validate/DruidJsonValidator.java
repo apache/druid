@@ -109,6 +109,7 @@ public class DruidJsonValidator extends GuiceRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/validator");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
           }
         }
     );

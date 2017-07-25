@@ -19,9 +19,9 @@
 
 package io.druid.common.utils;
 
-import java.util.Properties;
-
 import io.druid.java.util.common.ISE;
+
+import java.util.Properties;
 
 /**
  */
@@ -50,8 +50,7 @@ public class PropUtils
     if (retVal == null) {
       if (defaultValue == null) {
         throw new ISE("Property[%s] not specified.", property);
-      }
-      else {
+      } else {
         return defaultValue;
       }
     }

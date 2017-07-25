@@ -147,6 +147,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -163,6 +164,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverNorm",
                             "hostNorm",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "normal",
@@ -179,6 +181,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverCold",
                             "hostCold",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "cold",
@@ -259,6 +262,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -270,6 +274,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverHot2",
                             "hostHot2",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -286,6 +291,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverCold",
                             "hostCold",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "cold",
@@ -357,6 +363,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer normServer = new DruidServer(
         "serverNorm",
         "hostNorm",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -376,6 +383,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -462,6 +470,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverNorm",
                             "hostNorm",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "normal",
@@ -525,6 +534,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverNorm",
                             "hostNorm",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "normal",
@@ -579,6 +589,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server = new DruidServer(
         "serverNorm",
         "hostNorm",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -651,6 +662,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server1 = new DruidServer(
         "serverNorm",
         "hostNorm",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -661,6 +673,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -740,6 +753,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server1 = new DruidServer(
         "server1",
         "host1",
+        null,
         1000,
         ServerType.HISTORICAL,
         "hot",
@@ -749,6 +763,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -831,6 +846,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server1 = new DruidServer(
         "server1",
         "host1",
+        null,
         1000,
         ServerType.HISTORICAL,
         "hot",
@@ -839,6 +855,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -915,6 +932,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server1 = new DruidServer(
         "server1",
         "host1",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -924,6 +942,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -933,6 +952,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server3 = new DruidServer(
         "serverNorm3",
         "hostNorm3",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -1034,6 +1054,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -1045,6 +1066,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverHot2",
                             "hostHot2",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -1160,6 +1182,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
@@ -1176,6 +1199,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverNorm",
                             "hostNorm",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             DruidServer.DEFAULT_TIER,
@@ -1251,6 +1275,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server1 = new DruidServer(
         "serverNorm1",
         "hostNorm1",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -1262,6 +1287,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
+        null,
         1000,
         ServerType.HISTORICAL,
         "normal",
@@ -1366,6 +1392,7 @@ public class DruidCoordinatorRuleRunnerTest
                         new DruidServer(
                             "serverHot",
                             "hostHot",
+                            null,
                             1000,
                             ServerType.HISTORICAL,
                             DruidServer.DEFAULT_TIER,
