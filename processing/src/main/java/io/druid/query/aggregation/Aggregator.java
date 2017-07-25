@@ -20,7 +20,6 @@
 package io.druid.query.aggregation;
 
 import java.io.Closeable;
-
 /**
  * An Aggregator is an object that can aggregate metrics.  Its aggregation-related methods (namely, aggregate() and get())
  * do not take any arguments as the assumption is that the Aggregator was given something in its constructor that
@@ -42,6 +41,11 @@ public interface Aggregator extends Closeable
   float getFloat();
   long getLong();
 
+  /**
+   * The default implementation casts {@link Aggregator#getFloat()} to double.
+   * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
+   * work with numeric double columns.
+   */
   default double getDouble()
   {
     return (double) getFloat();

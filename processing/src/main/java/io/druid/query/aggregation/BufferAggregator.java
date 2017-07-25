@@ -124,6 +124,8 @@ public interface BufferAggregator extends HotLoopCallee
    * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
    *
    * The default implementation casts {@link BufferAggregator#getFloat(ByteBuffer, int)} to double.
+   * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
+   * work with numeric double columns.
    *
    * @param buf byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
