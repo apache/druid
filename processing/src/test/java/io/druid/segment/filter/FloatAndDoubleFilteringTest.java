@@ -28,13 +28,15 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.DoubleDimensionSchema;
+import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
-import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -67,9 +69,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
-public class FloatFilteringTest extends BaseFilterTest
+public class FloatAndDoubleFilteringTest extends BaseFilterTest
 {
   private static final String FLOAT_COLUMN = "flt";
+  private static final String DOUBLE_COLUMN = "dbl";
   private static final String TIMESTAMP_COLUMN = "ts";
   private static int EXECUTOR_NUM_THREADS = 16;
   private static int EXECUTOR_NUM_TASKS = 2000;
@@ -78,7 +81,11 @@ public class FloatFilteringTest extends BaseFilterTest
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "millis", new DateTime("2000")),
           new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")),
+              ImmutableList.of(
+                  new StringDimensionSchema("dim0"),
+                  new FloatDimensionSchema("flt"),
+                  new DoubleDimensionSchema("dbl")
+              ),
               null,
               null
           )
@@ -86,15 +93,15 @@ public class FloatFilteringTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("ts", 1L, "dim0", "1", "flt", 1.0f, "dim1", "", "dim2", ImmutableList.of("a", "b"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("ts", 2L, "dim0", "2", "flt", 2.0f, "dim1", "10", "dim2", ImmutableList.of())),
-      PARSER.parse(ImmutableMap.<String, Object>of("ts", 3L, "dim0", "3", "flt", 3.0f, "dim1", "2", "dim2", ImmutableList.of(""))),
-      PARSER.parse(ImmutableMap.<String, Object>of("ts", 4L, "dim0", "4", "flt", 4.0f, "dim1", "1", "dim2", ImmutableList.of("a"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("ts", 5L, "dim0", "5", "flt", 5.0f, "dim1", "def", "dim2", ImmutableList.of("c"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("ts", 6L, "dim0", "6", "flt", 6.0f, "dim1", "abc"))
+      PARSER.parse(ImmutableMap.of("ts", 1L, "dim0", "1", "flt", 1.0f, "dbl", 1.0d)),
+      PARSER.parse(ImmutableMap.of("ts", 2L, "dim0", "2", "flt", 2.0f, "dbl", 2.0d)),
+      PARSER.parse(ImmutableMap.of("ts", 3L, "dim0", "3", "flt", 3.0f, "dbl", 3.0d)),
+      PARSER.parse(ImmutableMap.of("ts", 4L, "dim0", "4", "flt", 4.0f, "dbl", 4.0d)),
+      PARSER.parse(ImmutableMap.of("ts", 5L, "dim0", "5", "flt", 5.0f, "dbl", 5.0d)),
+      PARSER.parse(ImmutableMap.of("ts", 6L, "dim0", "6", "flt", 6.0f, "dbl", 6.0d))
   );
 
-  public FloatFilteringTest(
+  public FloatAndDoubleFilteringTest(
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
@@ -107,7 +114,7 @@ public class FloatFilteringTest extends BaseFilterTest
         ROWS,
         indexBuilder.schema(
             new IncrementalIndexSchema.Builder()
-                .withMetrics(new DoubleSumAggregatorFactory(FLOAT_COLUMN, FLOAT_COLUMN))
+                .withDimensionsSpec(PARSER.getParseSpec().getDimensionsSpec())
                 .build()
         ),
         finisher,
@@ -119,59 +126,76 @@ public class FloatFilteringTest extends BaseFilterTest
   @AfterClass
   public static void tearDown() throws Exception
   {
-    BaseFilterTest.tearDown(FloatFilteringTest.class.getName());
+    BaseFilterTest.tearDown(FloatAndDoubleFilteringTest.class.getName());
   }
 
   @Test
   public void testFloatColumnFiltering()
   {
-  /*  assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, "0", null),
-        ImmutableList.<String>of()
-    );
+    doTestFloatColumnFiltering(FLOAT_COLUMN);
+    doTestFloatColumnFiltering(DOUBLE_COLUMN);
+  }
 
-    assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, "0.0", null),
-        ImmutableList.<String>of()
-    );*/
+  @Test
+  public void testFloatColumnFilteringWithNonNumbers()
+  {
+    doTestFloatColumnFilteringWithNonNumbers(FLOAT_COLUMN);
+    doTestFloatColumnFilteringWithNonNumbers(DOUBLE_COLUMN);
+  }
 
+  @Test
+  public void testFloatFilterWithExtractionFn()
+  {
+    doTestFloatFilterWithExtractionFn(FLOAT_COLUMN);
+    doTestFloatFilterWithExtractionFn(DOUBLE_COLUMN);
+  }
+
+  @Test
+  public void testMultithreaded()
+  {
+    doTestMultithreaded(FLOAT_COLUMN);
+    doTestMultithreaded(DOUBLE_COLUMN);
+  }
+
+  private void doTestFloatColumnFiltering(final String columnName)
+  {
     assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, "3", null),
+        new SelectorDimFilter(columnName, "3", null),
         ImmutableList.<String>of("3")
     );
 
     assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, "3.0", null),
+        new SelectorDimFilter(columnName, "3.0", null),
         ImmutableList.<String>of("3")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, "2", "5", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3", "4", "5")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "2.0", "5.0", false, false, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, "2.0", "5.0", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3", "4", "5")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "1", "4", true, true, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, "1", "4", true, true, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "1.0", "4.0", true, true, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, "1.0", "4.0", true, true, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3")
     );
 
     assertFilterMatches(
-        new InDimFilter(FLOAT_COLUMN, Arrays.asList("2", "4", "8"), null),
+        new InDimFilter(columnName, Arrays.asList("2", "4", "8"), null),
         ImmutableList.<String>of("2", "4")
     );
 
     assertFilterMatches(
-        new InDimFilter(FLOAT_COLUMN, Arrays.asList("2.0", "4.0", "8.0"), null),
+        new InDimFilter(columnName, Arrays.asList("2.0", "4.0", "8.0"), null),
         ImmutableList.<String>of("2", "4")
     );
 
@@ -181,95 +205,93 @@ public class FloatFilteringTest extends BaseFilterTest
       infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatches(
-        new InDimFilter(FLOAT_COLUMN, infilterValues, null),
+        new InDimFilter(columnName, infilterValues, null),
         ImmutableList.<String>of("2", "4", "6")
     );
 
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
     assertFilterMatches(
-        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn, null, JavaScriptConfig.getEnabledInstance()),
+        new JavaScriptDimFilter(columnName, jsFn, null, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "5")
     );
 
     String jsFn2 = "function(x) { return(x === 3.0 || x === 5.0) }";
     assertFilterMatches(
-        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn2, null, JavaScriptConfig.getEnabledInstance()),
+        new JavaScriptDimFilter(columnName, jsFn2, null, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "5")
     );
 
     assertFilterMatches(
-        new RegexDimFilter(FLOAT_COLUMN, "4", null),
+        new RegexDimFilter(columnName, "4", null),
         ImmutableList.<String>of("4")
     );
 
     assertFilterMatches(
-        new RegexDimFilter(FLOAT_COLUMN, "4.0", null),
+        new RegexDimFilter(columnName, "4.0", null),
         ImmutableList.<String>of("4")
     );
 
     assertFilterMatches(
-        new SearchQueryDimFilter(FLOAT_COLUMN, new ContainsSearchQuerySpec("2", true), null),
+        new SearchQueryDimFilter(columnName, new ContainsSearchQuerySpec("2", true), null),
         ImmutableList.<String>of("2")
     );
 
     assertFilterMatches(
-        new SearchQueryDimFilter(FLOAT_COLUMN, new ContainsSearchQuerySpec("2", true), null),
+        new SearchQueryDimFilter(columnName, new ContainsSearchQuerySpec("2", true), null),
         ImmutableList.<String>of("2")
     );
   }
 
-  @Test
-  public void testFloatColumnFilteringWithNonNumbers()
+  private void doTestFloatColumnFilteringWithNonNumbers(final String columnName)
   {
     assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, "", null),
+        new SelectorDimFilter(columnName, "", null),
         ImmutableList.<String>of()
     );
 
     assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, null, null),
+        new SelectorDimFilter(columnName, null, null),
         ImmutableList.<String>of()
     );
 
     assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, "abc", null),
+        new SelectorDimFilter(columnName, "abc", null),
         ImmutableList.<String>of()
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "a", "b", false, false, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, "a", "b", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of()
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, " ", "4", false, false, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, " ", "4", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("1", "2", "3", "4")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, " ", "4", false, false, null, null, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter(columnName, " ", "4", false, false, null, null, StringComparators.LEXICOGRAPHIC),
         ImmutableList.<String>of("1", "2", "3")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, " ", "4.0", false, false, null, null, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter(columnName, " ", "4.0", false, false, null, null, StringComparators.LEXICOGRAPHIC),
         ImmutableList.<String>of("1", "2", "3", "4")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, " ", "A", false, false, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, " ", "A", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of()
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, " ", "A", false, false, null, null, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter(columnName, " ", "A", false, false, null, null, StringComparators.LEXICOGRAPHIC),
         ImmutableList.<String>of("1", "2", "3", "4", "5", "6")
     );
   }
 
-  @Test
-  public void testFloatFilterWithExtractionFn()
+  private void doTestFloatFilterWithExtractionFn(final String columnName)
   {
     final Map<String, String> stringMap = new HashMap<>();
     stringMap.put("1.0", "Monday");
@@ -282,25 +304,25 @@ public class FloatFilteringTest extends BaseFilterTest
     LookupExtractionFn exfn = new LookupExtractionFn(mapExtractor, false, "UNKNOWN", false, true);
 
     assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, "Monday", exfn),
+        new SelectorDimFilter(columnName, "Monday", exfn),
         ImmutableList.<String>of("1")
     );
     assertFilterMatches(
-        new SelectorDimFilter(FLOAT_COLUMN, "Notaday", exfn),
+        new SelectorDimFilter(columnName, "Notaday", exfn),
         ImmutableList.<String>of()
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC),
+        new BoundDimFilter(columnName, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC),
         ImmutableList.<String>of("5")
     );
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC),
+        new BoundDimFilter(columnName, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC),
         ImmutableList.<String>of()
     );
 
     assertFilterMatches(
-        new InDimFilter(FLOAT_COLUMN, Arrays.asList("Caturday", "Saturday", "Tuesday"), exfn),
+        new InDimFilter(columnName, Arrays.asList("Caturday", "Saturday", "Tuesday"), exfn),
         ImmutableList.<String>of("2", "6")
     );
 
@@ -311,47 +333,46 @@ public class FloatFilteringTest extends BaseFilterTest
         "Hello", "World", "1", "2", "3", "4", "5", "6", "7"
     );
     assertFilterMatches(
-        new InDimFilter(FLOAT_COLUMN, bigList, exfn),
+        new InDimFilter(columnName, bigList, exfn),
         ImmutableList.<String>of("2", "6")
     );
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
     assertFilterMatches(
-        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
+        new JavaScriptDimFilter(columnName, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "4")
     );
 
     assertFilterMatches(
-        new RegexDimFilter(FLOAT_COLUMN, ".*day", exfn),
+        new RegexDimFilter(columnName, ".*day", exfn),
         ImmutableList.<String>of("1", "2", "3", "4", "5", "6")
     );
 
     assertFilterMatches(
-        new SearchQueryDimFilter(FLOAT_COLUMN, new ContainsSearchQuerySpec("s", true), exfn),
+        new SearchQueryDimFilter(columnName, new ContainsSearchQuerySpec("s", true), exfn),
         ImmutableList.<String>of("2", "3", "4")
     );
   }
 
-  @Test
-  public void testMultithreaded()
+  private void doTestMultithreaded(final String columnName)
   {
     assertFilterMatchesMultithreaded(
-        new SelectorDimFilter(FLOAT_COLUMN, "3", null),
+        new SelectorDimFilter(columnName, "3", null),
         ImmutableList.<String>of("3")
     );
 
     assertFilterMatchesMultithreaded(
-        new SelectorDimFilter(FLOAT_COLUMN, "3.0", null),
+        new SelectorDimFilter(columnName, "3.0", null),
         ImmutableList.<String>of("3")
     );
 
     assertFilterMatchesMultithreaded(
-        new InDimFilter(FLOAT_COLUMN, Arrays.asList("2", "4", "8"), null),
+        new InDimFilter(columnName, Arrays.asList("2", "4", "8"), null),
         ImmutableList.<String>of("2", "4")
     );
 
     assertFilterMatchesMultithreaded(
-        new InDimFilter(FLOAT_COLUMN, Arrays.asList("2.0", "4.0", "8.0"), null),
+        new InDimFilter(columnName, Arrays.asList("2.0", "4.0", "8.0"), null),
         ImmutableList.<String>of("2", "4")
     );
 
@@ -361,17 +382,17 @@ public class FloatFilteringTest extends BaseFilterTest
       infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatchesMultithreaded(
-        new InDimFilter(FLOAT_COLUMN, infilterValues, null),
+        new InDimFilter(columnName, infilterValues, null),
         ImmutableList.<String>of("2", "4", "6")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, "2", "5", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3", "4", "5")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(FLOAT_COLUMN, "2.0", "5.0", false, false, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(columnName, "2.0", "5.0", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3", "4", "5")
     );
   }
@@ -389,14 +410,7 @@ public class FloatFilteringTest extends BaseFilterTest
       final List<String> expectedRows
   )
   {
-    return new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        assertFilterMatches(filter, expectedRows);
-      }
-    };
+    return () -> assertFilterMatches(filter, expectedRows);
   }
 
   private void testWithExecutor(
@@ -404,7 +418,9 @@ public class FloatFilteringTest extends BaseFilterTest
       final List<String> expectedRows
   )
   {
-    ListeningExecutorService executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(EXECUTOR_NUM_THREADS));
+    ListeningExecutorService executor = MoreExecutors.listeningDecorator(
+        Executors.newFixedThreadPool(EXECUTOR_NUM_THREADS)
+    );
 
     List<ListenableFuture<?>> futures = new ArrayList<>();
 
