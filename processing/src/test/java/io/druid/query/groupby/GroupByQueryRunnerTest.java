@@ -7722,6 +7722,67 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testGroupByDoubleColumnDescending()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("qualityDouble", "alias", ValueType.DOUBLE)))
+        .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .addOrderByColumn(new OrderByColumnSpec(
+            "alias",
+            OrderByColumnSpec.Direction.DESCENDING,
+            StringComparators.NUMERIC
+        ))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    Assert.assertNotEquals(
+        Functions.<Sequence<Row>>identity(),
+        query.getLimitSpec().build(
+            query.getDimensions(),
+            query.getAggregatorSpecs(),
+            query.getPostAggregatorSpecs()
+        )
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            17000.0d,
+            "rows",
+            2L,
+            "idx",
+            175L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            12000.0d,
+            "rows",
+            2L,
+            "idx",
+            324L
+        )
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
   public void testGroupByFloatColumnWithExFn()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
