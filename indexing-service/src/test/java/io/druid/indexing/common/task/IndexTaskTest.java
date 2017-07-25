@@ -896,7 +896,7 @@ public class IndexTaskTest
                   TaskLockType.EXCLUSIVE,
                   "",
                   "",
-                  new Interval("2014/P1D"),
+                  new Interval("2014/P1Y"),
                   new DateTime().toString(),
                   Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
               )

@@ -238,13 +238,9 @@ public class IndexTask extends AbstractTask
                          )
       );
     } else {
-      versions = getTaskLocks(toolbox.getTaskActionClient()).stream()
-                                                            .collect(
-                                                                Collectors.toMap(
-                                                                    TaskLock::getInterval,
-                                                                    TaskLock::getVersion
-                                                                )
-                                                            );
+      versions = getTaskLocks(toolbox.getTaskActionClient())
+          .stream()
+          .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
       dataSchema = ingestionSchema.getDataSchema();
     }
 
