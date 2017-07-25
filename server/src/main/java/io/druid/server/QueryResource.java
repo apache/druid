@@ -156,7 +156,7 @@ public class QueryResource implements QueryCountStatsProvider
   public Response doPost(
       final InputStream in,
       @QueryParam("pretty") final String pretty,
-      @Context final HttpServletRequest req // used to get request content-type, remote address and AuthorizationInfo
+      @Context final HttpServletRequest req // used to get request content-type, remote address and auth-related headers
   ) throws IOException
   {
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();

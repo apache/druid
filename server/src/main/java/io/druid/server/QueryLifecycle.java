@@ -57,7 +57,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <ol>
  * <li>Initialization ({@link #initialize(Query)})</li>
- * <li>Authorization ({@link #authorize(AuthorizationInfo)}</li>
+ * <li>Authorization ({@link #authorize(String, String, HttpServletRequest)}</li>
  * <li>Execution ({@link #execute()}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
  * </ol>
@@ -114,8 +114,8 @@ public class QueryLifecycle
    * either fully iterated or throws an exception.
    *
    * @param query             the query
-   * @param authorizationInfo authorization info from the request; or null if none is present. This must be non-null
-   *                          if security is enabled, or the request will be considered unauthorized.
+   * @param user              authentication token from the request
+   * @param namespace         authentication namespace of the request
    * @param remoteAddress     remote address, for logging; or null if unknown
    * @param needsAuth         if false, skip the authorization check. This is useful when the authorization check has
    *                          already been performed (e.g. in SQL handling, where authorization takes place in the

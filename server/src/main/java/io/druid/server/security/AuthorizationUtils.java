@@ -36,7 +36,7 @@ public class AuthorizationUtils
   public final static Access ACCESS_OK = new Access(true, "All resource-actions authorized.");
 
   /**
-   * Check a resource-action using the AuthorizationInfo from the request.
+   * Check a resource-action using the authorization fields from the request.
    *
    * Otherwise, if the resource-actions is authorized, return ACCESS_OK.
    *
@@ -46,7 +46,8 @@ public class AuthorizationUtils
    *
    * @param request HTTP request to be authorized
    * @param resourceAction A resource identifier and the action to be taken the resource.
-   * @return ACCESS_OK or the failed Access object returned by the request's AuthorizationInfo.
+   * @param authorizationManagerMapper The singleton AuthorizationManagerMapper instance
+   * @return ACCESS_OK or the failed Access object returned by the AuthorizationManager that checked the request.
    */
   public static Access authorizeResourceAction(
       final HttpServletRequest request,
@@ -63,7 +64,7 @@ public class AuthorizationUtils
 
 
   /**
-   * Check a list of resource-actions using the AuthorizationInfo from the request.
+   * Check a list of resource-actions using the authorization fields from the request.
    *
    * If one of the resource-actions fails the authorization check, this method returns the failed
    * Access object from the check.
@@ -219,47 +220,7 @@ public class AuthorizationUtils
   }
 
   /**
-   * Check a list of resource-actions using the AuthorizationInfo from the request.
-   *
-   * If one of the resource-actions fails the authorization check, this method returns the failed
-   * Access object from the check.
-   *
-   * Otherwise, return ACCESS_OK if all resource-actions were successfully authorized.
-   *
-   * @param resourceActions A list of resource-actions to authorize
-   * @return ACCESS_OK or the Access object from the first failed check
-   */
-  public static Access authorizeAllResourceActions(
-      final String user,
-      final String namespace,
-      final AuthorizationManagerMapper authorizationManagerMapper,
-      final List<ResourceAction> resourceActions
-  )
-  {
-    if (user == null || namespace == null) {
-      throw new ISE("null user or namespace");
-    }
-    final AuthorizationManager authorizationManager = authorizationManagerMapper.getAuthorizationManager(namespace);
-    if (authorizationManager == null) {
-      throw new ISE("No authorization manager found for namespace: [%s].", namespace);
-    }
-
-    for (ResourceAction resourceAction : resourceActions) {
-      final Access access = authorizationManager.authorize(
-          user,
-          resourceAction.getResource(),
-          resourceAction.getAction()
-      );
-      if (!access.isAllowed()) {
-        return access;
-      }
-    }
-
-    return ACCESS_OK;
-  }
-
-  /**
-   * Filter a list of resource-actions using the request's AuthorizationInfo, returning a new list of
+   * Filter a list of resource-actions using the request's authorization fields, returning a new list of
    * resource-actions that were authorized.
    *
    * This function will set the DRUID_AUTH_TOKEN_CHECKED attribute in the request.

@@ -27,6 +27,17 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name = "default", value = DefaultAuthorizationManager.class),
     @JsonSubTypes.Type(name = "noop", value = NoopAuthorizationManager.class)
 })
+/**
+ * An AuthorizationManager is responsible for performing authorization checks for resource accesses.
+ *
+ * A single instance of each AuthorizationManager implementation will be created per node.
+ * Security-sensitive endpoints will need to extract the identity string contained in the request's Druid-Auth-Token
+ * attribute, previously set by an Authenticator. Each endpoint will pass this identity String to the
+ * AuthorizationManager's authorize() method along with any Resource/Action pairs created for the request being
+ * handled. The endpoint can use these checks to filter out resources or deny the request as needed.
+ * After a request is authorized, a new attribute, "Druid-Auth-Token-Checked", should be set in the
+ * request header with the result of the authorization decision.
+ */
 public interface AuthorizationManager
 {
   /**

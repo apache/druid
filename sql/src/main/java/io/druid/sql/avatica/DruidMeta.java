@@ -52,7 +52,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -62,7 +61,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DruidMeta extends MetaImpl
 {
   private static final Logger log = new Logger(DruidMeta.class);
-  private static final Set<String> SKIP_PROPERTIES = ImmutableSet.of("user", "password");
 
   private final PlannerFactory plannerFactory;
   private final ScheduledExecutorService exec;
@@ -112,9 +110,7 @@ public class DruidMeta extends MetaImpl
     // Build connection context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
     for (Map.Entry<String, String> entry : info.entrySet()) {
-      //if (!SKIP_PROPERTIES.contains(entry.getKey())) {
-        context.put(entry);
-      //}
+      context.put(entry);
     }
     openDruidConnection(ch.id, context.build());
   }

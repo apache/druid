@@ -27,7 +27,7 @@ import java.util.List;
 public class AuthConfig
 {
   /**
-   * Use this String as the attribute name for the request attribute to pass {@link AuthorizationInfo}
+   * Use this String as the attribute name for the request attribute to pass an authentication token
    * from the servlet filter to the jersey resource
    */
   public static final String DRUID_AUTH_TOKEN = "Druid-Auth-Token";
@@ -63,11 +63,6 @@ public class AuthConfig
     this.authorizationManagers = authorizationManagers;
   }
 
-  /**
-   * If druid.auth.enabled is set to true then an implementation of AuthorizationInfo
-   * must be provided and it must be set as a request attribute possibly inside the servlet filter
-   * injected in the filter chain using your own extension
-   */
   @JsonProperty
   private final boolean enabled;
 
@@ -107,6 +102,7 @@ public class AuthConfig
            "enabled=" + enabled +
            ", authenticatorChain='" + authenticatorChain + '\'' +
            ", internalAuthenticator='" + internalAuthenticator + '\'' +
+           ", authorizationManagers='" + authorizationManagers + '\'' +
            '}';
   }
 
@@ -125,10 +121,19 @@ public class AuthConfig
     if (isEnabled() != that.isEnabled()) {
       return false;
     }
-    if (!getInternalAuthenticator().equals(that.getInternalAuthenticator())) {
+    if (getAuthenticatorChain() != null
+        ? !getAuthenticatorChain().equals(that.getAuthenticatorChain())
+        : that.getAuthenticatorChain() != null) {
       return false;
     }
-    return getAuthenticatorChain().equals(that.getAuthenticatorChain());
+    if (getInternalAuthenticator() != null
+        ? !getInternalAuthenticator().equals(that.getInternalAuthenticator())
+        : that.getInternalAuthenticator() != null) {
+      return false;
+    }
+    return getAuthorizationManagers() != null
+           ? getAuthorizationManagers().equals(that.getAuthorizationManagers())
+           : that.getAuthorizationManagers() == null;
 
   }
 
@@ -136,8 +141,10 @@ public class AuthConfig
   public int hashCode()
   {
     int result = (isEnabled() ? 1 : 0);
-    result = 31 * result + getAuthenticatorChain().hashCode();
-    result = 31 * result + getInternalAuthenticator().hashCode();
+    result = 31 * result + (getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0);
+    result = 31 * result + (getInternalAuthenticator() != null ? getInternalAuthenticator().hashCode() : 0);
+    result = 31 * result + (getAuthorizationManagers() != null ? getAuthorizationManagers().hashCode() : 0);
     return result;
   }
+
 }
