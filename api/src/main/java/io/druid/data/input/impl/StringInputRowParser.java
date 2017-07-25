@@ -38,7 +38,6 @@ import java.util.Map;
 
 /**
  */
-@PublicApi
 public class StringInputRowParser implements ByteBufferInputRowParser
 {
   private static final Charset DEFAULT_CHARSET = Charsets.UTF_8;

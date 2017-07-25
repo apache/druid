@@ -22,13 +22,12 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
 
-/**
- * Not an {@code ExtensionPoint} since extension parsers are meant to extend {@code InputRowParser}.
- */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format", defaultImpl = DelimitedParseSpec.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "json", value = JSONParseSpec.class),
