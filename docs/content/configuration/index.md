@@ -186,6 +186,7 @@ The following monitors are available:
 |`io.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical nodes.|
 |`com.metamx.metrics.JvmMonitor`|Reports various JVM-related statistics.|
 |`com.metamx.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|
+|`com.metamx.metrics.CpuAcctDeltaMonitor`|Reports consumed CPU as per the cpuacct cgroup.|
 |`com.metamx.metrics.JvmThreadsMonitor`|Reports Thread statistics in the JVM, like numbers of total, daemon, started, died threads.|
 |`io.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime nodes.|
 |`io.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
