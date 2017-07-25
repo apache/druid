@@ -928,6 +928,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           @Override
           public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
           {
+            // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
+            // Some databases can only use an index on one of the columns. An additional condition provides
+            // explicit knowledge that 'start' cannot be greater than 'end'.
             return handle
                 .createQuery(
                     StringUtils.format(
