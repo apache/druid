@@ -23,10 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
@@ -46,6 +43,7 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.DimensionAndMetricValueExtractor;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultValue;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.Column;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.sql.calcite.planner.Calcites;
@@ -419,27 +417,21 @@ public class QueryMaker
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.BIGINT) {
-      if (value instanceof String) {
-        coercedValue = GuavaUtils.tryParseLong((String) value);
-      } else if (value instanceof Number) {
-        coercedValue = ((Number) value).longValue();
-      } else {
+      try {
+        coercedValue = DimensionHandlerUtils.convertObjectToLong(value);
+      } catch (Exception e) {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.FLOAT) {
-      if (value instanceof String) {
-        coercedValue = Floats.tryParse((String) value);
-      } else if (value instanceof Number) {
-        coercedValue = ((Number) value).floatValue();
-      } else {
+      try {
+        coercedValue = DimensionHandlerUtils.convertObjectToFloat(value);
+      } catch (Exception e) {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlType)) {
-      if (value instanceof String) {
-        coercedValue = Doubles.tryParse((String) value);
-      } else if (value instanceof Number) {
-        coercedValue = ((Number) value).doubleValue();
-      } else {
+      try {
+        coercedValue = DimensionHandlerUtils.convertObjectToDouble(value);
+      } catch (Exception e) {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.OTHER) {
