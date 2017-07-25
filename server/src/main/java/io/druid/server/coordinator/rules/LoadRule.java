@@ -22,10 +22,12 @@ package io.druid.server.coordinator.rules;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.primitives.Ints;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.IAE;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.LoadPeonCallback;
@@ -36,6 +38,7 @@ import io.druid.timeline.DataSegment;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -57,12 +60,59 @@ public abstract class LoadRule implements Rule
 
     final Map<String, Integer> loadStatus = Maps.newHashMap();
 
+    final Map<String, Integer> tieredReplicants = getTieredReplicants();
+    for (final String tier : tieredReplicants.keySet()) {
+      stats.addToTieredStat(ASSIGNED_COUNT, tier, 0);
+    }
+
+    final BalancerStrategy strategy = params.getBalancerStrategy();
+
+    final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig()
+                                                    .getMaxSegmentsInNodeLoadingQueue();
+
+    final Predicate<ServerHolder> serverHolderPredicate;
+    if (maxSegmentsInNodeLoadingQueue > 0) {
+      serverHolderPredicate = s -> (s != null && s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue);
+    } else {
+      serverHolderPredicate = Objects::nonNull;
+    }
+
     int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
-    for (Map.Entry<String, Integer> entry : getTieredReplicants().entrySet()) {
+
+    final Optional<ServerHolder> primaryHolderToLoad;
+    if (totalReplicantsInCluster <= 0) {
+      log.trace("No replicants for %s", segment.getIdentifier());
+      primaryHolderToLoad = getPrimaryHolder(
+          params.getDruidCluster(),
+          tieredReplicants,
+          strategy,
+          segment,
+          serverHolderPredicate
+      );
+
+      if (primaryHolderToLoad.isPresent()) {
+        final ServerHolder holder = primaryHolderToLoad.get();
+
+        holder.getPeon().loadSegment(segment, null);
+        stats.addToTieredStat(ASSIGNED_COUNT, holder.getServer().getTier(), 1);
+        ++totalReplicantsInCluster;
+      } else {
+        log.trace("No primary holder found for %s", segment.getIdentifier());
+        return stats;
+      }
+    } else {
+      primaryHolderToLoad = Optional.empty();
+    }
+
+    for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       final String tier = entry.getKey();
       final int expectedReplicantsInTier = entry.getValue();
+
       final int totalReplicantsInTier = params.getSegmentReplicantLookup()
-                                              .getTotalReplicants(segment.getIdentifier(), tier);
+                                              .getTotalReplicants(segment.getIdentifier(), tier) +
+                                        (primaryHolderToLoad.map(holder -> holder.getServer().getTier().equals(tier))
+                                                            .orElse(false) ? 1 : 0);
+
       final int loadedReplicantsInTier = params.getSegmentReplicantLookup()
                                                .getLoadedReplicants(segment.getIdentifier(), tier);
 
@@ -73,26 +123,17 @@ public abstract class LoadRule implements Rule
         continue;
       }
 
-      final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig()
-                                                      .getMaxSegmentsInNodeLoadingQueue();
+      final List<ServerHolder> serverHolderList =
+          serverQueue
+              .stream()
+              .filter(serverHolderPredicate)
+              .filter(holder -> !primaryHolderToLoad.map(holder::equals).orElse(false))
+              .collect(Collectors.toList());
 
-      Predicate<ServerHolder> serverHolderPredicate;
-      if (maxSegmentsInNodeLoadingQueue > 0) {
-        serverHolderPredicate = s -> (s != null && s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue);
-      } else {
-        serverHolderPredicate = Objects::nonNull;
-      }
-
-      final List<ServerHolder> serverHolderList = serverQueue.stream()
-                                                             .filter(serverHolderPredicate)
-                                                             .collect(Collectors.toList());
-
-      final BalancerStrategy strategy = params.getBalancerStrategy();
       if (availableSegments.contains(segment)) {
-        int assignedCount = assign(
+        final int assignedCount = assignReplicas(
             params.getReplicationManager(),
             tier,
-            totalReplicantsInCluster,
             expectedReplicantsInTier,
             totalReplicantsInTier,
             strategy,
@@ -108,14 +149,57 @@ public abstract class LoadRule implements Rule
     // Remove over-replication
     stats.accumulate(drop(loadStatus, segment, params));
 
-
     return stats;
   }
 
-  private int assign(
+  private static Optional<ServerHolder> getPrimaryHolder(
+      final DruidCluster cluster,
+      final Map<String, Integer> tieredReplicants,
+      final BalancerStrategy strategy,
+      final DataSegment segment,
+      final Predicate<ServerHolder> serverHolderPredicate
+  )
+  {
+    final List<ServerHolder> candidates = Lists.newLinkedList();
+
+    for (final Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
+      final int expectedReplicantsInTier = entry.getValue();
+      if (expectedReplicantsInTier <= 0) {
+        continue;
+      }
+
+      final String tier = entry.getKey();
+
+      final MinMaxPriorityQueue<ServerHolder> serverQueue = cluster.getHistoricalsByTier(tier);
+      if (serverQueue == null) {
+        log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
+        continue;
+      }
+
+      final ServerHolder candidate = strategy.findNewSegmentHomeReplicator(
+          segment,
+          serverQueue.stream().filter(serverHolderPredicate).collect(Collectors.toList())
+      );
+      if (candidate == null) {
+        log.warn(
+            "Not enough [%s] servers or node capacity to assign primary segment[%s]! Expected Replicants[%d]",
+            tier,
+            segment.getIdentifier(),
+            expectedReplicantsInTier
+        );
+      } else {
+        candidates.add(candidate);
+      }
+    }
+
+    return candidates
+        .stream()
+        .max((s1, s2) -> Ints.compare(s1.getServer().getPriority(), s2.getServer().getPriority()));
+  }
+
+  private int assignReplicas(
       final ReplicationThrottler replicationManager,
       final String tier,
-      final int totalReplicantsInCluster,
       final int expectedReplicantsInTier,
       final int totalReplicantsInTier,
       final BalancerStrategy strategy,
@@ -125,11 +209,8 @@ public abstract class LoadRule implements Rule
   {
     int assignedCount = 0;
     int currReplicantsInTier = totalReplicantsInTier;
-    int currTotalReplicantsInCluster = totalReplicantsInCluster;
     while (currReplicantsInTier < expectedReplicantsInTier) {
-      boolean replicate = currTotalReplicantsInCluster > 0;
-
-      if (replicate && !replicationManager.canCreateReplicant(tier)) {
+      if (!replicationManager.canCreateReplicant(tier)) {
         break;
       }
 
@@ -144,12 +225,13 @@ public abstract class LoadRule implements Rule
         );
         break;
       }
+      serverHolderList.remove(holder);
 
-      if (replicate) {
-        replicationManager.registerReplicantCreation(
-            tier, segment.getIdentifier(), holder.getServer().getHost()
-        );
-      }
+      replicationManager.registerReplicantCreation(
+          tier,
+          segment.getIdentifier(),
+          holder.getServer().getHost()
+      );
 
       holder.getPeon().loadSegment(
           segment,
@@ -169,7 +251,6 @@ public abstract class LoadRule implements Rule
 
       ++assignedCount;
       ++currReplicantsInTier;
-      ++currTotalReplicantsInCluster;
     }
 
     return assignedCount;
