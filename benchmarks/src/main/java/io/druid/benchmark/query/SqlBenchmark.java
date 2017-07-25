@@ -38,7 +38,6 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.QueryableIndex;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
@@ -116,11 +115,10 @@ public class SqlBenchmark
 
     plannerFactory = new PlannerFactory(
         CalciteTests.createMockSchema(walker, plannerConfig),
-        walker,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
-        plannerConfig,
-        new ServerConfig()
+        plannerConfig
     );
     groupByQuery = GroupByQuery
         .builder()

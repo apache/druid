@@ -21,8 +21,7 @@ package io.druid.sql.calcite.planner;
 
 import com.google.inject.Inject;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.server.initialization.ServerConfig;
+import io.druid.server.QueryLifecycleFactory;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
@@ -50,35 +49,32 @@ public class PlannerFactory
       .build();
 
   private final DruidSchema druidSchema;
-  private final QuerySegmentWalker walker;
+  private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
-  private final ServerConfig serverConfig;
 
   @Inject
   public PlannerFactory(
       final DruidSchema druidSchema,
-      final QuerySegmentWalker walker,
+      final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
-      final PlannerConfig plannerConfig,
-      final ServerConfig serverConfig
+      final PlannerConfig plannerConfig
   )
   {
     this.druidSchema = druidSchema;
-    this.walker = walker;
+    this.queryLifecycleFactory = queryLifecycleFactory;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = plannerConfig;
-    this.serverConfig = serverConfig;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
     final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema);
     final PlannerContext plannerContext = PlannerContext.create(operatorTable, macroTable, plannerConfig, queryContext);
-    final QueryMaker queryMaker = new QueryMaker(walker, plannerContext, serverConfig);
+    final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext);
     final FrameworkConfig frameworkConfig = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
