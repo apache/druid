@@ -54,6 +54,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FloatSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.expression.LookupExprMacro;
 import io.druid.query.expression.TestExprMacroTable;
@@ -250,19 +251,32 @@ public class CalciteTests
   private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
-          new DoubleSumAggregatorFactory("m1", "m1"),
+          new FloatSumAggregatorFactory("m1", "m1"),
+          new DoubleSumAggregatorFactory("m2", "m2"),
           new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
       )
       .withRollup(false)
       .build();
 
   public static final List<InputRow> ROWS1 = ImmutableList.of(
-      createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "", "dim2", ImmutableList.of("a"))),
-      createRow(ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "dim1", "10.1", "dim2", ImmutableList.of())),
-      createRow(ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "dim1", "2", "dim2", ImmutableList.of(""))),
-      createRow(ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "dim1", "1", "dim2", ImmutableList.of("a"))),
-      createRow(ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "dim1", "def", "dim2", ImmutableList.of("abc"))),
-      createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0", "dim1", "abc"))
+      createRow(
+          ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "m2", "1.0", "dim1", "", "dim2", ImmutableList.of("a"))
+      ),
+      createRow(
+          ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "m2", "2.0", "dim1", "10.1", "dim2", ImmutableList.of())
+      ),
+      createRow(
+          ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "m2", "3.0", "dim1", "2", "dim2", ImmutableList.of(""))
+      ),
+      createRow(
+          ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "m2", "4.0", "dim1", "1", "dim2", ImmutableList.of("a"))
+      ),
+      createRow(
+          ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "m2", "5.0", "dim1", "def", "dim2", ImmutableList.of("abc"))
+      ),
+      createRow(
+          ImmutableMap.of("t", "2001-01-03", "m1", "6.0", "m2", "6.0", "dim1", "abc")
+      )
   );
 
   public static final List<InputRow> ROWS2 = ImmutableList.of(

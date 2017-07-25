@@ -86,6 +86,7 @@ public class PlannerFactory
         .context(Contexts.EMPTY_CONTEXT)
         .typeSystem(RelDataTypeSystem.DEFAULT)
         .defaultSchema(rootSchema.getSubSchema(DruidSchema.NAME))
+        .typeSystem(DruidTypeSystem.INSTANCE)
         .build();
 
     return new DruidPlanner(Frameworks.getPlanner(frameworkConfig), plannerContext);
