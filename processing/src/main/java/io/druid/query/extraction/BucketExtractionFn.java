@@ -60,7 +60,7 @@ public class BucketExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    if (Objects.isNull(value)) {
+    if (value == null) {
       return null;
     }
 
@@ -76,6 +76,10 @@ public class BucketExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable String value)
   {
+    if (value == null) {
+      return null;
+    }
+
     try {
       return bucket(Double.parseDouble(value));
     }

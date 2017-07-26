@@ -133,7 +133,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    if (Objects.isNull(value)) {
+    if (value == null) {
       return null;
     }
 
