@@ -164,7 +164,8 @@ public class GroupByQueryMergeBufferTest
             mergeBufferPool,
             mapper,
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        ),
+        PROCESSING_CONFIG
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         strategySelector,

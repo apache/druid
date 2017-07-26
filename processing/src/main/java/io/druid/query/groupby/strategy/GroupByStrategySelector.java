@@ -22,28 +22,35 @@ package io.druid.query.groupby.strategy;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 
 public class GroupByStrategySelector
 {
+  private static final Logger log = new Logger(GroupByStrategySelector.class);
+
   public static final String STRATEGY_V2 = "v2";
   public static final String STRATEGY_V1 = "v1";
 
   private final GroupByQueryConfig config;
   private final GroupByStrategyV1 strategyV1;
   private final GroupByStrategyV2 strategyV2;
+  private final DruidProcessingConfig processingConfig;
 
   @Inject
   public GroupByStrategySelector(
       Supplier<GroupByQueryConfig> configSupplier,
       GroupByStrategyV1 strategyV1,
-      GroupByStrategyV2 strategyV2
+      GroupByStrategyV2 strategyV2,
+      DruidProcessingConfig processingConfig
   )
   {
     this.config = configSupplier.get();
     this.strategyV1 = strategyV1;
     this.strategyV2 = strategyV2;
+    this.processingConfig = processingConfig;
   }
 
   public GroupByStrategy strategize(GroupByQuery query)
@@ -52,6 +59,10 @@ public class GroupByStrategySelector
 
     switch (strategyString) {
       case STRATEGY_V2:
+        if (processingConfig.getNumMergeBuffers() == 0) {
+          log.warn("Falling back to groupBy strategy V1 because no merge buffers are configured");
+          return strategyV1;
+        }
         return strategyV2;
 
       case STRATEGY_V1:
