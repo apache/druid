@@ -48,4 +48,31 @@ public class ResourceAction
   {
     return action;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ResourceAction that = (ResourceAction) o;
+
+    if (!getResource().equals(that.getResource())) {
+      return false;
+    }
+    return getAction() == that.getAction();
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = getResource().hashCode();
+    result = 31 * result + getAction().hashCode();
+    return result;
+  }
 }

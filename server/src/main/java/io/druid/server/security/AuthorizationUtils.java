@@ -21,12 +21,14 @@ package io.druid.server.security;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Static utility functions for performing authorization checks.
@@ -61,7 +63,6 @@ public class AuthorizationUtils
         authorizationManagerMapper
     );
   }
-
 
   /**
    * Check a list of resource-actions using the authorization fields from the request.
@@ -99,7 +100,12 @@ public class AuthorizationUtils
       throw new ISE("No authorization manager found for namespace: [%s].", namespace);
     }
 
+    final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
     for (ResourceAction resourceAction : resourceActions) {
+      // this method returns on first failure, so only successful Access results are kept in the cache
+      if (resultCache.get(resourceAction) != null) {
+        continue;
+      }
       final Access access = authorizationManager.authorize(
           identity,
           resourceAction.getResource(),
@@ -108,13 +114,14 @@ public class AuthorizationUtils
       if (!access.isAllowed()) {
         request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
         return access;
+      } else {
+        resultCache.put(resourceAction, access);
       }
     }
 
     request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
     return ACCESS_OK;
   }
-
 
   /**
    * Check a list of caller-defined resources, after converting them into a list of resource-actions
@@ -157,8 +164,13 @@ public class AuthorizationUtils
       throw new ISE("No authorization manager found for namespace: [%s].", namespace);
     }
 
+    final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
     for (ResType resource : resources) {
       final ResourceAction resourceAction = raGenerator.apply(resource);
+      // this method returns on first failure, so only successful Access results are kept in the cache
+      if (resultCache.get(resourceAction) != null) {
+        continue;
+      }
       final Access access = authorizationManager.authorize(
           identity,
           resourceAction.getResource(),
@@ -167,6 +179,8 @@ public class AuthorizationUtils
       if (!access.isAllowed()) {
         request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
         return access;
+      } else {
+        resultCache.put(resourceAction, access);
       }
     }
 
@@ -204,8 +218,13 @@ public class AuthorizationUtils
       throw new ISE("No authorization manager found for namespace: [%s].", namespace);
     }
 
+    final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
     for (ResType resource : resources) {
       final ResourceAction resourceAction = raGenerator.apply(resource);
+      // this method returns on first failure, so only successful Access results are kept in the cache
+      if (resultCache.get(resourceAction) != null) {
+        continue;
+      }
       final Access access = authorizationManager.authorize(
           user,
           resourceAction.getResource(),
@@ -213,6 +232,8 @@ public class AuthorizationUtils
       );
       if (!access.isAllowed()) {
         return access;
+      } else {
+        resultCache.put(resourceAction, access);
       }
     }
 
@@ -232,7 +253,6 @@ public class AuthorizationUtils
    * @param resourceActionGenerator Function that creates a resource-action from a resource
    * @return A list containing the resource-actions from the resourceParser that were successfully authorized.
    */
-
   public static <ResType> List<ResType> filterAuthorizedResources(
       final HttpServletRequest request,
       final Collection<ResType> resources,
@@ -255,14 +275,19 @@ public class AuthorizationUtils
       throw new ISE("No authorization manager found for namespace: [%s].", namespace);
     }
 
+    final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
     List<ResType> filteredResources = new ArrayList<>();
     for (ResType resource : resources) {
       final ResourceAction resourceAction = resourceActionGenerator.apply(resource);
-      final Access access = authorizationManager.authorize(
-          identity,
-          resourceAction.getResource(),
-          resourceAction.getAction()
-      );
+      Access access = resultCache.get(resourceAction);
+      if (access == null) {
+        access = authorizationManager.authorize(
+            identity,
+            resourceAction.getResource(),
+            resourceAction.getAction()
+        );
+        resultCache.put(resourceAction, access);
+      }
       if (access.isAllowed()) {
         filteredResources.add(resource);
       }
