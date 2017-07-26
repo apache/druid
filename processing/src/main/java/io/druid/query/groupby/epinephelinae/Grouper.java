@@ -87,7 +87,7 @@ public interface Grouper<KeyType> extends Closeable
   void close();
 
   /**
-   * Iterate through entries. If a comparator is provided, do a sorted iteration.
+   * Iterate through entries.
    * <p>
    * Once this method is called, writes are no longer safe. After you are done with the iterator returned by this
    * method, you should either call {@link #close()} (if you are done with the Grouper), {@link #reset()} (if you
@@ -96,6 +96,9 @@ public interface Grouper<KeyType> extends Closeable
    * If "sorted" is true then the iterator will return sorted results. It will use KeyType's natural ordering on
    * deserialized objects, and will use the {@link KeySerde#comparator()} on serialized objects. Woe be unto you
    * if these comparators are not equivalent.
+   * <p>
+   * Callers must process and discard the returned {@link Entry}s immediately because some implementations can reuse the
+   * key objects.
    *
    * @param sorted return sorted results
    *

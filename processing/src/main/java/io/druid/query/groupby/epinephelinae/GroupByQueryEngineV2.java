@@ -61,7 +61,6 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -114,13 +113,13 @@ public class GroupByQueryEngineV2
         null
     );
 
-    final boolean allSingleValueDims = query.getDimensions().stream()
-                                            .noneMatch(dimension -> {
-                                              final ColumnCapabilities columnCapabilities =
-                                                  storageAdapter.getColumnCapabilities(dimension.getDimension());
-                                              return columnCapabilities == null ||
-                                                     columnCapabilities.hasMultipleValues();
-                                            });
+    final boolean allSingleValueDims = query
+        .getDimensions()
+        .stream()
+        .noneMatch(dimension -> {
+          final ColumnCapabilities columnCapabilities = storageAdapter.getColumnCapabilities(dimension.getDimension());
+          return columnCapabilities == null || columnCapabilities.hasMultipleValues();
+        });
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
@@ -345,29 +344,22 @@ public class GroupByQueryEngineV2
 
     private Grouper<ByteBuffer> newGrouper()
     {
-      final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
-                                                           .toArray(
-                                                               new AggregatorFactory[query.getAggregatorSpecs().size()]
-                                                           );
+      final AggregatorFactory[] aggregatorFactories = query
+          .getAggregatorSpecs()
+          .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]);
 
       if (!querySpecificConfig.isForceHashAggregation()) {
         if (dims.length == 1) {
           final ColumnCapabilities columnCapabilities = cursor.getColumnCapabilities(dims[0].getName());
-
-          @SuppressWarnings("ConstantConditions")
-          final int cardinality = cardinalityFunction.apply(dims[0].getName());
+          final int cardinality = computeCardinality(cardinalityFunction, dims[0]);
 
           // Choose array-based aggregation if the grouping key is a single string dimension of a known cardinality
           if ((columnCapabilities == null || columnCapabilities.getType().equals(ValueType.STRING)) &&
               cardinality > 0) {
-            final int keySize = BufferArrayGrouper.keySize(keySerde);
-            final int aggValuesSize = Arrays.stream(aggregatorFactories)
-                                            .mapToInt(AggregatorFactory::getMaxIntermediateSize)
-                                            .sum();
-            final int recordSize = keySize + aggValuesSize;
+            final int requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(keySerde, cardinality, aggregatorFactories);
 
             // Check that all keys and aggregated values can be contained the buffer
-            if ((cardinality + 1 ) * recordSize < buffer.capacity()) {
+            if (requiredBufferCapacity <= buffer.capacity()) {
               return new BufferArrayGrouper<>(
                   Suppliers.ofInstance(buffer),
                   keySerde,
@@ -389,6 +381,12 @@ public class GroupByQueryEngineV2
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets()
       );
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    private static int computeCardinality(Function<String, Integer> cardinalityFunction, GroupByColumnSelectorPlus dim)
+    {
+      return cardinalityFunction.apply(dim.getName());
     }
 
     private void aggregateSingleValueDims(Grouper<ByteBuffer> grouper)
