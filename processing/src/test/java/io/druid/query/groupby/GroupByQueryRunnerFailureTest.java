@@ -128,7 +128,8 @@ public class GroupByQueryRunnerFailureTest
             mergeBufferPool,
             mapper,
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        ),
+        DEFAULT_PROCESSING_CONFIG
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         strategySelector,
