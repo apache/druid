@@ -26,7 +26,6 @@ import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Objects;
 
 public class BucketExtractionFn implements ExtractionFn
 {

@@ -34,7 +34,6 @@ import org.joda.time.format.ISODateTimeFormat;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Locale;
-import java.util.Objects;
 
 public class TimeFormatExtractionFn implements ExtractionFn
 {
