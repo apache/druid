@@ -26,6 +26,7 @@ import com.google.common.base.Strings;
 import com.ibm.icu.text.SimpleDateFormat;
 import io.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.Date;
@@ -72,8 +73,9 @@ public class TimeDimExtractionFn extends DimExtractionFn
                      .array();
   }
 
+  @Nullable
   @Override
-  public String apply(String dimValue)
+  public String apply(@Nullable String dimValue)
   {
     if (Strings.isNullOrEmpty(dimValue)) {
       return null;

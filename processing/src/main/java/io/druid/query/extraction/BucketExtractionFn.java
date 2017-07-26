@@ -26,6 +26,7 @@ import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 public class BucketExtractionFn implements ExtractionFn
 {
@@ -56,8 +57,13 @@ public class BucketExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(Object value)
+  @Nullable
+  public String apply(@Nullable Object value)
   {
+    if (Objects.isNull(value)) {
+      return null;
+    }
+
     if (value instanceof Number) {
       return bucket(((Number) value).doubleValue());
     } else if (value instanceof String) {
@@ -67,7 +73,8 @@ public class BucketExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
     try {
       return bucket(Double.parseDouble(value));
