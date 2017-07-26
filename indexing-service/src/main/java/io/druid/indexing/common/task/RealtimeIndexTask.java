@@ -208,6 +208,8 @@ public class RealtimeIndexTask extends AbstractTask
 
     // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
     final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+    // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, http timeout error can occur while waiting for a
+    // lock to be acquired.
     final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
     {
       @Override

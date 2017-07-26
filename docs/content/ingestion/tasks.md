@@ -169,6 +169,11 @@ The task context is used for various task configuration parameters. The followin
 |--------|-------|-----------|
 |taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [the below Locking section](#locking).|
 
+<div class="note caution">
+When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
+As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of overlords.
+</div>
+
 Segment Merging Tasks
 ---------------------
 
