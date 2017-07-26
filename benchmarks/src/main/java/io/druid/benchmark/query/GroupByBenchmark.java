@@ -462,7 +462,8 @@ public class GroupByBenchmark
             mergePool,
             new ObjectMapper(new SmileFactory()),
             QueryBenchmarkUtil.NOOP_QUERYWATCHER
-        )
+        ),
+        druidProcessingConfig
     );
 
     factory = new GroupByQueryRunnerFactory(

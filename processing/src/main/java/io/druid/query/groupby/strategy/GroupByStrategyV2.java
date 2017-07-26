@@ -75,7 +75,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
 
-  // see countRequiredMergeBufferNum() for explanation
+  /** see {@link #countRequiredMergeBufferNum} for explanation */
   private static final int MAX_MERGE_BUFFER_NUM = 2;
 
   private final DruidProcessingConfig processingConfig;
