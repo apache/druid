@@ -22,6 +22,7 @@ package io.druid.server.security;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Static utility functions for performing authorization checks.
@@ -100,10 +102,11 @@ public class AuthorizationUtils
       throw new ISE("No authorization manager found for namespace: [%s].", namespace);
     }
 
-    final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
+    // this method returns on first failure, so only successful Access results are kept in the cache
+    final Set<ResourceAction> resultCache = Sets.newHashSet();
+
     for (ResourceAction resourceAction : resourceActions) {
-      // this method returns on first failure, so only successful Access results are kept in the cache
-      if (resultCache.get(resourceAction) != null) {
+      if (resultCache.contains(resourceAction)) {
         continue;
       }
       final Access access = authorizationManager.authorize(
@@ -115,7 +118,7 @@ public class AuthorizationUtils
         request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
         return access;
       } else {
-        resultCache.put(resourceAction, access);
+        resultCache.add(resourceAction);
       }
     }
 
@@ -164,11 +167,12 @@ public class AuthorizationUtils
       throw new ISE("No authorization manager found for namespace: [%s].", namespace);
     }
 
-    final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
+    // this method returns on first failure, so only successful Access results are kept in the cache
+    final Set<ResourceAction> resultCache = Sets.newHashSet();
+
     for (ResType resource : resources) {
       final ResourceAction resourceAction = raGenerator.apply(resource);
-      // this method returns on first failure, so only successful Access results are kept in the cache
-      if (resultCache.get(resourceAction) != null) {
+      if (resultCache.contains(resourceAction)) {
         continue;
       }
       final Access access = authorizationManager.authorize(
@@ -180,7 +184,7 @@ public class AuthorizationUtils
         request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
         return access;
       } else {
-        resultCache.put(resourceAction, access);
+        resultCache.add(resourceAction);
       }
     }
 
@@ -218,11 +222,12 @@ public class AuthorizationUtils
       throw new ISE("No authorization manager found for namespace: [%s].", namespace);
     }
 
-    final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
+    // this method returns on first failure, so only successful Access results are kept in the cache
+    final Set<ResourceAction> resultCache = Sets.newHashSet();
+
     for (ResType resource : resources) {
       final ResourceAction resourceAction = raGenerator.apply(resource);
-      // this method returns on first failure, so only successful Access results are kept in the cache
-      if (resultCache.get(resourceAction) != null) {
+      if (resultCache.contains(resourceAction)) {
         continue;
       }
       final Access access = authorizationManager.authorize(
@@ -233,7 +238,7 @@ public class AuthorizationUtils
       if (!access.isAllowed()) {
         return access;
       } else {
-        resultCache.put(resourceAction, access);
+        resultCache.add(resourceAction);
       }
     }
 
@@ -312,7 +317,6 @@ public class AuthorizationUtils
       );
     }
   };
-
 
   /**
    * Function for the common pattern of generating a resource-action for reading from a datasource, using the

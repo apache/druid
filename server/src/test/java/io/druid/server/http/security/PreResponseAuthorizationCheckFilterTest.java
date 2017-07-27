@@ -40,36 +40,30 @@ public class PreResponseAuthorizationCheckFilterTest
   private static AuthConfig authConfig = new AuthConfig(true, null, null, null);
 
   @Test
-  public void testValidRequest()
+  public void testValidRequest() throws Exception
   {
-    try {
-      HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
-      HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
-      FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
-      ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
+    HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
+    HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
+    FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
+    ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-      EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("so-very-valid").once();
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(true).once();
-      EasyMock.replay(req, resp, filterChain, outputStream);
+    EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("so-very-valid").once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(true).once();
+    EasyMock.replay(req, resp, filterChain, outputStream);
 
-      PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
-          authConfig,
-          authenticators,
-          new DefaultObjectMapper()
-      );
-      filter.doFilter(req, resp, filterChain);
-      EasyMock.verify(req, resp, filterChain, outputStream);
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
+    PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
+        authConfig,
+        authenticators,
+        new DefaultObjectMapper()
+    );
+    filter.doFilter(req, resp, filterChain);
+    EasyMock.verify(req, resp, filterChain, outputStream);
   }
 
   @Test
-  public void testAuthenticationFailedRequest()
+  public void testAuthenticationFailedRequest() throws Exception
   {
-    try {
       HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
       HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
       FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
@@ -94,44 +88,36 @@ public class PreResponseAuthorizationCheckFilterTest
       );
       filter.doFilter(req, resp, filterChain);
       EasyMock.verify(req, resp, filterChain, outputStream);
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
   }
 
   @Test
-  public void testMissingAuthorizationCheck()
+  public void testMissingAuthorizationCheck() throws Exception
   {
-    try {
-      HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
-      HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
-      FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
-      ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-      EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("so-very-valid").once();
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).once();
-      EasyMock.expect(resp.getStatus()).andReturn(200).once();
-      EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
-      resp.setStatus(403);
-      EasyMock.expectLastCall().once();
-      resp.setContentType("application/json");
-      EasyMock.expectLastCall().once();
-      resp.setCharacterEncoding("UTF-8");
-      EasyMock.expectLastCall().once();
-      EasyMock.replay(req, resp, filterChain, outputStream);
+    HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
+    HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
+    FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
+    ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-      PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
-          authConfig,
-          authenticators,
-          new DefaultObjectMapper()
-      );
-      filter.doFilter(req, resp, filterChain);
-      EasyMock.verify(req, resp, filterChain, outputStream);
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
+    EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("so-very-valid").once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).once();
+    EasyMock.expect(resp.getStatus()).andReturn(200).once();
+    EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
+    resp.setStatus(403);
+    EasyMock.expectLastCall().once();
+    resp.setContentType("application/json");
+    EasyMock.expectLastCall().once();
+    resp.setCharacterEncoding("UTF-8");
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(req, resp, filterChain, outputStream);
+
+    PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
+        authConfig,
+        authenticators,
+        new DefaultObjectMapper()
+    );
+    filter.doFilter(req, resp, filterChain);
+    EasyMock.verify(req, resp, filterChain, outputStream);
   }
 }

@@ -111,6 +111,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
           response.addHeader("WWW-Authenticate", authScheme);
         }
         sendJsonError(response, Response.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
+        out.close();
         return;
       }
 

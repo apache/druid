@@ -75,9 +75,11 @@ public class SecuritySanityCheckFilter implements Filter
     String authToken = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
     if (authInfoChecked != null || authToken != null) {
       sendJsonError(httpResponse, Response.SC_FORBIDDEN, jsonMapper.writeValueAsString(unauthorizedError), out);
+      out.close();
       return;
     }
 
+    out.close();
     chain.doFilter(request, response);
   }
 

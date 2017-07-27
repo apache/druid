@@ -33,53 +33,43 @@ import javax.servlet.http.HttpServletResponse;
 public class SecuritySanityCheckFilterTest
 {
   @Test
-  public void testValidRequest()
+  public void testValidRequest() throws Exception
   {
-    try {
-      HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
-      HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
-      FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
+    HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
+    HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
+    FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
 
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).once();
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn(null).once();
-      filterChain.doFilter(req, resp);
-      EasyMock.expectLastCall().once();
-      EasyMock.replay(req, filterChain);
-      SecuritySanityCheckFilter filter = new SecuritySanityCheckFilter(new DefaultObjectMapper());
-      filter.doFilter(req, resp, filterChain);
-      EasyMock.verify(req, filterChain);
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn(null).once();
+    filterChain.doFilter(req, resp);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(req, filterChain);
+    SecuritySanityCheckFilter filter = new SecuritySanityCheckFilter(new DefaultObjectMapper());
+    filter.doFilter(req, resp, filterChain);
+    EasyMock.verify(req, filterChain);
   }
 
   @Test
-  public void testInvalidRequest()
+  public void testInvalidRequest() throws Exception
   {
-    try {
-      HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
-      HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
-      FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
-      ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
+    HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
+    HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
+    FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
+    ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(true).once();
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("does-not-belong").once();
-      EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
-      resp.setStatus(403);
-      EasyMock.expectLastCall().once();
-      resp.setContentType("application/json");
-      EasyMock.expectLastCall().once();
-      resp.setCharacterEncoding("UTF-8");
-      EasyMock.expectLastCall().once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(true).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("does-not-belong").once();
+    EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
+    resp.setStatus(403);
+    EasyMock.expectLastCall().once();
+    resp.setContentType("application/json");
+    EasyMock.expectLastCall().once();
+    resp.setCharacterEncoding("UTF-8");
+    EasyMock.expectLastCall().once();
 
-      EasyMock.replay(req, resp, filterChain, outputStream);
-      SecuritySanityCheckFilter filter = new SecuritySanityCheckFilter(new DefaultObjectMapper());
-      filter.doFilter(req, resp, filterChain);
-      EasyMock.verify(req, resp, filterChain, outputStream);
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
+    EasyMock.replay(req, resp, filterChain, outputStream);
+    SecuritySanityCheckFilter filter = new SecuritySanityCheckFilter(new DefaultObjectMapper());
+    filter.doFilter(req, resp, filterChain);
+    EasyMock.verify(req, resp, filterChain, outputStream);
   }
 }
