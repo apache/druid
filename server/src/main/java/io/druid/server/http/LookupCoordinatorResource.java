@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.utils.ServletResourceUtils;
@@ -37,6 +38,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupsState;
+import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 
@@ -67,6 +69,7 @@ import java.util.Objects;
  * Contains information about lookups exposed through the coordinator
  */
 @Path("/druid/coordinator/v1/lookups")
+@ResourceFilters(ConfigResourceFilter.class)
 public class LookupCoordinatorResource
 {
   private static final Logger LOG = new Logger(LookupCoordinatorResource.class);
