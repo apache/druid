@@ -104,13 +104,6 @@ public class TimestampParserTest
     Assert.assertEquals(millis2, parser.apply("Wed Nov 9 04:00:00 GMT-0600 1994").getMillis());
     Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 UTC-0800 1994").getMillis());
     Assert.assertEquals(millis2, parser.apply("Wed Nov 9 04:00:00 UTC-0600 1994").getMillis());
-
-    parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss zZ Q yyyy");
-    Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 GMT-0800 (PST) 1994").getMillis());
-    Assert.assertEquals(millis2, parser.apply("Wed Nov 9 04:00:00 GMT-0600 (CST) 1994").getMillis());
-    Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 UTC-0800 (PST) 1994").getMillis());
-    Assert.assertEquals(millis2, parser.apply("Wed Nov 9 04:00:00 UTC-0600 (CST) 1994").getMillis());
-
   }
 
   @Test
@@ -123,28 +116,6 @@ public class TimestampParserTest
     parser = TimestampParser.createTimestampParser("zZ z EEE MMM dd yy HH:mm:ss");
     Assert.assertEquals(new DateTime(2005, 1, 22, 13, 0, DateTimeZone.forOffsetHours(-6)).getMillis(),
                         parser.apply("GMT-0600 CST Sat Jan 22 05 13:00:00").getMillis());
-  }
-
-  /**
-   * This test case checks a potentially fragile behavior
-   * Some timestamps will come to us in the form of GMT-OFFSET (Time Zone Abbreviation)
-   * The number of time zone abbreviations is long and what they mean can change
-   * If the offset is explicitly provided via GMT-OFFSET, we want Joda to use this instead
-   * of the time zone abbreviation
-   * @throws Exception
-   */
-  @Test
-  public void testOffsetPriority() throws Exception
-  {
-    long millis1 = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8)).getMillis();
-    long millis2 = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-6)).getMillis();
-
-    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss zZ Q yyyy");
-
-    //Test timestamps that have an incorrect time zone abbreviation for the GMT offset.
-    //Joda should use the offset and not use the time zone abbreviation
-    Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 GMT-0800 (ADT) 1994").getMillis());
-    Assert.assertEquals(millis2, parser.apply("Wed Nov 9 04:00:00 GMT-0600 (MDT) 1994").getMillis());
   }
 
   @Test
