@@ -22,6 +22,7 @@ package io.druid.emitter.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 import java.util.Map;
@@ -53,7 +54,7 @@ public class KafkaEmitterConfig
     this.metricTopic = Preconditions.checkNotNull(metricTopic, "metric.topic can not be null");
     this.alertTopic = Preconditions.checkNotNull(alertTopic, "alert.topic can not be null");
     this.clusterName = clusterName;
-    this.kafkaProducerConfig = kafkaProducerConfig;
+    this.kafkaProducerConfig = kafkaProducerConfig == null? ImmutableMap.<String,String>of() : kafkaProducerConfig;
   }
 
   @JsonProperty
@@ -110,9 +111,7 @@ public class KafkaEmitterConfig
     if (getClusterName() != null ? !getClusterName().equals(that.getClusterName()) : that.getClusterName() != null) {
       return false;
     }
-    return getKafkaProducerConfig() != null
-           ? getKafkaProducerConfig().equals(that.getKafkaProducerConfig())
-           : that.getKafkaProducerConfig() == null;
+    return getKafkaProducerConfig().equals(that.getKafkaProducerConfig());
   }
 
   @Override
@@ -122,7 +121,7 @@ public class KafkaEmitterConfig
     result = 31 * result + getMetricTopic().hashCode();
     result = 31 * result + getAlertTopic().hashCode();
     result = 31 * result + (getClusterName() != null ? getClusterName().hashCode() : 0);
-    result = 31 * result + (getKafkaProducerConfig() != null ? getKafkaProducerConfig().hashCode() : 0);
+    result = 31 * result + getKafkaProducerConfig().hashCode();
     return result;
   }
 
