@@ -101,7 +101,7 @@ public class NoopAuthenticator implements Authenticator
   @Override
   public String getAuthChallengeHeader()
   {
-    return null;
+    return "noop";
   }
 
   @Override
