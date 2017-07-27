@@ -68,7 +68,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -169,8 +168,7 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryNative(Blackhole blackhole) throws Exception
   {
-    HashMap<String, Object> context = Maps.newHashMap();
-    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, context);
+    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, Maps.newHashMap());
     final ArrayList<Row> resultList = Sequences.toList(resultSequence, Lists.<Row>newArrayList());
 
     for (Row row : resultList) {
