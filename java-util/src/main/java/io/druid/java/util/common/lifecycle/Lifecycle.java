@@ -64,9 +64,9 @@ public class Lifecycle
   {
     /** Lifecycle's state before {@link #start()} is called. */
     NOT_STARTED,
-    /** Lifecycle's state from when {@link #start()} and before {@link #stop()} is called. */
+    /** Lifecycle's state since {@link #start()} and before {@link #stop()} is called. */
     RUNNING,
-    /** Lifecycle's state from when {@link #stop()} is called. */
+    /** Lifecycle's state since {@link #stop()} is called. */
     STOP
   }
 
