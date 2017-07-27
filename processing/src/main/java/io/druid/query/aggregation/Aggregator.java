@@ -44,7 +44,16 @@ public interface Aggregator extends Closeable
   Object get();
   float getFloat();
   long getLong();
-  double getDouble();
+
+  /**
+   * The default implementation casts {@link Aggregator#getFloat()} to double.
+   * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
+   * work with numeric double columns.
+   */
+  default double getDouble()
+  {
+    return (double) getFloat();
+  }
 
   @Override
   void close();

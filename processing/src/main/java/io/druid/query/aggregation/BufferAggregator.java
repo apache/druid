@@ -125,11 +125,18 @@ public interface BufferAggregator extends HotLoopCallee
    * have an {@link AggregatorFactory#getTypeName()} of "double".
    * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
    *
+   * The default implementation casts {@link BufferAggregator#getFloat(ByteBuffer, int)} to double.
+   * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
+   * work with numeric double columns.
+   *
    * @param buf byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
    * @return the double representation of the aggregate
    */
-  double getDouble(ByteBuffer buf, int position);
+  default double getDouble(ByteBuffer buf, int position)
+  {
+    return (double) getFloat(buf, position);
+  }
 
   /**
    * Release any resources used by the aggregator
