@@ -79,7 +79,6 @@ public class SecuritySanityCheckFilter implements Filter
       return;
     }
 
-    out.close();
     chain.doFilter(request, response);
   }
 
