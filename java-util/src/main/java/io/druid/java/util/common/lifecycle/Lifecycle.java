@@ -62,8 +62,11 @@ public class Lifecycle
 
   private enum State
   {
+    /** Lifecycle's state before {@link #start()} is called. */
     NOT_STARTED,
+    /** Lifecycle's state from when {@link #start()} and before {@link #stop()} is called. */
     RUNNING,
+    /** Lifecycle's state from when {@link #stop()} is called. */
     STOP
   }
 
