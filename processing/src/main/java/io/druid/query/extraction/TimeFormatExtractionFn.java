@@ -31,6 +31,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
@@ -128,8 +129,13 @@ public class TimeFormatExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(Object value)
+  @Nullable
+  public String apply(@Nullable Object value)
   {
+    if (value == null) {
+      return null;
+    }
+
     if (asMillis && value instanceof String) {
       final Long theLong = GuavaUtils.tryParseLong((String) value);
       return theLong == null ? apply(new DateTime(value).getMillis()) : apply(theLong.longValue());
@@ -139,7 +145,8 @@ public class TimeFormatExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
     return apply((Object) value);
   }

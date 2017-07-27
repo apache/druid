@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import io.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -59,7 +60,7 @@ public class ContainsSearchQuerySpec implements SearchQuerySpec
   }
 
   @Override
-  public boolean accept(String dimVal)
+  public boolean accept(@Nullable String dimVal)
   {
     if (dimVal == null || value == null) {
       return false;
