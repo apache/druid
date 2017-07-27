@@ -97,10 +97,10 @@ public class TaskActionPreconditionsTest
         )
     );
 
-    Assert.assertTrue(TaskActionPreconditions.checkLockCoversSegments(task, lockbox, segments, false));
-    Assert.assertFalse(TaskActionPreconditions.checkLockCoversSegments(task, lockbox, segments, true));
+    Assert.assertTrue(TaskActionPreconditions.isLockCoversSegments(task, lockbox, segments));
+    Assert.assertFalse(TaskActionPreconditions.isLockCoversSegments(task, lockbox, segments));
 
     locks.forEach((interval, lock) -> lockbox.upgrade(task, interval));
-    Assert.assertTrue(TaskActionPreconditions.checkLockCoversSegments(task, lockbox, segments, true));
+    Assert.assertTrue(TaskActionPreconditions.isLockCoversSegments(task, lockbox, segments));
   }
 }

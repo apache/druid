@@ -31,34 +31,22 @@ import java.util.Set;
 
 public class TaskActionPreconditions
 {
-  public static void checkTaskLocksUpgraded(
+  public static void checkLockCoversSegments(
       final Task task,
       final TaskLockbox taskLockbox,
       final Set<DataSegment> segments
   )
   {
-    if (!checkLockCoversSegments(task, taskLockbox, segments, true)) {
-      throw new ISE("Segments not covered by locks or locks need upgrade for task: %s", task.getId());
-    }
-  }
-
-  public static void checkTaskLocks(
-      final Task task,
-      final TaskLockbox taskLockbox,
-      final Set<DataSegment> segments
-  )
-  {
-    if (!checkLockCoversSegments(task, taskLockbox, segments, false)) {
+    if (!isLockCoversSegments(task, taskLockbox, segments)) {
       throw new ISE("Segments not covered by locks for task: %s", task.getId());
     }
   }
 
   @VisibleForTesting
-  static boolean checkLockCoversSegments(
+  static boolean isLockCoversSegments(
       final Task task,
       final TaskLockbox taskLockbox,
-      final Set<DataSegment> segments,
-      final boolean checkUpgraded
+      final Set<DataSegment> segments
   )
   {
     // Verify that each of these segments falls under some lock
@@ -73,7 +61,6 @@ public class TaskActionPreconditions
           taskLock -> taskLock.getDataSource().equals(segment.getDataSource())
                       && taskLock.getInterval().contains(segment.getInterval())
                       && taskLock.getVersion().compareTo(segment.getVersion()) >= 0
-                      && (!checkUpgraded || taskLock.isUpgraded())
       );
 
       if (!ok) {

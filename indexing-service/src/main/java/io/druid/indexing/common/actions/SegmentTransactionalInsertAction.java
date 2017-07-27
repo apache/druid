@@ -27,6 +27,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
 
@@ -43,6 +44,8 @@ import java.util.Set;
  */
 public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
 {
+  private static final Logger LOG = new Logger(SegmentTransactionalInsertAction.class);
+
   private final Set<DataSegment> segments;
   private final DataSourceMetadata startMetadata;
   private final DataSourceMetadata endMetadata;
@@ -99,13 +102,17 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
+    TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+
     for (DataSegment segment : segments) {
       if (!toolbox.getTaskLockbox().upgrade(task, segment.getInterval()).isOk()) {
+        LOG.info("Failed to upgrade the lock for task[%s] and interval[%s]", task.getId(), segment.getInterval());
+
+        // Acquired locks don't have to be released explicitly here because the fail result will make the index task
+        // calling this action failed, and the acquired locks should be released automatically when the task completes.
         return SegmentPublishResult.fail();
       }
     }
-
-    TaskActionPreconditions.checkTaskLocks(task, toolbox.getTaskLockbox(), segments);
 
     final SegmentPublishResult retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
         segments,
@@ -113,9 +120,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
         endMetadata
     );
 
-    for (DataSegment segment : segments) {
-      toolbox.getTaskLockbox().downgrade(task, segment.getInterval());
-    }
+    segments.forEach(segment -> toolbox.getTaskLockbox().downgrade(task, segment.getInterval()));
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

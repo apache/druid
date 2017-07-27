@@ -26,6 +26,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.ISE;
 import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
 
@@ -62,8 +63,19 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
       Task task, TaskActionToolbox toolbox
   ) throws IOException
   {
-    TaskActionPreconditions.checkTaskLocks(task, toolbox.getTaskLockbox(), segments);
+    TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+
+    for (DataSegment segment : segments) {
+      if (!toolbox.getTaskLockbox().upgrade(task, segment.getInterval()).isOk()) {
+        // Acquired locks don't have to be released explicitly here because the fail result will make the index task
+        // calling this action failed, and the acquired locks should be released automatically when the task completes.
+        throw new ISE("Failed to upgrade the lock for task[%s] and interval[%s]", task.getId(), segment.getInterval());
+      }
+    }
+
     toolbox.getIndexerMetadataStorageCoordinator().updateSegmentMetadata(segments);
+
+    segments.forEach(segment -> toolbox.getTaskLockbox().downgrade(task, segment.getInterval()));
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

@@ -53,7 +53,7 @@ public class Tasks
     }
   }
 
-  public static Map<Interval, TaskLock> acquireLocks(TaskActionClient client, SortedSet<Interval> intervals)
+  public static Map<Interval, TaskLock> acquireExclusiveLocks(TaskActionClient client, SortedSet<Interval> intervals)
       throws IOException
   {
     final Map<Interval, TaskLock> lockMap = new HashMap<>();

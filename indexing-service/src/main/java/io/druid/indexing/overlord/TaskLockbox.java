@@ -69,7 +69,7 @@ import java.util.stream.StreamSupport;
 public class TaskLockbox
 {
   // Datasource -> Interval -> list of (Tasks + TaskLock)
-  // Multiple shared locks can be acquired for the same dataSource and interval
+  // Multiple shared locks can be acquired for the same dataSource and interval.
   // Note that revoked locks are also maintained in this map to notify that those locks are revoked to the callers when
   // they acquire the same locks again or request lock upgrade/downgrade.
   private final Map<String, NavigableMap<Interval, List<TaskLockPosse>>> running = Maps.newHashMap();
@@ -280,8 +280,6 @@ public class TaskLockbox
           // Update task storage facility. If it fails, revoke the lock.
           try {
             taskStorage.addLock(task.getId(), posseToUse.getTaskLock());
-            // The task newly acquired a lock even though the lock itself might not be a new one.
-            // The revokedState is maintained per task, so it should be updated here.
             return LockResult.ok(posseToUse.getTaskLock());
           }
           catch (Exception e) {
@@ -332,7 +330,7 @@ public class TaskLockbox
   private TaskLockPosse createOrFindLockPosse(
       final Task task,
       final Interval interval,
-      @Nullable final String preferredVersion, // TODO: check this
+      @Nullable final String preferredVersion,
       final TaskLockType lockType
   )
   {
@@ -344,19 +342,14 @@ public class TaskLockbox
       final List<TaskLockPosse> foundPosses = findLockPossesOverlapsInterval(dataSource, interval);
 
       // If we have some locks for dataSource and interval, check they can be reused.
-      // If they can't be reused, check lock priority and revoke existing locks.
+      // If they can't be reused, check lock priority and revoke existing locks if possible.
       if (foundPosses.size() > 0) {
 
-        final List<TaskLockPosse> possesForReusableLocks = foundPosses.stream()
-                                                                      .filter(lockPosse ->
-                                                                                  matchGroupIdAndInterval(
-                                                                                      lockPosse.getTaskLock(),
-                                                                                      task,
-                                                                                      interval
-                                                                                  )
-                                                                      ).collect(Collectors.toList());
-
         if (lockType.equals(TaskLockType.SHARED) && isAllSharedLocks(foundPosses)) {
+          final List<TaskLockPosse> possesForReusableLocks = foundPosses
+              .stream()
+              .filter(lockPosse -> matchGroupIdAndContainInterval(lockPosse.getTaskLock(), task, interval))
+              .collect(Collectors.toList());
 
           if (possesForReusableLocks.size() == 0) {
             // Any number of shared locks can be acquired for the same dataSource and interval.
@@ -378,9 +371,9 @@ public class TaskLockbox
             );
           }
         } else {
-          if (possesForReusableLocks.size() == 1 &&
-              matchGroupIdAndInterval(possesForReusableLocks.get(0).taskLock, task, interval)) {
-            final TaskLockPosse foundPosse = possesForReusableLocks.get(0);
+          if (foundPosses.size() == 1 &&
+              matchGroupIdAndContainInterval(foundPosses.get(0).taskLock, task, interval)) {
+            final TaskLockPosse foundPosse = foundPosses.get(0);
             if (lockType.equals(foundPosse.getTaskLock().getType())) {
               return foundPosse;
             } else {
@@ -864,7 +857,7 @@ public class TaskLockbox
     }
   }
 
-  private static boolean matchGroupIdAndInterval(TaskLock existingLock, Task task, Interval interval)
+  private static boolean matchGroupIdAndContainInterval(TaskLock existingLock, Task task, Interval interval)
   {
     return existingLock.getInterval().contains(interval) &&
            existingLock.getGroupId().equals(task.getGroupId());
