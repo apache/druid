@@ -238,7 +238,7 @@ public class BoundFilter implements Filter
           return input -> doesMatch(extractionFn.apply(input));
         }
         if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
-          return input -> doublePredicateSupplier.get().applyDouble(input);
+          return doublePredicateSupplier.get();
         }
         return input -> doesMatch(String.valueOf(input));
       }

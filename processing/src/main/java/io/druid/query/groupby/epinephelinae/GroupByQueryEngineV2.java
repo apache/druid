@@ -427,6 +427,10 @@ outer:
                 baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
                 baseVal = baseVal == null ? 0.f : baseVal;
                 break;
+              case DOUBLE:
+                baseVal = DimensionHandlerUtils.convertObjectToDouble(baseVal);
+                baseVal = baseVal == null ? 0.d : baseVal;
+                break;
               default:
                 throw new IAE("Unsupported type: " + outputType);
             }

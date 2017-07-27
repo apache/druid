@@ -27,6 +27,7 @@ import com.google.common.io.Resources;
 import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.DoubleDimensionSchema;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
@@ -70,6 +71,7 @@ public class TestIndex
       "quality",
       "qualityLong",
       "qualityFloat",
+      "qualityDouble",
       "qualityNumericString",
       "placement",
       "placementish",
@@ -85,6 +87,7 @@ public class TestIndex
       "quality",
       "qualityLong",
       "qualityFloat",
+      "qualityDouble",
       "qualityNumericString",
       "placement",
       "placementish",
@@ -97,6 +100,7 @@ public class TestIndex
       new StringDimensionSchema("quality"),
       new LongDimensionSchema("qualityLong"),
       new FloatDimensionSchema("qualityFloat"),
+      new DoubleDimensionSchema("qualityDouble"),
       new StringDimensionSchema("qualityNumericString"),
       new StringDimensionSchema("placement"),
       new StringDimensionSchema("placementish"),

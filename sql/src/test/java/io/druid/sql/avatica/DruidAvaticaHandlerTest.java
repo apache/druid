@@ -120,7 +120,13 @@ public class DruidAvaticaHandlerTest
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     druidMeta = new DruidMeta(
-        new PlannerFactory(druidSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
+        new PlannerFactory(
+            druidSchema,
+            CalciteTests.createMockQueryLifecycleFactory(walker),
+            operatorTable,
+            macroTable,
+            plannerConfig
+        ),
         AVATICA_CONFIG
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
@@ -349,6 +355,14 @@ public class DruidAvaticaHandlerTest
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m1"),
+                Pair.of("DATA_TYPE", Types.FLOAT),
+                Pair.of("TYPE_NAME", "FLOAT"),
+                Pair.of("IS_NULLABLE", "NO")
+            ),
+            ROW(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", "foo"),
+                Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
                 Pair.of("IS_NULLABLE", "NO")
@@ -545,7 +559,13 @@ public class DruidAvaticaHandlerTest
 
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        new PlannerFactory(druidSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
+        new PlannerFactory(
+            druidSchema,
+            CalciteTests.createMockQueryLifecycleFactory(walker),
+            operatorTable,
+            macroTable,
+            plannerConfig
+        ),
         smallFrameConfig
     )
     {

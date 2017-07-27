@@ -17,43 +17,23 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
-
-import javax.annotation.Nullable;
+package io.druid.server.security;
 
 /**
+ * An AuthorizationInfo that is useful for actions generated internally by the system. It allows everything.
  */
-public class AllSearchQuerySpec implements SearchQuerySpec
+public class SystemAuthorizationInfo implements AuthorizationInfo
 {
-  private static final byte CACHE_TYPE_ID = 0x7f;
+  public static final SystemAuthorizationInfo INSTANCE = new SystemAuthorizationInfo();
 
-  @Override
-  public boolean accept(@Nullable String dimVal)
+  private SystemAuthorizationInfo()
   {
-    return true;
+    // Singleton.
   }
 
   @Override
-  public byte[] getCacheKey()
+  public Access isAuthorized(final Resource resource, final Action action)
   {
-    return new byte[]{CACHE_TYPE_ID};
-  }
-
-  @Override
-  public boolean equals(Object object)
-  {
-    return object instanceof AllSearchQuerySpec;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return CACHE_TYPE_ID;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "AllSearchQuerySpec{}";
+    return new Access(true);
   }
 }

@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.DirectDruidClient;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.ManageLifecycle;
@@ -41,8 +40,6 @@ import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
-import io.druid.query.QueryPlus;
-import io.druid.query.QuerySegmentWalker;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.metadata.AllColumnIncluderator;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
@@ -50,8 +47,9 @@ import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.column.ValueType;
+import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.server.initialization.ServerConfig;
+import io.druid.server.security.SystemAuthorizationInfo;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
@@ -91,13 +89,12 @@ public class DruidSchema extends AbstractSchema
   private static final EmittingLogger log = new EmittingLogger(DruidSchema.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
 
-  private final QuerySegmentWalker walker;
+  private final QueryLifecycleFactory queryLifecycleFactory;
   private final TimelineServerView serverView;
   private final PlannerConfig config;
   private final ViewManager viewManager;
   private final ExecutorService cacheExec;
   private final ConcurrentMap<String, DruidTable> tables;
-  private final ServerConfig serverConfig;
 
   // For awaitInitialization.
   private final CountDownLatch initializationLatch = new CountDownLatch(1);
@@ -124,20 +121,18 @@ public class DruidSchema extends AbstractSchema
 
   @Inject
   public DruidSchema(
-      final QuerySegmentWalker walker,
+      final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
       final PlannerConfig config,
-      final ViewManager viewManager,
-      final ServerConfig serverConfig
+      final ViewManager viewManager
   )
   {
-    this.walker = Preconditions.checkNotNull(walker, "walker");
+    this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
     this.serverView = Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
     this.tables = Maps.newConcurrentMap();
-    this.serverConfig = serverConfig;
   }
 
   @LifecycleStart
@@ -404,8 +399,7 @@ public class DruidSchema extends AbstractSchema
 
     final Set<DataSegment> retVal = new HashSet<>();
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
-        walker,
-        serverConfig,
+        queryLifecycleFactory,
         Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
     );
 
@@ -475,8 +469,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   private static Sequence<SegmentAnalysis> runSegmentMetadataQuery(
-      final QuerySegmentWalker walker,
-      final ServerConfig serverConfig,
+      final QueryLifecycleFactory queryLifecycleFactory,
       final Iterable<DataSegment> segments
   )
   {
@@ -491,28 +484,19 @@ public class DruidSchema extends AbstractSchema
                      .map(DataSegment::toDescriptor).collect(Collectors.toList())
     );
 
-    final SegmentMetadataQuery segmentMetadataQuery = DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(
-        new SegmentMetadataQuery(
-            new TableDataSource(dataSource),
-            querySegmentSpec,
-            new AllColumnIncluderator(),
-            false,
-            ImmutableMap.of(),
-            EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
-            false,
-            false
-        ),
-        serverConfig
+    final SegmentMetadataQuery segmentMetadataQuery = new SegmentMetadataQuery(
+        new TableDataSource(dataSource),
+        querySegmentSpec,
+        new AllColumnIncluderator(),
+        false,
+        ImmutableMap.of(),
+        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        false,
+        false
     );
 
-    return QueryPlus.wrap(segmentMetadataQuery)
-                    .run(
-                        walker,
-                        DirectDruidClient.makeResponseContextForQuery(
-                            segmentMetadataQuery,
-                            System.currentTimeMillis()
-                        )
-                    );
+    // Use SystemAuthorizationInfo since this is a query generated by Druid itself.
+    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, SystemAuthorizationInfo.INSTANCE, null);
   }
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)

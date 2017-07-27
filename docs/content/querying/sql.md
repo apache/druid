@@ -207,13 +207,13 @@ Additionally, some Druid features are not supported by the SQL language. Some un
 
 ## Data types and casts
 
-Druid natively supports four main column types: "long" (64 bit signed int), "float" (32 bit float), "string" (UTF-8
-encoded strings), and "complex" (catch-all for more exotic data types like hyperUnique and approxHistogram columns).
-Timestamps (including the `__time` column) are stored as longs, with the value being the number of milliseconds since 1
-January 1970 UTC.
+Druid natively supports five basic column types: "long" (64 bit signed int), "float" (32 bit float), "double" (64 bit
+float) "string" (UTF-8 encoded strings), and "complex" (catch-all for more exotic data types like hyperUnique and
+approxHistogram columns). Timestamps (including the `__time` column) are stored as longs, with the value being the
+number of milliseconds since 1 January 1970 UTC.
 
-At runtime, Druid will widen floats to "double" (64 bit float) for certain features, like `SUM` aggregators. But this
-widening is not universal; some floating point operations retain 32 bit precision.
+At runtime, Druid may widen 32-bit floats to 64-bit for certain operators, like SUM aggregators. The reverse will not
+happen: 64-bit floats are not be narrowed to 32-bit.
 
 Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
 Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
@@ -238,10 +238,10 @@ converted to zeroes).
 |--------|------------------|-------------|-----|
 |CHAR|STRING|`''`||
 |VARCHAR|STRING|`''`|Druid STRING columns are reported as VARCHAR|
-|DECIMAL|FLOAT or DOUBLE|`0.0`|DECIMAL uses floating point, not fixed point math|
-|FLOAT|FLOAT or DOUBLE|`0.0`|Druid FLOAT columns are reported as FLOAT|
-|REAL|FLOAT or DOUBLE|`0.0`||
-|DOUBLE|FLOAT or DOUBLE|`0.0`||
+|DECIMAL|DOUBLE|`0.0`|DECIMAL uses floating point, not fixed point math|
+|FLOAT|FLOAT|`0.0`|Druid FLOAT columns are reported as FLOAT|
+|REAL|DOUBLE|`0.0`||
+|DOUBLE|DOUBLE|`0.0`|Druid DOUBLE columns are reported as DOUBLE|
 |BOOLEAN|LONG|`false`||
 |TINYINT|LONG|`0`||
 |SMALLINT|LONG|`0`||
