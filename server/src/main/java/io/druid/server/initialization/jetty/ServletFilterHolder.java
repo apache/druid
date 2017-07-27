@@ -19,6 +19,8 @@
 
 package io.druid.server.initialization.jetty;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import java.util.EnumSet;
@@ -33,6 +35,7 @@ import java.util.Map;
  * Note that some of the druid nodes (router for example) use async servlets and your filter
  * implementation should be able to handle those requests properly.
  */
+@ExtensionPoint
 public interface ServletFilterHolder
 {
 
