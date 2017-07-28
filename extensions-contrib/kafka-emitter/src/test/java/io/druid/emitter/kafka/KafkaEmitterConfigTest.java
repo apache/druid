@@ -62,7 +62,8 @@ public class KafkaEmitterConfigTest
     );
     try {
       KafkaEmitter emitter = new KafkaEmitter(kafkaEmitterConfig, mapper);
-    } catch (NullPointerException e) {
+    }
+    catch (NullPointerException e) {
       Assert.fail();
     }
   }
