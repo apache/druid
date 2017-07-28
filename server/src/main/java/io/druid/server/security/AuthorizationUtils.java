@@ -280,6 +280,7 @@ public class AuthorizationUtils
       throw new ISE("No authorization manager found for namespace: [%s].", namespace);
     }
 
+    int initialSize = resources.size();
     final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
     List<ResType> filteredResources = new ArrayList<>();
     for (ResType resource : resources) {
@@ -298,7 +299,7 @@ public class AuthorizationUtils
       }
     }
 
-    request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, filteredResources.size() > 0);
+    request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, (filteredResources.size() > 0 || initialSize == 0));
     return filteredResources;
   }
 

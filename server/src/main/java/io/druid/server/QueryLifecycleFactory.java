@@ -52,7 +52,7 @@ public class QueryLifecycleFactory
       final ServerConfig serverConfig,
       final AuthConfig authConfig,
       final AuthorizationManagerMapper authorizationManagerMapper
-      )
+  )
   {
     this.warehouse = warehouse;
     this.texasRanger = texasRanger;
