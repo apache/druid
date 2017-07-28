@@ -958,7 +958,7 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
             DateTimes.of("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
-        client.mergeCachedAndUncachedSequences(
+        mergeSequences(
             new TopNQueryBuilder()
                 .dataSource("test")
                 .intervals("2011-01-06/2011-01-10")
@@ -970,6 +970,11 @@ public class CachingClusteredClientTest
             sequences
         )
     );
+  }
+
+  private static <T> Sequence<T> mergeSequences(Query<T> query, List<Sequence<T>> sequences)
+  {
+    return Sequences.simple(sequences).flatMerge(seq -> seq, query.getResultOrdering());
   }
 
 

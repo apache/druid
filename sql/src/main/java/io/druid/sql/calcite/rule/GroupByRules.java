@@ -27,11 +27,15 @@ import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.math.expr.ExprType;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FloatMaxAggregatorFactory;
+import io.druid.query.aggregation.FloatMinAggregatorFactory;
+import io.druid.query.aggregation.FloatSumAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -478,23 +482,19 @@ public class GroupByRules
 
     // Walk through the postProject expressions.
     int projectPostAggregatorCount = 0;
-    for (final RexNode projectExpression : postProject.getChildExps()) {
+    for (final RexNode postAggregatorRexNode : postProject.getChildExps()) {
       // Attempt to convert to PostAggregator.
       final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
           druidRel.getPlannerContext(),
           druidRel.getOutputRowSignature(),
-          projectExpression
+          postAggregatorRexNode
       );
 
       if (postAggregatorExpression == null) {
         return null;
       }
 
-      if (postAggregatorExpression.isDirectColumnAccess()
-          && druidRel.getQueryBuilder()
-                     .getOutputRowSignature()
-                     .getColumnType(postAggregatorExpression.getDirectColumn())
-                     .equals(Calcites.getValueTypeForSqlTypeName(projectExpression.getType().getSqlTypeName()))) {
+      if (postAggregatorDirectColumnIsOk(druidRel, postAggregatorExpression, postAggregatorRexNode)) {
         // Direct column access, without any type cast as far as Druid's runtime is concerned.
         // (There might be a SQL-level type cast that we don't care about)
         newRowOrder.add(postAggregatorExpression.getDirectColumn());
@@ -522,6 +522,40 @@ public class GroupByRules
                     newRowOrder
                 )
     );
+  }
+
+  /**
+   * Returns true if a post-aggregation "expression" can be realized as a direct field access. This is true if it's
+   * a direct column access that doesn't require an implicit cast.
+   *
+   * @param druidRel   druid aggregation rel
+   * @param expression post-aggregation expression
+   * @param rexNode    RexNode for the post-aggregation expression
+   *
+   * @return
+   */
+  private static boolean postAggregatorDirectColumnIsOk(
+      final DruidRel druidRel,
+      final DruidExpression expression,
+      final RexNode rexNode
+  )
+  {
+    if (!expression.isDirectColumnAccess()) {
+      return false;
+    }
+
+    // Check if a cast is necessary.
+    final ExprType toExprType = Expressions.exprTypeForValueType(
+        druidRel.getQueryBuilder()
+                .getOutputRowSignature()
+                .getColumnType(expression.getDirectColumn())
+    );
+
+    final ExprType fromExprType = Expressions.exprTypeForValueType(
+        Calcites.getValueTypeForSqlTypeName(rexNode.getType().getSqlTypeName())
+    );
+
+    return toExprType.equals(fromExprType);
   }
 
   private static boolean canApplyHaving(final DruidRel druidRel)
@@ -780,9 +814,24 @@ public class GroupByRules
         // Built-in aggregator that is not COUNT.
         final Aggregation retVal;
 
-        final boolean isLong = SqlTypeName.INT_TYPES.contains(outputType)
-                               || SqlTypeName.TIMESTAMP == outputType
-                               || SqlTypeName.DATE == outputType;
+        final ValueType aggregationType;
+
+        if (SqlTypeName.INT_TYPES.contains(outputType)
+            || SqlTypeName.TIMESTAMP == outputType
+            || SqlTypeName.DATE == outputType) {
+          aggregationType = ValueType.LONG;
+        } else if (SqlTypeName.FLOAT == outputType) {
+          aggregationType = ValueType.FLOAT;
+        } else if (SqlTypeName.FRACTIONAL_TYPES.contains(outputType)) {
+          aggregationType = ValueType.DOUBLE;
+        } else {
+          throw new ISE(
+              "Cannot determine aggregation type for SQL operator[%s] type[%s]",
+              call.getAggregation().getName(),
+              outputType
+          );
+        }
+
         final String fieldName;
         final String expression;
         final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
@@ -796,23 +845,27 @@ public class GroupByRules
         }
 
         if (kind == SqlKind.SUM || kind == SqlKind.SUM0) {
-          retVal = isLong
-                   ? Aggregation.create(new LongSumAggregatorFactory(name, fieldName, expression, macroTable))
-                   : Aggregation.create(new DoubleSumAggregatorFactory(name, fieldName, expression, macroTable));
+          retVal = Aggregation.create(
+              createSumAggregatorFactory(aggregationType, name, fieldName, expression, macroTable)
+          );
         } else if (kind == SqlKind.MIN) {
-          retVal = isLong
-                   ? Aggregation.create(new LongMinAggregatorFactory(name, fieldName, expression, macroTable))
-                   : Aggregation.create(new DoubleMinAggregatorFactory(name, fieldName, expression, macroTable));
+          retVal = Aggregation.create(
+              createMinAggregatorFactory(aggregationType, name, fieldName, expression, macroTable)
+          );
         } else if (kind == SqlKind.MAX) {
-          retVal = isLong
-                   ? Aggregation.create(new LongMaxAggregatorFactory(name, fieldName, expression, macroTable))
-                   : Aggregation.create(new DoubleMaxAggregatorFactory(name, fieldName, expression, macroTable));
+          retVal = Aggregation.create(
+              createMaxAggregatorFactory(aggregationType, name, fieldName, expression, macroTable)
+          );
         } else if (kind == SqlKind.AVG) {
           final String sumName = StringUtils.format("%s:sum", name);
           final String countName = StringUtils.format("%s:count", name);
-          final AggregatorFactory sum = isLong
-                                        ? new LongSumAggregatorFactory(sumName, fieldName, expression, macroTable)
-                                        : new DoubleSumAggregatorFactory(sumName, fieldName, expression, macroTable);
+          final AggregatorFactory sum = createSumAggregatorFactory(
+              aggregationType,
+              sumName,
+              fieldName,
+              expression,
+              macroTable
+          );
           final AggregatorFactory count = new CountAggregatorFactory(countName);
           retVal = Aggregation.create(
               ImmutableList.of(sum, count),
@@ -881,5 +934,65 @@ public class GroupByRules
            : Filtration.create(filter)
                        .optimizeFilterOnly(sourceRowSignature)
                        .getDimFilter();
+  }
+
+  private static AggregatorFactory createSumAggregatorFactory(
+      final ValueType aggregationType,
+      final String name,
+      final String fieldName,
+      final String expression,
+      final ExprMacroTable macroTable
+  )
+  {
+    switch (aggregationType) {
+      case LONG:
+        return new LongSumAggregatorFactory(name, fieldName, expression, macroTable);
+      case FLOAT:
+        return new FloatSumAggregatorFactory(name, fieldName, expression, macroTable);
+      case DOUBLE:
+        return new DoubleSumAggregatorFactory(name, fieldName, expression, macroTable);
+      default:
+        throw new ISE("Cannot create aggregator factory for type[%s]", aggregationType);
+    }
+  }
+
+  private static AggregatorFactory createMinAggregatorFactory(
+      final ValueType aggregationType,
+      final String name,
+      final String fieldName,
+      final String expression,
+      final ExprMacroTable macroTable
+  )
+  {
+    switch (aggregationType) {
+      case LONG:
+        return new LongMinAggregatorFactory(name, fieldName, expression, macroTable);
+      case FLOAT:
+        return new FloatMinAggregatorFactory(name, fieldName, expression, macroTable);
+      case DOUBLE:
+        return new DoubleMinAggregatorFactory(name, fieldName, expression, macroTable);
+      default:
+        throw new ISE("Cannot create aggregator factory for type[%s]", aggregationType);
+    }
+  }
+
+  private static AggregatorFactory createMaxAggregatorFactory(
+      final ValueType aggregationType,
+      final String name,
+      final String fieldName,
+      final String expression,
+      final ExprMacroTable macroTable
+  )
+  {
+    switch (aggregationType) {
+      case LONG:
+        return new LongMaxAggregatorFactory(name, fieldName, expression, macroTable);
+      case FLOAT:
+        return new FloatMaxAggregatorFactory(name, fieldName, expression, macroTable);
+      case DOUBLE:
+        return new DoubleMaxAggregatorFactory(name, fieldName, expression, macroTable);
+      default:
+        throw new ISE("Cannot create aggregator factory for type[%s]", aggregationType);
+    }
   }
 }

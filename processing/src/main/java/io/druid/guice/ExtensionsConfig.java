@@ -22,7 +22,7 @@ package io.druid.guice;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
-import java.util.List;
+import java.util.LinkedHashSet;
 
 /**
  */
@@ -46,7 +46,7 @@ public class ExtensionsConfig
   private boolean addExtensionsToHadoopContainer = false;
 
   @JsonProperty
-  private List<String> loadList;
+  private LinkedHashSet<String> loadList;
 
   public boolean searchCurrentClassloader()
   {
@@ -73,7 +73,7 @@ public class ExtensionsConfig
     return addExtensionsToHadoopContainer;
   }
 
-  public List<String> getLoadList()
+  public LinkedHashSet<String> getLoadList()
   {
     return loadList;
   }

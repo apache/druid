@@ -82,10 +82,10 @@ public class SearchQueryRunnerWithCaseTest
     configs[2].setSearchStrategy(AutoStrategy.NAME);
 
     CharSource input = CharSource.wrap(
-        "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\t1000\t10000.0\t100000\tPREFERRED\ta\u0001preferred\t100.000000\n" +
-        "2011-01-12T00:00:00.000Z\tSPot\tbusiness\t1100\t11000.0\t110000\tpreferred\tb\u0001Preferred\t100.000000\n" +
-        "2011-01-12T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tPREFERRed\te\u0001preferred\t100.000000\n" +
-        "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\ta\u0001preferred\t94.874713"
+        "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\t1000\t10000.0\t10000.0\t100000\tPREFERRED\ta\u0001preferred\t100.000000\n" +
+        "2011-01-12T00:00:00.000Z\tSPot\tbusiness\t1100\t11000.0\t11000.0\t110000\tpreferred\tb\u0001Preferred\t100.000000\n" +
+        "2011-01-12T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t12000.0\t120000\tPREFERRed\te\u0001preferred\t100.000000\n" +
+        "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t10000.0\t100000\tpreferred\ta\u0001preferred\t94.874713"
     );
 
     IncrementalIndex index1 = TestIndex.makeRealtimeIndex(input);

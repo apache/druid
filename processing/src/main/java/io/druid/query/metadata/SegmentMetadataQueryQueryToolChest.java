@@ -119,7 +119,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
                 makeOrdering(updatedQuery),
                 createMergeFn(updatedQuery)
             ),
-            MERGE_TRANSFORM_FN
+            MERGE_TRANSFORM_FN::apply
         );
       }
 

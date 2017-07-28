@@ -144,7 +144,7 @@ public class OrcHadoopInputRowParserTest
   @Test
   public void testParse()
   {
-    final String typeString = "struct<timestamp:string,col1:string,col2:array<string>,col3:float,col4:bigint,col5:decimal>";
+    final String typeString = "struct<timestamp:string,col1:string,col2:array<string>,col3:float,col4:bigint,col5:decimal,col6:array<string>>";
     final OrcHadoopInputRowParser parser = new OrcHadoopInputRowParser(
         new TimeAndDimsParseSpec(
             new TimestampSpec("timestamp", "auto", null),
@@ -157,13 +157,14 @@ public class OrcHadoopInputRowParserTest
         TypeInfoUtils.getTypeInfoFromTypeString(typeString)
     );
     final OrcStruct struct = (OrcStruct) oi.create();
-    struct.setNumFields(6);
+    struct.setNumFields(7);
     oi.setStructFieldData(struct, oi.getStructFieldRef("timestamp"), new Text("2000-01-01"));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col1"), new Text("foo"));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col2"), ImmutableList.of(new Text("foo"), new Text("bar")));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col3"), new FloatWritable(1));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col4"), new LongWritable(2));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col5"), new HiveDecimalWritable(3));
+    oi.setStructFieldData(struct, oi.getStructFieldRef("col6"), null);
 
     final InputRow row = parser.parse(struct);
     Assert.assertEquals("timestamp", DateTimes.of("2000-01-01"), row.getTimestamp());
@@ -172,5 +173,6 @@ public class OrcHadoopInputRowParserTest
     Assert.assertEquals("col3", 1.0f, row.getRaw("col3"));
     Assert.assertEquals("col4", 2L, row.getRaw("col4"));
     Assert.assertEquals("col5", 3.0d, row.getRaw("col5"));
+    Assert.assertNull("col6", row.getRaw("col6"));
   }
 }

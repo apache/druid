@@ -659,8 +659,7 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
             new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -717,8 +716,7 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
             new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -1082,8 +1080,7 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
             new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final long startTime = System.currentTimeMillis();

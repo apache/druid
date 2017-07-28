@@ -213,7 +213,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   }
 
   @Override
-  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval)
+  public List<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval)
   {
     try {
       lock.readLock().lock();
