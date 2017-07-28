@@ -35,6 +35,7 @@ import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 
 import io.druid.java.util.common.StringUtils;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
@@ -55,10 +56,11 @@ public class CoordinatorClient
   public CoordinatorClient(
       @Global HttpClient client,
       ObjectMapper jsonMapper,
-      @Coordinator ServerDiscoverySelector selector
+      @Coordinator ServerDiscoverySelector selector,
+      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
   )
   {
-    this.client = client;
+    this.client = authenticatorHttpClientWrapper.getEscalatedClient(client);
     this.jsonMapper = jsonMapper;
     this.selector = selector;
   }

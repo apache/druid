@@ -26,6 +26,8 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
@@ -455,7 +457,12 @@ public class DruidCoordinatorSegmentMergerTest
     EasyMock.replay(configManager);
 
     final List<List<DataSegment>> retVal = Lists.newArrayList();
-    final IndexingServiceClient indexingServiceClient = new IndexingServiceClient(null, null, null)
+    final IndexingServiceClient indexingServiceClient = new IndexingServiceClient(
+        null,
+        null,
+        null,
+        new AuthenticatorHttpClientWrapper(new AuthConfig(), null)
+    )
     {
       @Override
       public void mergeSegments(List<DataSegment> segmentsToMerge)

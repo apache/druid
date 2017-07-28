@@ -27,13 +27,9 @@ import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Global;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authenticator;
 
 import java.lang.annotation.Annotation;
-import java.util.List;
 
 /**
  */
@@ -122,24 +118,10 @@ public class HttpClientModule implements Module
         builder.withSslContext(getSslContextBinding().getProvider().get());
       }
 
-      HttpClient client = HttpClientInit.createClient(
+      return HttpClientInit.createClient(
           builder.build(),
           LifecycleUtils.asMmxLifecycle(getLifecycleProvider().get())
       );
-      final AuthConfig authConfig = getAuthConfig();
-      if (authConfig.isEnabled()) {
-        List<Authenticator> authenticators = getAuthenticatorChain();
-        for (Authenticator authenticator : authenticators) {
-          if (authenticator.getTypeName().equals(authConfig.getInternalAuthenticator())) {
-            return authenticator.createInternalClient(client);
-          }
-        }
-        throw new ISE(
-            "Could not locate internal authenticator with type name: %s",
-            authConfig.getInternalAuthenticator()
-        );
-      }
-      return client;
     }
   }
 }

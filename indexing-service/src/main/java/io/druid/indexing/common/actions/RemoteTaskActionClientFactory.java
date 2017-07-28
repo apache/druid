@@ -27,6 +27,7 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 
 /**
  */
@@ -42,10 +43,11 @@ public class RemoteTaskActionClientFactory implements TaskActionClientFactory
       @Global HttpClient httpClient,
       @IndexingService ServerDiscoverySelector selector,
       RetryPolicyFactory retryPolicyFactory,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
   )
   {
-    this.httpClient = httpClient;
+    this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
     this.selector = selector;
     this.retryPolicyFactory = retryPolicyFactory;
     this.jsonMapper = jsonMapper;

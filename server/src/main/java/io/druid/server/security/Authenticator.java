@@ -108,5 +108,5 @@ public interface Authenticator extends ServletFilterHolder
    *
    * @return HttpClient that sends requests with the credentials of the internal system user
    */
-  public HttpClient createInternalClient(HttpClient baseClient);
+  public HttpClient createEscalatedClient(HttpClient baseClient);
 }

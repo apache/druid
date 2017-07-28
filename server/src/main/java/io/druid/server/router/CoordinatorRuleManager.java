@@ -40,6 +40,7 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.rules.Rule;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
@@ -79,10 +80,11 @@ public class CoordinatorRuleManager
       @Global HttpClient httpClient,
       @Json ObjectMapper jsonMapper,
       Supplier<TieredBrokerConfig> config,
-      ServerDiscoverySelector selector
+      ServerDiscoverySelector selector,
+      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
   )
   {
-    this.httpClient = httpClient;
+    this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.selector = selector;

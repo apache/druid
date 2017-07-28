@@ -32,6 +32,7 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.server.initialization.IndexerZkConfig;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.apache.curator.framework.CuratorFramework;
 
 /**
@@ -59,14 +60,15 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
       final Supplier<WorkerBehaviorConfig> workerConfigRef,
       final ScheduledExecutorFactory factory,
       final ProvisioningSchedulerConfig provisioningSchedulerConfig,
-      final ProvisioningStrategy provisioningStrategy
-  )
+      final ProvisioningStrategy provisioningStrategy,
+      final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+      )
   {
     this.curator = curator;
     this.remoteTaskRunnerConfig = remoteTaskRunnerConfig;
     this.zkPaths = zkPaths;
     this.jsonMapper = jsonMapper;
-    this.httpClient = httpClient;
+    this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
     this.workerConfigRef = workerConfigRef;
     this.provisioningSchedulerConfig = provisioningSchedulerConfig;
     this.provisioningStrategy = provisioningStrategy;

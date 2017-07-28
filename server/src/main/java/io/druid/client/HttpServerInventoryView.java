@@ -54,6 +54,7 @@ import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestHistory;
 import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -118,10 +119,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       final @Global HttpClient httpClient,
       final DruidServerDiscovery serverDiscovery,
       final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
-      final HttpServerInventoryViewConfig config
-  )
+      final HttpServerInventoryViewConfig config,
+      final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+      )
   {
-    this.httpClient = httpClient;
+    this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
     this.smileMapper = smileMapper;
     this.serverDiscovery = serverDiscovery;
     this.defaultFilter = defaultFilter;

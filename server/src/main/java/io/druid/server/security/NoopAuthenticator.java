@@ -111,7 +111,7 @@ public class NoopAuthenticator implements Authenticator
   }
 
   @Override
-  public HttpClient createInternalClient(HttpClient baseClient)
+  public HttpClient createEscalatedClient(HttpClient baseClient)
   {
     return baseClient;
   }

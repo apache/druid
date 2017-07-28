@@ -31,6 +31,7 @@ import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -54,10 +55,11 @@ public class IndexingServiceClient
   public IndexingServiceClient(
       @Global HttpClient client,
       ObjectMapper jsonMapper,
-      @IndexingService ServerDiscoverySelector selector
+      @IndexingService ServerDiscoverySelector selector,
+      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
   )
   {
-    this.client = client;
+    this.client = authenticatorHttpClientWrapper.getEscalatedClient(client);
     this.jsonMapper = jsonMapper;
     this.selector = selector;
   }

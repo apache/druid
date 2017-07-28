@@ -35,6 +35,8 @@ import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import junit.framework.Assert;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -131,7 +133,8 @@ public class RemoteTaskRunnerFactoryTest
             provisioningConfig,
             workerBehaviorConfig,
             provisioningSchedulerConfig
-        )
+        ),
+        new AuthenticatorHttpClientWrapper(new AuthConfig(), null)
     );
     Assert.assertEquals(0, executorCount.get());
     RemoteTaskRunner remoteTaskRunner1 = factory.build();

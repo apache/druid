@@ -44,6 +44,8 @@ import io.druid.query.lookup.LookupModule;
 import io.druid.query.lookup.LookupsState;
 import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.listener.announcer.ListenerDiscoverer;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.easymock.EasyMock;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -77,6 +79,10 @@ public class LookupCoordinatorManagerTest
   private final HttpClient client = EasyMock.createStrictMock(HttpClient.class);
   private final JacksonConfigManager configManager = EasyMock.createStrictMock(JacksonConfigManager.class);
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig = new LookupCoordinatorManagerConfig();
+  private final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper = new AuthenticatorHttpClientWrapper(
+      new AuthConfig(),
+      null
+  );
 
   private static final String LOOKUP_TIER = "lookup_tier";
   private static final String SINGLE_LOOKUP_NAME = "lookupName";
@@ -535,7 +541,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -558,7 +565,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -590,7 +598,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -627,7 +636,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -689,7 +699,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -744,7 +755,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -774,7 +786,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -808,7 +821,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -863,7 +877,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -908,7 +923,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -933,7 +949,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -959,7 +976,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -988,7 +1006,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -1013,7 +1032,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     )
     {
       @Override
@@ -1166,7 +1186,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     );
 
     LookupsState<LookupExtractorFactoryMapContainer> currNodeState = new LookupsState<>(
@@ -1202,7 +1223,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     );
 
     LookupsState<LookupExtractorFactoryMapContainer> currNodeState = new LookupsState<>(
@@ -1249,7 +1271,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     );
 
     Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -1286,7 +1309,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     );
 
     Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -1338,7 +1362,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     );
     manager.start();
     Assert.assertEquals(fakeChildren, manager.discoverTiers());
@@ -1375,7 +1400,8 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        lookupCoordinatorManagerConfig,
+        authenticatorHttpClientWrapper
     );
 
     manager.start();
@@ -1444,7 +1470,8 @@ public class LookupCoordinatorManagerTest
           {
             return 1;
           }
-        }
+        },
+        authenticatorHttpClientWrapper
     );
     manager.start();
     EasyMock.verify(configManager);

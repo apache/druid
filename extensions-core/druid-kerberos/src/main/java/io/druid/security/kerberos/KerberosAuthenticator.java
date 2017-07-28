@@ -416,7 +416,7 @@ public class KerberosAuthenticator implements Authenticator
   }
 
   @Override
-  public HttpClient createInternalClient(HttpClient baseClient)
+  public HttpClient createEscalatedClient(HttpClient baseClient)
   {
     return new KerberosHttpClient(baseClient, authConfig);
   }

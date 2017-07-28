@@ -21,6 +21,8 @@ package io.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QueryInterruptedException;
 import io.druid.server.DruidNode;
@@ -115,6 +117,21 @@ public class PreResponseAuthorizationCheckFilter implements Filter
         return;
       }
 
+      filterChain.doFilter(servletRequest, servletResponse);
+
+      authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED);
+      if (authInfoChecked == null && !errorOverridesMissingAuth(response.getStatus())) {
+        String errorMsg = StringUtils.format(
+            "Request did not have an authorization check performed: %s",
+            ((HttpServletRequest) servletRequest).getRequestURI()
+        );
+        log.error(errorMsg);
+        throw new ISE(errorMsg);
+      }
+
+      /*
+      this breaks proxying, disable for now.
+
       // capture the response stream before its sent to client, or we don't get a chance to modify it later
       // http://www.oracle.com/technetwork/java/filters-137243.html
       GenericResponseWrapper wrapper = new GenericResponseWrapper((HttpServletResponse) servletResponse);
@@ -130,10 +147,11 @@ public class PreResponseAuthorizationCheckFilter implements Filter
             ((HttpServletRequest) servletRequest).getRequestURI()
         );
         sendJsonError(response, Response.SC_FORBIDDEN, jsonMapper.writeValueAsString(unauthorizedError), out);
+        out.close();
       } else {
         out.write(wrapper.getData());
       }
-      out.close();
+      */
     } else {
       filterChain.doFilter(servletRequest, servletResponse);
     }

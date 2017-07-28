@@ -29,6 +29,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -65,6 +66,10 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
   @NotNull
   private CuratorFramework curator = null;
 
+  @JacksonInject
+  @NotNull
+  private AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper = null;
+
   @Override
   public HttpServerInventoryView get()
   {
@@ -72,7 +77,8 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
         jsonMapper, smileMapper, httpClient,
         new DruidServerDiscovery(curator, zkPaths.getAnnouncementsPath(), jsonMapper),
         Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue(),
-        config
+        config,
+        authenticatorHttpClientWrapper
     );
   }
 }

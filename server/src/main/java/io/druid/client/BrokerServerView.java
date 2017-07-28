@@ -40,6 +40,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -83,6 +84,7 @@ public class BrokerServerView implements TimelineServerView
       QueryWatcher queryWatcher,
       @Smile ObjectMapper smileMapper,
       @Client HttpClient httpClient,
+      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper,
       FilteredServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
       ServiceEmitter emitter,
@@ -92,7 +94,7 @@ public class BrokerServerView implements TimelineServerView
     this.warehouse = warehouse;
     this.queryWatcher = queryWatcher;
     this.smileMapper = smileMapper;
-    this.httpClient = httpClient;
+    this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;

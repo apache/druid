@@ -34,6 +34,8 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -249,7 +251,13 @@ public class TieredBrokerHostSelectorTest
         ServerDiscoverySelector selector
     )
     {
-      super(httpClient, jsonMapper, config, selector);
+      super(
+          httpClient,
+          jsonMapper,
+          config,
+          selector,
+          new AuthenticatorHttpClientWrapper(new AuthConfig(), null)
+      );
     }
 
     @Override

@@ -25,6 +25,7 @@ import com.metamx.http.client.HttpClient;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.TaskInfoProvider;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.joda.time.Duration;
 
 public class KafkaIndexTaskClientFactory
@@ -33,9 +34,13 @@ public class KafkaIndexTaskClientFactory
   private ObjectMapper mapper;
 
   @Inject
-  public KafkaIndexTaskClientFactory(@Global HttpClient httpClient, @Json ObjectMapper mapper)
+  public KafkaIndexTaskClientFactory(
+      @Global HttpClient httpClient,
+      @Json ObjectMapper mapper,
+      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+  )
   {
-    this.httpClient = httpClient;
+    this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
     this.mapper = mapper;
   }
 

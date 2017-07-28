@@ -59,6 +59,7 @@ import io.druid.query.lookup.LookupsState;
 import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.listener.resource.ListenerResource;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -137,14 +138,19 @@ public class LookupCoordinatorManager
       final ListenerDiscoverer listenerDiscoverer,
       final @Smile ObjectMapper smileMapper,
       final JacksonConfigManager configManager,
-      final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig
-  )
+      final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig,
+      final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+      )
   {
     this(
         listenerDiscoverer,
         configManager,
         lookupCoordinatorManagerConfig,
-        new LookupsCommunicator(httpClient, lookupCoordinatorManagerConfig, smileMapper)
+        new LookupsCommunicator(
+            authenticatorHttpClientWrapper.getEscalatedClient(httpClient),
+            lookupCoordinatorManagerConfig,
+            smileMapper
+        )
     );
   }
 
