@@ -216,6 +216,7 @@
                         <artifactId>forbiddenapis</artifactId>
                         <configuration>
                             <signaturesFiles>
+                                <!-- Needed because of https://github.com/policeman-tools/forbidden-apis/issues/126 -->
                                 <signaturesFile>../codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                             </signaturesFiles>
                         </configuration>
@@ -258,6 +259,7 @@
                         <artifactId>forbiddenapis</artifactId>
                         <configuration>
                             <signaturesFiles>
+                                <!-- Needed because of https://github.com/policeman-tools/forbidden-apis/issues/126 -->
                                 <signaturesFile>../codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                             </signaturesFiles>
                         </configuration>
