@@ -105,7 +105,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
     private int targetWorkerCount = -1;
     private DateTime lastProvisionTime = DateTimes.nowUtc();
-    private DateTime lastTerminateTime = DateTimes.nowUtc();
+    private DateTime lastTerminateTime = lastProvisionTime;
 
     SimpleProvisioner(WorkerTaskRunner runner)
     {
