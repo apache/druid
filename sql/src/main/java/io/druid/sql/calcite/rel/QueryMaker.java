@@ -64,9 +64,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class
-
-QueryMaker
+public class QueryMaker
 {
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerContext plannerContext;
