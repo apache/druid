@@ -32,20 +32,12 @@ import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
@@ -125,33 +117,12 @@ public class PreResponseAuthorizationCheckFilter implements Filter
             "Request did not have an authorization check performed: %s",
             ((HttpServletRequest) servletRequest).getRequestURI()
         );
+        // Note: rather than throwing an exception here, it would be nice to blank out the original response
+        // since the request didn't have any authorization checks performed. However, this breaks proxying
+        // (e.g. OverlordServletProxy), so this is not implemented for now.
         log.error(errorMsg);
         throw new ISE(errorMsg);
       }
-
-      /*
-      this breaks proxying, disable for now.
-
-      // capture the response stream before its sent to client, or we don't get a chance to modify it later
-      // http://www.oracle.com/technetwork/java/filters-137243.html
-      GenericResponseWrapper wrapper = new GenericResponseWrapper((HttpServletResponse) servletResponse);
-      filterChain.doFilter(servletRequest, wrapper);
-
-      // After response has been generated, something in the request processing path must have set
-      // DRUID_AUTH_TOKEN_CHECKED (i.e. performed an authorization check). If this is not set,
-      // a 403 error will be returned instead of the response.
-      authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED);
-      if (authInfoChecked == null && !errorOverridesMissingAuth(response.getStatus())) {
-        log.error(
-            "Request did not have an authorization check performed: %s",
-            ((HttpServletRequest) servletRequest).getRequestURI()
-        );
-        sendJsonError(response, Response.SC_FORBIDDEN, jsonMapper.writeValueAsString(unauthorizedError), out);
-        out.close();
-      } else {
-        out.write(wrapper.getData());
-      }
-      */
     } else {
       filterChain.doFilter(servletRequest, servletResponse);
     }
@@ -178,107 +149,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     }
     catch (IOException ioe) {
       log.error("WTF? Can't get writer from HTTP response.");
-    }
-  }
-
-  // classes from "Servlet Filters and Event Listeners"
-  // https://docs.oracle.com/cd/B14099_19/web.1012/b14017/filters.htm
-  private static class GenericResponseWrapper extends HttpServletResponseWrapper
-  {
-    private ByteArrayOutputStream output;
-    private int contentLength;
-    private String contentType;
-
-    public GenericResponseWrapper(HttpServletResponse response)
-    {
-      super(response);
-      output = new ByteArrayOutputStream();
-    }
-
-    public byte[] getData()
-    {
-      return output.toByteArray();
-    }
-
-    @Override
-    public ServletOutputStream getOutputStream()
-    {
-      return new FilterServletOutputStream(output);
-    }
-
-    @Override
-    public PrintWriter getWriter()
-    {
-      return new PrintWriter(
-          new BufferedWriter(new OutputStreamWriter(getOutputStream(), StandardCharsets.UTF_8)),
-          true
-      );
-    }
-
-    @Override
-    public void setContentLength(int length)
-    {
-      this.contentLength = length;
-      super.setContentLength(length);
-    }
-
-    public int getContentLength()
-    {
-      return contentLength;
-    }
-
-    @Override
-    public void setContentType(String type)
-    {
-      this.contentType = type;
-      super.setContentType(type);
-    }
-
-    @Override
-    public String getContentType()
-    {
-      return contentType;
-    }
-  }
-
-  private static class FilterServletOutputStream extends ServletOutputStream
-  {
-
-    private DataOutputStream stream;
-
-    public FilterServletOutputStream(OutputStream output)
-    {
-      stream = new DataOutputStream(output);
-    }
-
-    @Override
-    public void write(int b) throws IOException
-    {
-      stream.write(b);
-    }
-
-    @Override
-    public void write(byte[] b) throws IOException
-    {
-      stream.write(b);
-    }
-
-    @Override
-    public void write(byte[] b, int off, int len) throws IOException
-    {
-      stream.write(b, off, len);
-    }
-
-    @Override
-    public boolean isReady()
-    {
-      return false;
-    }
-
-    @Override
-    public void setWriteListener(WriteListener writeListener)
-    {
-
     }
   }
 }
