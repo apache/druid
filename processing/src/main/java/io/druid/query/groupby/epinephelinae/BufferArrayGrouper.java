@@ -21,56 +21,48 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
+import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.stream.IntStream;
+import java.util.NoSuchElementException;
+import java.util.function.Function;
 
 /**
  * A buffer grouper for array-based aggregation.  This grouper stores aggregated values in the buffer using the grouping
- * key as the index.  To do so, the grouping key always has the integer type.
+ * key as the index.
  * <p>
- * The buffer is divided into 3 separate regions, i.e., key buffer, used flag buffer, and value buffer.  The key buffer
- * is used to temporaily store a single key when deserializing the key using {@link Grouper.KeySerde} in
- * {@link #iterator(boolean)}.  The used flag buffer is a bit set to represent which keys are valid.  If a bit of an
- * index is set, that key is valid.  Finally, the value buffer is used to store aggregated values.  The first index is
- * reserved for {@link StringGroupByColumnSelectorStrategy#GROUP_BY_MISSING_VALUE}.
+ * The buffer is divided into 2 separate regions, i.e., used flag buffer and value buffer.  The used flag buffer is a
+ * bit set to represent which keys are valid.  If a bit of an index is set, that key is valid.  Finally, the value
+ * buffer is used to store aggregated values.  The first index is reserved for
+ * {@link GroupByColumnSelectorStrategy#GROUP_BY_MISSING_VALUE}.
  * <p>
  * This grouper is available only when the grouping key is a single indexed dimension of a known cardinality because it
  * directly uses the dimension value as the index for array access.  Since the cardinality for the grouping key across
  * different segments cannot be currently retrieved, this grouper can be used only when performing per-segment query
  * execution.
- * <p>
- * Since the index directly represents the grouping key, the grouping key type is always the integer.  However, the
- * {@link KeyType} parameter is preserved because this grouper will be used for merging per-segment aggregation
- * results with a proper cardinality computation in the future.
  */
-public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
+public class BufferArrayGrouper implements Grouper<Integer>
 {
   private static final Logger LOG = new Logger(BufferArrayGrouper.class);
 
   private final Supplier<ByteBuffer> bufferSupplier;
-  private final KeySerde<KeyType> keySerde;
   private final BufferAggregator[] aggregators;
   private final int[] aggregatorOffsets;
   private final int cardinalityWithMissingValue;
   private final int recordSize; // size of all aggregated values
 
   private boolean initialized = false;
-  private ByteBuffer keyBuffer;
   private ByteBuffer usedFlagBuffer;
   private ByteBuffer valBuffer;
 
-  static <KeyType> int requiredBufferCapacity(
-      KeySerde<KeyType> keySerde,
+  static int requiredBufferCapacity(
       int cardinality,
       AggregatorFactory[] aggregatorFactories
   )
@@ -80,14 +72,18 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
                                  .mapToInt(AggregatorFactory::getMaxIntermediateSize)
                                  .sum();
 
-    return keySerde.keySize() +                                         // key size
-           (int) Math.ceil((double) cardinalityWithMissingValue / 8) +  // total used flags size
-           cardinalityWithMissingValue * recordSize;                    // total values size
+    return Integer.BYTES +                                       // key size
+           getUserBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
+           cardinalityWithMissingValue * recordSize;             // total values size
+  }
+
+  private static int getUserBufferCapacity(int cardinalityWithMissingValue)
+  {
+    return (int) Math.ceil((double) cardinalityWithMissingValue / 8);
   }
 
   public BufferArrayGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
-      final KeySerde<KeyType> keySerde,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
       final int cardinality
@@ -97,7 +93,6 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
     Preconditions.checkArgument(cardinality > 0, "Cardinality must a non-zero positive number");
 
     this.bufferSupplier = Preconditions.checkNotNull(bufferSupplier, "bufferSupplier");
-    this.keySerde = Preconditions.checkNotNull(keySerde, "keySerde");
     this.aggregators = new BufferAggregator[aggregatorFactories.length];
     this.aggregatorOffsets = new int[aggregatorFactories.length];
     this.cardinalityWithMissingValue = cardinality + 1;
@@ -117,12 +112,8 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
     if (!initialized) {
       final ByteBuffer buffer = bufferSupplier.get().duplicate();
 
+      final int usedBufferEnd = getUserBufferCapacity(cardinalityWithMissingValue);
       buffer.position(0);
-      buffer.limit(keySerde.keySize());
-      keyBuffer = buffer.slice();
-
-      final int usedBufferEnd = keySerde.keySize() + (int) Math.ceil((double) cardinalityWithMissingValue / 8);
-      buffer.position(keySerde.keySize());
       buffer.limit(usedBufferEnd);
       usedFlagBuffer = buffer.slice();
 
@@ -143,27 +134,7 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public AggregateResult aggregate(KeyType key)
-  {
-    // BufferArrayGrouper is used only for dictionary-indexed single-value string dimensions.
-    // Here, the key contains the dictionary-encoded value of the grouping key
-    // and we use it as the index for the aggregation array.
-
-    final ByteBuffer fromKey = checkAndGetKeyBuffer(keySerde, key);
-    if (fromKey == null) {
-      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
-      // be correct.
-      return Groupers.DICTIONARY_FULL;
-    }
-
-    // The first index is reserved for missing value which is represented by -1.
-    final int dimIndex = fromKey.getInt() + 1;
-    fromKey.rewind();
-    return aggregate(key, dimIndex);
-  }
-
-  @Override
-  public AggregateResult aggregate(KeyType key, int dimIndex)
+  public AggregateResult aggregate(Integer key, int dimIndex)
   {
     Preconditions.checkArgument(
         dimIndex >= 0 && dimIndex < cardinalityWithMissingValue,
@@ -171,12 +142,7 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
         dimIndex
     );
 
-    final ByteBuffer fromKey = checkAndGetKeyBuffer(keySerde, key);
-    if (fromKey == null) {
-      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
-      // be correct.
-      return Groupers.DICTIONARY_FULL;
-    }
+    Preconditions.checkNotNull(key);
 
     final int recordOffset = dimIndex * recordSize;
 
@@ -200,23 +166,6 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
     }
 
     return AggregateResult.ok();
-  }
-
-  private ByteBuffer checkAndGetKeyBuffer(KeySerde<KeyType> keySerde, KeyType key)
-  {
-    final ByteBuffer fromKey = keySerde.toByteBuffer(key);
-    if (fromKey == null) {
-      return null;
-    }
-
-    if (fromKey.remaining() != keySerde.keySize()) {
-      throw new IAE(
-          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
-          fromKey.remaining(),
-          keySerde.keySize()
-      );
-    }
-    return fromKey;
   }
 
   private void initializeSlot(int dimIndex)
@@ -243,9 +192,21 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
   public void reset()
   {
     final int usedBufferCapacity = usedFlagBuffer.capacity();
-    for (int i = 0; i < usedBufferCapacity; i++) {
+
+    final int n = usedBufferCapacity / 8;
+    for (int i = 0; i < n; i += 8) {
+      usedFlagBuffer.putLong(i, 0L);
+    }
+
+    for (int i = n; i < usedBufferCapacity; i++) {
       usedFlagBuffer.put(i, (byte) 0);
     }
+  }
+
+  @Override
+  public Function<Integer, Integer> hashFunction()
+  {
+    return key -> key + 1;
   }
 
   @Override
@@ -262,20 +223,57 @@ public class BufferArrayGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public Iterator<Entry<KeyType>> iterator(boolean sorted)
+  public Iterator<Entry<Integer>> iterator(boolean sorted)
   {
-    // result is always natually sorted by keys
-    return IntStream.range(0, cardinalityWithMissingValue)
-                    .filter(this::isUsedSlot)
-                    .mapToObj(index -> {
-                      keyBuffer.putInt(0, index - 1); // Restore key values from the index
+    if (sorted) {
+      throw new UnsupportedOperationException("sorted iterator is not supported yet");
+    }
 
-                      final Object[] values = new Object[aggregators.length];
-                      final int recordOffset = index * recordSize;
-                      for (int i = 0; i < aggregators.length; i++) {
-                        values[i] = aggregators[i].get(valBuffer, recordOffset + aggregatorOffsets[i]);
-                      }
-                      return new Entry<>(keySerde.fromByteBuffer(keyBuffer, 0), values);
-                    }).iterator();
+    return new Iterator<Entry<Integer>>()
+    {
+      int cur = -1;
+      boolean findNext = false;
+
+      {
+        cur = findNext();
+      }
+
+      @Override
+      public boolean hasNext()
+      {
+        if (findNext) {
+          cur = findNext();
+          findNext = false;
+        }
+        return cur != -1;
+      }
+
+      private int findNext()
+      {
+        for (int i = cur + 1; i < cardinalityWithMissingValue; i++) {
+          if (isUsedSlot(i)) {
+            return i;
+          }
+        }
+        return -1;
+      }
+
+      @Override
+      public Entry<Integer> next()
+      {
+        if (cur == -1) {
+          throw new NoSuchElementException();
+        }
+
+        findNext = true;
+
+        final Object[] values = new Object[aggregators.length];
+        final int recordOffset = cur * recordSize;
+        for (int i = 0; i < aggregators.length; i++) {
+          values[i] = aggregators[i].get(valBuffer, recordOffset + aggregatorOffsets[i]);
+        }
+        return new Entry<>(cur - 1, values);
+      }
+    };
   }
 }

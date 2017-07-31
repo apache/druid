@@ -171,12 +171,6 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   }
 
   @Override
-  public AggregateResult aggregate(final KeyType key)
-  {
-    return aggregate(key, Groupers.hash(key));
-  }
-
-  @Override
   public void close()
   {
     for (BufferAggregator aggregator : aggregators) {

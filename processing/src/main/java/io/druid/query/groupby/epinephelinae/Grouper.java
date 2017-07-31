@@ -21,6 +21,7 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.io.Closeable;
@@ -28,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.function.Function;
 
 /**
  * Groupers aggregate metrics from rows that they typically get from a ColumnSelectorFactory, under
@@ -59,7 +61,7 @@ public interface Grouper<KeyType> extends Closeable
    * some are not.
    *
    * @param key     key object
-   * @param keyHash result of {@link Groupers#hash(Object)} on the key
+   * @param keyHash result of {@link #hashFunction()} on the key
    *
    * @return result that is ok if the row was aggregated, not ok if a resource limit was hit
    */
@@ -73,12 +75,21 @@ public interface Grouper<KeyType> extends Closeable
    *
    * @return result that is ok if the row was aggregated, not ok if a resource limit was hit
    */
-  AggregateResult aggregate(KeyType key);
+  default AggregateResult aggregate(KeyType key)
+  {
+    Preconditions.checkNotNull(key, "key");
+    return aggregate(key, hashFunction().apply(key));
+  }
 
   /**
    * Reset the grouper to its initial state.
    */
   void reset();
+
+  default Function<KeyType, Integer> hashFunction()
+  {
+    return Groupers::hash;
+  }
 
   /**
    * Close the grouper and release associated resources.

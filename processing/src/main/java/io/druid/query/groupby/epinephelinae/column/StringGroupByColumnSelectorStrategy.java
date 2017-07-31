@@ -30,8 +30,6 @@ import java.util.Map;
 
 public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
-  private static final int GROUP_BY_MISSING_VALUE = -1;
-
   @Override
   public int getGroupingKeySize()
   {

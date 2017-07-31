@@ -33,6 +33,8 @@ import java.util.Map;
  */
 public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
 {
+  int GROUP_BY_MISSING_VALUE = -1;
+
   /**
    * Return the size, in bytes, of this dimension's values in the grouping key.
    *

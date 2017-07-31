@@ -58,10 +58,8 @@ public class BufferArrayGrouperTest
         new Grouper.Entry<>(10, new Object[]{10L, 1L}),
         new Grouper.Entry<>(12, new Object[]{20L, 2L})
     );
-    final List<Grouper.Entry<Integer>> unsortedEntries = Lists.newArrayList(grouper.iterator(false));
-    final List<Grouper.Entry<Integer>> sortedEntries = Lists.newArrayList(grouper.iterator(true));
+    final List<Entry<Integer>> unsortedEntries = Lists.newArrayList(grouper.iterator(false));
 
-    Assert.assertEquals(expected, sortedEntries);
     Assert.assertEquals(
         expected,
         Ordering.from((Comparator<Entry<Integer>>) (o1, o2) -> Ints.compare(o1.getKey(), o2.getKey()))
@@ -69,16 +67,15 @@ public class BufferArrayGrouperTest
     );
   }
 
-  private BufferArrayGrouper<Integer> newGrouper(
+  private BufferArrayGrouper newGrouper(
       TestColumnSelectorFactory columnSelectorFactory,
       int bufferSize
   )
   {
     final ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
 
-    final BufferArrayGrouper<Integer> grouper = new BufferArrayGrouper<>(
+    final BufferArrayGrouper grouper = new BufferArrayGrouper(
         Suppliers.ofInstance(buffer),
-        GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("valueSum", "value"),
