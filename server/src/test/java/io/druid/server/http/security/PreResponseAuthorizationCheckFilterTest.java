@@ -21,12 +21,15 @@ package io.druid.server.http.security;
 
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.NoopAuthenticator;
 import io.druid.server.security.PreResponseAuthorizationCheckFilter;
 import org.easymock.EasyMock;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletOutputStream;
@@ -38,6 +41,9 @@ public class PreResponseAuthorizationCheckFilterTest
 {
   private static List<Authenticator> authenticators = Lists.newArrayList(new NoopAuthenticator());
   private static AuthConfig authConfig = new AuthConfig(true, null, null, null);
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testValidRequest() throws Exception
@@ -93,6 +99,8 @@ public class PreResponseAuthorizationCheckFilterTest
   @Test
   public void testMissingAuthorizationCheck() throws Exception
   {
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage("Request did not have an authorization check performed: uri");
 
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
