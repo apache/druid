@@ -99,7 +99,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     }
 
     @Override
-    public float get()
+    public float getFloat()
     {
       return floats[(int) (index % floats.length)];
     }
@@ -126,7 +126,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     }
 
     @Override
-    public double get()
+    public double getDouble()
     {
       return doubles[(int) (index % doubles.length)];
     }

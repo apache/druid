@@ -373,7 +373,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       class TimeFloatColumnSelector extends RowBasedFloatColumnSelector
       {
         @Override
-        public float get()
+        public float getFloat()
         {
           return (float) row.get().getTimestampFromEpoch();
         }
@@ -383,7 +383,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       return new RowBasedFloatColumnSelector()
       {
         @Override
-        public float get()
+        public float getFloat()
         {
           return row.get().getFloatMetric(columnName);
         }
@@ -406,7 +406,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       class TimeLongColumnSelector extends RowBasedLongColumnSelector
       {
         @Override
-        public long get()
+        public long getLong()
         {
           return row.get().getTimestampFromEpoch();
         }
@@ -416,7 +416,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       return new RowBasedLongColumnSelector()
       {
         @Override
-        public long get()
+        public long getLong()
         {
           return row.get().getLongMetric(columnName);
         }
@@ -475,7 +475,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       class TimeDoubleColumnSelector extends RowBasedDoubleColumnSelector
       {
         @Override
-        public double get()
+        public double getDouble()
         {
           return (double) row.get().getTimestampFromEpoch();
         }
@@ -485,7 +485,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       return new RowBasedDoubleColumnSelector()
       {
         @Override
-        public double get()
+        public double getDouble()
         {
           return row.get().getDoubleMetric(columnName);
         }

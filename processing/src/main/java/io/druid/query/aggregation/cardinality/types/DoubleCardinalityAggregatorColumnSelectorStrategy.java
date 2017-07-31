@@ -30,12 +30,12 @@ public class DoubleCardinalityAggregatorColumnSelectorStrategy implements Cardin
   @Override
   public void hashRow(DoubleColumnSelector dimSelector, Hasher hasher)
   {
-    hasher.putDouble(dimSelector.get());
+    hasher.putDouble(dimSelector.getDouble());
   }
 
   @Override
   public void hashValues(DoubleColumnSelector dimSelector, HyperLogLogCollector collector)
   {
-    collector.add(CardinalityAggregator.hashFn.hashLong(Double.doubleToLongBits(dimSelector.get())).asBytes());
+    collector.add(CardinalityAggregator.hashFn.hashLong(Double.doubleToLongBits(dimSelector.getDouble())).asBytes());
   }
 }

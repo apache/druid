@@ -37,7 +37,7 @@ public final class ZeroFloatColumnSelector implements HistoricalFloatColumnSelec
   }
 
   @Override
-  public float get()
+  public float getFloat()
   {
     return 0.0f;
   }
@@ -45,7 +45,7 @@ public final class ZeroFloatColumnSelector implements HistoricalFloatColumnSelec
   @Override
   public float get(int offset)
   {
-    return get();
+    return getFloat();
   }
 
   @Override

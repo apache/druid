@@ -39,7 +39,7 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public boolean matches()
       {
-        return selector.get() == matchValLong;
+        return selector.getLong() == matchValLong;
       }
 
       @Override
@@ -61,7 +61,7 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public boolean matches()
       {
-        return predicate.applyLong(selector.get());
+        return predicate.applyLong(selector.getLong());
       }
 
       @Override
@@ -81,7 +81,7 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public String[] get()
       {
-        return new String[]{ Long.toString(selector.get()) };
+        return new String[]{ Long.toString(selector.getLong()) };
       }
     };
   }

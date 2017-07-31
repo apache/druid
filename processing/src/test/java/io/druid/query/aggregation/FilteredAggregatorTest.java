@@ -40,6 +40,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.DoubleColumnSelector;
@@ -206,9 +207,9 @@ public class FilteredAggregatorTest
           return new DoubleColumnSelector()
           {
             @Override
-            public double get()
+            public double getDouble()
             {
-              return (double) selector.get();
+              return ((ColumnValueSelector) selector).getDouble();
             }
 
             @Override

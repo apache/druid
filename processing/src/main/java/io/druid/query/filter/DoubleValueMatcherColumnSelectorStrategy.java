@@ -41,7 +41,7 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
       @Override
       public boolean matches()
       {
-        return Double.doubleToLongBits(selector.get()) == matchValLongBits;
+        return Double.doubleToLongBits(selector.getDouble()) == matchValLongBits;
       }
 
       @Override
@@ -63,7 +63,7 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
       @Override
       public boolean matches()
       {
-        return predicate.applyDouble(selector.get());
+        return predicate.applyDouble(selector.getDouble());
       }
 
       @Override
@@ -83,7 +83,7 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
       @Override
       public String[] get()
       {
-        return new String[]{ Double.toString(selector.get()) };
+        return new String[]{ Double.toString(selector.getDouble()) };
       }
     };
   }
