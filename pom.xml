@@ -144,13 +144,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>server-metrics</artifactId>
-                <version>0.3.0</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.metamx</groupId>
-                        <artifactId>java-util</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>0.5.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
