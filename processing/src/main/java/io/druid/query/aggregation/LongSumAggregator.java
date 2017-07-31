@@ -56,7 +56,7 @@ public class LongSumAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    sum += selector.get();
+    sum += selector.getLong();
   }
 
   @Override

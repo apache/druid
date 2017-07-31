@@ -49,11 +49,11 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     long firstTime = buf.getLong(position);
     if (time < firstTime) {
       buf.putLong(position, time);
-      buf.putDouble(position + Longs.BYTES, valueSelector.get());
+      buf.putDouble(position + Longs.BYTES, valueSelector.getFloat());
     }
   }
 

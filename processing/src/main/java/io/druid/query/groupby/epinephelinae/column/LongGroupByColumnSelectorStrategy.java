@@ -47,7 +47,7 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    valuess[columnIndex] = ((LongColumnSelector) selector).get();
+    valuess[columnIndex] = ((LongColumnSelector) selector).getLong();
   }
 
   @Override

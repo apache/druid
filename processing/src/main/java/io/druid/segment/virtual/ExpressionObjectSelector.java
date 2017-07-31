@@ -63,9 +63,9 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
-        supplier = columnSelectorFactory.makeFloatColumnSelector(columnName)::get;
+        supplier = columnSelectorFactory.makeFloatColumnSelector(columnName)::getFloat;
       } else if (nativeType == ValueType.LONG) {
-        supplier = columnSelectorFactory.makeLongColumnSelector(columnName)::get;
+        supplier = columnSelectorFactory.makeLongColumnSelector(columnName)::getLong;
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))

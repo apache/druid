@@ -541,7 +541,7 @@ public class FilterPartitionBenchmark
             List<Long> longvals = new ArrayList<Long>();
             LongColumnSelector selector = input.makeLongColumnSelector("sumLongSequential");
             while (!input.isDone()) {
-              long rowval = selector.get();
+              long rowval = selector.getLong();
               blackhole.consume(rowval);
               input.advance();
             }

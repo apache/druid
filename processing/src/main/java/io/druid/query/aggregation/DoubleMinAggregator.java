@@ -48,7 +48,7 @@ public class DoubleMinAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    min = Math.min(min, (double) selector.get());
+    min = Math.min(min, (double) selector.getFloat());
   }
 
   @Override

@@ -485,7 +485,7 @@ public class RowBasedGrouperHelper
         @Override
         public Comparable get()
         {
-          return selector.get();
+          return selector.getLong();
         }
       };
     }
@@ -502,7 +502,7 @@ public class RowBasedGrouperHelper
         @Override
         public Comparable get()
         {
-          return selector.get();
+          return selector.getFloat();
         }
       };
     }

@@ -27,4 +27,28 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
 
   @CalledFromHotLoop
   public T get();
+
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polimorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default float getFloat()
+  {
+    return ((Number) get()).floatValue();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polimorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default long getLong()
+  {
+    return ((Number) get()).longValue();
+  }
 }

@@ -40,7 +40,7 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public boolean matches()
       {
-        return Float.floatToIntBits(selector.get()) == matchValIntBits;
+        return Float.floatToIntBits(selector.getFloat()) == matchValIntBits;
       }
 
       @Override
@@ -62,7 +62,7 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public boolean matches()
       {
-        return predicate.applyFloat(selector.get());
+        return predicate.applyFloat(selector.getFloat());
       }
 
       @Override
@@ -82,7 +82,7 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public String[] get()
       {
-        return new String[]{ Float.toString(selector.get()) };
+        return new String[]{ Float.toString(selector.getFloat()) };
       }
     };
   }

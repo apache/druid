@@ -72,7 +72,7 @@ public class FloatTopNColumnSelectorStrategy
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      int key = Float.floatToIntBits(selector.get());
+      int key = Float.floatToIntBits(selector.getFloat());
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
         theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());

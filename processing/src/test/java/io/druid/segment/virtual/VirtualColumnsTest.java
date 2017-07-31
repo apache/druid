@@ -81,8 +81,8 @@ public class VirtualColumnsTest
     Assert.assertEquals(1L, objectSelector.get());
     Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
     Assert.assertEquals("0.5", extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
-    Assert.assertEquals(1.0f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(1L, longSelector.get());
+    Assert.assertEquals(1.0f, floatSelector.getFloat(), 0.0f);
+    Assert.assertEquals(1L, longSelector.getLong());
   }
 
   @Test
@@ -99,8 +99,8 @@ public class VirtualColumnsTest
 
     Assert.assertEquals(5L, objectSelector.get());
     Assert.assertEquals("5", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals(5.0f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(5L, longSelector.get());
+    Assert.assertEquals(5.0f, floatSelector.getFloat(), 0.0f);
+    Assert.assertEquals(5L, longSelector.getLong());
   }
 
   @Test
@@ -117,8 +117,8 @@ public class VirtualColumnsTest
 
     Assert.assertEquals(-1L, objectSelector.get());
     Assert.assertEquals("-1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals(-1.0f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(-1L, longSelector.get());
+    Assert.assertEquals(-1.0f, floatSelector.getFloat(), 0.0f);
+    Assert.assertEquals(-1L, longSelector.getLong());
   }
 
   @Test
@@ -296,7 +296,7 @@ public class VirtualColumnsTest
         @Override
         public Object get()
         {
-          return selector.get();
+          return selector.getLong();
         }
       };
     }
@@ -323,7 +323,7 @@ public class VirtualColumnsTest
         @Override
         public String lookupName(int id)
         {
-          final String stringValue = String.valueOf(selector.get());
+          final String stringValue = String.valueOf(selector.getLong());
           return extractionFn == null ? stringValue : extractionFn.apply(stringValue);
         }
 
@@ -376,9 +376,9 @@ public class VirtualColumnsTest
       return new TestFloatColumnSelector()
       {
         @Override
-        public float get()
+        public float getFloat()
         {
-          return selector.get();
+          return selector.getLong();
         }
       };
     }
@@ -392,7 +392,7 @@ public class VirtualColumnsTest
       return new TestLongColumnSelector()
       {
         @Override
-        public long get()
+        public long getLong()
         {
           return theLong;
         }

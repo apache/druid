@@ -24,4 +24,7 @@ package io.druid.segment;
  */
 public interface ColumnValueSelector
 {
+  float getFloat();
+
+  long getLong();
 }

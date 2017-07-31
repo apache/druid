@@ -454,7 +454,7 @@ public class Filters
       @Override
       public boolean matches()
       {
-        return predicate.applyLong(longSelector.get());
+        return predicate.applyLong(longSelector.getLong());
       }
 
       @Override

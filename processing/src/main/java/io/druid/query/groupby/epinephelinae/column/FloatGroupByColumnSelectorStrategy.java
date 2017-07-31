@@ -47,7 +47,7 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    valuess[columnIndex] = ((FloatColumnSelector) selector).get();
+    valuess[columnIndex] = ((FloatColumnSelector) selector).getFloat();
   }
 
   @Override

@@ -557,7 +557,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       return new HistoricalFloatColumnSelector()
                       {
                         @Override
-                        public float get()
+                        public float getFloat()
                         {
                           return metricVals.getFloatSingleValueRow(cursorOffset.getOffset());
                         }
@@ -604,7 +604,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       return new LongColumnSelector()
                       {
                         @Override
-                        public long get()
+                        public long getLong()
                         {
                           return metricVals.getLongSingleValueRow(cursorOffset.getOffset());
                         }

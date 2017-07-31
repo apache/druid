@@ -105,7 +105,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     class IndexerLongColumnSelector implements LongColumnSelector
     {
       @Override
-      public long get()
+      public long getLong()
       {
         final Object[] dims = currEntry.getKey().getDims();
 
@@ -137,7 +137,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     class IndexerFloatColumnSelector implements FloatColumnSelector
     {
       @Override
-      public float get()
+      public float getFloat()
       {
         final Object[] dims = currEntry.getKey().getDims();
 

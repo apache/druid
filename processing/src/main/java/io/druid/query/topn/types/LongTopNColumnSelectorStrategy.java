@@ -72,7 +72,7 @@ public class LongTopNColumnSelectorStrategy
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      long key = selector.get();
+      long key = selector.getLong();
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
         theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());

@@ -48,7 +48,7 @@ public class DoubleMaxAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    max = Math.max(max, selector.get());
+    max = Math.max(max, selector.getFloat());
   }
 
   @Override

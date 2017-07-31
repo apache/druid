@@ -48,10 +48,10 @@ public class LongLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     if (time >= lastTime) {
-      lastTime = timeSelector.get();
-      lastValue = valueSelector.get();
+      lastTime = timeSelector.getLong();
+      lastValue = valueSelector.getLong();
     }
   }
 

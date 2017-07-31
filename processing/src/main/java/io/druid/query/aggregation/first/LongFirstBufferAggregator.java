@@ -48,11 +48,11 @@ public class LongFirstBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     long firstTime = buf.getLong(position);
     if (time < firstTime) {
       buf.putLong(position, time);
-      buf.putLong(position + Longs.BYTES, valueSelector.get());
+      buf.putLong(position + Longs.BYTES, valueSelector.getLong());
     }
   }
 

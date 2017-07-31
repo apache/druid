@@ -49,10 +49,10 @@ public class LongFirstAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     if (time < firstTime) {
       firstTime = time;
-      firstValue = valueSelector.get();
+      firstValue = valueSelector.getLong();
     }
   }
 

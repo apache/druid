@@ -99,7 +99,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     }
 
     @Override
-    public float get()
+    public float getFloat()
     {
       return floats[(int) (index % floats.length)];
     }

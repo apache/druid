@@ -112,7 +112,7 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
   private int getDimensionValueIndex()
   {
     // if this the first timestamp, apply and cache extraction function result
-    final long timestamp = selector.get();
+    final long timestamp = selector.getLong();
     if (index < 0) {
       currentTimestamp = timestamp;
       currentValue = extractionFn.apply(timestamp);

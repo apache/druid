@@ -124,7 +124,7 @@ public class IngestSegmentFirehose implements Firehose
                                       public InputRow next()
                                       {
                                         final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-                                        final long timestamp = timestampColumnSelector.get();
+                                        final long timestamp = timestampColumnSelector.getLong();
                                         theEvent.put(EventHolder.timestampKey, new DateTime(timestamp));
 
                                         for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {

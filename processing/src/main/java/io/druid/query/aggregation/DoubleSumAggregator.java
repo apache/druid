@@ -57,7 +57,7 @@ public class DoubleSumAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    sum += selector.get();
+    sum += selector.getFloat();
   }
 
   @Override

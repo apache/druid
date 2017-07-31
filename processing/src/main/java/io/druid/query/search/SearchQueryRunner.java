@@ -156,7 +156,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     )
     {
       if (selector != null) {
-        final String dimVal = String.valueOf(selector.get());
+        final String dimVal = String.valueOf(selector.getLong());
         if (searchQuerySpec.accept(dimVal)) {
           set.addTo(new SearchHit(outputName, dimVal), 1);
         }
@@ -176,7 +176,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     )
     {
       if (selector != null) {
-        final String dimVal = String.valueOf(selector.get());
+        final String dimVal = String.valueOf(selector.getFloat());
         if (searchQuerySpec.accept(dimVal)) {
           set.addTo(new SearchHit(outputName, dimVal), 1);
         }
