@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class KafkaEmitterConfig
@@ -47,7 +48,7 @@ public class KafkaEmitterConfig
       @JsonProperty("metric.topic") String metricTopic,
       @JsonProperty("alert.topic") String alertTopic,
       @JsonProperty("clusterName") String clusterName,
-      @JsonProperty("producer.config") Map<String, String> kafkaProducerConfig
+      @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig
   )
   {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
