@@ -138,13 +138,13 @@ public class RemoteTaskRunnerTestUtils
     return remoteTaskRunner;
   }
 
-  Worker makeWorker(final String workerId) throws Exception
+  Worker makeWorker(final String workerId, final int capacity) throws Exception
   {
     Worker worker = new Worker(
         "http",
         workerId,
         workerId,
-        3,
+        capacity,
         "0"
     );
 

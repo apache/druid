@@ -52,7 +52,7 @@ public class ZkWorker implements Closeable
 
   private AtomicReference<Worker> worker;
   private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
-  private AtomicInteger countinouslyFailedTasksCount = new AtomicInteger(0);
+  private AtomicInteger continuouslyFailedTasksCount = new AtomicInteger(0);
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
@@ -161,7 +161,13 @@ public class ZkWorker implements Closeable
   public ImmutableWorkerInfo toImmutable()
   {
 
-    return new ImmutableWorkerInfo(worker.get(), getCurrCapacityUsed(), getAvailabilityGroups(), getRunningTaskIds(), lastCompletedTaskTime.get());
+    return new ImmutableWorkerInfo(
+        worker.get(),
+        getCurrCapacityUsed(),
+        getAvailabilityGroups(),
+        getRunningTaskIds(),
+        lastCompletedTaskTime.get()
+    );
   }
 
   @Override
@@ -170,19 +176,19 @@ public class ZkWorker implements Closeable
     statusCache.close();
   }
 
-  public int getCountinouslyFailedTasksCount()
+  public int getContinuouslyFailedTasksCount()
   {
-    return countinouslyFailedTasksCount.get();
+    return continuouslyFailedTasksCount.get();
   }
 
-  public void resetCountinouslyFailedTasksCount()
+  public void resetContinuouslyFailedTasksCount()
   {
-    this.countinouslyFailedTasksCount.set(0);
+    this.continuouslyFailedTasksCount.set(0);
   }
 
-  public void incrementCountinouslyFailedTasksCount()
+  public void incrementContinuouslyFailedTasksCount()
   {
-    this.countinouslyFailedTasksCount.incrementAndGet();
+    this.continuouslyFailedTasksCount.incrementAndGet();
   }
 
   @Override

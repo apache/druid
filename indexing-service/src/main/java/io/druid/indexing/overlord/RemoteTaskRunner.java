@@ -65,12 +65,12 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -161,7 +161,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private final ConcurrentMap<String, ZkWorker> lazyWorkers = new ConcurrentHashMap<>();
 
   // Workers that have been blacklisted.
-  private final Set<ZkWorker> blackListedWorkers = Collections.synchronizedSet(new HashSet<ZkWorker>());
+  private final Set<ZkWorker> blackListedWorkers = Collections.synchronizedSet(new HashSet<>());
 
   // task runner listeners
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
@@ -744,8 +744,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       WorkerBehaviorConfig workerConfig = workerConfigRef.get();
       WorkerSelectStrategy strategy;
       if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
-        log.warn("No worker selections strategy set. Using default.");
         strategy = WorkerBehaviorConfig.DEFAULT_STRATEGY;
+        log.info("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
       } else {
         strategy = workerConfig.getSelectStrategy();
       }
@@ -834,7 +834,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     final String worker = theZkWorker.getWorker().getHost();
     synchronized (statusLock) {
       if (!zkWorkers.containsKey(worker) || lazyWorkers.containsKey(worker)) {
-        // the worker might got killed or has been marked as lazy.
+        // the worker might have been killed or marked as lazy
         log.info("Not assigning task to already removed worker[%s]", worker);
         return false;
       }
@@ -1091,32 +1091,42 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private void scheduleBlackListedNodesCleanUp()
   {
     ScheduledExecutors.scheduleAtFixedRate(
-            cleanupExec,
-            Period.ZERO.toStandardDuration(),
-            config.getWorkerBlackListCleanupPeriod().toStandardDuration(),
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                long currentTimeStamp = System.currentTimeMillis();
-                for (ZkWorker zkWorker : blackListedWorkers) {
-                  cleanBlackListedNode(zkWorker, currentTimeStamp);
-                }
-              }
+        cleanupExec,
+        Period.ZERO.toStandardDuration(),
+        config.getWorkerBlackListCleanupPeriod().toStandardDuration(),
+        () -> {
+          long currentTimeStamp = System.currentTimeMillis();
+          boolean shouldRunPendingTasks = false;
+
+          // must be synchronized while iterating:
+          // https://docs.oracle.com/javase/8/docs/api/java/util/Collections.html#synchronizedSet-java.util.Set-
+          synchronized (blackListedWorkers) {
+            for (ZkWorker zkWorker : blackListedWorkers) {
+              shouldRunPendingTasks |= cleanBlackListedNode(zkWorker, currentTimeStamp);
             }
+          }
+
+          if (shouldRunPendingTasks) {
+            runPendingTasks();
+          }
+        }
     );
   }
 
-  public void cleanBlackListedNode(ZkWorker zkWorker, long currentTimeStamp)
+  public boolean cleanBlackListedNode(ZkWorker zkWorker, long currentTimeStamp)
   {
-    // Clean blacklisted workers if blacklisted time has elapsed
-    if(currentTimeStamp - zkWorker.getLastCompletedTaskTime().getMillis() >
-            config.getWorkerBlackListBackoffTime().toStandardDuration().getMillis()){
-      // White listing node
-      log.info("Whitelisting worker [%s]. ", zkWorker);
-      blackListedWorkers.remove(zkWorker);
+    long remainingMillis = zkWorker.getLastCompletedTaskTime().getMillis()
+                           + config.getWorkerBlackListBackoffTime().toStandardDuration().getMillis()
+                           - currentTimeStamp;
+
+    if (remainingMillis > 0) {
+      log.info("[%s] still blacklisted for [%,dms]", zkWorker.getWorker(), remainingMillis);
+      return false;
     }
+
+    log.info("Removing [%s] from black list", zkWorker.getWorker());
+    blackListedWorkers.remove(zkWorker);
+    return true;
   }
 
   /**
@@ -1222,17 +1232,24 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     runningTasks.remove(taskStatus.getId());
 
     // Update success/failure counters
-    if(taskStatus.isSuccess()){
-      zkWorker.resetCountinouslyFailedTasksCount();
-    } else if(taskStatus.isFailure()){
-      zkWorker.incrementCountinouslyFailedTasksCount();
-    }
+    if (zkWorker != null) {
+      if (taskStatus.isSuccess()) {
+        zkWorker.resetContinuouslyFailedTasksCount();
+      } else if (taskStatus.isFailure()) {
+        zkWorker.incrementContinuouslyFailedTasksCount();
+      }
 
-    // BlackList node if there are too many failures.
-    if(zkWorker.getCountinouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
-            blackListedWorkers.size() <=
-                    zkWorkers.size()*(config.getMaxPercentageBlacklistWorkers()/100)){
-      blackListedWorkers.add(zkWorker);
+      // Blacklist node if there are too many failures.
+      if (zkWorker.getContinuouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
+          blackListedWorkers.size() <= zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100) - 1) {
+        if (blackListedWorkers.add(zkWorker)) {
+          log.info(
+              "Blacklisting [%s] after [%,d] failed tasks in a row.",
+              zkWorker.getWorker(),
+              zkWorker.getContinuouslyFailedTasksCount()
+          );
+        }
+      }
     }
 
     // Notify interested parties
@@ -1331,7 +1348,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
   {
-    return getImmutableWorkerFromZK(blackListedWorkers);
+    synchronized (blackListedWorkers) {
+      return getImmutableWorkerFromZK(blackListedWorkers);
+    }
   }
 
   @VisibleForTesting
