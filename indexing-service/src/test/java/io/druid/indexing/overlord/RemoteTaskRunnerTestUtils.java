@@ -219,7 +219,7 @@ public class RemoteTaskRunnerTestUtils
     );
   }
 
-  public class TestableRemoteTaskRunner extends RemoteTaskRunner
+  public static class TestableRemoteTaskRunner extends RemoteTaskRunner
   {
     private long currentTimeMillis = System.currentTimeMillis();
 
