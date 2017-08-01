@@ -32,7 +32,7 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
 
   /**
    * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
-   * calling. "Polimorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated
@@ -44,7 +44,7 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
 
   /**
    * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
-   * calling. "Polimorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated
@@ -56,7 +56,7 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
 
   /**
    * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
-   * calling. "Polimorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated

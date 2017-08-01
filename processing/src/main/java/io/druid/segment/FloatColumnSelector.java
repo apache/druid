@@ -35,7 +35,7 @@ public interface FloatColumnSelector extends ColumnValueSelector, HotLoopCallee
 
   /**
    * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
-   * calling. "Polimorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated
@@ -48,7 +48,7 @@ public interface FloatColumnSelector extends ColumnValueSelector, HotLoopCallee
 
   /**
    * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
-   * calling. "Polimorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated

@@ -31,7 +31,7 @@ public interface DoubleColumnSelector extends ColumnValueSelector, HotLoopCallee
 
   /**
    * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
-   * calling. "Polimorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated
@@ -44,7 +44,7 @@ public interface DoubleColumnSelector extends ColumnValueSelector, HotLoopCallee
 
   /**
    * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
-   * calling. "Polimorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated
