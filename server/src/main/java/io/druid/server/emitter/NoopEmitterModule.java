@@ -17,24 +17,32 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.emitter;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-
-import javax.validation.constraints.NotNull;
-import java.util.List;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.google.inject.name.Named;
+import com.metamx.emitter.core.Emitter;
+import com.metamx.emitter.core.NoopEmitter;
+import io.druid.guice.ManageLifecycle;
 
 /**
  */
-public class ComposingEmitterConfig
+public class NoopEmitterModule implements Module
 {
-  @JsonProperty
-  @NotNull
-  private List<String> emitters = ImmutableList.of();
+  public static final String EMITTER_TYPE = "noop";
 
-  public List<String> getEmitters()
+  @Override
+  public void configure(Binder binder)
   {
-    return emitters;
+  }
+
+  @Provides
+  @ManageLifecycle
+  @Named(EMITTER_TYPE)
+  public Emitter makeEmitter()
+  {
+    return new NoopEmitter();
   }
 }

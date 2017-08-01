@@ -17,20 +17,24 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.emitter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.common.collect.ImmutableList;
+
+import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  */
-public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
+public class ComposingEmitterConfig
 {
   @JsonProperty
-  private Period timeOut = new Period("PT5M");
+  @NotNull
+  private List<String> emitters = ImmutableList.of();
 
-  public Period getReadTimeout()
+  public List<String> getEmitters()
   {
-    return timeOut;
+    return emitters;
   }
 }

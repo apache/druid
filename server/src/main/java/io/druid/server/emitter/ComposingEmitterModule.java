@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.emitter;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Function;

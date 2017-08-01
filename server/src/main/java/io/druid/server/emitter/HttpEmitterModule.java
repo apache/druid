@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.emitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
@@ -50,6 +50,11 @@ public class HttpEmitterModule implements Module
   {
     JsonConfigProvider.bind(binder, "druid.emitter.http", HttpEmitterConfig.class);
 
+    configureSsl(binder);
+  }
+
+  static void configureSsl(Binder binder)
+  {
     final SSLContext context;
     try {
       context = SSLContext.getDefault();
