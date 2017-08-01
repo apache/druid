@@ -388,11 +388,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
   {
     DruidServerHolder holder = servers.get(serverKey);
-    if (holder != null) {
-      return holder.druidServer.getSegment(segment.getIdentifier()) != null;
-    } else {
-      return false;
-    }
+    return holder != null && holder.druidServer.getSegment(segment.getIdentifier()) != null;
   }
 
   private class DruidServerHolder
