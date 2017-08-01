@@ -22,7 +22,6 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -118,13 +117,13 @@ import java.util.concurrent.TimeUnit;
  * creating ephemeral nodes in ZK that workers must remove. Workers announce the statuses of the tasks they are running.
  * Once a task completes, it is up to the RTR to remove the task status and run any necessary cleanup.
  * The RemoteTaskRunner is event driven and updates state according to ephemeral node changes in ZK.
- * <p/>
+ * <p>
  * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
- * <p/>
+ * <p>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the
  * worker after waiting for RemoteTaskRunnerConfig.taskCleanupTimeout for the worker to show up.
- * <p/>
+ * <p>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
 public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
@@ -685,16 +684,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @VisibleForTesting
   static void sortByInsertionTime(List<RemoteTaskRunnerWorkItem> tasks)
   {
-    Collections.sort(
-        tasks, new Comparator<RemoteTaskRunnerWorkItem>()
-        {
-          @Override
-          public int compare(RemoteTaskRunnerWorkItem o1, RemoteTaskRunnerWorkItem o2)
-          {
-            return o1.getQueueInsertionTime().compareTo(o2.getQueueInsertionTime());
-          }
-        }
-    );
+    Collections.sort(tasks, Comparator.comparing(RemoteTaskRunnerWorkItem::getQueueInsertionTime));
   }
 
   /**
@@ -1209,16 +1199,18 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
 
       // Blacklist node if there are too many failures.
-      if (zkWorker.getContinuouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
-          blackListedWorkers.size() <= zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0) - 1) {
-        zkWorker.setBlacklistedUntil(DateTime.now().plus(config.getWorkerBlackListBackoffTime()));
-        if (blackListedWorkers.add(zkWorker)) {
-          log.info(
-              "Blacklisting [%s] until [%s] after [%,d] failed tasks in a row.",
-              zkWorker.getWorker(),
-              zkWorker.getBlacklistedUntil(),
-              zkWorker.getContinuouslyFailedTasksCount()
-          );
+      synchronized (blackListedWorkers) {
+        if (zkWorker.getContinuouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
+            blackListedWorkers.size() <= zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0) - 1) {
+          zkWorker.setBlacklistedUntil(DateTime.now().plus(config.getWorkerBlackListBackoffTime()));
+          if (blackListedWorkers.add(zkWorker)) {
+            log.info(
+                "Blacklisting [%s] until [%s] after [%,d] failed tasks in a row.",
+                zkWorker.getWorker(),
+                zkWorker.getBlacklistedUntil(),
+                zkWorker.getContinuouslyFailedTasksCount()
+            );
+          }
         }
       }
     }
@@ -1285,36 +1277,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private static ImmutableList<ImmutableWorkerInfo> getImmutableWorkerFromZK(Collection<ZkWorker> workers)
   {
-    return ImmutableList.copyOf(
-        Collections2.transform(
-            workers,
-            new Function<ZkWorker, ImmutableWorkerInfo>()
-            {
-              @Override
-              public ImmutableWorkerInfo apply(ZkWorker input)
-              {
-                return input.toImmutable();
-              }
-            }
-        )
-    );
+    return ImmutableList.copyOf(Collections2.transform(workers, ZkWorker::toImmutable));
   }
 
   private static ImmutableList<Worker> getWorkerFromZK(Collection<ZkWorker> workers)
   {
-    return ImmutableList.copyOf(
-        Collections2.transform(
-            workers,
-            new Function<ZkWorker, Worker>()
-            {
-              @Override
-              public Worker apply(ZkWorker input)
-              {
-                return input.getWorker();
-              }
-            }
-        )
-    );
+    return ImmutableList.copyOf(Collections2.transform(workers, ZkWorker::getWorker));
   }
 
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
