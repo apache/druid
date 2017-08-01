@@ -31,7 +31,7 @@ public interface LongColumnSelector extends ColumnValueSelector, HotLoopCallee
   long getLong();
 
   /**
-   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in LongColumnSelector to minimize the probability of accidential
    * calling. "Polimorphism" of LongColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -44,7 +44,7 @@ public interface LongColumnSelector extends ColumnValueSelector, HotLoopCallee
   }
 
   /**
-   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in LongColumnSelector to minimize the probability of accidential
    * calling. "Polimorphism" of LongColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
