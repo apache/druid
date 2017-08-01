@@ -20,12 +20,20 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheMonitor;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
 import io.druid.guice.CacheModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.Jerseys;
@@ -36,9 +44,12 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
+import io.druid.guice.annotations.Self;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.lookup.LookupModule;
+import io.druid.server.DruidNode;
 import io.druid.server.QueryResource;
 import io.druid.server.SegmentManager;
 import io.druid.server.coordination.ServerManager;
@@ -103,9 +114,52 @@ public class CliHistorical extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
             binder.install(new CacheModule());
             MetricsModule.register(binder, CacheMonitor.class);
+
+            binder.bind(ForSideEffectsOnlyProvider.Child.class).toProvider(ForSideEffectsOnlyProvider.class).asEagerSingleton();
           }
         },
         new LookupModule()
     );
+  }
+
+  private static class ForSideEffectsOnlyProvider implements Provider<ForSideEffectsOnlyProvider.Child>
+  {
+    final static class Child {};
+
+    @Inject
+    public ForSideEffectsOnlyProvider(DruidNodeAnnouncer announcer, @Self DruidNode druidNode, DataNodeService dataNodeService,
+                                      LookupNodeService lookupNodeService, Lifecycle lifecycle)
+    {
+      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode,
+                                                                     DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
+                                                                     ImmutableMap.of(
+                                                                         dataNodeService.getName(), dataNodeService,
+                                                                         lookupNodeService.getName(), lookupNodeService
+                                                                     ));
+
+      lifecycle.addHandler(
+          new Lifecycle.Handler()
+          {
+            @Override
+            public void start() throws Exception
+            {
+              announcer.announce(discoveryDruidNode);
+            }
+
+            @Override
+            public void stop()
+            {
+              announcer.unannounce(discoveryDruidNode);
+            }
+          },
+          Lifecycle.Stage.LAST
+      );
+    }
+
+    @Override
+    public ForSideEffectsOnlyProvider.Child get()
+    {
+      return new Child();
+    }
   }
 }

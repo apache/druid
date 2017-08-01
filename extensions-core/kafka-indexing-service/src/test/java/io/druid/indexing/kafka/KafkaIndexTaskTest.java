@@ -1637,7 +1637,11 @@ public class KafkaIndexTaskTest
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
         new CacheConfig(),
-        testUtils.getTestIndexMergerV9()
+        testUtils.getTestIndexMergerV9(),
+        null,
+        null,
+        null,
+        null
     );
   }
 

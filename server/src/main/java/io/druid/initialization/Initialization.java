@@ -32,6 +32,7 @@ import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
+import io.druid.discovery.DruidDiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
 import io.druid.guice.CoordinatorDiscoveryModule;
@@ -358,6 +359,7 @@ public class Initialization
         new JettyServerModule(),
         new ExpressionModule(),
         new DiscoveryModule(),
+        new DruidDiscoveryModule(),
         new ServerViewModule(),
         new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),

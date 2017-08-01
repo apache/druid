@@ -20,8 +20,11 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.druid.client.BrokerSegmentWatcherConfig;
@@ -33,6 +36,10 @@ import io.druid.client.cache.CacheMonitor;
 import io.druid.client.selector.CustomTierSelectorStrategyConfig;
 import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.client.selector.TierSelectorStrategy;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
 import io.druid.guice.CacheModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.Jerseys;
@@ -41,6 +48,8 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
+import io.druid.guice.annotations.Self;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.RetryQueryRunnerConfig;
@@ -48,6 +57,7 @@ import io.druid.query.lookup.LookupModule;
 import io.druid.server.BrokerQueryResource;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
+import io.druid.server.DruidNode;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.BrokerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -120,10 +130,52 @@ public class CliBroker extends ServerRunnable
             MetricsModule.register(binder, CacheMonitor.class);
 
             LifecycleModule.register(binder, Server.class);
+
+            binder.bind(ForSideEffectsOnlyProvider.Child.class).toProvider(ForSideEffectsOnlyProvider.class).asEagerSingleton();
           }
         },
         new LookupModule(),
         new SqlModule()
     );
+  }
+
+  private static class ForSideEffectsOnlyProvider implements Provider<ForSideEffectsOnlyProvider.Child>
+  {
+    final static class Child {};
+
+    @Inject
+    public ForSideEffectsOnlyProvider(DruidNodeAnnouncer announcer, @Self DruidNode druidNode,
+                                      LookupNodeService lookupNodeService, Lifecycle lifecycle)
+    {
+      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode,
+                                                                     DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+                                                                     ImmutableMap.of(
+                                                                         lookupNodeService.getName(), lookupNodeService
+                                                                     ));
+
+      lifecycle.addHandler(
+          new Lifecycle.Handler()
+          {
+            @Override
+            public void start() throws Exception
+            {
+              announcer.announce(discoveryDruidNode);
+            }
+
+            @Override
+            public void stop()
+            {
+              announcer.unannounce(discoveryDruidNode);
+            }
+          },
+          Lifecycle.Stage.LAST
+      );
+    }
+
+    @Override
+    public ForSideEffectsOnlyProvider.Child get()
+    {
+      return new Child();
+    }
   }
 }

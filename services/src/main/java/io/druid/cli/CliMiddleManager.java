@@ -20,13 +20,19 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-
 import io.airlift.airline.Command;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.WorkerNodeService;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.IndexingServiceTaskLogsModule;
@@ -44,6 +50,7 @@ import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.indexing.worker.WorkerTaskMonitor;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.indexing.worker.http.WorkerResource;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.DruidNode;
@@ -98,6 +105,7 @@ public class CliMiddleManager extends ServerRunnable
             Jerseys.addResource(binder, WorkerResource.class);
 
             LifecycleModule.register(binder, Server.class);
+            binder.bind(ForSideEffectsOnlyProvider.Child.class).toProvider(ForSideEffectsOnlyProvider.class).asEagerSingleton();
           }
 
           @Provides
@@ -116,5 +124,54 @@ public class CliMiddleManager extends ServerRunnable
         new IndexingServiceFirehoseModule(),
         new IndexingServiceTaskLogsModule()
     );
+  }
+
+  private static class ForSideEffectsOnlyProvider implements Provider<ForSideEffectsOnlyProvider.Child>
+  {
+    final static class Child {};
+
+    @Inject
+    public ForSideEffectsOnlyProvider(
+        DruidNodeAnnouncer announcer,
+        @Self DruidNode druidNode,
+        WorkerConfig workerConfig,
+        Lifecycle lifecycle
+    )
+    {
+      WorkerNodeService workerNodeService = new WorkerNodeService(
+          workerConfig.getIp(),
+          workerConfig.getCapacity(),
+          workerConfig.getVersion()
+      );
+      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode,
+                                                                     DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+                                                                     ImmutableMap.of(
+                                                                         workerNodeService.getName(), workerNodeService
+                                                                     ));
+
+      lifecycle.addHandler(
+          new Lifecycle.Handler()
+          {
+            @Override
+            public void start() throws Exception
+            {
+              announcer.announce(discoveryDruidNode);
+            }
+
+            @Override
+            public void stop()
+            {
+              announcer.unannounce(discoveryDruidNode);
+            }
+          },
+          Lifecycle.Stage.LAST
+      );
+    }
+
+    @Override
+    public ForSideEffectsOnlyProvider.Child get()
+    {
+      return new Child();
+    }
   }
 }

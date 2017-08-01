@@ -17,32 +17,33 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.discovery;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.inject.Binder;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import io.druid.guice.PolyBind;
 
 /**
  */
-public class CuratorDiscoveryConfig
+public class DruidDiscoveryModule implements Module
 {
-  @JsonProperty
-  private String path = "/druid/discovery";
+  public static final String PROPERTY = "druid.discovery.type";
 
-  @JsonProperty
-  private String internalDiscoveryPath = "/druid/internal-discovery";
-
-  public String getInternalDiscoveryPath()
+  @Override
+  public void configure(Binder binder)
   {
-    return internalDiscoveryPath;
+
   }
 
-  public String getPath()
+  public static void createBindingChoices(Binder binder, String defaultPropertyValue)
   {
-    return path;
-  }
+    PolyBind.createChoiceWithDefault(
+        binder, PROPERTY, Key.get(DruidNodeAnnouncer.class), defaultPropertyValue
+    );
 
-  public boolean useDiscovery()
-  {
-    return path != null;
+    PolyBind.createChoiceWithDefault(
+        binder, PROPERTY, Key.get(DruidNodeDiscoveryProvider.class), defaultPropertyValue
+    );
   }
 }

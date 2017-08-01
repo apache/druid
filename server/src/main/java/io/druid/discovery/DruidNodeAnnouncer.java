@@ -17,32 +17,13 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
+package io.druid.discovery;
 
 /**
+ * DiscoveryDruidNode announcer for internal discovery.
  */
-public class CuratorDiscoveryConfig
+public interface DruidNodeAnnouncer
 {
-  @JsonProperty
-  private String path = "/druid/discovery";
-
-  @JsonProperty
-  private String internalDiscoveryPath = "/druid/internal-discovery";
-
-  public String getInternalDiscoveryPath()
-  {
-    return internalDiscoveryPath;
-  }
-
-  public String getPath()
-  {
-    return path;
-  }
-
-  public boolean useDiscovery()
-  {
-    return path != null;
-  }
+  void announce(DiscoveryDruidNode discoveryDruidNode);
+  void unannounce(DiscoveryDruidNode discoveryDruidNode);
 }

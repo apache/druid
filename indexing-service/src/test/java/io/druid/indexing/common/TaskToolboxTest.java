@@ -110,7 +110,11 @@ public class TaskToolboxTest
         mockIndexIO,
         mockCache,
         mockCacheConfig,
-        mockIndexMergerV9
+        mockIndexMergerV9,
+        null,
+        null,
+        null,
+        null
     );
   }
 

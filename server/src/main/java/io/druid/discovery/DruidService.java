@@ -17,32 +17,21 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.discovery;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
+ * Metadata of a service announced by node. See DataNodeService and LookupNodeService for examples.
  */
-public class CuratorDiscoveryConfig
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = DataNodeService.DISCOVERY_SERVICE_KEY, value = DataNodeService.class),
+    @JsonSubTypes.Type(name = LookupNodeService.DISCOVERY_SERVICE_KEY, value = LookupNodeService.class),
+    @JsonSubTypes.Type(name = WorkerNodeService.DISCOVERY_SERVICE_KEY, value = WorkerNodeService.class)
+})
+public abstract class DruidService
 {
-  @JsonProperty
-  private String path = "/druid/discovery";
-
-  @JsonProperty
-  private String internalDiscoveryPath = "/druid/internal-discovery";
-
-  public String getInternalDiscoveryPath()
-  {
-    return internalDiscoveryPath;
-  }
-
-  public String getPath()
-  {
-    return path;
-  }
-
-  public boolean useDiscovery()
-  {
-    return path != null;
-  }
+  public abstract String getName();
 }
