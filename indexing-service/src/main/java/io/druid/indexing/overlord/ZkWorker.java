@@ -51,7 +51,9 @@ public class ZkWorker implements Closeable
   private final Function<ChildData, TaskAnnouncement> cacheConverter;
 
   private AtomicReference<Worker> worker;
-  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
+  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(new DateTime());
+  private AtomicReference<DateTime> blacklistedUntil = new AtomicReference<>();
+
   private AtomicInteger continuouslyFailedTasksCount = new AtomicInteger(0);
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
@@ -134,6 +136,12 @@ public class ZkWorker implements Closeable
     return lastCompletedTaskTime.get();
   }
 
+  @JsonProperty
+  public DateTime getBlacklistedUntil()
+  {
+    return blacklistedUntil.get();
+  }
+
   public boolean isRunningTask(String taskId)
   {
     return getRunningTasks().containsKey(taskId);
@@ -158,6 +166,11 @@ public class ZkWorker implements Closeable
     lastCompletedTaskTime.set(completedTaskTime);
   }
 
+  public void setBlacklistedUntil(DateTime blacklistedUntil)
+  {
+    this.blacklistedUntil.set(blacklistedUntil);
+  }
+
   public ImmutableWorkerInfo toImmutable()
   {
 
@@ -166,7 +179,8 @@ public class ZkWorker implements Closeable
         getCurrCapacityUsed(),
         getAvailabilityGroups(),
         getRunningTaskIds(),
-        lastCompletedTaskTime.get()
+        lastCompletedTaskTime.get(),
+        blacklistedUntil.get()
     );
   }
 
@@ -197,6 +211,7 @@ public class ZkWorker implements Closeable
     return "ZkWorker{" +
            "worker=" + worker +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +
+           ", blacklistedUntil=" + blacklistedUntil +
            '}';
   }
 }
