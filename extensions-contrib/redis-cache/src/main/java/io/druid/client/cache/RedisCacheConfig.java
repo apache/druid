@@ -29,11 +29,11 @@ public class RedisCacheConfig
     @JsonProperty
     private int port;
 
-    // seconds
+    // milliseconds, default to one day
     @JsonProperty
-    private int expiration = 24 * 3600;
+    private long expiration = 24 * 3600 * 1000;
 
-    // milliseconds
+    // milliseconds, the type is 'int' because current Jedis only accept 'int' for timeout
     @JsonProperty
     private int timeout = 2000;
 
@@ -59,7 +59,7 @@ public class RedisCacheConfig
         return port;
     }
 
-    public int getExpiration()
+    public long getExpiration()
     {
         return expiration;
     }

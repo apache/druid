@@ -19,6 +19,7 @@
 
 package io.druid.client.cache;
 
+import com.fiftyonred.mock_jedis.MockJedis;
 import com.fiftyonred.mock_jedis.MockJedisPool;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -35,7 +36,6 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
 import java.util.Map;
@@ -56,9 +56,9 @@ public class RedisCacheTest
         }
 
         @Override
-        public int getExpiration()
+        public long getExpiration()
         {
-            return 3600;
+            return 3600000;
         }
     };
 
@@ -70,7 +70,16 @@ public class RedisCacheTest
         poolConfig.setMaxIdle(cacheConfig.getMaxIdleConnections());
         poolConfig.setMinIdle(cacheConfig.getMinIdleConnections());
 
-        JedisPool pool = new MockJedisPool(poolConfig, "localhost");
+        MockJedisPool pool = new MockJedisPool(poolConfig, "localhost");
+        // orginal MockJedis do not support 'milliseconds' in long type,
+        // for test we add one method to support it
+        pool.setClient(new MockJedis("localhost") {
+            public String psetex(byte[] key, long milliseconds, byte[] value)
+            {
+                return this.psetex(key, (int) milliseconds, value);
+            }
+        });
+
         cache = RedisCache.create(pool, cacheConfig);
     }
 

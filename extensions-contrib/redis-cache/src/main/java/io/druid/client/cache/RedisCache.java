@@ -34,11 +34,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class RedisCache implements Cache
 {
-    private static final Logger log = new Logger(MemcachedCache.class);
+    private static final Logger log = new Logger(RedisCache.class);
 
     private JedisPool pool;
     private RedisCacheConfig config;
@@ -48,7 +47,7 @@ public class RedisCache implements Cache
     private final AtomicLong timeoutCount = new AtomicLong(0);
     private final AtomicLong errorCount = new AtomicLong(0);
 
-    private final AtomicReference<AtomicLong> priorRequestCount = new AtomicReference<>(new AtomicLong(0L));
+    private final AtomicLong priorRequestCount = new AtomicLong(0);
     // both get、put and getBulk will increase request count by 1
     private final AtomicLong totalRequestCount = new AtomicLong(0);
 
@@ -101,7 +100,7 @@ public class RedisCache implements Cache
         totalRequestCount.incrementAndGet();
 
         try (Jedis jedis = pool.getResource()) {
-            jedis.setex(key.toByteArray(), config.getExpiration(), value);
+            jedis.psetex(key.toByteArray(), config.getExpiration(), value);
         }
         catch (JedisException e) {
             errorCount.incrementAndGet();
@@ -172,13 +171,14 @@ public class RedisCache implements Cache
     @Override
     public void doMonitor(ServiceEmitter emitter)
     {
-        final AtomicLong priorCount = priorRequestCount.get();
+        final long priorCount = priorRequestCount.get();
+        final long totalCount = totalRequestCount.get();
         final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
-        emitter.emit(builder.build("query/cache/redis/total/requests", totalRequestCount.get()));
-        emitter.emit(builder.build("query/cache/redis/delta/requests", totalRequestCount.get() - priorCount.get()));
-        if (!priorRequestCount.compareAndSet(priorCount, totalRequestCount)) {
+        emitter.emit(builder.build("query/cache/redis/total/requests", totalCount));
+        emitter.emit(builder.build("query/cache/redis/delta/requests", totalCount - priorCount));
+        if (!priorRequestCount.compareAndSet(priorCount, totalCount)) {
             log.error("Prior value changed while I was reporting! updating anyways");
-            priorRequestCount.set(totalRequestCount);
+            priorRequestCount.set(totalCount);
         }
     }
 
