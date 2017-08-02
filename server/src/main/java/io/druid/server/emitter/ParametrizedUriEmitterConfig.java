@@ -19,22 +19,13 @@
 
 package io.druid.server.emitter;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Period;
-
-import javax.validation.constraints.NotNull;
 
 public class ParametrizedUriEmitterConfig extends com.metamx.emitter.core.ParametrizedUriEmitterConfig
 {
   @JsonProperty
   private Period timeOut = new Period("PT5M");
-
-  @JsonCreator
-  public ParametrizedUriEmitterConfig(@NotNull @JsonProperty("recipientBaseUrlPattern") String recipientBaseUrlPattern)
-  {
-    super(recipientBaseUrlPattern);
-  }
 
   public Period getReadTimeout()
   {
