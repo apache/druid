@@ -352,6 +352,10 @@ public class GroupByQuery extends BaseQuery<Row>
         throw new IAE("When forcing limit push down, the provided limit spec must have a limit.");
       }
 
+      if (havingSpec != null) {
+        throw new IAE("Cannot force limit push down when a having spec is present.");
+      }
+
       for (OrderByColumnSpec orderBySpec : ((DefaultLimitSpec) limitSpec).getColumns()) {
         if (OrderByColumnSpec.getPostAggIndexForOrderBy(orderBySpec, postAggregatorSpecs) > -1) {
           throw new UnsupportedOperationException("Limit push down when sorting by a post aggregator is not supported.");
