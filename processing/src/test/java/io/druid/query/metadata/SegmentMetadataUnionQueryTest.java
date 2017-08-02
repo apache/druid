@@ -110,7 +110,7 @@ public class SegmentMetadataUnionQueryTest
                 null
             )
         ),
-        mmap ? 626448 : 629228,
+        mmap ? 669972 : 672752,
         4836,
         null,
         null,

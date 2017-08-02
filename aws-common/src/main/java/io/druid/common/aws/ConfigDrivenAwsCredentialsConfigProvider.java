@@ -36,23 +36,25 @@ public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsP
   @Override
   public AWSCredentials getCredentials()
   {
-      if (!Strings.isNullOrEmpty(config.getAccessKey()) && !Strings.isNullOrEmpty(config.getSecretKey())) {
-        return new AWSCredentials()
+    final String key = config.getAccessKey().getPassword();
+    final String secret = config.getSecretKey().getPassword();
+    if (!Strings.isNullOrEmpty(key) && !Strings.isNullOrEmpty(secret)) {
+      return new AWSCredentials()
+      {
+        @Override
+        public String getAWSAccessKeyId()
         {
-          @Override
-          public String getAWSAccessKeyId()
-          {
-            return config.getAccessKey();
-          }
+          return key;
+        }
 
-          @Override
-          public String getAWSSecretKey()
-          {
-            return config.getSecretKey();
-          }
-        };
-      }
-      throw new AmazonClientException("Unable to load AWS credentials from druid AWSCredentialsConfig");
+        @Override
+        public String getAWSSecretKey()
+        {
+          return secret;
+        }
+      };
+    }
+    throw new AmazonClientException("Unable to load AWS credentials from druid AWSCredentialsConfig");
   }
 
   @Override

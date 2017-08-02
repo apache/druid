@@ -19,6 +19,8 @@
 
 package io.druid.query.search.search;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class AllSearchQuerySpec implements SearchQuerySpec
@@ -26,7 +28,7 @@ public class AllSearchQuerySpec implements SearchQuerySpec
   private static final byte CACHE_TYPE_ID = 0x7f;
 
   @Override
-  public boolean accept(String dimVal)
+  public boolean accept(@Nullable String dimVal)
   {
     return true;
   }

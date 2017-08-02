@@ -98,7 +98,6 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
     if (queryDataSource != null) {
       return getQueryMaker().runQuery(
           queryDataSource,
-          sourceRel.getOutputRowSignature(),
           queryBuilder
       );
     } else {
