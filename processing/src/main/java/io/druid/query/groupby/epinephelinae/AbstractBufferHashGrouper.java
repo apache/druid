@@ -51,6 +51,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   protected ByteBuffer hashTableBuffer; // buffer for the entire hash table (total space, not individual growth)
 
   public AbstractBufferHashGrouper(
+      // the buffer returned from the below supplier can have dirty bits and should be cleared during initialization
       final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
       final AggregatorFactory[] aggregatorFactories,

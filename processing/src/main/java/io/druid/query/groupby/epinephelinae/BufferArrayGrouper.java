@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.function.Function;
+import java.util.function.ToIntFunction;
 
 /**
  * A buffer grouper for array-based aggregation.  This grouper stores aggregated values in the buffer using the grouping
@@ -72,17 +72,21 @@ public class BufferArrayGrouper implements Grouper<Integer>
                                  .mapToInt(AggregatorFactory::getMaxIntermediateSize)
                                  .sum();
 
-    return Integer.BYTES +                                       // key size
-           getUserBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
-           cardinalityWithMissingValue * recordSize;             // total values size
+    return Integer.BYTES +                                           // grouping key size
+           getUsedFlagBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
+           cardinalityWithMissingValue * recordSize;                 // total values size
   }
 
-  private static int getUserBufferCapacity(int cardinalityWithMissingValue)
+  /**
+   * Compute the number of bytes to store all used flag bits.
+   */
+  private static int getUsedFlagBufferCapacity(int cardinalityWithMissingValue)
   {
-    return (int) Math.ceil((double) cardinalityWithMissingValue / 8);
+    return (cardinalityWithMissingValue + 7) / 8;
   }
 
   public BufferArrayGrouper(
+      // the buffer returned from the below supplier can have dirty bits and should be cleared during initialization
       final Supplier<ByteBuffer> bufferSupplier,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
@@ -110,14 +114,14 @@ public class BufferArrayGrouper implements Grouper<Integer>
   public void init()
   {
     if (!initialized) {
-      final ByteBuffer buffer = bufferSupplier.get().duplicate();
+      final ByteBuffer buffer = bufferSupplier.get();
 
-      final int usedBufferEnd = getUserBufferCapacity(cardinalityWithMissingValue);
+      final int usedFlagBufferEnd = getUsedFlagBufferCapacity(cardinalityWithMissingValue);
       buffer.position(0);
-      buffer.limit(usedBufferEnd);
+      buffer.limit(usedFlagBufferEnd);
       usedFlagBuffer = buffer.slice();
 
-      buffer.position(usedBufferEnd);
+      buffer.position(usedFlagBufferEnd);
       buffer.limit(buffer.capacity());
       valBuffer = buffer.slice();
 
@@ -170,9 +174,9 @@ public class BufferArrayGrouper implements Grouper<Integer>
 
   private void initializeSlot(int dimIndex)
   {
-    final int index = dimIndex / 8;
-    final int extraIndex = dimIndex % 8;
-    usedFlagBuffer.put(index, (byte) (usedFlagBuffer.get(index) | 1 << extraIndex));
+    final int index = dimIndex / Byte.SIZE;
+    final int extraIndex = dimIndex % Byte.SIZE;
+    usedFlagBuffer.put(index, (byte) (usedFlagBuffer.get(index) | (1 << extraIndex)));
 
     final int recordOffset = dimIndex * recordSize;
     for (int i = 0; i < aggregators.length; i++) {
@@ -182,29 +186,31 @@ public class BufferArrayGrouper implements Grouper<Integer>
 
   private boolean isUsedSlot(int dimIndex)
   {
-    final int index = dimIndex / 8;
-    final int extraIndex = dimIndex % 8;
-    final int usedByte = 1 << extraIndex;
-    return (usedFlagBuffer.get(index) & usedByte) == usedByte;
+    final int index = dimIndex / Byte.SIZE;
+    final int extraIndex = dimIndex % Byte.SIZE;
+    final int usedFlagByte = 1 << extraIndex;
+    return (usedFlagBuffer.get(index) & usedFlagByte) != 0;
   }
 
   @Override
   public void reset()
   {
-    final int usedBufferCapacity = usedFlagBuffer.capacity();
+    // Clear the entire usedFlagBuffer
+    final int usedFlagBufferCapacity = usedFlagBuffer.capacity();
 
-    final int n = usedBufferCapacity / 8;
-    for (int i = 0; i < n; i += 8) {
+    // putLong() instead of put() can boost the performance of clearing the buffer
+    final int n = usedFlagBufferCapacity / Long.BYTES;
+    for (int i = 0; i < n; i += Long.BYTES) {
       usedFlagBuffer.putLong(i, 0L);
     }
 
-    for (int i = n; i < usedBufferCapacity; i++) {
+    for (int i = n; i < usedFlagBufferCapacity; i++) {
       usedFlagBuffer.put(i, (byte) 0);
     }
   }
 
   @Override
-  public Function<Integer, Integer> hashFunction()
+  public ToIntFunction<Integer> hashFunction()
   {
     return key -> key + 1;
   }
@@ -245,7 +251,7 @@ public class BufferArrayGrouper implements Grouper<Integer>
           cur = findNext();
           findNext = false;
         }
-        return cur != -1;
+        return cur >= 0;
       }
 
       private int findNext()
@@ -261,7 +267,7 @@ public class BufferArrayGrouper implements Grouper<Integer>
       @Override
       public Entry<Integer> next()
       {
-        if (cur == -1) {
+        if (cur < 0) {
           throw new NoSuchElementException();
         }
 

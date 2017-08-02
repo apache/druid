@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.function.Function;
+import java.util.function.ToIntFunction;
 
 /**
  * Groupers aggregate metrics from rows that they typically get from a ColumnSelectorFactory, under
@@ -78,7 +78,7 @@ public interface Grouper<KeyType> extends Closeable
   default AggregateResult aggregate(KeyType key)
   {
     Preconditions.checkNotNull(key, "key");
-    return aggregate(key, hashFunction().apply(key));
+    return aggregate(key, hashFunction().applyAsInt(key));
   }
 
   /**
@@ -86,7 +86,7 @@ public interface Grouper<KeyType> extends Closeable
    */
   void reset();
 
-  default Function<KeyType, Integer> hashFunction()
+  default ToIntFunction<KeyType> hashFunction()
   {
     return Groupers::hash;
   }
