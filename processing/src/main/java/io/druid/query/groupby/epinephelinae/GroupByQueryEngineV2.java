@@ -215,38 +215,40 @@ public class GroupByQueryEngineV2
       ByteBuffer buffer
   )
   {
-    if (!config.isForceHashAggregation()) {
-      final ColumnCapabilities columnCapabilities;
-      final int cardinality;
+    if (config.isForceHashAggregation()) {
+      return false;
+    }
 
-      // Find cardinality
-      if (dims.length == 0) {
-        columnCapabilities = null;
-        cardinality = 1;
-      } else if (dims.length == 1) {
-        columnCapabilities = storageAdapter.getColumnCapabilities(dims[0].getName());
-        cardinality = storageAdapter.getDimensionCardinality(dims[0].getName());
-      } else {
-        columnCapabilities = null;
-        cardinality = -1; // ArrayAggregateIterator is not available
-      }
+    final ColumnCapabilities columnCapabilities;
+    final int cardinality;
 
-      // Choose array-based aggregation if the grouping key is a single string dimension of a
-      // known cardinality
-      if ((columnCapabilities == null || columnCapabilities.getType().equals(ValueType.STRING))
-          && cardinality > 0) {
-        final AggregatorFactory[] aggregatorFactories = query
-            .getAggregatorSpecs()
-            .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]);
-        final int requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
-            cardinality,
-            aggregatorFactories
-        );
+    // Find cardinality
+    if (dims.length == 0) {
+      columnCapabilities = null;
+      cardinality = 1;
+    } else if (dims.length == 1) {
+      columnCapabilities = storageAdapter.getColumnCapabilities(dims[0].getName());
+      cardinality = storageAdapter.getDimensionCardinality(dims[0].getName());
+    } else {
+      columnCapabilities = null;
+      cardinality = -1; // ArrayAggregateIterator is not available
+    }
 
-        // Check that all keys and aggregated values can be contained the buffer
-        if (requiredBufferCapacity <= buffer.capacity()) {
-          return true;
-        }
+    // Choose array-based aggregation if the grouping key is a single string dimension of a
+    // known cardinality
+    if ((columnCapabilities == null || columnCapabilities.getType().equals(ValueType.STRING))
+        && cardinality > 0) {
+      final AggregatorFactory[] aggregatorFactories = query
+          .getAggregatorSpecs()
+          .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]);
+      final int requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
+          cardinality,
+          aggregatorFactories
+      );
+
+      // Check that all keys and aggregated values can be contained the buffer
+      if (requiredBufferCapacity <= buffer.capacity()) {
+        return true;
       }
     }
 

@@ -72,8 +72,7 @@ public class BufferArrayGrouper implements Grouper<Integer>
                                  .mapToInt(AggregatorFactory::getMaxIntermediateSize)
                                  .sum();
 
-    return Integer.BYTES +                                           // grouping key size
-           getUsedFlagBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
+    return getUsedFlagBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
            cardinalityWithMissingValue * recordSize;                 // total values size
   }
 
@@ -199,7 +198,7 @@ public class BufferArrayGrouper implements Grouper<Integer>
     final int usedFlagBufferCapacity = usedFlagBuffer.capacity();
 
     // putLong() instead of put() can boost the performance of clearing the buffer
-    final int n = usedFlagBufferCapacity / Long.BYTES;
+    final int n = (usedFlagBufferCapacity / Long.BYTES) * Long.BYTES;
     for (int i = 0; i < n; i += Long.BYTES) {
       usedFlagBuffer.putLong(i, 0L);
     }
