@@ -47,6 +47,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   private final String valueColumn;
   @JsonProperty
   private final String tsColumn;
+  @JsonProperty 
+  private final String filter;
   @JsonProperty
   private final Period pollPeriod;
 
@@ -62,6 +64,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       final String valueColumn,
       @Nullable @JsonProperty(value = "tsColumn", required = false)
       final String tsColumn,
+      @Nullable @JsonProperty(value = "filter", required = false)
+      final String filter,
       @Min(0) @Nullable @JsonProperty(value = "pollPeriod", required = false)
       final Period pollPeriod
   )
@@ -72,6 +76,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
     this.tsColumn = tsColumn;
+    this.filter = filter;
     this.pollPeriod = pollPeriod == null ? new Period(0L) : pollPeriod;
   }
 
@@ -95,6 +100,11 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     return valueColumn;
   }
 
+  public String getFilter()
+  {
+    return filter;
+  }
+
   public String getTsColumn()
   {
     return tsColumn;
@@ -110,9 +120,10 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   public String toString()
   {
     return StringUtils.format(
-        "JdbcExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
+        "JdbcExtractionNamespace = { connectorConfig = { %s }, table = %s, filter = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
         connectorConfig.toString(),
         table,
+        filter,
         keyColumn,
         valueColumn,
         tsColumn,
@@ -144,6 +155,11 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     if (!valueColumn.equals(that.valueColumn)) {
       return false;
     }
+
+    if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
+      return false;
+    }
+
     if (tsColumn != null ? !tsColumn.equals(that.tsColumn) : that.tsColumn != null) {
       return false;
     }
@@ -158,6 +174,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     result = 31 * result + table.hashCode();
     result = 31 * result + keyColumn.hashCode();
     result = 31 * result + valueColumn.hashCode();
+    result = 31 * result + (filter != null ? filter.hashCode() : 0);
     result = 31 * result + (tsColumn != null ? tsColumn.hashCode() : 0);
     result = 31 * result + pollPeriod.hashCode();
     return result;

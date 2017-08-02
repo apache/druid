@@ -33,6 +33,8 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
+import com.google.common.base.Strings;
+
 import javax.annotation.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -68,6 +70,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final long dbQueryStart = System.currentTimeMillis();
     final DBI dbi = ensureDBI(entryId, namespace);
     final String table = namespace.getTable();
+    final String filter = namespace.getFilter();
     final String valueColumn = namespace.getValueColumn();
     final String keyColumn = namespace.getKeyColumn();
 
@@ -79,12 +82,28 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
           public List<Pair<String, String>> withHandle(Handle handle) throws Exception
           {
             final String query;
-            query = StringUtils.format(
-                "SELECT %s, %s FROM %s",
-                keyColumn,
-                valueColumn,
-                table
-            );
+
+            if(!Strings.isNullOrEmpty(filter)) {
+
+              query = String.format(
+                  "SELECT %s, %s FROM %s WHERE %s",
+                  keyColumn,
+                  valueColumn,
+                  table,
+                  filter
+              );
+            
+            } else {
+
+              query = String.format(
+                  "SELECT %s, %s FROM %s",
+                  keyColumn,
+                  valueColumn,
+                  table
+              );
+
+            }
+
             return handle
                 .createQuery(
                     query
