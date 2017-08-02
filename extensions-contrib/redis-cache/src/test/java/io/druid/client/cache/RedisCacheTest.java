@@ -72,8 +72,9 @@ public class RedisCacheTest
 
         MockJedisPool pool = new MockJedisPool(poolConfig, "localhost");
         // orginal MockJedis do not support 'milliseconds' in long type,
-        // for test we add one method to support it
+        // for test we override to support it
         pool.setClient(new MockJedis("localhost") {
+            @Override
             public String psetex(byte[] key, long milliseconds, byte[] value)
             {
                 return this.psetex(key, (int) milliseconds, value);
