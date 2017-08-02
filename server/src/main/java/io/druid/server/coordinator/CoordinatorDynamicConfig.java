@@ -67,7 +67,7 @@ public class CoordinatorDynamicConfig
       // See https://github.com/druid-io/druid/issues/3055
       @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
       @JsonProperty("killAllDataSources") boolean killAllDataSources,
-      @JsonProperty("maxSegmentsInNodeLoadingQueue") Integer maxSegmentsInNodeLoadingQueue
+      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
