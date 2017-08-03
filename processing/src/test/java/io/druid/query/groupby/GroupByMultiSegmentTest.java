@@ -207,14 +207,14 @@ public class GroupByMultiSegmentTest
 
     NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByBenchmark-computeBufferPool",
-        new OffheapBufferGenerator("compute", 250_000_000),
+        new OffheapBufferGenerator("compute", 10_000_000),
         0,
         Integer.MAX_VALUE
     );
 
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
     BlockingPool<ByteBuffer> mergePool = new DefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 250_000_000),
+        new OffheapBufferGenerator("merge", 10_000_000),
         2
     );
     final GroupByQueryConfig config = new GroupByQueryConfig()
