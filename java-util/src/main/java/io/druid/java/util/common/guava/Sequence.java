@@ -69,6 +69,13 @@ public interface Sequence<T>
     return new MappedSequence<>(this, mapper);
   }
 
+  default <R> Sequence<R> flatMap(
+      Function<? super T, ? extends Sequence<? extends R>> mapper
+  )
+  {
+    return new ConcatSequence<>(this.map(mapper));
+  }
+
   default <R> Sequence<R> flatMerge(
       Function<? super T, ? extends Sequence<? extends R>> mapper,
       Ordering<? super R> ordering

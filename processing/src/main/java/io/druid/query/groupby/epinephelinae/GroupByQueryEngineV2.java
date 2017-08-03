@@ -31,7 +31,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -131,59 +130,57 @@ public class GroupByQueryEngineV2
                                     ? null
                                     : new DateTime(Long.parseLong(fudgeTimestampString));
 
-    return Sequences.concat(
-        cursors.map(
-            cursor -> new BaseSequence<>(
-                new BaseSequence.IteratorMaker<Row, GroupByEngineIterator<?>>()
-                {
-                  @Override
-                  public GroupByEngineIterator make()
-                  {
-                    ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
-                        .createColumnSelectorPluses(
-                            STRATEGY_FACTORY,
-                            query.getDimensions(),
-                            cursor
-                        );
-                    GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
+    return cursors.flatMap(
+        cursor -> new BaseSequence<>(
+            new BaseSequence.IteratorMaker<Row, GroupByEngineIterator<?>>()
+            {
+              @Override
+              public GroupByEngineIterator make()
+              {
+                ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
+                    .createColumnSelectorPluses(
+                        STRATEGY_FACTORY,
+                        query.getDimensions(),
+                        cursor
+                    );
+                GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
 
-                    final ByteBuffer buffer = bufferHolder.get();
+                final ByteBuffer buffer = bufferHolder.get();
 
-                    // Check array-based aggregation is applicable
-                    if (isArrayAggregateApplicable(config, query, dims, storageAdapter, buffer)) {
-                      return new ArrayAggregateIterator(
-                          query,
-                          config,
-                          cursor,
-                          buffer,
-                          fudgeTimestamp,
-                          dims,
-                          allSingleValueDims,
-                          // There must be 0 or 1 dimension if isArrayAggregateApplicable() is true
-                          dims.length == 0 ? 1 : storageAdapter.getDimensionCardinality(dims[0].getName())
-                      );
-                    } else {
-                      return new HashAggregateIterator(
-                          query,
-                          config,
-                          cursor,
-                          buffer,
-                          fudgeTimestamp,
-                          dims,
-                          allSingleValueDims
-                      );
-                    }
-                  }
-
-                  @Override
-                  public void cleanup(GroupByEngineIterator iterFromMake)
-                  {
-                    iterFromMake.close();
-                  }
+                // Check array-based aggregation is applicable
+                if (isArrayAggregateApplicable(config, query, dims, storageAdapter, buffer)) {
+                  return new ArrayAggregateIterator(
+                      query,
+                      config,
+                      cursor,
+                      buffer,
+                      fudgeTimestamp,
+                      dims,
+                      allSingleValueDims,
+                      // There must be 0 or 1 dimension if isArrayAggregateApplicable() is true
+                      dims.length == 0 ? 1 : storageAdapter.getDimensionCardinality(dims[0].getName())
+                  );
+                } else {
+                  return new HashAggregateIterator(
+                      query,
+                      config,
+                      cursor,
+                      buffer,
+                      fudgeTimestamp,
+                      dims,
+                      allSingleValueDims
+                  );
                 }
-            )
-        ).withBaggage(bufferHolder)
-    );
+              }
+
+              @Override
+              public void cleanup(GroupByEngineIterator iterFromMake)
+              {
+                iterFromMake.close();
+              }
+            }
+        )
+    ).withBaggage(bufferHolder);
   }
 
   private static boolean isArrayAggregateApplicable(
