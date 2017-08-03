@@ -36,6 +36,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
+  private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
@@ -69,6 +70,9 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private boolean forcePushDownLimit = false;
+
+  @JsonProperty
+  private boolean forceHashAggregation = false;
 
   public String getDefaultStrategy()
   {
@@ -134,6 +138,11 @@ public class GroupByQueryConfig
   {
     return forcePushDownLimit;
   }
+
+  public boolean isForceHashAggregation()
+  {
+    return forceHashAggregation;
+  }
   
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
@@ -169,6 +178,7 @@ public class GroupByQueryConfig
         getMaxMergingDictionarySize()
     );
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
+    newConfig.forceHashAggregation = query.getContextBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
     return newConfig;
   }
 
@@ -185,6 +195,8 @@ public class GroupByQueryConfig
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
            ", maxMergingDictionarySize=" + maxMergingDictionarySize +
            ", maxOnDiskStorage=" + maxOnDiskStorage +
+           ", forcePushDownLimit=" + forcePushDownLimit +
+           ", forceHashAggregation=" + forceHashAggregation +
            '}';
   }
 }

@@ -43,7 +43,7 @@ import java.nio.channels.FileChannel;
 import java.util.Comparator;
 import java.util.List;
 
-public class BufferGrouperTest
+public class BufferHashGrouperTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -52,7 +52,7 @@ public class BufferGrouperTest
   public void testSimple()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = new BufferGrouper<>(
+    final Grouper<Integer> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(ByteBuffer.allocate(1000)),
         GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,
@@ -182,7 +182,7 @@ public class BufferGrouperTest
     Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
   }
 
-  private BufferGrouper<Integer> makeGrouper(
+  private BufferHashGrouper<Integer> makeGrouper(
       TestColumnSelectorFactory columnSelectorFactory,
       int bufferSize,
       int initialBuckets
@@ -197,7 +197,7 @@ public class BufferGrouperTest
       throw Throwables.propagate(e);
     }
 
-    final BufferGrouper<Integer> grouper = new BufferGrouper<>(
+    final BufferHashGrouper<Integer> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(buffer),
         GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,

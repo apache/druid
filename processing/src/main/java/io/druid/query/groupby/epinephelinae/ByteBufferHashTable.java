@@ -238,7 +238,7 @@ public class ByteBufferHashTable
   {
     int offset = bucket * bucketSizeWithHash;
     tableBuffer.position(offset);
-    tableBuffer.putInt(keyHash | 0x80000000);
+    tableBuffer.putInt(Groupers.getUsedFlag(keyHash));
     tableBuffer.put(keyBuffer);
     size++;
 

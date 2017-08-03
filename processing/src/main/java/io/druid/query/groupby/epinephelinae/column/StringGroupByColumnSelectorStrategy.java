@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby.epinephelinae.column;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
@@ -29,8 +30,6 @@ import java.util.Map;
 
 public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
-  private static final int GROUP_BY_MISSING_VALUE = -1;
-
   @Override
   public int getGroupingKeySize()
   {
@@ -59,6 +58,21 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     DimensionSelector dimSelector = (DimensionSelector) selector;
     IndexedInts row = dimSelector.getRow();
     valuess[columnIndex] = row;
+  }
+
+  @Override
+  public Object getOnlyValue(ColumnValueSelector selector)
+  {
+    final DimensionSelector dimSelector = (DimensionSelector) selector;
+    final IndexedInts row = dimSelector.getRow();
+    Preconditions.checkState(row.size() < 2, "Not supported for multi-value dimensions");
+    return row.size() == 1 ? row.get(0) : GROUP_BY_MISSING_VALUE;
+  }
+
+  @Override
+  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putInt(keyBufferPosition, (int) obj);
   }
 
   @Override
