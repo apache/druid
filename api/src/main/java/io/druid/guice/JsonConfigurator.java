@@ -185,8 +185,16 @@ public class JsonConfigurator
       throw new ProvisionException(String.format("Dot at the end of property: %s", originalProperty));
     }
     String nestedKey = property.substring(0, dotIndex);
-    Map<String, Object> nestedMap =
-        (Map<String, Object>) targetMap.computeIfAbsent(nestedKey, k -> new HashMap<String, Object>());
+    Object nested = targetMap.computeIfAbsent(nestedKey, k -> new HashMap<String, Object>());
+    if (!(nested instanceof Map)) {
+      throw new ProvisionException(String.format(
+          "Problem with %s property: one of it's prefixes is also used as a property key. "
+          + "Current property map is %s",
+          originalProperty,
+          targetMap
+      ));
+    }
+    Map<String, Object> nestedMap = (Map<String, Object>) nested;
     hieraricalPutValue(originalProperty, property.substring(dotIndex + 1), value, nestedMap);
   }
 
