@@ -113,7 +113,7 @@ public class QueryInterruptedException extends RuntimeException
   @Override
   public String toString()
   {
-    return StringUtils.nonStrictFormat(
+    return StringUtils.format(
         "QueryInterruptedException{msg=%s, code=%s, class=%s, host=%s}",
         getMessage(),
         errorCode,
