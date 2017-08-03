@@ -76,7 +76,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String OBJECTMAPPER_ATTRIBUTE = "io.druid.proxy.objectMapper";
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
-  private static final int MAX_QUEUED_CANCELLATIONS = 64;
+
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -116,7 +116,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
       @Router Provider<HttpClient> httpClientProvider,
-      DruidHttpClientConfig httpClientConfig,
+      @Router DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
       GenericQueryMetricsFactory queryMetricsFactory
@@ -138,12 +138,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     super.init();
 
-    // separate client with more aggressive connection timeouts
-    // to prevent cancellations requests from blocking queries
+    // Note that httpClientProvider is setup to return same HttpClient instance on each get() so
+    // it is same http client as that is used by parent ProxyServlet.
     broadcastClient = httpClientProvider.get();
-    broadcastClient.setConnectTimeout(CANCELLATION_TIMEOUT_MILLIS);
-    broadcastClient.setMaxRequestsQueuedPerDestination(MAX_QUEUED_CANCELLATIONS);
-
     try {
       broadcastClient.start();
     }

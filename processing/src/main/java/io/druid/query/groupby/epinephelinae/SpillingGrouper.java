@@ -46,7 +46,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Grouper based around a single underlying {@link BufferGrouper}. Not thread-safe.
+ * Grouper based around a single underlying {@link BufferHashGrouper}. Not thread-safe.
  *
  * When the underlying grouper is full, its contents are sorted and written to temporary files using "spillMapper".
  */
@@ -88,7 +88,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.keyObjComparator = keySerdeFactory.objectComparator(false);
     this.defaultOrderKeyObjComparator = keySerdeFactory.objectComparator(true);
     if (limitSpec != null) {
-      this.grouper = new LimitedBufferGrouper<>(
+      this.grouper = new LimitedBufferHashGrouper<>(
           bufferSupplier,
           keySerde,
           columnSelectorFactory,
@@ -100,7 +100,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
           sortHasNonGroupingFields
       );
     } else {
-      this.grouper = new BufferGrouper<>(
+      this.grouper = new BufferHashGrouper<>(
           bufferSupplier,
           keySerde,
           columnSelectorFactory,
@@ -151,12 +151,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       // Try again.
       return grouper.aggregate(key, keyHash);
     }
-  }
-
-  @Override
-  public AggregateResult aggregate(KeyType key)
-  {
-    return aggregate(key, Groupers.hash(key));
   }
 
   @Override

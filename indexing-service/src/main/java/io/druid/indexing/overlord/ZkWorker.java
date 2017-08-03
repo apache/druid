@@ -52,8 +52,9 @@ public class ZkWorker implements Closeable
   private final Function<ChildData, TaskAnnouncement> cacheConverter;
 
   private AtomicReference<Worker> worker;
-  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(DateTimes.nowUtc());
-  private AtomicInteger countinouslyFailedTasksCount = new AtomicInteger(0);
+  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(DateTimes.nowUtc());
+  private AtomicReference<DateTime> blacklistedUntil = new AtomicReference<>();
+  private AtomicInteger continuouslyFailedTasksCount = new AtomicInteger(0);
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
@@ -135,6 +136,12 @@ public class ZkWorker implements Closeable
     return lastCompletedTaskTime.get();
   }
 
+  @JsonProperty
+  public DateTime getBlacklistedUntil()
+  {
+    return blacklistedUntil.get();
+  }
+
   public boolean isRunningTask(String taskId)
   {
     return getRunningTasks().containsKey(taskId);
@@ -159,10 +166,22 @@ public class ZkWorker implements Closeable
     lastCompletedTaskTime.set(completedTaskTime);
   }
 
+  public void setBlacklistedUntil(DateTime blacklistedUntil)
+  {
+    this.blacklistedUntil.set(blacklistedUntil);
+  }
+
   public ImmutableWorkerInfo toImmutable()
   {
 
-    return new ImmutableWorkerInfo(worker.get(), getCurrCapacityUsed(), getAvailabilityGroups(), getRunningTaskIds(), lastCompletedTaskTime.get());
+    return new ImmutableWorkerInfo(
+        worker.get(),
+        getCurrCapacityUsed(),
+        getAvailabilityGroups(),
+        getRunningTaskIds(),
+        lastCompletedTaskTime.get(),
+        blacklistedUntil.get()
+    );
   }
 
   @Override
@@ -171,19 +190,19 @@ public class ZkWorker implements Closeable
     statusCache.close();
   }
 
-  public int getCountinouslyFailedTasksCount()
+  public int getContinuouslyFailedTasksCount()
   {
-    return countinouslyFailedTasksCount.get();
+    return continuouslyFailedTasksCount.get();
   }
 
-  public void resetCountinouslyFailedTasksCount()
+  public void resetContinuouslyFailedTasksCount()
   {
-    this.countinouslyFailedTasksCount.set(0);
+    this.continuouslyFailedTasksCount.set(0);
   }
 
-  public void incrementCountinouslyFailedTasksCount()
+  public void incrementContinuouslyFailedTasksCount()
   {
-    this.countinouslyFailedTasksCount.incrementAndGet();
+    this.continuouslyFailedTasksCount.incrementAndGet();
   }
 
   @Override
@@ -192,6 +211,7 @@ public class ZkWorker implements Closeable
     return "ZkWorker{" +
            "worker=" + worker +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +
+           ", blacklistedUntil=" + blacklistedUntil +
            '}';
   }
 }

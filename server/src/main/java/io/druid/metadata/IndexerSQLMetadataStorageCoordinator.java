@@ -632,10 +632,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("payload", jsonMapper.writeValueAsBytes(segment))
             .execute();
 
-      log.info("Published segment [%s] to DB", segment.getIdentifier());
+      log.info("Published segment [%s] to DB with used flag [%s]", segment.getIdentifier(), used);
     }
     catch (Exception e) {
-      log.error(e, "Exception inserting segment [%s] into DB", segment.getIdentifier());
+      log.error(e, "Exception inserting segment [%s] with used flag [%s] into DB", segment.getIdentifier(), used);
       throw e;
     }
 
