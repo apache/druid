@@ -21,6 +21,7 @@ package io.druid.java.util.common.guava;
 
 import com.google.common.collect.Ordering;
 
+import java.io.Closeable;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
@@ -79,5 +80,10 @@ public interface Sequence<T>
   default Sequence<T> withEffect(Runnable effect, Executor effectExecutor)
   {
     return Sequences.withEffect(this, effect, effectExecutor);
+  }
+
+  default Sequence<T> withBaggage(Closeable baggage)
+  {
+    return Sequences.withBaggage(this, baggage);
   }
 }

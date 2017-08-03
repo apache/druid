@@ -19,7 +19,6 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Suppliers;
@@ -31,7 +30,6 @@ import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
-import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ColumnSelectorPlus;
@@ -62,7 +60,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -135,75 +132,57 @@ public class GroupByQueryEngineV2
                                     : new DateTime(Long.parseLong(fudgeTimestampString));
 
     return Sequences.concat(
-        Sequences.withBaggage(
-            Sequences.map(
-                cursors,
-                new Function<Cursor, Sequence<Row>>()
+        cursors.map(
+            cursor -> new BaseSequence<>(
+                new BaseSequence.IteratorMaker<Row, GroupByEngineIterator<?>>()
                 {
                   @Override
-                  public Sequence<Row> apply(final Cursor cursor)
+                  public GroupByEngineIterator make()
                   {
-                    return new BaseSequence<>(
-                        new BaseSequence.IteratorMaker<Row, GroupByEngineIterator<?>>()
-                        {
-                          @Override
-                          public GroupByEngineIterator make()
-                          {
-                            ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
-                                .createColumnSelectorPluses(
-                                    STRATEGY_FACTORY,
-                                    query.getDimensions(),
-                                    cursor
-                                );
-                            GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
+                    ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
+                        .createColumnSelectorPluses(
+                            STRATEGY_FACTORY,
+                            query.getDimensions(),
+                            cursor
+                        );
+                    GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
 
-                            final ByteBuffer buffer = bufferHolder.get();
+                    final ByteBuffer buffer = bufferHolder.get();
 
-                            // Check array-based aggregation is applicable
-                            if (isArrayAggregateApplicable(config, query, dims, storageAdapter, buffer)) {
-                              return new ArrayAggregateIterator(
-                                  query,
-                                      config,
-                                      cursor,
-                                      buffer,
-                                      fudgeTimestamp,
-                                      dims,
-                                      allSingleValueDims,
-                                      // There must be 0 or 1 dimension if isArrayAggregateApplicable() is true
-                                      dims.length == 0 ? 1 : storageAdapter.getDimensionCardinality(dims[0].getName())
-                              );
-                            } else {
-                              return new HashAggregateIterator(
-                                  query,
-                                  config,
-                                  cursor,
-                                  buffer,
-                                  fudgeTimestamp,
-                                  dims,
-                                  allSingleValueDims
-                              );
-                            }
-                          }
+                    // Check array-based aggregation is applicable
+                    if (isArrayAggregateApplicable(config, query, dims, storageAdapter, buffer)) {
+                      return new ArrayAggregateIterator(
+                          query,
+                          config,
+                          cursor,
+                          buffer,
+                          fudgeTimestamp,
+                          dims,
+                          allSingleValueDims,
+                          // There must be 0 or 1 dimension if isArrayAggregateApplicable() is true
+                          dims.length == 0 ? 1 : storageAdapter.getDimensionCardinality(dims[0].getName())
+                      );
+                    } else {
+                      return new HashAggregateIterator(
+                          query,
+                          config,
+                          cursor,
+                          buffer,
+                          fudgeTimestamp,
+                          dims,
+                          allSingleValueDims
+                      );
+                    }
+                  }
 
-                          @Override
-                          public void cleanup(GroupByEngineIterator iterFromMake)
-                          {
-                            iterFromMake.close();
-                          }
-                        }
-                    );
+                  @Override
+                  public void cleanup(GroupByEngineIterator iterFromMake)
+                  {
+                    iterFromMake.close();
                   }
                 }
-            ),
-            new Closeable()
-            {
-              @Override
-              public void close() throws IOException
-              {
-                CloseQuietly.close(bufferHolder);
-              }
-            }
-        )
+            )
+        ).withBaggage(bufferHolder)
     );
   }
 
