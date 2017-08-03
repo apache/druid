@@ -167,6 +167,26 @@ public class ImmutableWorkerInfoTest
         new DateTime("2015-01-01T01:01:02Z")
     ), false);
 
+    // same worker different blacklistedUntil
+    assertEqualsAndHashCode(new ImmutableWorkerInfo(
+        new Worker(
+            "testWorker1", "192.0.0.1", 10, "v1"
+        ),
+        3,
+        ImmutableSet.of("grp1", "grp2"),
+        ImmutableSet.of("task1", "task2"),
+        new DateTime("2015-01-01T01:01:01Z"),
+        new DateTime("2017-07-30")
+    ), new ImmutableWorkerInfo(
+        new Worker(
+            "testWorker2", "192.0.0.1", 10, "v1"
+        ),
+        2,
+        ImmutableSet.of("grp1", "grp2"),
+        ImmutableSet.of("task1", "task2"),
+        new DateTime("2015-01-01T01:01:02Z"),
+        new DateTime("2017-07-31")
+    ), false);
   }
 
   private void assertEqualsAndHashCode(ImmutableWorkerInfo o1, ImmutableWorkerInfo o2, boolean shouldMatch)
