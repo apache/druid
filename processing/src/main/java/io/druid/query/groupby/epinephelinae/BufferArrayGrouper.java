@@ -81,7 +81,7 @@ public class BufferArrayGrouper implements Grouper<Integer>
    */
   private static int getUsedFlagBufferCapacity(int cardinalityWithMissingValue)
   {
-    return (cardinalityWithMissingValue + 7) / 8;
+    return (cardinalityWithMissingValue + Byte.SIZE - 1) / Byte.SIZE;
   }
 
   public BufferArrayGrouper(
