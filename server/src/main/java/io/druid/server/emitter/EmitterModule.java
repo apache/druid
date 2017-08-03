@@ -88,6 +88,7 @@ public class EmitterModule implements Module
         "version",
         Strings.nullToEmpty(version) // Version is null during `mvn test`.
     );
+    log.info("Underlying emitter for ServiceEmitter: %s", emitter);
     final ServiceEmitter retVal = new ServiceEmitter(
         config.getServiceName(),
         config.getHostAndPort(),

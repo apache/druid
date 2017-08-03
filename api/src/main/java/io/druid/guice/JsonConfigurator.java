@@ -42,6 +42,7 @@ import javax.validation.Path;
 import javax.validation.Validator;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -92,7 +93,7 @@ public class JsonConfigurator
           value = propValue;
         }
 
-        jsonMap.put(prop.substring(propertyBase.length()), value);
+        hieraricalPutValue(prop, prop.substring(propertyBase.length()), value, jsonMap);
       }
     }
 
@@ -163,6 +164,30 @@ public class JsonConfigurator
     log.info("Loaded class[%s] from props[%s] as [%s]", clazz, propertyBase, config);
 
     return config;
+  }
+
+  private static void hieraricalPutValue(
+      String originalProperty,
+      String property,
+      Object value,
+      Map<String, Object> targetMap
+  )
+  {
+    int dotIndex = property.indexOf('.');
+    if (dotIndex < 0) {
+      targetMap.put(property, value);
+      return;
+    }
+    if (dotIndex == 0) {
+      throw new ProvisionException(String.format("Double dot in property: %s", originalProperty));
+    }
+    if (dotIndex == property.length() - 1) {
+      throw new ProvisionException(String.format("Dot at the end of property: %s", originalProperty));
+    }
+    String nestedKey = property.substring(0, dotIndex);
+    Map<String, Object> nestedMap =
+        (Map<String, Object>) targetMap.computeIfAbsent(nestedKey, k -> new HashMap<String, Object>());
+    hieraricalPutValue(originalProperty, property.substring(dotIndex + 1), value, nestedMap);
   }
 
   @VisibleForTesting

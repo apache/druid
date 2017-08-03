@@ -25,10 +25,10 @@ import org.joda.time.Period;
 public class ParametrizedUriEmitterConfig extends com.metamx.emitter.core.ParametrizedUriEmitterConfig
 {
   @JsonProperty
-  private Period timeOut = new Period("PT5M");
+  private Period readTimeout = new Period("PT5M");
 
   public Period getReadTimeout()
   {
-    return timeOut;
+    return readTimeout;
   }
 }
