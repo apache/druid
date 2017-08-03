@@ -21,13 +21,12 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import com.google.common.primitives.Floats;
 import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 public class HistogramAggregatorTest
@@ -108,14 +107,10 @@ public class HistogramAggregatorTest
 
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
-    ArrayList<Float> b = Lists.newArrayList();
-    for (int i = 0; i < breaks.length; ++i) {
-      b.add(breaks[i]);
-    }
     HistogramAggregatorFactory factory = new HistogramAggregatorFactory(
         "billy",
         "billy",
-        b
+        Floats.asList(breaks)
     );
     HistogramBufferAggregator agg = new HistogramBufferAggregator(selector, breaks);
 

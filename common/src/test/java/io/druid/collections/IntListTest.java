@@ -85,8 +85,8 @@ public class IntListTest
   {
     int[] inputArray = {1,3,4};
     IntList list = new IntList();
-    for (int i = 0; i < inputArray.length; i++) {
-      list.add(inputArray[i]);
+    for (int e : inputArray) {
+      list.add(e);
     }
     int[] outputArray = list.toArray();
     Assert.assertArrayEquals(inputArray, outputArray);

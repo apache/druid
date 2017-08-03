@@ -54,10 +54,10 @@ public class SerializerUtilsTest
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(bos);
     out.writeInt(strings.length);
-    for (int i = 0;i < strings.length;i++) {
-      byte [] stringBytes = StringUtils.toUtf8(strings[i]);
+    for (String string : strings) {
+      byte[] stringBytes = StringUtils.toUtf8(string);
       out.writeInt(stringBytes.length);
-      out.write(StringUtils.toUtf8(strings[i]));
+      out.write(StringUtils.toUtf8(string));
     }
     out.close();
     stringsByte = bos.toByteArray();
@@ -65,8 +65,8 @@ public class SerializerUtilsTest
     bos = new ByteArrayOutputStream();
     out = new DataOutputStream(bos);
     out.writeInt(ints.length);
-    for (int i = 0;i < ints.length;i++) {
-      out.writeInt(ints[i]);
+    for (int e : ints) {
+      out.writeInt(e);
     }
     out.close();
     intsByte = bos.toByteArray();
@@ -83,8 +83,8 @@ public class SerializerUtilsTest
     bos = new ByteArrayOutputStream();
     out = new DataOutputStream(bos);
     out.writeInt(longs.length);
-    for (int i = 0;i < longs.length;i++) {
-      out.writeLong(longs[i]);
+    for (long e : longs) {
+      out.writeLong(e);
     }
     out.close();
     longsByte = bos.toByteArray();
@@ -105,8 +105,8 @@ public class SerializerUtilsTest
   public void testWriteIntList() throws IOException
   {
     IntList list = new IntList();
-    for (int i = 0;i < ints.length;i++) {
-      list.add(ints[i]);
+    for (int e : ints) {
+      list.add(e);
     }
     serializerUtils.writeInts(outStream, list);
     byte [] actuals = outStream.toByteArray();

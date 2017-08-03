@@ -560,8 +560,8 @@ public class IndexGeneratorJobTest
     for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
       List<ShardSpec> specs = constructShardSpecFromShardInfo(partitionType, shardInfoForEachShard[segmentNum++]);
       List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
-      for (int i = 0; i < specs.size(); ++i) {
-        actualSpecs.add(new HadoopyShardSpec(specs.get(i), shardCount++));
+      for (ShardSpec spec : specs) {
+        actualSpecs.add(new HadoopyShardSpec(spec, shardCount++));
       }
 
       shardSpecs.put(segmentGranularity.getStartMillis(), actualSpecs);

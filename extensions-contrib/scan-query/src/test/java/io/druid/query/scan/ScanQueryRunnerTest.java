@@ -617,8 +617,8 @@ public class ScanQueryRunnerTest
       {
         List mapEvents = Lists.newLinkedList();
         List events = ((List) input.getEvents());
-        for (int i = 0; i < events.size(); i++) {
-          Iterator compactedEventIter = ((List) events.get(i)).iterator();
+        for (Object event : events) {
+          Iterator compactedEventIter = ((List) event).iterator();
           Map mapEvent = new LinkedHashMap();
           for (String column : input.getColumns()) {
             mapEvent.put(column, compactedEventIter.next());

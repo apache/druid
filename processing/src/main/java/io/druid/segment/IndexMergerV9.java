@@ -784,8 +784,7 @@ public class IndexMergerV9 implements IndexMerger
     );
 
     final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
-    for (int i = 0; i < metricAggs.length; i++) {
-      AggregatorFactory metricAgg = metricAggs[i];
+    for (AggregatorFactory metricAgg : metricAggs) {
       int metricIndex = mergedMetrics.indexOf(metricAgg.getName());
       /*
         If metricIndex is negative, one of the metricAggs was not present in the union of metrics from the indices
