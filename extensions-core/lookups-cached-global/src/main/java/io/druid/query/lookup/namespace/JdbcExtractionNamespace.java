@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 /**
  *
@@ -119,16 +119,15 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   @Override
   public String toString()
   {
-    return StringUtils.format(
-        "JdbcExtractionNamespace = { connectorConfig = { %s }, table = %s, filter = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
-        connectorConfig.toString(),
-        table,
-        filter,
-        keyColumn,
-        valueColumn,
-        tsColumn,
-        pollPeriod
-    );
+    return "JdbcExtractionNamespace{" +
+           "connectorConfig=" + connectorConfig +
+           ", table='" + table + '\'' +
+           ", keyColumn='" + keyColumn + '\'' +
+           ", valueColumn='" + valueColumn + '\'' +
+           ", tsColumn='" + tsColumn + '\'' +
+           ", filter='" + filter + '\'' +
+           ", pollPeriod=" + pollPeriod +
+           '}';
   }
 
   @Override
@@ -143,40 +142,24 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
 
     JdbcExtractionNamespace that = (JdbcExtractionNamespace) o;
 
-    if (!connectorConfig.equals(that.connectorConfig)) {
-      return false;
-    }
-    if (!table.equals(that.table)) {
-      return false;
-    }
-    if (!keyColumn.equals(that.keyColumn)) {
-      return false;
-    }
-    if (!valueColumn.equals(that.valueColumn)) {
-      return false;
-    }
-
-    if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
-      return false;
-    }
-
-    if (tsColumn != null ? !tsColumn.equals(that.tsColumn) : that.tsColumn != null) {
-      return false;
-    }
-    return pollPeriod.equals(that.pollPeriod);
-
+    return Objects.equals(connectorConfig,that.connectorConfig) &&
+           Objects.equals(table,that.table) &&
+           Objects.equals(filter,that.filter) &&
+           Objects.equals(keyColumn,that.keyColumn) &&
+           Objects.equals(valueColumn, that.valueColumn) &&
+           Objects.equals(tsColumn,that.tsColumn) &&
+           Objects.equals(pollPeriod,that.pollPeriod);
   }
 
   @Override
   public int hashCode()
   {
-    int result = connectorConfig.hashCode();
-    result = 31 * result + table.hashCode();
-    result = 31 * result + keyColumn.hashCode();
-    result = 31 * result + valueColumn.hashCode();
-    result = 31 * result + (filter != null ? filter.hashCode() : 0);
-    result = 31 * result + (tsColumn != null ? tsColumn.hashCode() : 0);
-    result = 31 * result + pollPeriod.hashCode();
-    return result;
+    return Objects.hash(connectorConfig,
+                        table,
+                        filter,
+                        keyColumn,
+                        valueColumn,
+                        tsColumn,
+                        pollPeriod);
   }
 }

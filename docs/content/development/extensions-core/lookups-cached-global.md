@@ -321,7 +321,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`table`|The table which contains the key value pairs|Yes||
 |`keyColumn`|The column in `table` which contains the keys|Yes||
 |`valueColumn`|The column in `table` which contains the values|Yes||
-|`filter`|The filter to use when selecting lookups, this is is used to create a where clause on lookup population|Yes||
+|`filter`|The filter to use when selecting lookups, this is is used to create a where clause on lookup population|No| No Used|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
 

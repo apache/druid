@@ -81,36 +81,12 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
           @Override
           public List<Pair<String, String>> withHandle(Handle handle) throws Exception
           {
-            final String query;
-
-            if(!Strings.isNullOrEmpty(filter)) {
-
-              query = String.format(
-                  "SELECT %s, %s FROM %s WHERE %s",
-                  keyColumn,
-                  valueColumn,
-                  table,
-                  filter
-              );
-            
-            } else {
-
-              query = String.format(
-                  "SELECT %s, %s FROM %s",
-                  keyColumn,
-                  valueColumn,
-                  table
-              );
-
-            }
-
             return handle
                 .createQuery(
-                    query
+                    buildLookupQuery(table, filter, keyColumn, valueColumn)
                 ).map(
                     new ResultSetMapper<Pair<String, String>>()
                     {
-
                       @Override
                       public Pair<String, String> map(
                           final int index,
@@ -149,6 +125,30 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       }
       throw t;
     }
+  }
+
+  private String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
+  {
+    String query;
+
+    if (Strings.isNullOrEmpty(filter)) {
+      query = StringUtils.format(
+          "SELECT %s, %s FROM %s",
+          keyColumn,
+          valueColumn,
+          table
+      );
+    } else {
+      query = StringUtils.format(
+          "SELECT %s, %s FROM %s WHERE %s",
+          keyColumn,
+          valueColumn,
+          table,
+          filter
+      );
+    }
+
+    return query;
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)
