@@ -347,7 +347,7 @@ public class JdbcExtractionNamespaceTest
     } else {
       query = StringUtils.format(
           "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s')",
-          tableName, 
+          tableName,
           tsColumn, filterColumn, keyName, valName,
           updateTs, filter, key, val
       );
@@ -439,7 +439,7 @@ public class JdbcExtractionNamespaceTest
   {
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
-      insertValues(handleRef, "foo", "baz",null, "2900-01-01 00:00:00");
+      insertValues(handleRef, "foo", "baz", null, "2900-01-01 00:00:00");
       assertUpdated(entry, "foo", "baz");
     }
   }
@@ -453,7 +453,7 @@ public class JdbcExtractionNamespaceTest
         keyName,
         valName,
         tsColumn,
-            null,
+        null,
         new Period(10)
     );
     CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace);
