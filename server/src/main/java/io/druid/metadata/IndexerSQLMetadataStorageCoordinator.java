@@ -315,9 +315,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = Sets.newHashSet();
-    for (TimelineObjectHolder<String, DataSegment> holder : VersionedIntervalTimeline.forSegments(segments)
-                                                                                     .lookupWithIncompletePartitions(
-                                                                                         Intervals.ETERNITY)) {
+    List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
+        VersionedIntervalTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
+    for (TimelineObjectHolder<String, DataSegment> holder : segmentHolders) {
       for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
         usedSegments.add(chunk.getObject());
       }

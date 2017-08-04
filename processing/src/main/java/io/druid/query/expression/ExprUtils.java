@@ -65,10 +65,10 @@ public class ExprUtils
       timeZone = value != null ? DateTimeZone.forID(value) : null;
     }
 
-    Chronology chronology = timeZone == null ? ISOChronology.getInstanceUTC() : ISOChronology.getInstance(timeZone);
     if (originArg == null) {
       origin = null;
     } else {
+      Chronology chronology = timeZone == null ? ISOChronology.getInstanceUTC() : ISOChronology.getInstance(timeZone);
       final Object value = originArg.eval(bindings).value();
       origin = value != null ? new DateTime(value, chronology) : null;
     }
