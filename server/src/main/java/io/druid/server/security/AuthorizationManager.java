@@ -43,17 +43,26 @@ public interface AuthorizationManager
   /**
    * Check if the entity represented by `identity` in `namespace` is authorized to perform `action` on `resource`.
    *
-   * @param identity The identity of the requester
+   * @param identity  The identity of the requester
    * @param namespace The namespace of the identity
-   * @param resource The resource to be accessed
-   * @param action The action to perform on the resource
+   * @param resource  The resource to be accessed
+   * @param action    The action to perform on the resource
+   *
    * @return An Access object representing the result of the authorization check.
    */
-  public Access authorize(String identity, Resource resource, Action action);
+  Access authorize(String identity, Resource resource, Action action);
 
   /**
    * @return The namespace associated with this AuthorizationManager. Authenticator implementations will
    * put the namespace in request headers.
    */
-  public String getNamespace();
+  String getNamespace();
+
+  default void start()
+  {
+  }
+
+  default void stop()
+  {
+  }
 }

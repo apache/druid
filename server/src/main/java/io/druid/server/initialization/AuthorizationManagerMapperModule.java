@@ -28,6 +28,7 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.name.Names;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.LifecycleModule;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.security.AuthConfig;
@@ -49,8 +50,11 @@ public class AuthorizationManagerMapperModule implements DruidModule
     binder.bind(AuthorizationManagerMapper.class)
           .toProvider(new AuthorizationManagerMapperProvider())
           .in(LazySingleton.class);
+
+    LifecycleModule.register(binder, AuthorizationManagerMapper.class);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -74,10 +78,10 @@ public class AuthorizationManagerMapperModule implements DruidModule
     {
       Map<String, AuthorizationManager> authorizationManagerMap = Maps.newHashMap();
 
-      List<String> authManagerNames = authConfig.getAuthorizationManagers();
+      List<String> authorizationManagers = authConfig.getAuthorizationManagers();
 
       // If user didn't configure any AuthorizationManagers, use the default which rejects all requests.
-      if (authManagerNames == null || authManagerNames.size() == 0) {
+      if (authorizationManagers == null || authorizationManagers.isEmpty()) {
         return new AuthorizationManagerMapper(null) {
           @Override
           public AuthorizationManager getAuthorizationManager(String namespace)
@@ -87,7 +91,7 @@ public class AuthorizationManagerMapperModule implements DruidModule
         };
       }
 
-      for (String authorizationManagerName : authManagerNames) {
+      for (String authorizationManagerName : authorizationManagers) {
         AuthorizationManager authorizationManager = injector.getInstance(Key.get(
             AuthorizationManager.class,
             Names.named(authorizationManagerName)

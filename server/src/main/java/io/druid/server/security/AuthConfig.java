@@ -73,7 +73,7 @@ public class AuthConfig
   private final String internalAuthenticator;
 
   @JsonProperty
-  List<String> authorizationManagers;
+  private List<String> authorizationManagers;
 
   public boolean isEnabled()
   {

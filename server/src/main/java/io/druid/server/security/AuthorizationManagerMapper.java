@@ -19,8 +19,12 @@
 
 package io.druid.server.security;
 
+import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+
 import java.util.Map;
 
+@ManageLifecycle
 public class AuthorizationManagerMapper
 {
   private Map<String, AuthorizationManager> authorizationManagerMap;
@@ -35,5 +39,21 @@ public class AuthorizationManagerMapper
   public AuthorizationManager getAuthorizationManager(String namespace)
   {
     return authorizationManagerMap.get(namespace);
+  }
+
+  @LifecycleStart
+  public void start()
+  {
+    for (AuthorizationManager authorizationManager : authorizationManagerMap.values()) {
+      authorizationManager.start();
+    }
+  }
+
+  @LifecycleStart
+  public void stop()
+  {
+    for (AuthorizationManager authorizationManager : authorizationManagerMap.values()) {
+      authorizationManager.stop();
+    }
   }
 }
