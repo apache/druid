@@ -138,14 +138,14 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       );
     }
 
-    return query = StringUtils.format(
+    return StringUtils.format(
         "SELECT %s, %s FROM %s WHERE %s",
         keyColumn,
         valueColumn,
         table,
         filter
     );
-    
+
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)
