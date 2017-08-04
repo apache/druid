@@ -51,6 +51,18 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   }
 
   @Override
+  public Object getOnlyValue(ColumnValueSelector selector)
+  {
+    return ((LongColumnSelector) selector).get();
+  }
+
+  @Override
+  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putLong(keyBufferPosition, (Long) obj);
+  }
+
+  @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
   )

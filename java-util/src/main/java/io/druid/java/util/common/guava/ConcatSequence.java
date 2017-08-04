@@ -31,10 +31,10 @@ public class ConcatSequence<T> implements Sequence<T>
   private final Sequence<Sequence<T>> baseSequences;
 
   public ConcatSequence(
-      Sequence<Sequence<T>> baseSequences
+      Sequence<? extends Sequence<? extends T>> baseSequences
   )
   {
-    this.baseSequences = baseSequences;
+    this.baseSequences = (Sequence<Sequence<T>>) baseSequences;
   }
 
   @Override

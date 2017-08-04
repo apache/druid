@@ -109,6 +109,7 @@ public class CliBroker extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
+            binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, BrokerQueryResource.class);
             binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, BrokerResource.class);

@@ -1398,7 +1398,7 @@ public class GroupByQueryRunnerTest
     List<Row> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough aggregation table space to execute this query");
+      expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
     } else {
       expectedResults = Arrays.asList(
           GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -1576,7 +1576,7 @@ public class GroupByQueryRunnerTest
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     } else {
       expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough aggregation table space to execute this query");
+      expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     }
   }

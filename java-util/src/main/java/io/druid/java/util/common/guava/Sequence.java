@@ -21,6 +21,7 @@ package io.druid.java.util.common.guava;
 
 import com.google.common.collect.Ordering;
 
+import java.io.Closeable;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
@@ -68,6 +69,13 @@ public interface Sequence<T>
     return new MappedSequence<>(this, mapper);
   }
 
+  default <R> Sequence<R> flatMap(
+      Function<? super T, ? extends Sequence<? extends R>> mapper
+  )
+  {
+    return new ConcatSequence<>(this.map(mapper));
+  }
+
   default <R> Sequence<R> flatMerge(
       Function<? super T, ? extends Sequence<? extends R>> mapper,
       Ordering<? super R> ordering
@@ -79,5 +87,10 @@ public interface Sequence<T>
   default Sequence<T> withEffect(Runnable effect, Executor effectExecutor)
   {
     return Sequences.withEffect(this, effect, effectExecutor);
+  }
+
+  default Sequence<T> withBaggage(Closeable baggage)
+  {
+    return Sequences.withBaggage(this, baggage);
   }
 }
