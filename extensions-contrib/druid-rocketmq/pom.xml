@@ -32,12 +32,12 @@
   <artifactId>druid-rocketmq</artifactId>
 
   <properties>
-    <rocketmq.version>3.2.6</rocketmq.version>
+    <rocketmq.version>4.1.0-incubating</rocketmq.version>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>com.alibaba.rocketmq</groupId>
+      <groupId>org.apache.rocketmq</groupId>
       <artifactId>rocketmq-client</artifactId>
       <version>${rocketmq.version}</version>
     </dependency>

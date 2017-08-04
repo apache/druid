@@ -18,19 +18,6 @@
  */
 package io.druid.firehose.rocketmq;
 
-import com.alibaba.rocketmq.client.Validators;
-import com.alibaba.rocketmq.client.consumer.DefaultMQPullConsumer;
-import com.alibaba.rocketmq.client.consumer.MessageQueueListener;
-import com.alibaba.rocketmq.client.consumer.PullResult;
-import com.alibaba.rocketmq.client.consumer.store.OffsetStore;
-import com.alibaba.rocketmq.client.consumer.store.ReadOffsetType;
-import com.alibaba.rocketmq.client.exception.MQBrokerException;
-import com.alibaba.rocketmq.client.exception.MQClientException;
-import com.alibaba.rocketmq.common.ServiceThread;
-import com.alibaba.rocketmq.common.message.MessageExt;
-import com.alibaba.rocketmq.common.message.MessageQueue;
-import com.alibaba.rocketmq.common.protocol.heartbeat.MessageModel;
-import com.alibaba.rocketmq.remoting.exception.RemotingException;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
@@ -57,6 +44,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.rocketmq.client.Validators;
+import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
+import org.apache.rocketmq.client.consumer.MessageQueueListener;
+import org.apache.rocketmq.client.consumer.PullResult;
+import org.apache.rocketmq.client.consumer.store.OffsetStore;
+import org.apache.rocketmq.client.consumer.store.ReadOffsetType;
+import org.apache.rocketmq.client.exception.MQBrokerException;
+import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.common.ServiceThread;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
+import org.apache.rocketmq.remoting.exception.RemotingException;
+
 public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputRowParser>
 {
 
@@ -64,7 +65,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
 
   /**
    * Passed in configuration for consumer client.
-   * This provides an approach to override default values defined in {@link com.alibaba.rocketmq.common.MixAll}.
+   * This provides an approach to override default values defined in {@link org.apache.rocketmq.common.MixAll}.
    */
   @JsonProperty
   private final Properties consumerProps;
@@ -160,12 +161,12 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
                                 )
     );
 
-    /**
+    /*
      * Topic-Queue mapping.
      */
     final ConcurrentHashMap<String, Set<MessageQueue>> topicQueueMap;
 
-    /**
+    /*
      * Default Pull-style client for RocketMQ.
      */
     final DefaultMQPullConsumer defaultMQPullConsumer;
@@ -255,9 +256,8 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
             MessageExt message = entry.getValue().pollFirst();
             InputRow inputRow = theParser.parse(ByteBuffer.wrap(message.getBody()));
 
-            windows
-                .computeIfAbsent(entry.getKey(), k -> new ConcurrentSkipListSet<>())
-                .add(message.getQueueOffset());
+            windows.computeIfAbsent(entry.getKey(), k -> new ConcurrentSkipListSet<>())
+                   .add(message.getQueueOffset());
             return inputRow;
           }
         }
@@ -390,8 +390,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
     {
       synchronized (this) {
         this.requestsWrite.add(request);
-        if (!hasNotified) {
-          hasNotified = true;
+        if (hasNotified.compareAndSet(false, true)) {
           notify();
         }
       }
@@ -475,7 +474,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
     public void run()
     {
       LOGGER.info(getServiceName() + " starts.");
-      while (!isStoped()) {
+      while (!isStopped()) {
         waitForRunning(0);
         doPull();
       }
@@ -540,13 +539,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         topicQueueMap.put(topic, mqDivided);
 
         // Remove message queues that are re-assigned to other clients.
-        Iterator<Map.Entry<MessageQueue, ConcurrentSkipListSet<MessageExt>>> it =
-            messageQueueTreeSetMap.entrySet().iterator();
-        while (it.hasNext()) {
-          if (!mqDivided.contains(it.next().getKey())) {
-            it.remove();
-          }
-        }
+        messageQueueTreeSetMap.entrySet().removeIf(entry -> !mqDivided.contains(entry.getKey()));
 
         StringBuilder stringBuilder = new StringBuilder();
         for (MessageQueue messageQueue : mqDivided) {
