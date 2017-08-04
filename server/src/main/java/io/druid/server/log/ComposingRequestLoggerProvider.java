@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.RequestLogLine;
 
 import javax.validation.constraints.NotNull;
@@ -35,6 +36,8 @@ import java.util.List;
 @JsonTypeName("composing")
 public class ComposingRequestLoggerProvider implements RequestLoggerProvider
 {
+  private static final Logger log = new Logger(ComposingRequestLoggerProvider.class);
+
   @JsonProperty
   @NotNull
   private final List<RequestLoggerProvider> loggerProviders = Lists.newArrayList();
@@ -46,7 +49,9 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
     for (RequestLoggerProvider loggerProvider : loggerProviders) {
       loggers.add(loggerProvider.get());
     }
-    return new ComposingRequestLogger(loggers);
+    ComposingRequestLogger logger = new ComposingRequestLogger(loggers);
+    log.info(new Exception("Stack trace"), "Creating %s at", logger);
+    return logger;
   }
 
   public static class ComposingRequestLogger implements RequestLogger
@@ -78,6 +83,14 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
         Throwables.propagateIfInstanceOf(exception, IOException.class);
         throw Throwables.propagate(exception);
       }
+    }
+
+    @Override
+    public String toString()
+    {
+      return "ComposingRequestLogger{" +
+             "loggers=" + loggers +
+             '}';
     }
   }
 
