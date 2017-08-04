@@ -74,10 +74,10 @@ public class JdbcExtractionNamespaceTest
   private static final String tsColumn_ = "tsColumn";
   private static final String filterColumn = "filterColumn";
   private static final Map<String, String[]> renames = ImmutableMap.of(
-      "foo", new String[]{"bar","1"},
-      "bad", new String[]{"bar","1"},
-      "how about that", new String[]{"foo","0"},
-      "empty string", new String[]{"empty string","0"}
+      "foo", new String[]{"bar", "1"},
+      "bad", new String[]{"bar", "1"},
+      "how about that", new String[]{"foo", "0"},
+      "empty string", new String[]{"empty string", "0"}
   );
 
 
@@ -201,6 +201,7 @@ public class JdbcExtractionNamespaceTest
                     {
                       private final JdbcCacheGenerator delegate =
                           new JdbcCacheGenerator();
+
                       @Override
                       public CacheScheduler.VersionedCache generateCache(
                           final JdbcExtractionNamespace namespace,
@@ -330,7 +331,13 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
-  private void insertValues(final Handle handle, final String key, final String val, final String filter, final String updateTs)
+  private void insertValues(
+      final Handle handle,
+      final String key,
+      final String val,
+      final String filter,
+      final String updateTs
+  )
       throws InterruptedException
   {
     final String query;
@@ -398,7 +405,7 @@ public class JdbcExtractionNamespaceTest
         keyName,
         valName,
         tsColumn,
-        filterColumn+"='1'",
+        filterColumn + "='1'",
         new Period(0)
     );
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
@@ -411,7 +418,7 @@ public class JdbcExtractionNamespaceTest
         String field = val[0];
         String filterVal = val[1];
 
-        if( filterVal.equals("1") ) {
+        if (filterVal.equals("1")) {
           Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
         } else {
           Assert.assertEquals("non-null check", null, Strings.emptyToNull(map.get(key)));

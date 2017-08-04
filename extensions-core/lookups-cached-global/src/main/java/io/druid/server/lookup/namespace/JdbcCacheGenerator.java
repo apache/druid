@@ -129,26 +129,23 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
 
   private String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
   {
-    String query;
-
     if (Strings.isNullOrEmpty(filter)) {
-      query = StringUtils.format(
+      return StringUtils.format(
           "SELECT %s, %s FROM %s",
           keyColumn,
           valueColumn,
           table
       );
-    } else {
-      query = StringUtils.format(
-          "SELECT %s, %s FROM %s WHERE %s",
-          keyColumn,
-          valueColumn,
-          table,
-          filter
-      );
     }
 
-    return query;
+    return query = StringUtils.format(
+        "SELECT %s, %s FROM %s WHERE %s",
+        keyColumn,
+        valueColumn,
+        table,
+        filter
+    );
+    
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)

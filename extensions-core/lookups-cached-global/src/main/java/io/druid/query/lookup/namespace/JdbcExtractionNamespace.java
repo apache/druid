@@ -47,7 +47,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   private final String valueColumn;
   @JsonProperty
   private final String tsColumn;
-  @JsonProperty 
+  @JsonProperty
   private final String filter;
   @JsonProperty
   private final Period pollPeriod;
@@ -56,18 +56,12 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   public JdbcExtractionNamespace(
       @NotNull @JsonProperty(value = "connectorConfig", required = true)
       final MetadataStorageConnectorConfig connectorConfig,
-      @NotNull @JsonProperty(value = "table", required = true)
-      final String table,
-      @NotNull @JsonProperty(value = "keyColumn", required = true)
-      final String keyColumn,
-      @NotNull @JsonProperty(value = "valueColumn", required = true)
-      final String valueColumn,
-      @Nullable @JsonProperty(value = "tsColumn", required = false)
-      final String tsColumn,
-      @Nullable @JsonProperty(value = "filter", required = false)
-      final String filter,
-      @Min(0) @Nullable @JsonProperty(value = "pollPeriod", required = false)
-      final Period pollPeriod
+      @NotNull @JsonProperty(value = "table", required = true) final String table,
+      @NotNull @JsonProperty(value = "keyColumn", required = true) final String keyColumn,
+      @NotNull @JsonProperty(value = "valueColumn", required = true) final String valueColumn,
+      @Nullable @JsonProperty(value = "tsColumn", required = false) final String tsColumn,
+      @Nullable @JsonProperty(value = "filter", required = false) final String filter,
+      @Min(0) @Nullable @JsonProperty(value = "pollPeriod", required = false) final Period pollPeriod
   )
   {
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");
@@ -142,24 +136,26 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
 
     JdbcExtractionNamespace that = (JdbcExtractionNamespace) o;
 
-    return Objects.equals(connectorConfig,that.connectorConfig) &&
-           Objects.equals(table,that.table) &&
-           Objects.equals(filter,that.filter) &&
-           Objects.equals(keyColumn,that.keyColumn) &&
+    return Objects.equals(connectorConfig, that.connectorConfig) &&
+           Objects.equals(table, that.table) &&
+           Objects.equals(filter, that.filter) &&
+           Objects.equals(keyColumn, that.keyColumn) &&
            Objects.equals(valueColumn, that.valueColumn) &&
-           Objects.equals(tsColumn,that.tsColumn) &&
-           Objects.equals(pollPeriod,that.pollPeriod);
+           Objects.equals(tsColumn, that.tsColumn) &&
+           Objects.equals(pollPeriod, that.pollPeriod);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(connectorConfig,
-                        table,
-                        filter,
-                        keyColumn,
-                        valueColumn,
-                        tsColumn,
-                        pollPeriod);
+    return Objects.hash(
+        connectorConfig,
+        table,
+        filter,
+        keyColumn,
+        valueColumn,
+        tsColumn,
+        pollPeriod
+    );
   }
 }
