@@ -40,6 +40,7 @@ import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
@@ -709,7 +710,7 @@ public class RemoteTaskRunnerTest
     makeRemoteTaskRunner(rtrConfig);
 
     for (int i = 1; i < 13; i++) {
-      String taskId = String.format("rt-%d", i);
+      String taskId = StringUtils.format("rt-%d", i);
       TestRealtimeTask task = new TestRealtimeTask(
           taskId, new TaskResource(taskId, 1), "foo", TaskStatus.success(taskId), jsonMapper
       );
@@ -747,7 +748,7 @@ public class RemoteTaskRunnerTest
     makeRemoteTaskRunner(rtrConfig);
 
     for (int i = 1; i < 13; i++) {
-      String taskId = String.format("rt-%d", i);
+      String taskId = StringUtils.format("rt-%d", i);
       TestRealtimeTask task = new TestRealtimeTask(
           taskId, new TaskResource(taskId, 1), "foo", TaskStatus.success(taskId), jsonMapper
       );
