@@ -179,11 +179,9 @@ public class JdbcExtractionNamespaceTest
             });
             for (Map.Entry<String, String[]> entry : renames.entrySet()) {
               try {
-
                 String key = entry.getKey();
                 String value = entry.getValue()[0];
                 String filter = entry.getValue()[1];
-
                 insertValues(handle, key, value, filter, "2015-01-01 00:00:00");
               }
               catch (InterruptedException e) {
