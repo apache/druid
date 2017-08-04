@@ -76,6 +76,7 @@ import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -5190,5 +5191,45 @@ public class TopNQueryRunnerTest
       );
       assertExpectedResults(expectedResults, query);
     }
+  }
+
+
+  @Test
+  public void testFullOnTopNBoundFilterAndLongSumMetric()
+  {
+    // this tests the stack overflow issue from https://github.com/druid-io/druid/issues/4628
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension, "Market")
+        .filters(new BoundDimFilter(
+            QueryRunnerTestHelper.indexMetric,
+            "0",
+            "46.64980229268867",
+            true,
+            true,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ))
+        .metric("Count")
+        .threshold(5)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.asList(new LongSumAggregatorFactory("Count", "qualityLong"))
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(Arrays.asList())
+        )
+    );
+
+    final Sequence<Result<TopNResultValue>> retval = runWithMerge(query);
+    List<Result<TopNResultValue>> results = Sequences.toList(retval, Lists.<Result<TopNResultValue>>newArrayList());
+
+    assertExpectedResults(expectedResults, query);
   }
 }
