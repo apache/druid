@@ -158,7 +158,7 @@ public class SimpleDictionaryEncodedColumn
         @Override
         public IndexedInts getRow()
         {
-          return multiValueColumn.get(offsetHolder.getOffset().getOffset());
+          return multiValueColumn.get(offsetHolder.getReadableOffset().getOffset());
         }
 
         @Override
@@ -184,7 +184,7 @@ public class SimpleDictionaryEncodedColumn
         {
           inspector.visit("multiValueColumn", multiValueColumn);
           inspector.visit("offsetHolder", offsetHolder);
-          inspector.visit("offset", offsetHolder.getOffset());
+          inspector.visit("offset", offsetHolder.getReadableOffset());
           inspector.visit("extractionFn", extractionFn);
         }
       }
@@ -202,7 +202,7 @@ public class SimpleDictionaryEncodedColumn
         @Override
         public int getRowValue()
         {
-          return column.get(offsetHolder.getOffset().getOffset());
+          return column.get(offsetHolder.getReadableOffset().getOffset());
         }
 
         @Override
@@ -274,7 +274,7 @@ public class SimpleDictionaryEncodedColumn
         {
           inspector.visit("column", column);
           inspector.visit("offsetHolder", offsetHolder);
-          inspector.visit("offset", offsetHolder.getOffset());
+          inspector.visit("offset", offsetHolder.getReadableOffset());
           inspector.visit("extractionFn", extractionFn);
         }
       }
