@@ -19,13 +19,18 @@
 
 package io.druid.server.log;
 
+import io.druid.java.util.common.logger.Logger;
+
 /**
  */
 public class NoopRequestLoggerProvider implements RequestLoggerProvider
 {
+  private static final Logger log = new Logger(NoopRequestLoggerProvider.class);
+
   @Override
   public RequestLogger get()
   {
+    log.info(new Exception("Stack trace"), "Creating NoopRequestLogger at");
     return new NoopRequestLogger();
   }
 }

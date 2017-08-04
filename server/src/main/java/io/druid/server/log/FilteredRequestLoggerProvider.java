@@ -21,6 +21,7 @@ package io.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.RequestLogLine;
 
 import javax.validation.constraints.NotNull;
@@ -31,6 +32,8 @@ import java.io.IOException;
 @JsonTypeName("filtered")
 public class FilteredRequestLoggerProvider implements RequestLoggerProvider
 {
+  private static final Logger log = new Logger(FilteredRequestLoggerProvider.class);
+
   @JsonProperty
   @NotNull
   private RequestLoggerProvider delegate = null;
@@ -41,7 +44,9 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    return new FilteredRequestLogger(delegate.get(), queryTimeThresholdMs);
+    FilteredRequestLogger logger = new FilteredRequestLogger(delegate.get(), queryTimeThresholdMs);
+    log.info(new Exception("Stack trace"), "Creating %s at", logger);
+    return logger;
   }
 
   public static class FilteredRequestLogger implements RequestLogger
@@ -63,6 +68,15 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
       if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThresholdMs) {
         logger.log(requestLogLine);
       }
+    }
+
+    @Override
+    public String toString()
+    {
+      return "FilteredRequestLogger{" +
+             "queryTimeThresholdMs=" + queryTimeThresholdMs +
+             ", logger=" + logger +
+             '}';
     }
   }
 

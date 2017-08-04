@@ -24,10 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.logger.Logger;
 
 @JsonTypeName("slf4j")
 public class LoggingRequestLoggerProvider implements RequestLoggerProvider
 {
+  private static final Logger log = new Logger(LoggingRequestLoggerProvider.class);
+
   @JacksonInject
   @Json
   public ObjectMapper mapper;
@@ -41,6 +44,8 @@ public class LoggingRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    return new LoggingRequestLogger(mapper, setMDC, setContextMDC);
+    LoggingRequestLogger logger = new LoggingRequestLogger(mapper, setMDC, setContextMDC);
+    log.info(new Exception("Stack trace"), "Creating %s at", logger);
+    return logger;
   }
 }

@@ -130,4 +130,12 @@ public class FileRequestLogger implements RequestLogger
       fileWriter.flush();
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "FileRequestLogger{" +
+           "baseDir=" + baseDir +
+           '}';
+  }
 }

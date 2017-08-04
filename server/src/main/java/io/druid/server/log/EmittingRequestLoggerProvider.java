@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.validation.constraints.NotNull;
 
@@ -33,6 +34,8 @@ import javax.validation.constraints.NotNull;
 @JsonTypeName("emitter")
 public class EmittingRequestLoggerProvider implements RequestLoggerProvider
 {
+  private static final Logger log = new Logger(EmittingRequestLoggerProvider.class);
+
   @JsonProperty
   @NotNull
   private String feed = null;
@@ -49,6 +52,8 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    return new EmittingRequestLogger(emitter, feed);
+    EmittingRequestLogger logger = new EmittingRequestLogger(emitter, feed);
+    log.info(new Exception("Stack trace"), "Creating %s at", logger);
+    return logger;
   }
 }
