@@ -93,7 +93,7 @@ public class JsonConfigurator
           value = propValue;
         }
 
-        hieraricalPutValue(prop, prop.substring(propertyBase.length()), value, jsonMap);
+        hieraricalPutValue(propertyPrefix, prop, prop.substring(propertyBase.length()), value, jsonMap);
       }
     }
 
@@ -167,6 +167,7 @@ public class JsonConfigurator
   }
 
   private static void hieraricalPutValue(
+      String propertyPrefix,
       String originalProperty,
       String property,
       Object value,
@@ -187,15 +188,15 @@ public class JsonConfigurator
     String nestedKey = property.substring(0, dotIndex);
     Object nested = targetMap.computeIfAbsent(nestedKey, k -> new HashMap<String, Object>());
     if (!(nested instanceof Map)) {
-      throw new ProvisionException(String.format(
-          "Problem with %s property: one of it's prefixes is also used as a property key. "
-          + "Current property map is %s",
+      log.info(
+          "Skipping %s property: one of it's prefixes is also used as a property key. Prefix: %s",
           originalProperty,
-          targetMap
-      ));
+          propertyPrefix
+      );
+      return;
     }
     Map<String, Object> nestedMap = (Map<String, Object>) nested;
-    hieraricalPutValue(originalProperty, property.substring(dotIndex + 1), value, nestedMap);
+    hieraricalPutValue(propertyPrefix, originalProperty, property.substring(dotIndex + 1), value, nestedMap);
   }
 
   @VisibleForTesting
