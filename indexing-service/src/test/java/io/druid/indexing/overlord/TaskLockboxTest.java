@@ -82,7 +82,7 @@ public class TaskLockboxTest
     EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100)).anyTimes();
     EasyMock.replay(serverConfig);
 
-    ServiceEmitter emitter  = EasyMock.createMock(ServiceEmitter.class);
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 
@@ -242,7 +242,7 @@ public class TaskLockboxTest
     }
 
     @Override
-    public  String getGroupId()
+    public String getGroupId()
     {
       return "someGroupId";
     }

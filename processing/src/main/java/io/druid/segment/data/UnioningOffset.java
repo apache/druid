@@ -125,7 +125,7 @@ public class UnioningOffset extends Offset
     Offset[] newOffsets = new Offset[2];
     int[] newOffsetValues = new int[2];
 
-    for(int i = 0; i < newOffsets.length; ++i) {
+    for (int i = 0; i < newOffsets.length; ++i) {
       newOffsets[i] = offsets[i] == null ? null : offsets[i].clone();
       newOffsetValues[i] = this.offsetVals[i];
     }

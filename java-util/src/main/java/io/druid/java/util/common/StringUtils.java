@@ -115,7 +115,7 @@ public class StringUtils
    */
   public static String nonStrictFormat(String message, Object... formatArgs)
   {
-    if(formatArgs == null || formatArgs.length == 0) {
+    if (formatArgs == null || formatArgs.length == 0) {
       return message;
     }
     try {

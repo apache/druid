@@ -79,7 +79,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
           status.getId()
       );
 
-      if(tasks.containsKey(task.getId())) {
+      if (tasks.containsKey(task.getId())) {
         throw new EntryExistsException(task.getId());
       }
 
@@ -98,7 +98,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       Preconditions.checkNotNull(taskid, "taskid");
-      if(tasks.containsKey(taskid)) {
+      if (tasks.containsKey(taskid)) {
         return Optional.of(tasks.get(taskid).getTask());
       } else {
         return Optional.absent();
@@ -135,7 +135,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       Preconditions.checkNotNull(taskid, "taskid");
-      if(tasks.containsKey(taskid)) {
+      if (tasks.containsKey(taskid)) {
         return Optional.of(tasks.get(taskid).getStatus());
       } else {
         return Optional.absent();
@@ -153,8 +153,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
-      for(final TaskStuff taskStuff : tasks.values()) {
-        if(taskStuff.getStatus().isRunnable()) {
+      for (final TaskStuff taskStuff : tasks.values()) {
+        if (taskStuff.getStatus().isRunnable()) {
           listBuilder.add(taskStuff.getTask());
         }
       }
@@ -182,7 +182,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
         }
       }.reverse();
       for (final TaskStuff taskStuff : createdDateDesc.sortedCopy(tasks.values())) {
-        if(taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > recent) {
+        if (taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > recent) {
           returns.add(taskStuff.getStatus());
         }
       }

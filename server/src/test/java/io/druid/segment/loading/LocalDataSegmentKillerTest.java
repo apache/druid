@@ -41,7 +41,7 @@ public class LocalDataSegmentKillerTest
   @Test
   public void testKill() throws Exception
   {
-    LocalDataSegmentKiller  killer = new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig());
+    LocalDataSegmentKiller killer = new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig());
 
     // Create following segments and then delete them in this order and assert directory deletions
     // /tmp/dataSource/interval1/v1/0/index.zip

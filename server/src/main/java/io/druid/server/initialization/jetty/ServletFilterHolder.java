@@ -62,7 +62,7 @@ public interface ServletFilterHolder
    * @return a map containing all the Filter initialization
    * parameters 
    */
-  public Map<String,String> getInitParameters();
+  public Map<String, String> getInitParameters();
 
   /**
    * The path that this Filter should apply to

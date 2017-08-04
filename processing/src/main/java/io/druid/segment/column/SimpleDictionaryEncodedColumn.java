@@ -287,10 +287,10 @@ public class SimpleDictionaryEncodedColumn
   {
     CloseQuietly.close(cachedLookups);
 
-    if(column != null) {
+    if (column != null) {
       column.close();
     }
-    if(multiValueColumn != null) {
+    if (multiValueColumn != null) {
       multiValueColumn.close();
     }
   }

@@ -115,8 +115,8 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
   public byte[] remove(Object key)
   {
     byte[] value = super.remove(key);
-    if(value != null) {
-      long delta = -((ByteBuffer)key).remaining() - value.length;
+    if (value != null) {
+      long delta = -((ByteBuffer) key).remaining() - value.length;
       numBytes.addAndGet(delta);
     }
     return value;

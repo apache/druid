@@ -66,7 +66,7 @@ public class TimestampMinMaxAggregatorTest
       Timestamp.valueOf("2014-01-02 02:00:00")
   };
 
-  @Parameterized.Parameters(name="{index}: Test for {0}")
+  @Parameterized.Parameters(name = "{index}: Test for {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
@@ -102,7 +102,7 @@ public class TimestampMinMaxAggregatorTest
   @Before
   public void setup() throws Exception
   {
-    injector =  Initialization.makeInjectorWithModules(
+    injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
             new Module()

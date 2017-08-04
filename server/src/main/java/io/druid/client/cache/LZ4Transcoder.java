@@ -66,7 +66,7 @@ public class LZ4Transcoder extends SerializingTranscoder
   protected byte[] decompress(byte[] in)
   {
     byte[] out = null;
-    if(in != null) {
+    if (in != null) {
       LZ4FastDecompressor decompressor = lz4Factory.fastDecompressor();
 
       int size = ByteBuffer.wrap(in).getInt();

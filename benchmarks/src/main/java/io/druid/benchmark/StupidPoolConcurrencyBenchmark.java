@@ -84,7 +84,7 @@ public class StupidPoolConcurrencyBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void hammerQueue(BenchmarkPool pool, Blackhole blackhole) throws IOException
   {
-    try(ResourceHolder<Object> holder = pool.pool.take()){
+    try (ResourceHolder<Object> holder = pool.pool.take()) {
       blackhole.consume(holder);
     }
   }

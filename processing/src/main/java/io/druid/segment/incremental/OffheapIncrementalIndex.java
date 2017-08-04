@@ -126,7 +126,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       if (i == 0) {
         aggOffsetInBuffer[i] = 0;
       } else {
-        aggOffsetInBuffer[i] = aggOffsetInBuffer[i-1] + metrics[i-1].getMaxIntermediateSize();
+        aggOffsetInBuffer[i] = aggOffsetInBuffer[i - 1] + metrics[i - 1].getMaxIntermediateSize();
       }
     }
 

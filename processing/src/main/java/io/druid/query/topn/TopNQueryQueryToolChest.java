@@ -444,8 +444,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               return runner.run(queryPlus.withQuery(delegateTopNQuery), responseContext);
             }
           }
-        }
-        , this
+        },
+        this
     );
   }
 
