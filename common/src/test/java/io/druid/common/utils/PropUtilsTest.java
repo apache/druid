@@ -32,22 +32,22 @@ public class PropUtilsTest
   public void testNotSpecifiedGetProperty()
   {
     Properties prop = new Properties();
-    PropUtils.getProperty(prop,"");
+    PropUtils.getProperty(prop, "");
   }
 
   @Test
   public void testGetProperty()
   {
     Properties prop = new Properties();
-    prop.setProperty("key","value");
-    Assert.assertEquals("value", PropUtils.getProperty(prop,"key"));
+    prop.setProperty("key", "value");
+    Assert.assertEquals("value", PropUtils.getProperty(prop, "key"));
   }
 
   @Test(expected = ISE.class)
   public void testNotSpecifiedGetPropertyAsInt()
   {
     Properties prop = new Properties();
-    PropUtils.getPropertyAsInt(prop,"",null);
+    PropUtils.getPropertyAsInt(prop, "", null);
   }
 
   @Test
@@ -55,7 +55,7 @@ public class PropUtilsTest
   {
     Properties prop = new Properties();
     int defaultValue = 1;
-    int result = PropUtils.getPropertyAsInt(prop,"",defaultValue);
+    int result = PropUtils.getPropertyAsInt(prop, "", defaultValue);
     Assert.assertEquals(defaultValue, result);
   }
 
@@ -65,7 +65,7 @@ public class PropUtilsTest
     Properties prop = new Properties();
     int expectedValue = 1;
     prop.setProperty("key", Integer.toString(expectedValue));
-    int result = PropUtils.getPropertyAsInt(prop,"key");
+    int result = PropUtils.getPropertyAsInt(prop, "key");
     Assert.assertEquals(expectedValue, result);
   }
 
@@ -73,7 +73,7 @@ public class PropUtilsTest
   public void testFormatExceptionGetPropertyAsInt()
   {
     Properties prop = new Properties();
-    prop.setProperty("key","1-value");
-    PropUtils.getPropertyAsInt(prop,"key",null);
+    prop.setProperty("key", "1-value");
+    PropUtils.getPropertyAsInt(prop, "key", null);
   }
 }

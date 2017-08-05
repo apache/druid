@@ -87,7 +87,7 @@ public class WorkerResourceTest
           {
             return basePath;
           }
-        },null,null,null,null,null),
+        }, null, null, null, null, null),
         new RemoteTaskRunnerConfig(),
         cf,
         worker

@@ -58,7 +58,7 @@ public class OrcHadoopInputRowParserTest
   @Before
   public void setUp()
   {
-    injector =  Initialization.makeInjectorWithModules(
+    injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
             new Module()

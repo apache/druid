@@ -105,7 +105,7 @@ public class IndexMergeBenchmark
   @Setup
   public void setup() throws IOException
   {
-    log.info("SETUP CALLED AT " + + System.currentTimeMillis());
+    log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
       ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));

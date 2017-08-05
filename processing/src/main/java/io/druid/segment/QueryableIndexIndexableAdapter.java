@@ -331,7 +331,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       case DOUBLE:
         return "double";
       case COMPLEX: {
-        try (ComplexColumn complexColumn = column.getComplexColumn() ) {
+        try (ComplexColumn complexColumn = column.getComplexColumn()) {
           return complexColumn.getTypeName();
         }
       }

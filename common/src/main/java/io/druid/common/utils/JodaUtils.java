@@ -60,7 +60,7 @@ public class JodaUtils
 
       if (currInterval.abuts(next)) {
         currInterval = new Interval(currInterval.getStart(), next.getEnd());
-      } else if(currInterval.overlaps(next)) {
+      } else if (currInterval.overlaps(next)) {
         DateTime nextEnd = next.getEnd();
         DateTime currEnd = currInterval.getEnd();
         currInterval = new Interval(

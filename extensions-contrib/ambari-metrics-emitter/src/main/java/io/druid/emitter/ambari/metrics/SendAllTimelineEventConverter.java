@@ -71,7 +71,7 @@ public class SendAllTimelineEventConverter implements DruidToTimelineMetricConve
   public TimelineMetric druidEventToTimelineMetric(ServiceMetricEvent serviceMetricEvent)
   {
     ImmutableList.Builder metricNameBuilder = new ImmutableList.Builder<>();
-    if(!Strings.isNullOrEmpty(namespacePrefix)) {
+    if (!Strings.isNullOrEmpty(namespacePrefix)) {
       metricNameBuilder.add(namespacePrefix);
     }
     metricNameBuilder.add(AmbariMetricsEmitter.sanitize(serviceMetricEvent.getService()));

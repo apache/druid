@@ -60,7 +60,7 @@ public class DatasourceInputSplitTest
                 interval
             )
         ),
-        new String[] { "server1", "server2", "server3"}
+        new String[] {"server1", "server2", "server3"}
     );
 
     ByteArrayDataOutput out = ByteStreams.newDataOutput();

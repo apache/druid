@@ -482,7 +482,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     DruidServerHolder updatedHolder(DruidServer server)
     {
       synchronized (lock) {
-        return new DruidServerHolder(server.addDataSegments(druidServer), counter) ;
+        return new DruidServerHolder(server.addDataSegments(druidServer), counter);
       }
     }
 

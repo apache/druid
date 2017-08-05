@@ -40,7 +40,7 @@ import static org.junit.Assert.assertTrue;
 
 public class HavingSpecTest
 {
-  private static final Row ROW = new MapBasedInputRow(0, new ArrayList<String>(), ImmutableMap.of("metric", (Object)Float.valueOf(10)));
+  private static final Row ROW = new MapBasedInputRow(0, new ArrayList<>(), ImmutableMap.of("metric", Float.valueOf(10)));
 
   @Test
   public void testHavingClauseSerde() throws Exception
@@ -85,7 +85,7 @@ public class HavingSpecTest
     );
 
     ObjectMapper mapper = new DefaultObjectMapper();
-    assertEquals(andHavingSpec,  mapper.convertValue(payloadMap, AndHavingSpec.class));
+    assertEquals(andHavingSpec, mapper.convertValue(payloadMap, AndHavingSpec.class));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -180,7 +180,7 @@ public class HavingSpecTest
   {
     AtomicInteger counter = new AtomicInteger(0);
     AndHavingSpec spec = new AndHavingSpec(ImmutableList.of(
-      (HavingSpec)new CountingHavingSpec(counter, true),
+      (HavingSpec) new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, false),
       new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, false)
@@ -196,7 +196,7 @@ public class HavingSpecTest
   {
     AtomicInteger counter = new AtomicInteger(0);
     AndHavingSpec spec = new AndHavingSpec(ImmutableList.of(
-      (HavingSpec)new CountingHavingSpec(counter, true),
+      (HavingSpec) new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, true)
@@ -208,7 +208,7 @@ public class HavingSpecTest
 
     counter.set(0);
     spec = new AndHavingSpec(ImmutableList.of(
-      (HavingSpec)new CountingHavingSpec(counter, false),
+      (HavingSpec) new CountingHavingSpec(counter, false),
       new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, true)
@@ -224,7 +224,7 @@ public class HavingSpecTest
   {
     AtomicInteger counter = new AtomicInteger(0);
     OrHavingSpec spec = new OrHavingSpec(ImmutableList.of(
-      (HavingSpec)new CountingHavingSpec(counter, true),
+      (HavingSpec) new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, true),
       new CountingHavingSpec(counter, false)
@@ -240,7 +240,7 @@ public class HavingSpecTest
   {
     AtomicInteger counter = new AtomicInteger(0);
     OrHavingSpec spec = new OrHavingSpec(ImmutableList.of(
-      (HavingSpec)new CountingHavingSpec(counter, false),
+      (HavingSpec) new CountingHavingSpec(counter, false),
       new CountingHavingSpec(counter, false),
       new CountingHavingSpec(counter, false),
       new CountingHavingSpec(counter, false)
@@ -252,7 +252,7 @@ public class HavingSpecTest
 
     counter.set(0);
     spec = new OrHavingSpec(ImmutableList.of(
-      (HavingSpec)new CountingHavingSpec(counter, false),
+      (HavingSpec) new CountingHavingSpec(counter, false),
       new CountingHavingSpec(counter, false),
       new CountingHavingSpec(counter, false),
       new CountingHavingSpec(counter, true)

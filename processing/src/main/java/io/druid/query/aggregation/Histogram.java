@@ -31,7 +31,7 @@ import java.util.Arrays;
 public class Histogram
 {
   public float[] breaks;
-  public long[]  bins;
+  public long[] bins;
   public transient long count;
   public float min;
   public float max;
@@ -41,8 +41,8 @@ public class Histogram
     Preconditions.checkArgument(breaks != null, "Histogram breaks must not be null");
 
     this.breaks = breaks;
-    this.bins   = new long[this.breaks.length + 1];
-    this.count  = 0;
+    this.bins = new long[this.breaks.length + 1];
+    this.count = 0;
     this.min = Float.POSITIVE_INFINITY;
     this.max = Float.NEGATIVE_INFINITY;
   }
@@ -50,20 +50,20 @@ public class Histogram
   public Histogram(float[] breaks, long[] bins, float min, float max)
   {
     this.breaks = breaks;
-    this.bins   = bins;
+    this.bins = bins;
     this.min = min;
     this.max = max;
-    for(long k : bins) {
+    for (long k : bins) {
       this.count += k;
     }
   }
 
   public void offer(float d)
   {
-    if(d > max) {
+    if (d > max) {
       max = d;
     }
-    if(d < min) {
+    if (d < min) {
       min = d;
     }
 
@@ -178,7 +178,7 @@ public class Histogram
   {
     int n = buf.getInt();
     float[] breaks = new float[n];
-    long[]  bins   = new long[n + 1];
+    long[] bins = new long[n + 1];
 
     for (int i = 0; i < breaks.length; ++i) {
       breaks[i] = buf.getFloat();

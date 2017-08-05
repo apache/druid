@@ -116,7 +116,7 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class TopNQueryRunnerTest
 {
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
@@ -3517,8 +3517,8 @@ public class TopNQueryRunnerTest
             .threshold(10)
             .intervals(QueryRunnerTestHelper.firstToThird)
             .aggregators(duplicateAggregators(
-                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs,false),
-                new CardinalityAggregatorFactory("numVals1",aggregatorDimensionSpecs,false)
+                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false),
+                new CardinalityAggregatorFactory("numVals1", aggregatorDimensionSpecs, false)
             ))
             .build();
 
@@ -4217,7 +4217,7 @@ public class TopNQueryRunnerTest
   public void testTopNWithExtractionFilterNoExistingValue()
   {
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("","NULL");
+    extractionMap.put("", "NULL");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
