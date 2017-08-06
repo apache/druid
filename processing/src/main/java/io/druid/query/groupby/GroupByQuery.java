@@ -317,6 +317,12 @@ public class GroupByQuery extends BaseQuery<Row>
     return applyLimitPushDown;
   }
 
+  @JsonIgnore
+  public boolean getApplyLimitPushDownFromContext()
+  {
+    return getContextBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
+  }
+
   @Override
   public Ordering getResultOrdering()
   {
@@ -346,6 +352,10 @@ public class GroupByQuery extends BaseQuery<Row>
         throw new IAE("When forcing limit push down, the provided limit spec must have a limit.");
       }
 
+      if (havingSpec != null) {
+        throw new IAE("Cannot force limit push down when a having spec is present.");
+      }
+
       for (OrderByColumnSpec orderBySpec : ((DefaultLimitSpec) limitSpec).getColumns()) {
         if (OrderByColumnSpec.getPostAggIndexForOrderBy(orderBySpec, postAggregatorSpecs) > -1) {
           throw new UnsupportedOperationException("Limit push down when sorting by a post aggregator is not supported.");
@@ -369,6 +379,14 @@ public class GroupByQuery extends BaseQuery<Row>
 
       if (forceLimitPushDown) {
         return true;
+      }
+
+      if (!getApplyLimitPushDownFromContext()) {
+        return false;
+      }
+
+      if (havingSpec != null) {
+        return false;
       }
 
       // If the sorting order only uses columns in the grouping key, we can always push the limit down

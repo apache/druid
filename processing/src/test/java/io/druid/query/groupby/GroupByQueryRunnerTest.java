@@ -9134,6 +9134,52 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testRejectForceLimitPushDownWithHaving()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Cannot force limit push down when a having spec is present.");
+
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setDimensions(
+            Arrays.<DimensionSpec>asList(
+                new DefaultDimensionSpec(
+                    QueryRunnerTestHelper.marketDimension,
+                    "marketalias"
+                )
+            )
+        )
+        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Lists.newArrayList(
+                    new OrderByColumnSpec(
+                        "marketalias",
+                        OrderByColumnSpec.Direction.DESCENDING
+                    )
+                ),
+                2
+            )
+        )
+        .setAggregatorSpecs(
+            Lists.<AggregatorFactory>newArrayList(
+                QueryRunnerTestHelper.rowsCount
+            )
+        )
+        .setContext(
+            ImmutableMap.<String, Object>of(
+                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
+                true
+            )
+        )
+        .setHavingSpec(
+            new GreaterThanHavingSpec("rows", 10)
+        )
+        .build();
+  }
+
+  @Test
   public void testTypeConversionWithMergingChainedExecutionRunner()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
