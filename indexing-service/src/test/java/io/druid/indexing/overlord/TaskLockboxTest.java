@@ -267,7 +267,7 @@ public class TaskLockboxTest
   @Test
   public void testUpgradeSharedLock()
   {
-    expectedException.expect(IllegalStateException. class );
+    expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Shared lock cannot be upgraded");
 
     final Interval interval = new Interval("2017-01-01/2017-01-02");
@@ -310,8 +310,8 @@ public class TaskLockboxTest
     Assert.assertFalse(downgradedLock.isUpgraded());
   }
 
-    @Test
-    public  void testUpgradeDownGradeWithSmallerInterval()
+  @Test
+  public void testUpgradeDownGradeWithSmallerInterval()
   {
     final Interval interval = new Interval("2017-01-01/2017-02-01");
     final Interval smallInterval1 = new Interval("2017-01-01/2017-01-02");

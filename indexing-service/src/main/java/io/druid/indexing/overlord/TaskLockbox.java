@@ -684,7 +684,7 @@ public class TaskLockbox
       }
 
       final List<TaskLockPosse > possesHolder = dsRunning.get(interval);
-      if(possesHolder == null|| possesHolder.isEmpty()) {
+      if (possesHolder == null || possesHolder.isEmpty()) {
         return;
       }
 
