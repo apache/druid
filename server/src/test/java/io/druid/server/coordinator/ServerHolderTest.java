@@ -208,7 +208,7 @@ public class ServerHolderTest
 
     final ServerHolder h4 = new ServerHolder(
         new ImmutableDruidServer(
-            new DruidServerMetadata("name1", "host1", null,200L, ServerType.HISTORICAL, "tier2", 0),
+            new DruidServerMetadata("name1", "host1", null, 200L, ServerType.HISTORICAL, "tier2", 0),
             100L,
             ImmutableMap.of(
                 "src1",

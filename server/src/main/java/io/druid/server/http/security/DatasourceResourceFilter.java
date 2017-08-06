@@ -102,7 +102,7 @@ public class DatasourceResourceFilter extends AbstractResourceFilter
         "druid/v2/datasources/"
     );
     for (String path : applicablePaths) {
-      if(requestPath.startsWith(path) && !requestPath.equals(path)) {
+      if (requestPath.startsWith(path) && !requestPath.equals(path)) {
         return true;
       }
     }

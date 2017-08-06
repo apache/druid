@@ -75,7 +75,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
-    if(powerOf2) {
+    if (powerOf2) {
       return new CompressedIndexedInts()
       {
         @Override
@@ -224,7 +224,10 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   }
 
   public static CompressedIntsIndexedSupplier fromList(
-      final List<Integer> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final List<Integer> list,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -259,7 +262,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
                       retVal.limit(list.size() - position);
                     }
                     final List<Integer> ints = list.subList(position, position + retVal.remaining());
-                    for(int value : ints) {
+                    for (int value : ints) {
                       retVal.put(value);
                     }
                     retVal.rewind();

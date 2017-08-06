@@ -240,7 +240,7 @@ public class GroupByQueryEngineV2
     )
     {
       ValueType type = capabilities.getType();
-      switch(type) {
+      switch (type) {
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
           if (dimSelector.getValueCardinality() >= 0) {

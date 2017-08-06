@@ -255,7 +255,7 @@ public class DruidCoordinatorRuntimeParams
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.stats = stats;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
-      this.balancerStrategy=balancerStrategy;
+      this.balancerStrategy = balancerStrategy;
     }
 
     public DruidCoordinatorRuntimeParams build()
@@ -351,7 +351,7 @@ public class DruidCoordinatorRuntimeParams
 
     public Builder withBalancerStrategy(BalancerStrategy balancerStrategy)
     {
-      this.balancerStrategy=balancerStrategy;
+      this.balancerStrategy = balancerStrategy;
       return this;
     }
   }

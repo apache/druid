@@ -996,7 +996,7 @@ public class LookupCoordinatorManagerTest
       {
         return ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(LOOKUP_TIER, ImmutableMap.of(
             "foo", lookup,
-            "bar", new LookupExtractorFactoryMapContainer("v0",ImmutableMap.<String, Object>of())
+            "bar", new LookupExtractorFactoryMapContainer("v0", ImmutableMap.<String, Object>of())
         ));
       }
     };

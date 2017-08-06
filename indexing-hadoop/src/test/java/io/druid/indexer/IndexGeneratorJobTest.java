@@ -376,7 +376,7 @@ public class IndexGeneratorJobTest
     // Run each baseConstructor with/without forceExtendableShardSpecs.
     final List<Object[]> constructors = Lists.newArrayList();
     for (Object[] baseConstructor : baseConstructors) {
-      for (int forceExtendableShardSpecs = 0; forceExtendableShardSpecs < 2 ; forceExtendableShardSpecs++) {
+      for (int forceExtendableShardSpecs = 0; forceExtendableShardSpecs < 2; forceExtendableShardSpecs++) {
         final Object[] fullConstructor = new Object[baseConstructor.length + 1];
         System.arraycopy(baseConstructor, 0, fullConstructor, 0, baseConstructor.length);
         fullConstructor[baseConstructor.length] = forceExtendableShardSpecs == 0;

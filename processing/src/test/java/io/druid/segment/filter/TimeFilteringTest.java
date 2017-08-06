@@ -134,7 +134,7 @@ public class TimeFilteringTest extends BaseFilterTest
     // cross the hashing threshold to test hashset implementation, filter on even values
     List<String> infilterValues = new ArrayList<>(InDimFilter.NUMERIC_HASHING_THRESHOLD * 2);
     for (int i = 0; i < InDimFilter.NUMERIC_HASHING_THRESHOLD * 2; i++) {
-      infilterValues.add(String.valueOf(i*2));
+      infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatches(
         new InDimFilter(Column.TIME_COLUMN_NAME, infilterValues, null),

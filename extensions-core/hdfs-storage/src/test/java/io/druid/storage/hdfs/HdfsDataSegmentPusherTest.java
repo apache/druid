@@ -540,7 +540,7 @@ public class HdfsDataSegmentPusherTest
             -1
         ),
         JobHelper.INDEX_ZIP,
-        new LocalDataSegmentPusher( new LocalDataSegmentPusherConfig(), objectMapper)
+        new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), objectMapper)
     );
     Assert.assertEquals(
         "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
@@ -563,7 +563,7 @@ public class HdfsDataSegmentPusherTest
             -1
         ),
         JobHelper.DESCRIPTOR_JSON,
-        new LocalDataSegmentPusher( new LocalDataSegmentPusherConfig(), objectMapper)
+        new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), objectMapper)
     );
     Assert.assertEquals(
         "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
@@ -586,7 +586,7 @@ public class HdfsDataSegmentPusherTest
             -1
         ),
         new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0),
-        new LocalDataSegmentPusher( new LocalDataSegmentPusherConfig(), objectMapper)
+        new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), objectMapper)
     );
     Assert.assertEquals(
         "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"

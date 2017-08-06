@@ -84,7 +84,7 @@ public class DatasourceRecordReaderTest
     Assert.assertEquals(0, rr.getProgress(), 0.0001);
 
     List<InputRow> rows = Lists.newArrayList();
-    while(rr.nextKeyValue()) {
+    while (rr.nextKeyValue()) {
       rows.add(rr.getCurrentValue());
     }
     verifyRows(rows);

@@ -2158,7 +2158,7 @@ public class IndexMergerTestBase
 
     SmooshedFileMapper sfm = closer.closeLater(SmooshedFileMapper.load(tempDir));
     List<String> expectedFilenames = Arrays.asList("A", "__time", "d1", "index.drd", "metadata.drd");
-    List<String> actualFilenames =  new ArrayList<>(sfm.getInternalFilenames());
+    List<String> actualFilenames = new ArrayList<>(sfm.getInternalFilenames());
     Collections.sort(expectedFilenames);
     Collections.sort(actualFilenames);
     Assert.assertEquals(expectedFilenames, actualFilenames);

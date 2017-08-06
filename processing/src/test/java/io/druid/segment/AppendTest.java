@@ -181,7 +181,7 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -206,7 +206,7 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -231,7 +231,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -256,7 +256,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -281,7 +281,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -306,7 +306,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -352,7 +352,7 @@ public class AppendTest
 
     TopNQuery query = makeTopNQuery();
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -398,7 +398,7 @@ public class AppendTest
 
     TopNQuery query = makeTopNQuery();
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -426,7 +426,7 @@ public class AppendTest
 
     TopNQuery query = makeFilteredTopNQuery();
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -444,7 +444,7 @@ public class AppendTest
 
     TopNQuery query = makeFilteredTopNQuery();
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -467,7 +467,7 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -489,7 +489,7 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -510,7 +510,7 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -532,7 +532,7 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -574,7 +574,7 @@ public class AppendTest
                                   .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
                                   .build();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment3);
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 

@@ -43,7 +43,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class VarianceTimeseriesQueryTest
 {
-  @Parameterized.Parameters(name="{0}:descending={1}")
+  @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return TimeseriesQueryRunnerTest.constructorFeeder();

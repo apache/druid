@@ -204,7 +204,7 @@ public class BatchServerInventoryViewTest
             return input.rhs.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
           }
         }
-    ){
+    ) {
       @Override
       protected DruidServer addInnerInventory(
           DruidServer container, String inventoryKey, Set<DataSegment> inventory
@@ -473,7 +473,7 @@ public class BatchServerInventoryViewTest
                   List<DataSegment> segments = new ArrayList<DataSegment>();
                   try {
                     for (int j = 0; j < INITIAL_SEGMENTS / numThreads; ++j) {
-                      segments.add(makeSegment(INITIAL_SEGMENTS + ii  + numThreads * j));
+                      segments.add(makeSegment(INITIAL_SEGMENTS + ii + numThreads * j));
                     }
                     latch.countDown();
                     latch.await();

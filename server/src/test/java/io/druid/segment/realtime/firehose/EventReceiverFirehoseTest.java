@@ -229,7 +229,7 @@ public class EventReceiverFirehoseTest
   public void testShutdownWithPrevTime() throws Exception
   {
     firehose.shutdown(DateTimes.nowUtc().minusMinutes(2).toString());
-    while (!firehose.isClosed()){
+    while (!firehose.isClosed()) {
       Thread.sleep(50);
     }
   }
@@ -238,7 +238,7 @@ public class EventReceiverFirehoseTest
   public void testShutdown() throws Exception
   {
     firehose.shutdown(DateTimes.nowUtc().plusMillis(100).toString());
-    while (!firehose.isClosed()){
+    while (!firehose.isClosed()) {
      Thread.sleep(50);
     }
   }

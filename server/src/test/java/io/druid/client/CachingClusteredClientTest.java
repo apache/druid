@@ -1949,7 +1949,7 @@ public class CachingClusteredClientTest
                     @Override
                     public Sequence answer() throws Throwable
                     {
-                      return toFilteredQueryableTimeseriesResults((TimeseriesQuery)capture.getValue().getQuery(), segmentIds, queryIntervals, results);
+                      return toFilteredQueryableTimeseriesResults((TimeseriesQuery) capture.getValue().getQuery(), segmentIds, queryIntervals, results);
                     }
                   })
                   .times(0, 1);
@@ -1960,7 +1960,7 @@ public class CachingClusteredClientTest
 
       final Iterable<Result<Object>> expected = new ArrayList<>();
       for (int intervalNo = 0; intervalNo < i + 1; intervalNo++) {
-        Iterables.addAll((List)expected, filteredExpected.get(intervalNo));
+        Iterables.addAll((List) expected, filteredExpected.get(intervalNo));
       }
 
       runWithMocks(
@@ -2004,7 +2004,7 @@ public class CachingClusteredClientTest
       List<Iterable<Result<TimeseriesResultValue>>> results
   )
   {
-    MultipleSpecificSegmentSpec spec = (MultipleSpecificSegmentSpec)query.getQuerySegmentSpec();
+    MultipleSpecificSegmentSpec spec = (MultipleSpecificSegmentSpec) query.getQuerySegmentSpec();
     List<Result<TimeseriesResultValue>> ret = Lists.newArrayList();
     for (SegmentDescriptor descriptor : spec.getDescriptors()) {
       String id = StringUtils.format("%s_%s", queryIntervals.indexOf(descriptor.getInterval()), descriptor.getPartitionNumber());
@@ -2281,9 +2281,9 @@ public class CachingClusteredClientTest
             start = String.valueOf(j);
           }
           if (j + 1 < numChunks) {
-            end = String.valueOf(j+1);
+            end = String.valueOf(j + 1);
           }
-          shardSpec = new SingleDimensionShardSpec("dim"+k, start, end, j);
+          shardSpec = new SingleDimensionShardSpec("dim" + k, start, end, j);
         }
         EasyMock.expect(mockSegment.getShardSpec())
                 .andReturn(shardSpec)

@@ -167,7 +167,7 @@ public class HdfsDataSegmentFinderTest
     descriptor3 = new Path(dataSourceDir, "interval3/v2/0/" + DESCRIPTOR_JSON);
     descriptor4_0 = new Path(dataSourceDir, "interval4/v1/0/" + DESCRIPTOR_JSON);
     descriptor4_1 = new Path(dataSourceDir, "interval4/v1/1/" + DESCRIPTOR_JSON);
-    descriptor5 = new Path(dataSourceDir, "interval5/v1/1/" + "1_" +DESCRIPTOR_JSON);
+    descriptor5 = new Path(dataSourceDir, "interval5/v1/1/" + "1_" + DESCRIPTOR_JSON);
     indexZip1 = new Path(descriptor1.getParent(), INDEX_ZIP);
     indexZip2 = new Path(descriptor2.getParent(), INDEX_ZIP);
     indexZip3 = new Path(descriptor3.getParent(), INDEX_ZIP);

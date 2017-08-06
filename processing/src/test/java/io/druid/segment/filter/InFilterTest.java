@@ -145,7 +145,7 @@ public class InFilterTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        toInFilter("dim2", "", (String)null),
+        toInFilter("dim2", "", (String) null),
         ImmutableList.of("b", "c", "f")
     );
 
@@ -176,7 +176,7 @@ public class InFilterTest extends BaseFilterTest
   public void testMissingColumn()
   {
     assertFilterMatches(
-        toInFilter("dim3", null, (String)null),
+        toInFilter("dim3", null, (String) null),
         ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
 

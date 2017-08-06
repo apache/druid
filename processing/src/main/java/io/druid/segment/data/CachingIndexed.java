@@ -51,7 +51,7 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
   {
     this.delegate = delegate.singleThreaded();
 
-    if(lookupCacheSize > 0) {
+    if (lookupCacheSize > 0) {
       log.debug("Allocating column cache of max size[%d]", lookupCacheSize);
       cachedValues = new SizedLRUMap<>(INITIAL_CACHE_CAPACITY, lookupCacheSize);
     } else {

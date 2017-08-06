@@ -319,7 +319,7 @@ public class RetryQueryRunnerTest
               );
             } else if ((int) context.get("count") == 1) {
               // this is first retry
-              Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 2);
+              Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec) ((BaseQuery) query).getQuerySegmentSpec()).getDescriptors().size() == 2);
               // assume only left 1 missing at first retry
               ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                   new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 2)
@@ -337,7 +337,7 @@ public class RetryQueryRunnerTest
               );
             } else {
               // this is second retry
-              Assert.assertTrue("Should retry with 1 missing segments", ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 1);
+              Assert.assertTrue("Should retry with 1 missing segments", ((MultipleSpecificSegmentSpec) ((BaseQuery) query).getQuerySegmentSpec()).getDescriptors().size() == 1);
               // assume no more missing at second retry
               context.put("count", 3);
               return Sequences.simple(

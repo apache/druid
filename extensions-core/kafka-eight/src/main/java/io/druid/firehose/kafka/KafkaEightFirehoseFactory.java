@@ -129,7 +129,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
           IF the CRC is caused within the wire transfer, this is not the best way to handel CRC.
           Probably it is better to shutdown the fireHose without commit and start it again.
            */
-          log.error(e,"Message failed its checksum and it is corrupt, will skip it");
+          log.error(e, "Message failed its checksum and it is corrupt, will skip it");
           return null;
         }
       }

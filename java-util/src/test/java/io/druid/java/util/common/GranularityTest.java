@@ -313,7 +313,7 @@ public class GranularityTest
                     granularity.toDate(pd.path, formatter)
                 );
 
-                if(formatter.equals(Granularity.Formatter.DEFAULT)) {
+                if (formatter.equals(Granularity.Formatter.DEFAULT)) {
                     Assert.assertEquals(
                         StringUtils.format(
                             "[%s] Expected toDate(%s) to return the same as toDate(%s, DEFAULT)",
@@ -325,7 +325,7 @@ public class GranularityTest
                     );
                 }
 
-                if(pd.date != null) {
+                if (pd.date != null) {
                     // check if formatter is readable by toDate
                     Assert.assertEquals(
                         StringUtils.format(
@@ -357,7 +357,8 @@ public class GranularityTest
                         formatter,
                         pd.exception,
                         pd.path
-                    ), flag
+                    ),
+                    flag
                 );
             }
         }

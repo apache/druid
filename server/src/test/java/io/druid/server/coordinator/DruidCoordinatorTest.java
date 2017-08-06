@@ -175,7 +175,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         null,
-        new NoopServiceAnnouncer(){
+        new NoopServiceAnnouncer() {
           @Override
           public void announce(DruidNode node)
           {
@@ -214,7 +214,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(segment.getDataSource()).andReturn("dummyDataSource");
     EasyMock.replay(segment);
     EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
-    DruidDataSource druidDataSource= EasyMock.createNiceMock(DruidDataSource.class);
+    DruidDataSource druidDataSource = EasyMock.createNiceMock(DruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(segment);
     EasyMock.replay(druidDataSource);
     EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
@@ -265,7 +265,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testCoordinatorRun() throws Exception
   {
     String dataSource = "dataSource1";
-    String tier= "hot";
+    String tier = "hot";
 
     // Setup MetadataRuleManager
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2));
@@ -320,7 +320,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
             CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
         ) throws Exception
         {
-          if(pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)){
+          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
             if (assignSegmentLatch.getCount() > 0) {
               //Coordinator should try to assign segment to druidServer historical
               //Simulate historical loading segment

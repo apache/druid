@@ -468,7 +468,7 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
@@ -537,7 +537,7 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
@@ -645,7 +645,7 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
@@ -686,8 +686,7 @@ public class RealtimeManagerTest
             factory,
             "druid.sample.numeric.tsv.top",
             null
-        )
-        ,
+        ),
         interval_28_29,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,

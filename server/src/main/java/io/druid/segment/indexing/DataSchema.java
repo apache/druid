@@ -103,7 +103,7 @@ public class DataSchema
   @JsonIgnore
   public InputRowParser getParser()
   {
-    if(parser == null) {
+    if (parser == null) {
       log.warn("No parser has been specified");
       return null;
     }

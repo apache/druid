@@ -61,7 +61,7 @@ public class TimeSeriesUnionQueryRunnerTest
     this.descending = descending;
   }
 
-  @Parameterized.Parameters(name="{0}:descending={1}")
+  @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(

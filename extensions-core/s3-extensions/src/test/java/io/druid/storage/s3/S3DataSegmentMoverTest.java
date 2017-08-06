@@ -205,7 +205,7 @@ public class S3DataSegmentMoverTest
     ) throws ServiceException
     {
       moved = true;
-      if(isObjectInBucket(sourceBucketName, sourceObjectKey)) {
+      if (isObjectInBucket(sourceBucketName, sourceObjectKey)) {
         this.putObject(destinationBucketName, new S3Object(destinationObject.getKey()));
         storage.get(sourceBucketName).remove(sourceObjectKey);
       }

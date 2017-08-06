@@ -131,41 +131,40 @@ public class RabbitMQProducerMain
 
     CommandLine cmd = null;
 
-    try{
+    try {
       cmd = new BasicParser().parse(options, args);
-
     }
-    catch(ParseException e){
+    catch (ParseException e) {
       formatter.printHelp("RabbitMQProducerMain", e.getMessage(), options, null);
       System.exit(1);
     }
 
-    if(cmd.hasOption("h")) {
+    if (cmd.hasOption("h")) {
       formatter.printHelp("RabbitMQProducerMain", options);
       System.exit(2);
     }
 
     ConnectionFactory factory = new ConnectionFactory();
 
-    if(cmd.hasOption("b")){
+    if (cmd.hasOption("b")) {
       factory.setHost(cmd.getOptionValue("b"));
     }
-    if(cmd.hasOption("u")){
+    if (cmd.hasOption("u")) {
       factory.setUsername(cmd.getOptionValue("u"));
     }
-    if(cmd.hasOption("p")){
+    if (cmd.hasOption("p")) {
       factory.setPassword(cmd.getOptionValue("p"));
     }
-    if(cmd.hasOption("v")){
+    if (cmd.hasOption("v")) {
       factory.setVirtualHost(cmd.getOptionValue("v"));
     }
-    if(cmd.hasOption("n")){
+    if (cmd.hasOption("n")) {
       factory.setPort(Integer.parseInt(cmd.getOptionValue("n")));
     }
 
     String exchange = cmd.getOptionValue("e");
     String routingKey = "default.routing.key";
-    if(cmd.hasOption("k")){
+    if (cmd.hasOption("k")) {
       routingKey = cmd.getOptionValue("k");
     }
 
@@ -204,7 +203,7 @@ public class RabbitMQProducerMain
       timer.add(Calendar.SECOND, interval);
 
       Thread.sleep(delay);
-    } while((!single && stop.after(timer.getTime())));
+    } while ((!single && stop.after(timer.getTime())));
 
     connection.close();
   }

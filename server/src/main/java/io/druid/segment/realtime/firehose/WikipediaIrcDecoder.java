@@ -110,9 +110,9 @@ class WikipediaIrcDecoder implements IrcDecoder
       return openDefaultGeoIpDb(geoDb);
     }
     catch (RuntimeException e) {
-      log.warn(e.getMessage()+" Attempting to re-download.", e);
+      log.warn(e.getMessage() + " Attempting to re-download.", e);
       if (geoDb.exists() && !geoDb.delete()) {
-        throw new RuntimeException("Could not delete geo db file ["+ geoDb.getAbsolutePath() +"].");
+        throw new RuntimeException("Could not delete geo db file [" + geoDb.getAbsolutePath() + "].");
       }
       // local download may be corrupt, will retry once.
       return openDefaultGeoIpDb(geoDb);
@@ -133,7 +133,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       return reader;
     }
     catch (IOException e) {
-      throw new RuntimeException("Could not open geo db at ["+ geoDb.getAbsolutePath() +"].", e);
+      throw new RuntimeException("Could not open geo db at [" + geoDb.getAbsolutePath() + "].", e);
     }
   }
 
@@ -156,7 +156,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       );
 
       if (!tmpFile.renameTo(geoDb)) {
-        throw new RuntimeException("Unable to move geo file to ["+geoDb.getAbsolutePath()+"]!");
+        throw new RuntimeException("Unable to move geo file to [" + geoDb.getAbsolutePath() + "]!");
       }
     }
     catch (IOException e) {

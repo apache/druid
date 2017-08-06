@@ -231,7 +231,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             final ChildData child = event.getData();
 
             byte[] data = getZkDataForNode(child.getPath());
-            if(data == null) {
+            if (data == null) {
               log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),

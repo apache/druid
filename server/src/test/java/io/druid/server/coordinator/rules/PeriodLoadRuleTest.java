@@ -92,8 +92,8 @@ public class PeriodLoadRuleTest
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
 
-    Assert.assertEquals(rule.getPeriod(), ((PeriodLoadRule)reread).getPeriod());
-    Assert.assertEquals(rule.getTieredReplicants(), ((PeriodLoadRule)reread).getTieredReplicants());
+    Assert.assertEquals(rule.getPeriod(), ((PeriodLoadRule) reread).getPeriod());
+    Assert.assertEquals(rule.getTieredReplicants(), ((PeriodLoadRule) reread).getTieredReplicants());
     Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), rule.getTieredReplicants());
   }
 
@@ -107,7 +107,7 @@ public class PeriodLoadRuleTest
     String expectedJson = "{\n"
                           + "      \"period\": \"P1D\",\n"
                           + "      \"tieredReplicants\": {\n"
-                          + "        \""+ DruidServer.DEFAULT_TIER +"\": "+ DruidServer.DEFAULT_NUM_REPLICANTS +"\n"
+                          + "        \"" + DruidServer.DEFAULT_TIER + "\": " + DruidServer.DEFAULT_NUM_REPLICANTS + "\n"
                           + "      },\n"
                           + "      \"type\": \"loadByPeriod\"\n"
                           + "    }";

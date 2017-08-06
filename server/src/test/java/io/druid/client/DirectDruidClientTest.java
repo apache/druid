@@ -316,8 +316,8 @@ public class DirectDruidClientTest
         0,
         0L
     );
-    final ServerSelector serverSelector = new ServerSelector( dataSegment
-        ,
+    final ServerSelector serverSelector = new ServerSelector(
+        dataSegment,
         new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
     );
 

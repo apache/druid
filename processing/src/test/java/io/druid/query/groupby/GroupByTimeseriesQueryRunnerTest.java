@@ -59,7 +59,7 @@ import java.util.Map;
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
   @SuppressWarnings("unchecked")
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     GroupByQueryConfig config = new GroupByQueryConfig();

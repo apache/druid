@@ -55,8 +55,7 @@ public class FileRequestLoggerTest
     FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir);
     fileRequestLogger.start();
     RequestLogLine requestLogLine = EasyMock.createMock(RequestLogLine.class);
-    EasyMock.expect(requestLogLine.getLine((ObjectMapper) EasyMock.anyObject())).
-        andReturn(actualLogString).anyTimes();
+    EasyMock.expect(requestLogLine.getLine(EasyMock.anyObject())).andReturn(actualLogString).anyTimes();
     EasyMock.replay(requestLogLine);
     fileRequestLogger.log(requestLogLine);
     File logFile = new File(logDir, dateTime.toString("yyyy-MM-dd'.log'"));

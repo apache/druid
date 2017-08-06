@@ -219,13 +219,13 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry2, auditEntries.get(1));
   }
 
-  @Test(expected=IllegalArgumentException.class, timeout = 10_000L)
+  @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
   public void testFetchAuditHistoryLimitBelowZero() throws IOException
   {
     auditManager.fetchAuditHistory("testType", -1);
   }
 
-  @Test(expected=IllegalArgumentException.class, timeout = 10_000L)
+  @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
   public void testFetchAuditHistoryLimitZero() throws IOException
   {
     auditManager.fetchAuditHistory("testType", 0);

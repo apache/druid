@@ -75,7 +75,7 @@ public class SelectQueryEngine
     )
     {
       ValueType type = capabilities.getType();
-      switch(type) {
+      switch (type) {
         case STRING:
           return new StringSelectColumnSelectorStrategy();
         case LONG:
