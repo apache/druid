@@ -138,7 +138,7 @@ public class TaskLockbox
           final TaskLock taskLock = taskLockPosse.getTaskLock();
 
           if (savedTaskLock.getVersion().equals(taskLock.getVersion())) {
-            taskLockCount ++;
+            taskLockCount++;
             log.info(
                 "Reacquired lock on interval[%s] version[%s] for task: %s",
                 savedTaskLock.getInterval(),
@@ -146,7 +146,7 @@ public class TaskLockbox
                 task.getId()
             );
           } else {
-            taskLockCount ++;
+            taskLockCount++;
             log.info(
                 "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task: %s",
                 savedTaskLock.getInterval(),
@@ -264,7 +264,7 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      if(!activeTasks.contains(task.getId())){
+      if (!activeTasks.contains(task.getId())) {
         throw new ISE("Unable to grant lock to inactive Task [%s]", task.getId());
       }
       Preconditions.checkArgument(interval.toDurationMillis() > 0, "interval empty");
@@ -423,9 +423,9 @@ public class TaskLockbox
       // So we can alert if activeTasks try to release stuff they don't have
       boolean removed = false;
 
-      if(dsRunning != null) {
+      if (dsRunning != null) {
         final TaskLockPosse taskLockPosse = dsRunning.get(interval);
-        if(taskLockPosse != null) {
+        if (taskLockPosse != null) {
           final TaskLock taskLock = taskLockPosse.getTaskLock();
 
           // Remove task from live list
@@ -509,7 +509,7 @@ public class TaskLockbox
 
       // Scan through all locks for this datasource
       final NavigableMap<Interval, TaskLockPosse> dsRunning = running.get(task.getDataSource());
-      if(dsRunning == null) {
+      if (dsRunning == null) {
         searchSpace = ImmutableList.of();
       } else {
         searchSpace = dsRunning.values();

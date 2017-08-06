@@ -72,7 +72,7 @@ public class DruidBroker
   public void start()
   {
     synchronized (self) {
-      if(started) {
+      if (started) {
         return;
       }
       started = true;

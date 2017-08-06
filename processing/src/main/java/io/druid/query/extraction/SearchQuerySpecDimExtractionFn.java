@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.druid.query.search.search.SearchQuerySpec;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -59,8 +60,9 @@ public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
                      .array();
   }
 
+  @Nullable
   @Override
-  public String apply(String dimValue)
+  public String apply(@Nullable String dimValue)
   {
     return searchQuerySpec.accept(dimValue) ? Strings.emptyToNull(dimValue) : null;
   }

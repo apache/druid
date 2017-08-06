@@ -188,12 +188,6 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public AggregateResult aggregate(KeyType key)
-  {
-    return aggregate(key, Groupers.hash(key));
-  }
-
-  @Override
   public void reset()
   {
     if (!initialized) {

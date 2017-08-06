@@ -238,7 +238,7 @@ public class BoundFilter implements Filter
           return input -> doesMatch(extractionFn.apply(input));
         }
         if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
-          return input -> doublePredicateSupplier.get().applyDouble(input);
+          return doublePredicateSupplier.get();
         }
         return input -> doesMatch(String.valueOf(input));
       }
@@ -252,8 +252,7 @@ public class BoundFilter implements Filter
               || (boundDimFilter.getLower().isEmpty() && !boundDimFilter.isLowerStrict())) // lower bound allows null
              && (!boundDimFilter.hasUpperBound()
                  || !boundDimFilter.getUpper().isEmpty()
-                 || !boundDimFilter.isUpperStrict()) // upper bound allows null
-          ;
+                 || !boundDimFilter.isUpperStrict()); // upper bound allows null
     }
     int lowerComparing = 1;
     int upperComparing = 1;

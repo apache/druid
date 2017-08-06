@@ -431,23 +431,23 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L, "idxFloat", 135.88510131835938f, "idxDouble", 135.88510131835938d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L,"idxFloat", 118.57034, "idxDouble", 118.57034),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L,"idxFloat", 158.747224, "idxDouble", 158.747224),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L,"idxFloat", 120.134704, "idxDouble", 120.134704),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L,"idxFloat", 2871.8866900000003f, "idxDouble", 2871.8866900000003d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L,"idxFloat", 121.58358f, "idxDouble", 121.58358d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L,"idxFloat", 2900.798647f, "idxDouble", 2900.798647d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L,"idxFloat", 78.622547f, "idxDouble", 78.622547d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L,"idxFloat", 119.922742f, "idxDouble", 119.922742d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L, "idxFloat", 118.57034, "idxDouble", 118.57034),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L, "idxFloat", 158.747224, "idxDouble", 158.747224),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L, "idxFloat", 120.134704, "idxDouble", 120.134704),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L, "idxFloat", 2871.8866900000003f, "idxDouble", 2871.8866900000003d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L, "idxFloat", 121.58358f, "idxDouble", 121.58358d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L, "idxFloat", 2900.798647f, "idxDouble", 2900.798647d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L, "idxFloat", 78.622547f, "idxDouble", 78.622547d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L, "idxFloat", 119.922742f, "idxDouble", 119.922742d),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L,"idxFloat", 147.42593f, "idxDouble", 147.42593d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L,"idxFloat", 112.987027f, "idxDouble", 112.987027d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L,"idxFloat", 166.016049f, "idxDouble", 166.016049d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L,"idxFloat", 113.446008f, "idxDouble", 113.446008d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L,"idxFloat", 2448.830613f, "idxDouble", 2448.830613d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L,"idxFloat", 114.290141f, "idxDouble", 114.290141d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L,"idxFloat", 2506.415148f, "idxDouble", 2506.415148d),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L,"idxFloat", 97.387433f, "idxDouble", 97.387433d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L, "idxFloat", 147.42593f, "idxDouble", 147.42593d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L, "idxFloat", 112.987027f, "idxDouble", 112.987027d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L, "idxFloat", 166.016049f, "idxDouble", 166.016049d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L, "idxFloat", 113.446008f, "idxDouble", 113.446008d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L, "idxFloat", 2448.830613f, "idxDouble", 2448.830613d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L, "idxFloat", 114.290141f, "idxDouble", 114.290141d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L, "idxFloat", 2506.415148f, "idxDouble", 2506.415148d),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L, "idxFloat", 97.387433f, "idxDouble", 97.387433d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L, "idxFloat", 126.411364f, "idxDouble", 126.411364d)
     );
 
@@ -1401,7 +1401,7 @@ public class GroupByQueryRunnerTest
     List<Row> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough aggregation table space to execute this query");
+      expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
     } else {
       expectedResults = Arrays.asList(
           GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -1579,7 +1579,7 @@ public class GroupByQueryRunnerTest
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     } else {
       expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Not enough aggregation table space to execute this query");
+      expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     }
   }
@@ -5504,7 +5504,7 @@ public class GroupByQueryRunnerTest
         .build();
 
     final DimFilter fridayFilter = new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Friday", new TimeFormatExtractionFn("EEEE", null, null, null, false));
-    final DimFilter firstDaysFilter = new InDimFilter(Column.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"),  new TimeFormatExtractionFn("d", null, null, null, false));
+    final DimFilter firstDaysFilter = new InDimFilter(Column.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"), new TimeFormatExtractionFn("d", null, null, null, false));
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
@@ -7722,6 +7722,67 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testGroupByDoubleColumnDescending()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("qualityDouble", "alias", ValueType.DOUBLE)))
+        .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .addOrderByColumn(new OrderByColumnSpec(
+            "alias",
+            OrderByColumnSpec.Direction.DESCENDING,
+            StringComparators.NUMERIC
+        ))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    Assert.assertNotEquals(
+        Functions.<Sequence<Row>>identity(),
+        query.getLimitSpec().build(
+            query.getDimensions(),
+            query.getAggregatorSpecs(),
+            query.getPostAggregatorSpecs()
+        )
+    );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            17000.0d,
+            "rows",
+            2L,
+            "idx",
+            175L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            12000.0d,
+            "rows",
+            2L,
+            "idx",
+            324L
+        )
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
   public void testGroupByFloatColumnWithExFn()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
@@ -9135,6 +9196,52 @@ public class GroupByQueryRunnerTest
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testRejectForceLimitPushDownWithHaving()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Cannot force limit push down when a having spec is present.");
+
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setDimensions(
+            Arrays.<DimensionSpec>asList(
+                new DefaultDimensionSpec(
+                    QueryRunnerTestHelper.marketDimension,
+                    "marketalias"
+                )
+            )
+        )
+        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Lists.newArrayList(
+                    new OrderByColumnSpec(
+                        "marketalias",
+                        OrderByColumnSpec.Direction.DESCENDING
+                    )
+                ),
+                2
+            )
+        )
+        .setAggregatorSpecs(
+            Lists.<AggregatorFactory>newArrayList(
+                QueryRunnerTestHelper.rowsCount
+            )
+        )
+        .setContext(
+            ImmutableMap.<String, Object>of(
+                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
+                true
+            )
+        )
+        .setHavingSpec(
+            new GreaterThanHavingSpec("rows", 10)
+        )
+        .build();
   }
 
   @Test

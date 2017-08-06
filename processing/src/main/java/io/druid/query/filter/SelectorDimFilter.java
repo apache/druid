@@ -125,7 +125,7 @@ public class SelectorDimFilter implements DimFilter
         public DruidDoublePredicate makeDoublePredicate()
         {
           initDoublePredicate();
-          return input -> druidDoublePredicate.applyDouble(input);
+          return druidDoublePredicate;
         }
       };
       return new DimensionPredicateFilter(dimension, predicateFactory, extractionFn);

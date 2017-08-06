@@ -71,13 +71,13 @@ public class ByteCountingLRUMapTest
 
     Iterator<ByteBuffer> it = map.keySet().iterator();
     List<ByteBuffer> toRemove = Lists.newLinkedList();
-    while(it.hasNext()) {
+    while (it.hasNext()) {
       ByteBuffer buf = it.next();
-      if(buf.remaining() == 10) {
+      if (buf.remaining() == 10) {
         toRemove.add(buf);
       }
     }
-    for(ByteBuffer buf : toRemove) {
+    for (ByteBuffer buf : toRemove) {
       map.remove(buf);
     }
     assertMapValues(1, 3, 3);

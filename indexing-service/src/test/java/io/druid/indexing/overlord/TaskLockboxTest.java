@@ -72,7 +72,7 @@ public class TaskLockboxTest
             objectMapper
         )
     );
-    ServiceEmitter emitter  = EasyMock.createMock(ServiceEmitter.class);
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 

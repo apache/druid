@@ -956,7 +956,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
             new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
-        client.mergeCachedAndUncachedSequences(
+        mergeSequences(
             new TopNQueryBuilder()
                 .dataSource("test")
                 .intervals("2011-01-06/2011-01-10")
@@ -968,6 +968,11 @@ public class CachingClusteredClientTest
             sequences
         )
     );
+  }
+
+  private static <T> Sequence<T> mergeSequences(Query<T> query, List<Sequence<T>> sequences)
+  {
+    return Sequences.simple(sequences).flatMerge(seq -> seq, query.getResultOrdering());
   }
 
 
@@ -1942,7 +1947,7 @@ public class CachingClusteredClientTest
                     @Override
                     public Sequence answer() throws Throwable
                     {
-                      return toFilteredQueryableTimeseriesResults((TimeseriesQuery)capture.getValue().getQuery(), segmentIds, queryIntervals, results);
+                      return toFilteredQueryableTimeseriesResults((TimeseriesQuery) capture.getValue().getQuery(), segmentIds, queryIntervals, results);
                     }
                   })
                   .times(0, 1);
@@ -1953,7 +1958,7 @@ public class CachingClusteredClientTest
 
       final Iterable<Result<Object>> expected = new ArrayList<>();
       for (int intervalNo = 0; intervalNo < i + 1; intervalNo++) {
-        Iterables.addAll((List)expected, filteredExpected.get(intervalNo));
+        Iterables.addAll((List) expected, filteredExpected.get(intervalNo));
       }
 
       runWithMocks(
@@ -1997,7 +2002,7 @@ public class CachingClusteredClientTest
       List<Iterable<Result<TimeseriesResultValue>>> results
   )
   {
-    MultipleSpecificSegmentSpec spec = (MultipleSpecificSegmentSpec)query.getQuerySegmentSpec();
+    MultipleSpecificSegmentSpec spec = (MultipleSpecificSegmentSpec) query.getQuerySegmentSpec();
     List<Result<TimeseriesResultValue>> ret = Lists.newArrayList();
     for (SegmentDescriptor descriptor : spec.getDescriptors()) {
       String id = StringUtils.format("%s_%s", queryIntervals.indexOf(descriptor.getInterval()), descriptor.getPartitionNumber());
@@ -2274,9 +2279,9 @@ public class CachingClusteredClientTest
             start = String.valueOf(j);
           }
           if (j + 1 < numChunks) {
-            end = String.valueOf(j+1);
+            end = String.valueOf(j + 1);
           }
-          shardSpec = new SingleDimensionShardSpec("dim"+k, start, end, j);
+          shardSpec = new SingleDimensionShardSpec("dim" + k, start, end, j);
         }
         EasyMock.expect(mockSegment.getShardSpec())
                 .andReturn(shardSpec)

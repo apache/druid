@@ -124,12 +124,9 @@ public class DimFilterUtils
       if (dimFilter != null && shard != null) {
         Map<String, Range<String>> domain = shard.getDomain();
         for (Map.Entry<String, Range<String>> entry : domain.entrySet()) {
-          Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache.get(entry.getKey());
-          if (optFilterRangeSet == null) {
-            RangeSet<String> filterRangeSet = dimFilter.getDimensionRangeSet(entry.getKey());
-            optFilterRangeSet = Optional.fromNullable(filterRangeSet);
-            dimensionRangeCache.put(entry.getKey(), optFilterRangeSet);
-          }
+          String dimension = entry.getKey();
+          Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
+              .computeIfAbsent(dimension, d -> Optional.fromNullable(dimFilter.getDimensionRangeSet(d)));
           if (optFilterRangeSet.isPresent() && optFilterRangeSet.get().subRangeSet(entry.getValue()).isEmpty()) {
             include = false;
           }

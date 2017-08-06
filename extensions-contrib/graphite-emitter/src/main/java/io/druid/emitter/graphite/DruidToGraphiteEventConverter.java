@@ -25,9 +25,9 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = WhiteListBasedConverter.class)
-@JsonSubTypes(value= {
-    @JsonSubTypes.Type(name="all", value = SendAllGraphiteEventConverter.class),
-    @JsonSubTypes.Type(name="whiteList", value = WhiteListBasedConverter.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "all", value = SendAllGraphiteEventConverter.class),
+    @JsonSubTypes.Type(name = "whiteList", value = WhiteListBasedConverter.class)
 })
 
 public interface DruidToGraphiteEventConverter

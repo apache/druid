@@ -206,7 +206,7 @@ public class LoadQueuePeon
 
       try {
         if (currentlyProcessing == null) {
-          if(!stopped) {
+          if (!stopped) {
             log.makeAlert("Crazy race condition! server[%s]", basePath)
                     .emit();
           }

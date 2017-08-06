@@ -50,7 +50,7 @@ public class PolygonBoundTest
   @Test
   public void testContains()
   {
-    final PolygonBound triangle = PolygonBound.from(new float[]{1f, 4f, 7f}, new float[]{ 1f, 4f, 1f});
+    final PolygonBound triangle = PolygonBound.from(new float[]{1f, 4f, 7f}, new float[]{1f, 4f, 1f});
     final float delta = 1e-5f;
 
     Assert.assertTrue(triangle.contains(new float[]{1f, 1f}));
@@ -64,11 +64,11 @@ public class PolygonBoundTest
     Assert.assertFalse(triangle.contains(new float[]{1f, 5f}));
     Assert.assertTrue(triangle.contains(new float[]{3f, 2f}));
 
-    final PolygonBound rightTriangle = PolygonBound.from(new float[]{1f, 1f, 5f}, new float[]{ 1f, 5f, 1f});
+    final PolygonBound rightTriangle = PolygonBound.from(new float[]{1f, 1f, 5f}, new float[]{1f, 5f, 1f});
 
     Assert.assertTrue(rightTriangle.contains(new float[]{1f, 5f}));
     Assert.assertTrue(rightTriangle.contains(new float[]{2f, 4f}));
-    Assert.assertTrue(rightTriangle.contains(new float[]{2f - delta , 4f}));
+    Assert.assertTrue(rightTriangle.contains(new float[]{2f - delta, 4f}));
     Assert.assertFalse(rightTriangle.contains(new float[]{2f + delta, 4f}));
     Assert.assertTrue(rightTriangle.contains(new float[]{2f, 4f - delta}));
     Assert.assertFalse(rightTriangle.contains(new float[]{2f, 4f + delta}));

@@ -45,7 +45,7 @@ public class ClientAppendQueryTest
   @Test
   public void testGetType()
   {
-    Assert.assertEquals("append",clientAppendQuery.getType());
+    Assert.assertEquals("append", clientAppendQuery.getType());
   }
 
   @Test

@@ -49,7 +49,7 @@ public class LoggerListener extends TestListenerAdapter
   @Override
   public void onTestStart(ITestResult tr)
   {
-      LOG.info ("[%s] -- TEST START", tr.getName() );
+    LOG.info ("[%s] -- TEST START", tr.getName());
   }
 
 }

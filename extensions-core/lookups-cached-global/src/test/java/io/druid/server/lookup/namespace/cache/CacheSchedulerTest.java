@@ -138,7 +138,7 @@ public class CacheSchedulerTest
           final CacheScheduler scheduler
       ) throws InterruptedException
       {
-        Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
+        Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
         String version = Long.toString(System.currentTimeMillis());
         CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
         // Don't actually read off disk because TravisCI doesn't like that
@@ -303,10 +303,9 @@ public class CacheSchedulerTest
     testDelete();
   }
 
-  public void testDelete()
-      throws InterruptedException, TimeoutException, ExecutionException
+  public void testDelete() throws InterruptedException, TimeoutException, ExecutionException
   {
-    final long period = 1_000L;// Give it some time between attempts to update
+    final long period = 1_000L; // Give it some time between attempts to update
     final UriExtractionNamespace namespace = getUriExtractionNamespace(period);
     CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000);
     Assert.assertNotNull(entry);

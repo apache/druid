@@ -117,7 +117,7 @@ public final class QueryPlus<T>
   /**
    * Returns a QueryPlus object with {@link QueryMetrics} from this QueryPlus object, and the provided {@link Query}.
    */
-  public QueryPlus<T> withQuery(Query<T> replacementQuery)
+  public <U> QueryPlus<U> withQuery(Query<U> replacementQuery)
   {
     return new QueryPlus<>(replacementQuery, queryMetrics);
   }

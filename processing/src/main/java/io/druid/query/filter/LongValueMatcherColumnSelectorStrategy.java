@@ -81,7 +81,7 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public String[] get()
       {
-        return new String[]{ Long.toString(selector.get()) };
+        return new String[]{Long.toString(selector.get())};
       }
     };
   }

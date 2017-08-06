@@ -78,11 +78,11 @@ public class DeterminePartitionsJobTest
                 new int[]{5},
                 new String[][][]{
                     {
-                        { null, "c.example.com" },
-                        { "c.example.com", "e.example.com" },
-                        { "e.example.com", "g.example.com" },
-                        { "g.example.com", "i.example.com" },
-                        { "i.example.com", null }
+                        {null, "c.example.com"},
+                        {"c.example.com", "e.example.com"},
+                        {"e.example.com", "g.example.com"},
+                        {"g.example.com", "i.example.com"},
+                        {"i.example.com", null }
                     }
                 },
                 ImmutableList.of(
@@ -106,11 +106,11 @@ public class DeterminePartitionsJobTest
                 new int[]{5},
                 new String[][][]{
                     {
-                        { null, "c.example.com"},
-                        { "c.example.com", "e.example.com" },
-                        { "e.example.com", "g.example.com" },
-                        { "g.example.com", "i.example.com" },
-                        { "i.example.com", null }
+                        {null, "c.example.com"},
+                        {"c.example.com", "e.example.com"},
+                        {"e.example.com", "g.example.com"},
+                        {"g.example.com", "i.example.com"},
+                        {"i.example.com", null}
                     }
                 },
                 ImmutableList.of(
@@ -144,16 +144,16 @@ public class DeterminePartitionsJobTest
                 new int[]{2, 2, 2},
                 new String[][][]{
                     {
-                        { null, "f.example.com" },
-                        { "f.example.com", null }
+                        {null, "f.example.com"},
+                        {"f.example.com", null}
                     },
                     {
-                        { null, "f.example.com" },
-                        { "f.example.com", null }
+                        {null, "f.example.com"},
+                        {"f.example.com", null}
                     },
                     {
-                        { null, "f.example.com" },
-                        { "f.example.com", null }
+                        {null, "f.example.com"},
+                        {"f.example.com", null}
                     }
                 },
                 ImmutableList.of(

@@ -332,7 +332,7 @@ public class LookupReferencesManager
 
   private LookupUpdateState atomicallyUpdateStateRef(Function<LookupUpdateState, LookupUpdateState> fn)
   {
-    while(true) {
+    while (true) {
       LookupUpdateState old = stateRef.get();
       LookupUpdateState newState = fn.apply(old);
       if (stateRef.compareAndSet(old, newState)) {

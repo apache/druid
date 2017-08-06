@@ -21,6 +21,8 @@ package io.druid.query.extraction;
 
 import com.google.common.base.Strings;
 
+import javax.annotation.Nullable;
+
 public class IdentityExtractionFn implements ExtractionFn
 {
   private static final IdentityExtractionFn instance = new IdentityExtractionFn();
@@ -37,13 +39,15 @@ public class IdentityExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(Object value)
+  @Nullable
+  public String apply(@Nullable Object value)
   {
     return value == null ? null : Strings.emptyToNull(value.toString());
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
     return Strings.emptyToNull(value);
   }

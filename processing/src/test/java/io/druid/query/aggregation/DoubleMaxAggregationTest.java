@@ -65,7 +65,7 @@ public class DoubleMaxAggregationTest
     aggregate(selector, agg);
 
     Assert.assertEquals(values[2], ((Double) agg.get()).doubleValue(), 0.0001);
-    Assert.assertEquals((long)values[2], agg.getLong());
+    Assert.assertEquals((long) values[2], agg.getLong());
     Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
 
     agg.reset();

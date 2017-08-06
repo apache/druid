@@ -17,7 +17,9 @@
  * under the License.
  */
 
-package io.druid.segment;import org.joda.time.DateTime;
+package io.druid.segment;
+
+import org.joda.time.DateTime;
 
 /**
  */

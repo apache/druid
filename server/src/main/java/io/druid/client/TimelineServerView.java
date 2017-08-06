@@ -26,12 +26,14 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.Executor;
 
 /**
  */
 public interface TimelineServerView extends ServerView
 {
+  @Nullable
   TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource);
 
   <T> QueryRunner<T> getQueryRunner(DruidServer server);

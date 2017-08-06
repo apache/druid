@@ -190,8 +190,7 @@ public class TaskSerdeTest
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTuningConfig(10000, 10, null, 9999, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        jsonMapper
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -253,8 +252,7 @@ public class TaskSerdeTest
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        jsonMapper
+        null
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
