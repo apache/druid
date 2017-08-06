@@ -36,9 +36,10 @@ import io.druid.query.QueryDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
-import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.aggregation.FloatMaxAggregatorFactory;
+import io.druid.query.aggregation.FloatMinAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -81,7 +82,6 @@ import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -305,7 +305,8 @@ public class CalciteQueryTest
             new Object[]{"cnt", "BIGINT", "NO"},
             new Object[]{"dim1", "VARCHAR", "YES"},
             new Object[]{"dim2", "VARCHAR", "YES"},
-            new Object[]{"m1", "DOUBLE", "NO"},
+            new Object[]{"m1", "FLOAT", "NO"},
+            new Object[]{"m2", "DOUBLE", "NO"},
             new Object[]{"unique_dim1", "OTHER", "NO"}
         )
     );
@@ -355,7 +356,7 @@ public class CalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
@@ -364,7 +365,7 @@ public class CalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .pagingSpec(
                       new PagingSpec(
                           ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 5),
@@ -376,12 +377,12 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", "", 2.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-03"), 1L, "2", "", 3.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", "", 6.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", "", 2f, 2.0, HLLCV1.class.getName()},
+            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6.0, HLLCV1.class.getName()}
         )
     );
   }
@@ -431,14 +432,14 @@ public class CalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", "", 2.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0, HLLCV1.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", "", 2.0f, 2.0, HLLCV1.class.getName()}
         )
     );
   }
@@ -454,15 +455,15 @@ public class CalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .descending(true)
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2001-01-03"), 1L, "abc", "", 6.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0, HLLCV1.class.getName()}
+            new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6d, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, HLLCV1.class.getName()}
         )
     );
   }
@@ -570,7 +571,7 @@ public class CalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
@@ -579,7 +580,7 @@ public class CalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .pagingSpec(
                       new PagingSpec(
                           ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 5),
@@ -595,7 +596,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(NOT(SELECTOR("dim1", "", null)))
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
@@ -605,7 +606,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(NOT(SELECTOR("dim1", "", null)))
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .pagingSpec(
                       new PagingSpec(
                           ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 4),
@@ -636,8 +637,8 @@ public class CalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
-                "BindableProject(dim1=[$8], dim10=[$2], dim2=[$3])\n"
-                + "  BindableJoin(condition=[=($8, $3)], joinType=[inner])\n"
+                "BindableProject(dim1=[$9], dim10=[$2], dim2=[$3])\n"
+                + "  BindableJoin(condition=[=($9, $3)], joinType=[inner])\n"
                 + "    DruidQueryRel(dataSource=[foo])\n"
                 + "    DruidQueryRel(dataSource=[foo], filter=[!dim1 = ])\n"
             }
@@ -682,6 +683,32 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
+            new Object[]{1.0f, 1L},
+            new Object[]{2.0f, 1L},
+            new Object[]{3.0f, 1L},
+            new Object[]{4.0f, 1L},
+            new Object[]{5.0f, 1L},
+            new Object[]{6.0f, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByDouble() throws Exception
+  {
+    testQuery(
+        "SELECT m2, COUNT(*) FROM druid.foo GROUP BY m2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("m2", "d0", ValueType.DOUBLE)))
+                        .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
             new Object[]{1.0d, 1L},
             new Object[]{2.0d, 1L},
             new Object[]{3.0d, 1L},
@@ -714,7 +741,28 @@ public class CalciteQueryTest
   }
 
   @Test
-  public void testHavingOnFloat() throws Exception
+  public void testFilterOnDouble() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE m2 = 1.0",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .filters(SELECTOR("m2", "1.0", null))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
+  public void testHavingOnDoubleSum() throws Exception
   {
     testQuery(
         "SELECT dim1, SUM(m1) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING SUM(m1) > 1",
@@ -753,6 +801,45 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testHavingOnFloatSum() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, CAST(SUM(m1) AS FLOAT) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING CAST(SUM(m1) AS FLOAT) > 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
+                        .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
+                        .setHavingSpec(
+                            new DimFilterHavingSpec(
+                                new BoundDimFilter(
+                                    "a0",
+                                    "1",
+                                    null,
+                                    true,
+                                    false,
+                                    false,
+                                    null,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1", 4.0f},
+            new Object[]{"10.1", 2.0f},
+            new Object[]{"2", 3.0f},
+            new Object[]{"abc", 6.0f},
+            new Object[]{"def", 5.0f}
+        )
+    );
+  }
+
+  @Test
   public void testColumnComparison() throws Exception
   {
     testQuery(
@@ -772,8 +859,8 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", 1.0d, 1L},
-            new Object[]{"2", 3.0d, 1L}
+            new Object[]{"", 1.0f, 1L},
+            new Object[]{"2", 3.0f, 1L}
         )
     );
   }
@@ -1188,7 +1275,7 @@ public class CalciteQueryTest
                       )
                   )
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newSelectQueryBuilder()
@@ -1209,14 +1296,14 @@ public class CalciteQueryTest
                       )
                   )
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1d, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0f, 4d, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0f, 5d, HLLCV1.class.getName()}
         )
     );
   }
@@ -1240,7 +1327,7 @@ public class CalciteQueryTest
                       )
                   )
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newSelectQueryBuilder()
@@ -1261,7 +1348,7 @@ public class CalciteQueryTest
                       )
                   )
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newSelectQueryBuilder()
@@ -1282,14 +1369,14 @@ public class CalciteQueryTest
                       )
                   )
                   .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "unique_dim1"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0d, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0f, 4.0d, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0f, 5.0d, HLLCV1.class.getName()}
         )
     );
   }
@@ -1763,8 +1850,8 @@ public class CalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("p0")))
                 .aggregators(AGGS(
-                    new DoubleMinAggregatorFactory("a0", "m1"),
-                    new DoubleMaxAggregatorFactory("a1", "m1")
+                    new FloatMinAggregatorFactory("a0", "m1"),
+                    new FloatMaxAggregatorFactory("a1", "m1")
                 ))
                 .postAggregators(
                     ImmutableList.of(
@@ -1776,9 +1863,9 @@ public class CalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"", 2.0},
-            new Object[]{"10.1", 4.0},
-            new Object[]{"2", 6.0}
+            new Object[]{"", 2.0f},
+            new Object[]{"10.1", 4.0f},
+            new Object[]{"2", 6.0f}
         )
     );
   }
@@ -1799,8 +1886,8 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(
                             ImmutableList.of(
-                                new DoubleMinAggregatorFactory("a0", "m1"),
-                                new DoubleMaxAggregatorFactory("a1", "m1")
+                                new FloatMinAggregatorFactory("a0", "m1"),
+                                new FloatMaxAggregatorFactory("a1", "m1")
                             )
                         )
                         .setPostAggregatorSpecs(ImmutableList.of(EXPRESSION_POST_AGG("p0", "(\"a0\" + \"a1\")")))
@@ -1820,9 +1907,9 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", 2.0},
-            new Object[]{"10.1", 4.0},
-            new Object[]{"2", 6.0}
+            new Object[]{"", 2.0f},
+            new Object[]{"10.1", 4.0f},
+            new Object[]{"2", 6.0f}
         )
     );
   }
@@ -1844,8 +1931,8 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(
                             ImmutableList.of(
-                                new DoubleMinAggregatorFactory("a0", "m1"),
-                                new DoubleMaxAggregatorFactory("a1", "m1")
+                                new FloatMinAggregatorFactory("a0", "m1"),
+                                new FloatMaxAggregatorFactory("a1", "m1")
                             )
                         )
                         .setPostAggregatorSpecs(
@@ -1869,9 +1956,9 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", 2.0},
-            new Object[]{"10.1", 4.0},
-            new Object[]{"2", 6.0}
+            new Object[]{"", 2.0f},
+            new Object[]{"10.1", 4.0f},
+            new Object[]{"2", 6.0f}
         )
     );
   }
@@ -1949,7 +2036,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 5L, 1L, 2L, 5L, 5, 2L, 1L, 5L, 1L}
+            new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L}
         )
     );
   }
@@ -1987,7 +2074,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{18L, 3.295836866004329, 2, 12, 3f + (Math.log(5.0))}
+            new Object[]{18L, 3.295836866004329, 2, 12L, 3f + (Math.log(5.0))}
         )
     );
   }
@@ -2030,10 +2117,10 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{6.0, 1L},
-            new Object[]{4.0, 2L},
-            new Object[]{2.0, 2L},
-            new Object[]{0.0, 1L}
+            new Object[]{6.0f, 1L},
+            new Object[]{4.0f, 2L},
+            new Object[]{2.0f, 2L},
+            new Object[]{0.0f, 1L}
         )
     );
   }
@@ -2130,9 +2217,9 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{10.0, 1L},
-            new Object[]{2.0, 1L},
-            new Object[]{0.0, 4L}
+            new Object[]{10.0f, 1L},
+            new Object[]{2.0f, 1L},
+            new Object[]{0.0f, 4L}
         )
     );
   }
@@ -2617,7 +2704,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{3}
+            new Object[]{3L}
         )
     );
   }
@@ -2646,7 +2733,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{3}
+            new Object[]{3L}
         )
     );
   }
@@ -3472,7 +3559,7 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{5L, 5L, -0.1222693591629298}
+            new Object[]{5L, 5L, -0.12226936f}
         )
     );
   }
@@ -3607,7 +3694,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{6L, 3L, 3.0021994137521975, 1L, 4L, 4.9985347983600805}
+            new Object[]{6L, 3L, 3.0021994f, 1L, 4L, 4.9985347f}
         )
     );
   }
@@ -4095,10 +4182,10 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{0.0, 3L},
-            new Object[]{1.0, 1L},
-            new Object[]{2.0, 1L},
-            new Object[]{10.0, 1L}
+            new Object[]{0.0f, 3L},
+            new Object[]{1.0f, 1L},
+            new Object[]{2.0f, 1L},
+            new Object[]{10.0f, 1L}
         )
     );
   }
@@ -4146,10 +4233,10 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{10.0, 1L},
-            new Object[]{2.0, 1L},
-            new Object[]{1.0, 1L},
-            new Object[]{0.0, 3L}
+            new Object[]{10.0f, 1L},
+            new Object[]{2.0f, 1L},
+            new Object[]{1.0f, 1L},
+            new Object[]{0.0f, 3L}
         )
     );
   }
@@ -5354,11 +5441,10 @@ public class CalciteQueryTest
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
-        walker,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         macroTable,
-        plannerConfig,
-        new ServerConfig()
+        plannerConfig
     );
 
     viewManager.createView(

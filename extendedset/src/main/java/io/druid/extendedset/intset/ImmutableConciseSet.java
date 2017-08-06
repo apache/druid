@@ -977,7 +977,7 @@ public class ImmutableConciseSet
 
     StringBuilder sb = new StringBuilder();
     sb.append('[');
-    for (; ; ) {
+    while (true) {
       sb.append(itr.next());
       if (!itr.hasNext()) {
         return sb.append(']').toString();

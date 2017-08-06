@@ -100,7 +100,7 @@ public class JdbcDataFetcherTest
   @Test
   public void testFetchAll()
   {
-    ImmutableMap.Builder<String,String> mapBuilder = ImmutableMap.builder();
+    ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
     for (Map.Entry<String, String> entry: jdbcDataFetcher.fetchAll()
          ) {
       mapBuilder.put(entry.getKey(), entry.getValue());
@@ -111,7 +111,7 @@ public class JdbcDataFetcherTest
   @Test
   public void testFetchKeys()
   {
-    ImmutableMap.Builder<String,String> mapBuilder = ImmutableMap.builder();
+    ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
     for (Map.Entry<String, String> entry: jdbcDataFetcher.fetch(lookupMap.keySet())
         ) {
       mapBuilder.put(entry.getKey(), entry.getValue());

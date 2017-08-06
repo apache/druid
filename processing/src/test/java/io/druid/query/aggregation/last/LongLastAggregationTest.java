@@ -129,7 +129,7 @@ public class LongLastAggregationTest
     aggregate(agg);
 
     Pair<Long, Long> result = (Pair<Long, Long>) agg.get();
-    Pair<Long, Long> expected = (Pair<Long, Long>)pairs[2];
+    Pair<Long, Long> expected = (Pair<Long, Long>) pairs[2];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs);
@@ -155,7 +155,7 @@ public class LongLastAggregationTest
     aggregate(agg, buffer, 0);
 
     Pair<Long, Long> result = (Pair<Long, Long>) agg.get(buffer, 0);
-    Pair<Long, Long> expected = (Pair<Long, Long>)pairs[2];
+    Pair<Long, Long> expected = (Pair<Long, Long>) pairs[2];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs);

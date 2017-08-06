@@ -35,7 +35,7 @@ public class RetryPolicyFactoryTest
         .setMaxRetryCount(1);
     RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(config);
     RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-    Assert.assertEquals(new Duration("PT1S"),retryPolicy.getAndIncrementRetryDelay());
+    Assert.assertEquals(new Duration("PT1S"), retryPolicy.getAndIncrementRetryDelay());
     Assert.assertTrue(retryPolicy.hasExceededRetryThreshold());
   }
 }

@@ -105,7 +105,8 @@ public abstract class FunctionalExtraction extends DimExtractionFn
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
     return extractionFunction.apply(value);
   }

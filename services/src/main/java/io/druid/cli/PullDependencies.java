@@ -440,8 +440,9 @@ public class PullDependencies implements Runnable
                 {
 
                 }
-              }
-              , false, StringUtils.UTF8_STRING
+              },
+              false,
+              StringUtils.UTF8_STRING
           )
       );
       return new DefaultTeslaAether(

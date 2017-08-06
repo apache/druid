@@ -98,7 +98,7 @@ public class RulesResourceFilter extends AbstractResourceFilter
   {
     List<String> applicablePaths = ImmutableList.of("druid/coordinator/v1/rules/");
     for (String path : applicablePaths) {
-      if(requestPath.startsWith(path) && !requestPath.equals(path)) {
+      if (requestPath.startsWith(path) && !requestPath.equals(path)) {
         return true;
       }
     }

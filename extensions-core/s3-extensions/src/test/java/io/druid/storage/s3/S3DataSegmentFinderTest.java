@@ -378,7 +378,7 @@ public class S3DataSegmentFinderTest
         startOffset = keys.indexOf(priorLastKey) + 1;
       }
 
-      int endOffset = startOffset + (int)maxListingLength; // exclusive
+      int endOffset = startOffset + (int) maxListingLength; // exclusive
       if (endOffset > keys.size()) {
         endOffset = keys.size();
       }
@@ -389,7 +389,7 @@ public class S3DataSegmentFinderTest
       }
 
       List<StorageObject> objects = Lists.newArrayList();
-      for(String objectKey : keys.subList(startOffset, endOffset)) {
+      for (String objectKey : keys.subList(startOffset, endOffset)) {
         objects.add(getObjectDetails(bucketName, objectKey));
       }
 

@@ -51,6 +51,18 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   }
 
   @Override
+  public Object getOnlyValue(ColumnValueSelector selector)
+  {
+    return ((FloatColumnSelector) selector).get();
+  }
+
+  @Override
+  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putFloat(keyBufferPosition, (Float) obj);
+  }
+
+  @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
   )

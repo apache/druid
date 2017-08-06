@@ -85,7 +85,7 @@ public class TaskLockboxTest
     EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100)).anyTimes();
     EasyMock.replay(serverConfig);
 
-    ServiceEmitter emitter  = EasyMock.createMock(ServiceEmitter.class);
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 
@@ -310,8 +310,8 @@ public class TaskLockboxTest
     Assert.assertFalse(downgradedLock.isUpgraded());
   }
 
-  @Test
-  public void testUpgradeDownGradeWithSmallerInterval()
+    @Test
+    public  void testUpgradeDownGradeWithSmallerInterval()
   {
     final Interval interval = new Interval("2017-01-01/2017-02-01");
     final Interval smallInterval1 = new Interval("2017-01-01/2017-01-02");

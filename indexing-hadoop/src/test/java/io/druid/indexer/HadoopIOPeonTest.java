@@ -49,7 +49,7 @@ public class HadoopIOPeonTest
     EasyMock.expect(mockJobContext.getConfiguration()).andReturn(jobConfig).anyTimes();
     EasyMock.replay(mockJobContext);
 
-    ioPeon = new HadoopIOPeon(mockJobContext,new Path(tmpFolder.newFile().getParent()),overwritesFiles);
+    ioPeon = new HadoopIOPeon(mockJobContext, new Path(tmpFolder.newFile().getParent()), overwritesFiles);
   }
 
   @After public void tearDown()

@@ -131,6 +131,9 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
 
   private List getListObject(ListObjectInspector listObjectInspector, Object listObject)
   {
+    if (listObjectInspector.getListLength(listObject) < 0) {
+      return null;
+    }
     List objectList = listObjectInspector.getList(listObject);
     List list = null;
     ObjectInspector child = listObjectInspector.getListElementObjectInspector();

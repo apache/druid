@@ -497,51 +497,56 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor = getSupervisor(2, 1, true, "PT1H", null, false);
     addSomeEvents(1);
 
-    Task id1 = createKafkaIndexTask( // unexpected # of partitions (kill)
-                                     "id1",
-                                     DATASOURCE,
-                                     "index_kafka_testDS__some_other_sequenceName",
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
-                                     null
+    // unexpected # of partitions (kill)
+    Task id1 = createKafkaIndexTask(
+        "id1",
+        DATASOURCE,
+        "index_kafka_testDS__some_other_sequenceName",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
+        null
     );
 
-    Task id2 = createKafkaIndexTask( // correct number of partitions and ranges (don't kill)
-                                     "id2",
-                                     DATASOURCE,
-                                     "sequenceName-0",
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 333L)),
-                                     null
+    // correct number of partitions and ranges (don't kill)
+    Task id2 = createKafkaIndexTask(
+        "id2",
+        DATASOURCE,
+        "sequenceName-0",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 333L)),
+        null
     );
 
-    Task id3 = createKafkaIndexTask( // unexpected range on partition 2 (kill)
-                                     "id3",
-                                     DATASOURCE,
-                                     "index_kafka_testDS__some_other_sequenceName",
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 1L)),
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 330L)),
-                                     null
+    // unexpected range on partition 2 (kill)
+    Task id3 = createKafkaIndexTask(
+        "id3",
+        DATASOURCE,
+        "index_kafka_testDS__some_other_sequenceName",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 1L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 330L)),
+        null
     );
 
-    Task id4 = createKafkaIndexTask( // different datasource (don't kill)
-                                     "id4",
-                                     "other-datasource",
-                                     "index_kafka_testDS_d927edff33c4b3f",
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
-                                     null
+    // different datasource (don't kill)
+    Task id4 = createKafkaIndexTask(
+        "id4",
+        "other-datasource",
+        "index_kafka_testDS_d927edff33c4b3f",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
+        null
     );
 
-    Task id5 = new RealtimeIndexTask( // non KafkaIndexTask (don't kill)
-                                      "id5",
-                                      null,
-                                      new FireDepartment(
-                                          dataSchema,
-                                          new RealtimeIOConfig(null, null, null),
-                                          null
-                                      ),
-                                      null
+    // non KafkaIndexTask (don't kill)
+    Task id5 = new RealtimeIndexTask(
+        "id5",
+        null,
+        new FireDepartment(
+            dataSchema,
+            new RealtimeIOConfig(null, null, null),
+            null
+        ),
+        null
     );
 
     List<Task> existingTasks = ImmutableList.of(id1, id2, id3, id4, id5);
