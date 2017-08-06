@@ -221,7 +221,7 @@ public class BytesBoundedLinkedQueueTest
                 public Boolean call() throws InterruptedException
                 {
                   while (!stopTest.get()) {
-                    q.poll(100,TimeUnit.MILLISECONDS);
+                    q.poll(100, TimeUnit.MILLISECONDS);
                     q.offer(new TestObject(2));
                   }
                   return true;

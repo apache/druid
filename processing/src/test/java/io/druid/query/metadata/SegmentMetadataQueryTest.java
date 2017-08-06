@@ -331,7 +331,7 @@ public class SegmentMetadataQueryTest
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(QueryPlus.wrap(query),Maps.newHashMap()),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();

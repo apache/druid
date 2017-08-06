@@ -127,7 +127,7 @@ public class AggregationTestHelper
     this.factory = factory;
     this.tempFolder = tempFolder;
 
-    for(Module mod : jsonModulesToRegister) {
+    for (Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
     }
   }
@@ -280,7 +280,7 @@ public class AggregationTestHelper
               @Override
               public ByteBuffer get()
               {
-                return ByteBuffer.allocate(10*1024*1024);
+                return ByteBuffer.allocate(10 * 1024 * 1024);
               }
             }
         ),
@@ -608,7 +608,7 @@ public class AggregationTestHelper
 
     ObjectCodec objectCodec = jp.getCodec();
 
-    while(jp.nextToken() != JsonToken.END_ARRAY) {
+    while (jp.nextToken() != JsonToken.END_ARRAY) {
       result.add(objectCodec.readValue(jp, toolChest.getResultTypeReference()));
     }
     return result;

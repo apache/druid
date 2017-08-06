@@ -573,7 +573,7 @@ public class SelectQueryRunnerTest
   {
 
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("total_market","replaced");
+    extractionMap.put("total_market", "replaced");
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
     SelectQuery query = newTestQuery()
@@ -589,9 +589,9 @@ public class SelectQueryRunnerTest
         Lists.<Result<SelectResultValue>>newArrayList()
     );
     Iterable<Result<SelectResultValue>> resultsOptimize = Sequences.toList(
-        toolChest.postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-                 .run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()),
-        Lists.<Result<SelectResultValue>>newArrayList()
+        toolChest
+            .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
+            .run(QueryPlus.wrap(query), Maps.newHashMap()), Lists.<Result<SelectResultValue>>newArrayList()
     );
 
     final List<List<Map<String, Object>>> events = toEvents(

@@ -281,7 +281,7 @@ public class GranularityPathSpecTest
     // Double-check Jackson's lower-case enum support
     sb.append(jsonMapper.writeValueAsString(granularity));
     sb.append(",");
-    if(inputFormat != null) {
+    if (inputFormat != null) {
       sb.append("\"inputFormat\" : \"");
       sb.append(inputFormat.getName());
       sb.append("\",");

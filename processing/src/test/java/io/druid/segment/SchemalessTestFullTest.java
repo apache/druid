@@ -1145,10 +1145,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(
-            null, SchemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})
-        )
-        ,
+        new QueryableIndexSegment(null, SchemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,

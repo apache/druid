@@ -319,7 +319,7 @@ public class JavaScriptAggregatorTest
     /* memory usage test
     List<JavaScriptAggregator> aggs = Lists.newLinkedList();
 
-    for(int i = 0; i < 100000; ++i) {
+    for (int i = 0; i < 100000; ++i) {
         JavaScriptAggregator a = new JavaScriptAggregator(
           "billy",
           Lists.asList(selector, new FloatColumnSelector[]{}),
@@ -329,7 +329,7 @@ public class JavaScriptAggregatorTest
         a.aggregate();
         a.aggregate();
         a.aggregate();
-        if(i % 1000 == 0) System.out.println(StringUtils.format("Query object %d", i));
+        if (i % 1000 == 0) System.out.println(StringUtils.format("Query object %d", i));
     }
     */
 

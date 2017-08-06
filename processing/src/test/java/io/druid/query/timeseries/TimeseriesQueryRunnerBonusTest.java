@@ -137,7 +137,7 @@ public class TimeseriesQueryRunnerBonusTest
                                   )
                                   .descending(descending)
                                   .build();
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     return Sequences.toList(
         runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()

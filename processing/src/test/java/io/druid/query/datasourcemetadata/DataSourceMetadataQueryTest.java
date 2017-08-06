@@ -221,7 +221,7 @@ public class DataSourceMetadataQueryTest
     );
 
     for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(expected.get(i).getInterval(),segments.get(i).getInterval());
+      Assert.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
     }
   }
 

@@ -40,6 +40,6 @@ public class StringComparatorModule extends SimpleModule
     );
   }
 
-  @JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringComparator.class)
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringComparator.class)
   public static interface StringComparatorMixin {}
 }

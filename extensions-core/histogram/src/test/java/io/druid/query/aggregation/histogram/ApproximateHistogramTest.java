@@ -221,7 +221,7 @@ public class ApproximateHistogramTest
     final int numRand = 10000;
     ApproximateHistogram h = new ApproximateHistogram(combinedHistSize);
     Random rand = new Random(0);
-    //for(int i = 0; i < 200; ++i) h.offer((float)(rand.nextGaussian() * 50.0));
+    //for (int i = 0; i < 200; ++i) h.offer((float)(rand.nextGaussian() * 50.0));
     long tFold = 0;
     int count = 5000000;
     // May be a bug that randNums are not used, should be resolved if testFoldSpeed() becomes a jUnit test again
@@ -234,10 +234,10 @@ public class ApproximateHistogramTest
     List<ApproximateHistogram> randHist = Lists.newLinkedList();
     Iterator<ApproximateHistogram> it = Iterators.cycle(randHist);
 
-    for(int k = 0; k < numRand; ++k) {
+    for (int k = 0; k < numRand; ++k) {
       ApproximateHistogram tmp = new ApproximateHistogram(histSize);
       for (int i = 0; i < 20; ++i) {
-        tmp.offer((float) (rand.nextGaussian() + (double)k));
+        tmp.offer((float) (rand.nextGaussian() + (double) k));
       }
       randHist.add(tmp);
     }
@@ -539,40 +539,40 @@ public class ApproximateHistogramTest
   @Test
   public void testBuckets4()
   {
-    final float[] values = new float[]{0f, 0f, 0.01f, 0.51f, 0.6f,0.8f};
-    ApproximateHistogram h = buildHistogram(50, values, 0.5f,1f);
-    Histogram h3 = h.toHistogram(0.2f,0);
+    final float[] values = new float[]{0f, 0f, 0.01f, 0.51f, 0.6f, 0.8f};
+    ApproximateHistogram h = buildHistogram(50, values, 0.5f, 1f);
+    Histogram h3 = h.toHistogram(0.2f, 0);
 
     Assert.assertArrayEquals(
         "Expected counts match actual counts",
-        new double[]{3f,2f,1f},
+        new double[]{3f, 2f, 1f},
         h3.getCounts(),
         0.1f
     );
 
     Assert.assertArrayEquals(
         "expected breaks match actual breaks",
-        new double[]{-0.2f,0.5f,0.7f,0.9f},
+        new double[]{-0.2f, 0.5f, 0.7f, 0.9f},
         h3.getBreaks(), 0.1f
     );
   }
 
   @Test public void testBuckets5()
   {
-    final float[] values = new float[]{0.1f,0.5f,0.6f};
-    ApproximateHistogram h = buildHistogram(50, values, 0f,1f);
-    Histogram h4 = h.toHistogram(0.5f,0);
+    final float[] values = new float[]{0.1f, 0.5f, 0.6f};
+    ApproximateHistogram h = buildHistogram(50, values, 0f, 1f);
+    Histogram h4 = h.toHistogram(0.5f, 0);
 
     Assert.assertArrayEquals(
         "Expected counts match actual counts",
-        new double[]{2,1},
+        new double[]{2, 1},
         h4.getCounts(),
         0.1f
     );
 
     Assert.assertArrayEquals(
         "Expected breaks match actual breaks",
-        new double[]{0f,0.5f,1f},
+        new double[]{0f, 0.5f, 1f},
         h4.getBreaks(),
         0.1f
     );

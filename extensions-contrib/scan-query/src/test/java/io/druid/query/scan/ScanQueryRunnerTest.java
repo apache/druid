@@ -371,8 +371,9 @@ public class ScanQueryRunnerTest
         Lists.<ScanResultValue>newArrayList()
     );
     Iterable<ScanResultValue> resultsOptimize = Sequences.toList(
-        toolChest.postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-                 .run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()), Lists.<ScanResultValue>newArrayList()
+        toolChest
+            .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
+            .run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()), Lists.<ScanResultValue>newArrayList()
     );
 
     final List<List<Map<String, Object>>> events = toEvents(

@@ -101,8 +101,8 @@ public class MapVirtualColumnTest
             Arrays.asList("ts", "dim", "keys", "values"),
             false,
             0
-        )
-        , "utf8"
+        ),
+        "utf8"
     );
 
     CharSource input = CharSource.wrap(

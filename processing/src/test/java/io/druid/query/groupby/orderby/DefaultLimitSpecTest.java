@@ -253,8 +253,8 @@ public class DefaultLimitSpecTest
         )
     );
     Assert.assertEquals(
-        (List)ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        (List)Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
+        (List) Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
     );
 
     // makes same result
@@ -264,8 +264,8 @@ public class DefaultLimitSpecTest
         ImmutableList.<PostAggregator>of(new ExpressionPostAggregator("k1", "1 + 1", null, TestExprMacroTable.INSTANCE))
     );
     Assert.assertEquals(
-        (List)ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        (List)Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
+        (List) Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
     );
   }
 

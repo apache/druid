@@ -84,7 +84,7 @@ public class TimeseriesQueryRunnerTest
 
   public static final Map<String, Object> CONTEXT = ImmutableMap.of();
 
-  @Parameterized.Parameters(name="{0}:descending={1}")
+  @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(
@@ -217,7 +217,7 @@ public class TimeseriesQueryRunnerTest
           result.toString(),
           Doubles.tryParse(expectedIndex[count]).doubleValue(),
           value.getDoubleMetric("index").doubleValue(),
-          value.getDoubleMetric("index").doubleValue() *  1e-6
+          value.getDoubleMetric("index").doubleValue() * 1e-6
       );
       Assert.assertEquals(
           result.toString(),
@@ -2544,7 +2544,7 @@ public class TimeseriesQueryRunnerTest
   public void testTimeSeriesWithSelectionFilterLookupExtractionFn()
   {
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("spot","upfront");
+    extractionMap.put("spot", "upfront");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, true, null, true, true);

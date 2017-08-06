@@ -194,8 +194,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             .put(granularityBytes)
             .put(filterBytes)
             .put(querySpecBytes)
-            .put(sortSpecBytes)
-            ;
+            .put(sortSpecBytes);
 
         for (byte[] bytes : dimensionsBytes) {
           queryCacheKey.put(bytes);
@@ -293,11 +292,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                                 String val = null;
                                 Integer cnt = null;
                                 if (input instanceof Map) {
-                                  dim = outputNameMap.get((String)((Map) input).get("dimension"));
+                                  dim = outputNameMap.get((String) ((Map) input).get("dimension"));
                                   val = (String) ((Map) input).get("value");
                                   cnt = (Integer) ((Map) input).get("count");
                                 } else if (input instanceof SearchHit) {
-                                  SearchHit cached = (SearchHit)input;
+                                  SearchHit cached = (SearchHit) input;
                                   dim = outputNameMap.get(cached.getDimension());
                                   val = cached.getValue();
                                   cnt = cached.getCount();
@@ -309,8 +308,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                             }
                         )
                     )
-                )
-                ;
+                );
           }
         };
       }
@@ -349,7 +347,9 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                 }
                 return runner.run(queryPlus, responseContext);
               }
-            } , this),
+            },
+            this
+        ),
         config
     );
   }
