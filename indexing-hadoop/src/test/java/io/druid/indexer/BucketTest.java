@@ -54,10 +54,10 @@ public class BucketTest
   {
     byte[] firstPart = {1, 1, 0, 10};
     byte[] secondPart = {2, 4, 0, 5};
-    byte[] expectedGroupParts = bucket.toGroupKey(firstPart,secondPart);
+    byte[] expectedGroupParts = bucket.toGroupKey(firstPart, secondPart);
     Pair<Bucket, byte[]> actualPair = Bucket.fromGroupKey(expectedGroupParts);
     Assert.assertEquals("Bucket is not matching", bucket, actualPair.lhs);
-    Assert.assertArrayEquals("Parts not matching", Bytes.concat(firstPart,secondPart), actualPair.rhs);
+    Assert.assertArrayEquals("Parts not matching", Bytes.concat(firstPart, secondPart), actualPair.rhs);
   }
 
   @Test public void testToString()
@@ -67,7 +67,7 @@ public class BucketTest
         ", partitionNum=" + partitionNum +
         ", shardNum=" + shardNum +
         '}';
-    Assert.assertEquals(bucket.toString(),expectedString);
+    Assert.assertEquals(bucket.toString(), expectedString);
   }
 
   @Test public void testEquals()
@@ -79,10 +79,10 @@ public class BucketTest
     Assert.assertFalse("Objects do not have the same partitionNum",
         bucket.equals(new Bucket(shardNum, time, partitionNum + 1)));
     Assert.assertFalse("Objects do not have the same shardNum",
-        bucket.equals(new Bucket(shardNum + 1,time,partitionNum)));
-    Assert.assertFalse("Objects do not have the same time",bucket.equals(new Bucket(shardNum,new DateTime(),partitionNum)));
-    Assert.assertFalse("Object do have NULL time",bucket.equals(new Bucket(shardNum,null,partitionNum)));
-    Assert.assertTrue("Objects must be the same",bucket.equals(new Bucket(shardNum, time, partitionNum)));
+        bucket.equals(new Bucket(shardNum + 1, time, partitionNum)));
+    Assert.assertFalse("Objects do not have the same time", bucket.equals(new Bucket(shardNum, new DateTime(), partitionNum)));
+    Assert.assertFalse("Object do have NULL time", bucket.equals(new Bucket(shardNum, null, partitionNum)));
+    Assert.assertTrue("Objects must be the same", bucket.equals(new Bucket(shardNum, time, partitionNum)));
 
   }
 
@@ -90,7 +90,7 @@ public class BucketTest
   {
     int hashCode = bucket.hashCode();
     Assert.assertThat(hashCode, OrderingComparison.greaterThanOrEqualTo(31 * partitionNum + shardNum));
-    bucket = new Bucket(shardNum,null,partitionNum);
+    bucket = new Bucket(shardNum, null, partitionNum);
     hashCode = bucket.hashCode();
     Assert.assertEquals(hashCode, (31 * partitionNum + shardNum));
   }

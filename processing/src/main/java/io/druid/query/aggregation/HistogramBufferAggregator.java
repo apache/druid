@@ -37,7 +37,7 @@ public class HistogramBufferAggregator implements BufferAggregator
   public HistogramBufferAggregator(FloatColumnSelector selector, float[] breaks)
   {
     this.selector = selector;
-    this.breaks   = breaks;
+    this.breaks = breaks;
     this.minOffset = Longs.BYTES * (breaks.length + 1);
     this.maxOffset = this.minOffset + Floats.BYTES;
   }
@@ -61,10 +61,10 @@ public class HistogramBufferAggregator implements BufferAggregator
     final int minPos = position + minOffset;
     final int maxPos = position + maxOffset;
 
-    if(value < buf.getFloat(minPos)) {
+    if (value < buf.getFloat(minPos)) {
       buf.putFloat(minPos, value);
     }
-    if(value > buf.getFloat(maxPos)) {
+    if (value > buf.getFloat(maxPos)) {
       buf.putFloat(maxPos, value);
     }
 

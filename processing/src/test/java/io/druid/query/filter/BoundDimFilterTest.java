@@ -63,7 +63,7 @@ public class BoundDimFilterTest
   private static final ExtractionFn extractionFn = new RegexDimExtractionFn(".*", false, null);
 
   @Parameterized.Parameters
-  public static Iterable<Object[]>  constructorFeeder()
+  public static Iterable<Object[]> constructorFeeder()
   {
 
     return ImmutableList.of(

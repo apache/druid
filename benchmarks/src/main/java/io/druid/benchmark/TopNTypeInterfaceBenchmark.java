@@ -250,11 +250,11 @@ public class TopNTypeInterfaceBenchmark
     queryBuilder.threshold(threshold);
     stringQuery = queryBuilder.build();
 
-    TopNQueryBuilder longBuilder =  SCHEMA_QUERY_MAP.get("basic").get("long");
+    TopNQueryBuilder longBuilder = SCHEMA_QUERY_MAP.get("basic").get("long");
     longBuilder.threshold(threshold);
     longQuery = longBuilder.build();
 
-    TopNQueryBuilder floatBuilder =  SCHEMA_QUERY_MAP.get("basic").get("float");
+    TopNQueryBuilder floatBuilder = SCHEMA_QUERY_MAP.get("basic").get("float");
     floatBuilder.threshold(threshold);
     floatQuery = floatBuilder.build();
 

@@ -101,7 +101,7 @@ public class ExtensionsConfigTest
     );
 
     Assert.assertEquals(
-            ImmutableList.of("b","a","c","d"),
+            ImmutableList.of("b", "a", "c", "d"),
             new ArrayList<>(config.getLoadList())
     );
   }

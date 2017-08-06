@@ -62,7 +62,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
     root.addServlet(holderPwd, "/");
-    if(config.getConsoleStatic() == null) {
+    if (config.getConsoleStatic() == null) {
       ResourceCollection staticResources;
       if (beOverlord) {
         staticResources = new ResourceCollection(

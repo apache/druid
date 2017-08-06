@@ -34,7 +34,7 @@ import java.nio.channels.WritableByteChannel;
 public class DoubleGenericColumnPartSerde implements ColumnPartSerde
 {
   private final ByteOrder byteOrder;
-  private  Serializer serialize;
+  private Serializer serialize;
 
   @JsonCreator
   public static DoubleGenericColumnPartSerde getDoubleGenericColumnPartSerde(

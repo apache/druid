@@ -130,7 +130,7 @@ public class DoubleFirstAggregationTest
     aggregate(agg);
 
     Pair<Long, Double> result = (Pair<Long, Double>) agg.get();
-    Pair<Long, Double> expected = (Pair<Long, Double>)pairs[2];
+    Pair<Long, Double> expected = (Pair<Long, Double>) pairs[2];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
@@ -156,7 +156,7 @@ public class DoubleFirstAggregationTest
     aggregate(agg, buffer, 0);
 
     Pair<Long, Double> result = (Pair<Long, Double>) agg.get(buffer, 0);
-    Pair<Long, Double> expected = (Pair<Long, Double>)pairs[2];
+    Pair<Long, Double> expected = (Pair<Long, Double>) pairs[2];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);

@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class MapLookupExtractorTest
 {
-  private final Map lookupMap = ImmutableMap.of("foo", "bar", "null", "", "empty String", "", "","empty_string");
+  private final Map lookupMap = ImmutableMap.of("foo", "bar", "null", "", "empty String", "", "", "empty_string");
   private final MapLookupExtractor fn = new MapLookupExtractor(lookupMap, false);
 
   @Test

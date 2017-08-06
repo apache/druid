@@ -143,12 +143,12 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
         for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
           if (zipperBuffer[i] != 0) {
             final short val = (short) (0xffff & (i + startPosition - initialPosition));
-            if(byteOrder.equals(ByteOrder.LITTLE_ENDIAN)){
+            if (byteOrder.equals(ByteOrder.LITTLE_ENDIAN)) {
               tempBuffer[outBufferPos + 0] = (byte) (0xff & val);
-              tempBuffer[outBufferPos + 1] = (byte) (0xff & (val>>8));
-            }else{
+              tempBuffer[outBufferPos + 1] = (byte) (0xff & (val >> 8));
+            } else {
               tempBuffer[outBufferPos + 1] = (byte) (0xff & val);
-              tempBuffer[outBufferPos + 0] = (byte) (0xff & (val>>8));
+              tempBuffer[outBufferPos + 0] = (byte) (0xff & (val >> 8));
             }
             tempBuffer[outBufferPos + 2] = zipperBuffer[i];
             outBufferPos += 3;

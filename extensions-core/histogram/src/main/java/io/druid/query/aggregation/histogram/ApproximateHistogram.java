@@ -855,7 +855,7 @@ public class ApproximateHistogram
    *   ApproximateHistogram merged = new ApproximateHistogram(mergedBinCount, mergedPositions, mergedBins);
    *
    *   int targetSize = merged.binCount() - numMerge;
-   *   while(merged.binCount() > targetSize) {
+   *   while (merged.binCount() > targetSize) {
    *     merged.merge(merged.minDeltaIndex());
    *   }
    * </pre>

@@ -1143,7 +1143,7 @@ public class RowBasedGrouperHelper
                 return timeCompare;
               }
 
-              int cmp =  compareDimsInBuffersForNullFudgeTimestampForPushDown(
+              int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
                   adjustedSerdeHelpers,
                   needsReverses,
                   fieldCount,

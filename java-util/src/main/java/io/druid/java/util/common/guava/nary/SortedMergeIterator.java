@@ -74,14 +74,14 @@ public class SortedMergeIterator<InType, OutType> implements Iterator<OutType>
   @Override
   public OutType next()
   {
-    if (! hasNext()) {
+    if (!hasNext()) {
       throw new NoSuchElementException();
     }
 
-    if (! lhs.hasNext()) {
+    if (!lhs.hasNext()) {
       return fn.apply(null, rhs.next());
     }
-    if (! rhs.hasNext()) {
+    if (!rhs.hasNext()) {
       return fn.apply(lhs.next(), null);
     }
 

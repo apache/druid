@@ -471,7 +471,7 @@ public abstract class AbstractIntSet implements IntSet
 
     StringBuilder sb = new StringBuilder();
     sb.append('[');
-    for (; ; ) {
+    while (true) {
       int e = itr.next();
       sb.append(e);
       if (!itr.hasNext()) {

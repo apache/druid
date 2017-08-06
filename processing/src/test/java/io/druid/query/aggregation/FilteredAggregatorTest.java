@@ -249,12 +249,12 @@ public class FilteredAggregatorTest
     };
   }
 
-  private void assertValues(FilteredAggregator agg,TestFloatColumnSelector selector, double... expectedVals)
+  private void assertValues(FilteredAggregator agg, TestFloatColumnSelector selector, double... expectedVals)
   {
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());
-    for(double expectedVal : expectedVals){
+    for (double expectedVal : expectedVals) {
       aggregate(selector, agg);
       Assert.assertEquals(expectedVal, agg.get());
       Assert.assertEquals(expectedVal, agg.get());

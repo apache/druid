@@ -56,7 +56,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
       ObjectMapper jsonMapper)
   {
     super(config);
-    this.jsonMapper=jsonMapper;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override

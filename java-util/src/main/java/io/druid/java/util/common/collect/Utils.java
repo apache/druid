@@ -46,7 +46,7 @@ public class Utils
 
     Map<K, V> retVal = new LinkedHashMap<>();
 
-    for(int i = 0; i < values.length; ++i) {
+    for (int i = 0; i < values.length; ++i) {
       retVal.put(keys[i], values[i]);
     }
 
@@ -91,7 +91,7 @@ public class Utils
     while (keysIter.hasNext()) {
       final K key = keysIter.next();
 
-      if(valsIter.hasNext()) {
+      if (valsIter.hasNext()) {
         retVal.put(key, valsIter.next());
       } else {
         break;

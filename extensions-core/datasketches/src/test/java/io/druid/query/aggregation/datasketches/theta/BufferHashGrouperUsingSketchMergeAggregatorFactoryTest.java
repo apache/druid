@@ -27,7 +27,7 @@ import com.yahoo.sketches.theta.UpdateSketch;
 import io.druid.data.input.MapBasedRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.groupby.epinephelinae.BufferGrouper;
+import io.druid.query.groupby.epinephelinae.BufferHashGrouper;
 import io.druid.query.groupby.epinephelinae.Grouper;
 import io.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
@@ -36,15 +36,15 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-public class BufferGrouperUsingSketchMergeAggregatorFactoryTest
+public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
 {
-  private static BufferGrouper<Integer> makeGrouper(
+  private static BufferHashGrouper<Integer> makeGrouper(
       TestColumnSelectorFactory columnSelectorFactory,
       int bufferSize,
       int initialBuckets
   )
   {
-    final BufferGrouper<Integer> grouper = new BufferGrouper<>(
+    final BufferHashGrouper<Integer> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(ByteBuffer.allocate(bufferSize)),
         GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,

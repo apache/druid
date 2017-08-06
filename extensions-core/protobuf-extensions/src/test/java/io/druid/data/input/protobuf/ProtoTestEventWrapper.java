@@ -3256,7 +3256,7 @@ public final class ProtoTestEventWrapper
     internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable = new
         com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_prototest_ProtoTestEvent_Foo_descriptor,
-        new java.lang.String[]{"Bar",}
+        new java.lang.String[]{"Bar"}
     );
   }
 

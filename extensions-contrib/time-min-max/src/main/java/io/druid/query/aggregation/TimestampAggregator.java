@@ -30,7 +30,7 @@ public class TimestampAggregator implements Aggregator
 
   static long combineValues(Object lhs, Object rhs)
   {
-    return Math.max(((Number)lhs).longValue(), ((Number)rhs).longValue());
+    return Math.max(((Number) lhs).longValue(), ((Number) rhs).longValue());
   }
 
   private final ObjectColumnSelector selector;
