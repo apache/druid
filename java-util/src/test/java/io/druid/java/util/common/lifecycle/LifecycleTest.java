@@ -311,16 +311,16 @@ public class LifecycleTest
       lifecycle.addHandler(dummyHandler);
       Assert.fail("Expected exception");
     }
-    catch (Exception e) {
-      // expected
+    catch (IllegalStateException e) {
+      Assert.assertTrue(e.getMessage().contains("Cannot add a handler"));
     }
 
     try {
       lifecycle.addMaybeStartHandler(dummyHandler);
       Assert.fail("Expected exception");
     }
-    catch (Exception e) {
-      // expected
+    catch (IllegalStateException e) {
+      Assert.assertTrue(e.getMessage().contains("Cannot add a handler"));
     }
   }
 }
