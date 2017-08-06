@@ -35,7 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
+public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyType>
 {
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
@@ -51,7 +51,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
   // Additionally, results must be resorted by grouping key to allow results to merge correctly.
   private boolean sortHasNonGroupingFields;
 
-  // Min-max heap, used for storing offsets when applying limits/sorting in the BufferGrouper
+  // Min-max heap, used for storing offsets when applying limits/sorting in the BufferHashGrouper
   private ByteBufferMinMaxOffsetHeap offsetHeap;
 
   // ByteBuffer slices used by the grouper
@@ -64,7 +64,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
   private BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater;
   private boolean initialized = false;
 
-  public LimitedBufferGrouper(
+  public LimitedBufferHashGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final Grouper.KeySerde<KeyType> keySerde,
       final ColumnSelectorFactory columnSelectorFactory,
@@ -236,7 +236,8 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       this.indexPosition = indexPosition;
     }
 
-    public void setHashTableBuffer(ByteBuffer newTableBuffer) {
+    public void setHashTableBuffer(ByteBuffer newTableBuffer)
+    {
       hashTableBuffer = newTableBuffer;
     }
 

@@ -191,7 +191,8 @@ public class LoadQueuePeon
     segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
   }
 
-  private void processSegmentChangeRequest() {
+  private void processSegmentChangeRequest()
+  {
     if (currentlyProcessing == null) {
       if (!segmentsToDrop.isEmpty()) {
         currentlyProcessing = segmentsToDrop.firstEntry().getValue();
@@ -205,7 +206,7 @@ public class LoadQueuePeon
 
       try {
         if (currentlyProcessing == null) {
-          if(!stopped) {
+          if (!stopped) {
             log.makeAlert("Crazy race condition! server[%s]", basePath)
                     .emit();
           }
@@ -275,7 +276,8 @@ public class LoadQueuePeon
 
           entryRemoved(path);
         }
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         failAssign(e);
       }
     } else {

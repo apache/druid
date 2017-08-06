@@ -118,11 +118,11 @@ public class JSONPathParserTest
     Assert.assertEquals("2999", jsonMap.get("timestamp"));
     Assert.assertEquals("Hello world!", jsonMap.get("foo.bar1"));
 
-    List<Object> testListConvert = (List)jsonMap.get("testListConvert");
+    List<Object> testListConvert = (List) jsonMap.get("testListConvert");
     Assert.assertEquals(1.23456789E21, testListConvert.get(0));
     Assert.assertEquals("foo?", testListConvert.get(1));
 
-    List<Object> testListConvert2 = (List)jsonMap.get("testListConvert2");
+    List<Object> testListConvert2 = (List) jsonMap.get("testListConvert2");
     Assert.assertEquals(1.23456789E21, testListConvert2.get(0));
     Assert.assertEquals("foo?", testListConvert2.get(1));
     Assert.assertEquals(1.23456789E21, ((List) testListConvert2.get(2)).get(0));

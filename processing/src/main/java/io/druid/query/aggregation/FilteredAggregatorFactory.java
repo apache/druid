@@ -32,8 +32,6 @@ import java.util.List;
 
 public class FilteredAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x9;
-
   private final AggregatorFactory delegate;
   private final DimFilter filter;
 
@@ -118,7 +116,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     byte[] filterCacheKey = filter.getCacheKey();
     byte[] aggregatorCacheKey = delegate.getCacheKey();
     return ByteBuffer.allocate(1 + filterCacheKey.length + aggregatorCacheKey.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.FILTERED_AGG_CACHE_TYPE_ID)
                      .put(filterCacheKey)
                      .put(aggregatorCacheKey)
                      .array();

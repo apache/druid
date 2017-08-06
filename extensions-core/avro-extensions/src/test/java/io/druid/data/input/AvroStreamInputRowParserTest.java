@@ -19,6 +19,7 @@
 package io.druid.data.input;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Function;
@@ -94,7 +95,10 @@ public class AvroStreamInputRowParserTest
       {
         @Nullable
         @Override
-        public Integer apply(@Nullable CharSequence input) { return Integer.parseInt(input.toString()); }
+        public Integer apply(@Nullable CharSequence input)
+        {
+          return Integer.parseInt(input.toString());
+        }
       }
   );
   public static final Map<CharSequence, CharSequence> SOME_STRING_VALUE_MAP_VALUE = Maps.asMap(
@@ -102,16 +106,14 @@ public class AvroStreamInputRowParserTest
       {
         @Nullable
         @Override
-        public CharSequence apply(@Nullable CharSequence input) { return input.toString(); }
+        public CharSequence apply(@Nullable CharSequence input)
+        {
+          return input.toString();
+        }
       }
   );
   public static final String SOME_UNION_VALUE = "string as union";
   public static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
-  private static final Function<Object, String> TO_STRING_INCLUDING_NULL = new Function<Object, String>()
-  {
-    @Override
-    public String apply(Object o) { return String.valueOf(o); }
-  };
 
   private final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -121,7 +123,7 @@ public class AvroStreamInputRowParserTest
   {
     jsonMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     jsonMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    for (com.fasterxml.jackson.databind.Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
+    for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
   }
@@ -194,11 +196,11 @@ public class AvroStreamInputRowParserTest
     assertEquals(Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)), inputRow.getDimension(SOME_OTHER_ID));
     assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
     assertEquals(
-        Lists.transform(SOME_INT_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
+        Lists.transform(SOME_INT_ARRAY_VALUE, String::valueOf),
         inputRow.getDimension("someIntArray")
     );
     assertEquals(
-        Lists.transform(SOME_STRING_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
+        Lists.transform(SOME_STRING_ARRAY_VALUE, String::valueOf),
         inputRow.getDimension("someStringArray")
     );
     // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality

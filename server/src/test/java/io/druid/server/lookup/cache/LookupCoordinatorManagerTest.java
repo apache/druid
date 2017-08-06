@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.SettableFuture;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -129,7 +130,7 @@ public class LookupCoordinatorManagerTest
         super.emit(event);
       }
     };
-    com.metamx.emitter.EmittingLogger.registerEmitter(SERVICE_EMITTER);
+    EmittingLogger.registerEmitter(SERVICE_EMITTER);
   }
 
   @Before
@@ -788,7 +789,8 @@ public class LookupCoordinatorManagerTest
     try {
       manager.updateLookups(TIERED_LOOKUP_MAP_V0, auditInfo);
       Assert.fail();
-    } catch (IAE ex) {
+    }
+    catch (IAE ex) {
     }
   }
 
@@ -994,7 +996,7 @@ public class LookupCoordinatorManagerTest
       {
         return ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(LOOKUP_TIER, ImmutableMap.of(
             "foo", lookup,
-            "bar", new LookupExtractorFactoryMapContainer("v0",ImmutableMap.<String, Object>of())
+            "bar", new LookupExtractorFactoryMapContainer("v0", ImmutableMap.<String, Object>of())
         ));
       }
     };
@@ -1435,9 +1437,11 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        new LookupCoordinatorManagerConfig(){
+        new LookupCoordinatorManagerConfig()
+        {
           @Override
-          public long getPeriod(){
+          public long getPeriod()
+          {
             return 1;
           }
         }

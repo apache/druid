@@ -145,7 +145,8 @@ public class SegmentChangeRequestHistory
     } else {
       try {
         future.set(getRequestsSinceWithoutWait(counter));
-      } catch (Exception ex) {
+      }
+      catch (Exception ex) {
         future.setException(ex);
       }
     }
@@ -197,7 +198,8 @@ public class SegmentChangeRequestHistory
     for (Map.Entry<CustomSettableFuture, Counter> e : waitingFuturesCopy.entrySet()) {
       try {
         e.getKey().set(getRequestsSinceWithoutWait(e.getValue()));
-      } catch (Exception ex) {
+      }
+      catch (Exception ex) {
         e.getKey().setException(ex);
       }
     }
@@ -339,7 +341,7 @@ public class SegmentChangeRequestHistory
     {
       Preconditions.checkArgument(index >= 0 && index < size, "invalid index");
 
-      int bufferIndex = (start-size+index) % buffer.length;
+      int bufferIndex = (start - size + index) % buffer.length;
       if (bufferIndex < 0) {
         bufferIndex += buffer.length;
       }

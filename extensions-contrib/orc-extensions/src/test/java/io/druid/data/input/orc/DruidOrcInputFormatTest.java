@@ -90,7 +90,7 @@ public class DruidOrcInputFormatTest
 
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
     RecordReader reader = inputFormat.createRecordReader(split, context);
-    OrcHadoopInputRowParser parser = (OrcHadoopInputRowParser)config.getParser();
+    OrcHadoopInputRowParser parser = (OrcHadoopInputRowParser) config.getParser();
 
     reader.initialize(split, context);
 
@@ -98,7 +98,7 @@ public class DruidOrcInputFormatTest
 
     OrcStruct data = (OrcStruct) reader.getCurrentValue();
 
-    MapBasedInputRow row = (MapBasedInputRow)parser.parse(data);
+    MapBasedInputRow row = (MapBasedInputRow) parser.parse(data);
 
     Assert.assertTrue(row.getEvent().keySet().size() == 4);
     Assert.assertEquals(new DateTime(timestamp), row.getTimestamp());
@@ -141,8 +141,7 @@ public class DruidOrcInputFormatTest
     ListColumnVector listColumnVector = (ListColumnVector) batch.cols[2];
     listColumnVector.childCount = col2.length;
     listColumnVector.lengths[0] = 3;
-    for (int idx = 0; idx < col2.length; idx++)
-    {
+    for (int idx = 0; idx < col2.length; idx++) {
       ((BytesColumnVector) listColumnVector.child).setRef(
           idx,
           StringUtils.toUtf8(col2[idx]),

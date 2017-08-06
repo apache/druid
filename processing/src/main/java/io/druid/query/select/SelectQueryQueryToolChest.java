@@ -167,17 +167,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       private final List<DimensionSpec> dimensionSpecs =
           query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
       private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
-          Lists.transform(
-              dimensionSpecs,
-              new Function<DimensionSpec, String>() {
-                @Override
-                public String apply(DimensionSpec input) {
-                  return input.getOutputName();
-                }
-              }
-          )
-          :
-          Collections.<String>emptyList();
+          Lists.transform(dimensionSpecs, DimensionSpec::getOutputName) : Collections.emptyList();
 
       @Override
       public boolean isCacheable(SelectQuery query, boolean willMergeRunners)

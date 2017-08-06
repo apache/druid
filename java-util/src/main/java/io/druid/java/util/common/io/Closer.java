@@ -89,12 +89,14 @@ import java.util.Deque;
  * @since Guava 14.0
  */
 // Coffee's for {@link Closer closers} only.
-public final class Closer implements Closeable {
+public final class Closer implements Closeable
+{
 
   /**
    * Creates a new {@link Closer}.
    */
-  public static Closer create() {
+  public static Closer create()
+  {
     return new Closer();
   }
 
@@ -113,7 +115,8 @@ public final class Closer implements Closeable {
    * @return the given {@code closeable}
    */
   // close. this word no longer has any meaning to me.
-  public <C extends Closeable> C register(@Nullable C closeable) {
+  public <C extends Closeable> C register(@Nullable C closeable)
+  {
     if (closeable != null) {
       stack.addFirst(closeable);
     }
@@ -134,7 +137,8 @@ public final class Closer implements Closeable {
    * @return this method does not return; it always throws
    * @throws IOException when the given throwable is an IOException
    */
-  public RuntimeException rethrow(Throwable e) throws IOException {
+  public RuntimeException rethrow(Throwable e) throws IOException
+  {
     Preconditions.checkNotNull(e);
     thrown = e;
     Throwables.propagateIfPossible(e, IOException.class);
@@ -155,8 +159,8 @@ public final class Closer implements Closeable {
    * @throws IOException when the given throwable is an IOException
    * @throws X when the given throwable is of the declared type X
    */
-  public <X extends Exception> RuntimeException rethrow(Throwable e, Class<X> declaredType)
-      throws IOException, X {
+  public <X extends Exception> RuntimeException rethrow(Throwable e, Class<X> declaredType) throws IOException, X
+  {
     Preconditions.checkNotNull(e);
     thrown = e;
     Throwables.propagateIfPossible(e, IOException.class);
@@ -180,7 +184,10 @@ public final class Closer implements Closeable {
    * @throws X2 when the given throwable is of the declared type X2
    */
   public <X1 extends Exception, X2 extends Exception> RuntimeException rethrow(
-      Throwable e, Class<X1> declaredType1, Class<X2> declaredType2) throws IOException, X1, X2 {
+      Throwable e, Class<X1> declaredType1,
+      Class<X2> declaredType2
+  ) throws IOException, X1, X2
+  {
     Preconditions.checkNotNull(e);
     thrown = e;
     Throwables.propagateIfPossible(e, IOException.class);
@@ -196,7 +203,8 @@ public final class Closer implements Closeable {
    * additional exceptions that are thrown after that will be suppressed.
    */
   @Override
-  public void close() throws IOException {
+  public void close() throws IOException
+  {
     Throwable throwable = thrown;
 
     // close closeables in LIFO order
@@ -204,7 +212,8 @@ public final class Closer implements Closeable {
       Closeable closeable = stack.removeFirst();
       try {
         closeable.close();
-      } catch (Throwable e) {
+      }
+      catch (Throwable e) {
         if (throwable == null) {
           throwable = e;
         } else {
@@ -219,8 +228,9 @@ public final class Closer implements Closeable {
     }
   }
 
-  private void suppress(Throwable thrown, Throwable suppressed) {
-    if(thrown != suppressed) {
+  private void suppress(Throwable thrown, Throwable suppressed)
+  {
+    if (thrown != suppressed) {
       thrown.addSuppressed(suppressed);
     }
   }

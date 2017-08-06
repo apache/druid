@@ -20,6 +20,7 @@
 package io.druid.common.aws;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.google.common.base.Strings;
 
@@ -27,27 +28,33 @@ public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsP
 {
   private AWSCredentialsConfig config;
 
-  public ConfigDrivenAwsCredentialsConfigProvider(AWSCredentialsConfig config) {
+  public ConfigDrivenAwsCredentialsConfigProvider(AWSCredentialsConfig config)
+  {
     this.config = config;
   }
 
   @Override
-  public com.amazonaws.auth.AWSCredentials getCredentials()
+  public AWSCredentials getCredentials()
   {
-      if (!Strings.isNullOrEmpty(config.getAccessKey()) && !Strings.isNullOrEmpty(config.getSecretKey())) {
-        return new com.amazonaws.auth.AWSCredentials() {
-          @Override
-          public String getAWSAccessKeyId() {
-            return config.getAccessKey();
-          }
+    final String key = config.getAccessKey().getPassword();
+    final String secret = config.getSecretKey().getPassword();
+    if (!Strings.isNullOrEmpty(key) && !Strings.isNullOrEmpty(secret)) {
+      return new AWSCredentials()
+      {
+        @Override
+        public String getAWSAccessKeyId()
+        {
+          return key;
+        }
 
-          @Override
-          public String getAWSSecretKey() {
-            return config.getSecretKey();
-          }
-        };
-      }
-      throw new AmazonClientException("Unable to load AWS credentials from druid AWSCredentialsConfig");
+        @Override
+        public String getAWSSecretKey()
+        {
+          return secret;
+        }
+      };
+    }
+    throw new AmazonClientException("Unable to load AWS credentials from druid AWSCredentialsConfig");
   }
 
   @Override

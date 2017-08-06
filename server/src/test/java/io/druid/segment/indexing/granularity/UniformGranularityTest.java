@@ -177,7 +177,8 @@ public class UniformGranularityTest
     );
   }
 
-  public void equalsCheck(GranularitySpec spec1, GranularitySpec spec2) {
+  public void equalsCheck(GranularitySpec spec1, GranularitySpec spec2)
+  {
     Assert.assertEquals(spec1, spec2);
     Assert.assertEquals(spec1.hashCode(), spec2.hashCode());
   }
@@ -235,7 +236,8 @@ public class UniformGranularityTest
   }
 
   @Test
-  public void testPeriodSegmentGranularity() {
+  public void testPeriodSegmentGranularity()
+  {
     final GranularitySpec spec = new UniformGranularitySpec(
             new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")),
             null,
@@ -274,7 +276,8 @@ public class UniformGranularityTest
     Assert.assertEquals(expectedIntervals, actualIntervals);
   }
 
-  private void notEqualsCheck(GranularitySpec spec1, GranularitySpec spec2) {
+  private void notEqualsCheck(GranularitySpec spec1, GranularitySpec spec2)
+  {
     Assert.assertNotEquals(spec1, spec2);
     Assert.assertNotEquals(spec1.hashCode(), spec2.hashCode());
   }

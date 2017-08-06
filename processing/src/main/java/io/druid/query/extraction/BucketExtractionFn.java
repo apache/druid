@@ -56,8 +56,13 @@ public class BucketExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(Object value)
+  @Nullable
+  public String apply(@Nullable Object value)
   {
+    if (value == null) {
+      return null;
+    }
+
     if (value instanceof Number) {
       return bucket(((Number) value).doubleValue());
     } else if (value instanceof String) {
@@ -67,8 +72,13 @@ public class BucketExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
+    if (value == null) {
+      return null;
+    }
+
     try {
       return bucket(Double.parseDouble(value));
     }

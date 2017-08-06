@@ -45,7 +45,8 @@ public abstract class NamespaceExtractionCacheManager
 
   private final ScheduledThreadPoolExecutor scheduledExecutorService;
 
-  public NamespaceExtractionCacheManager(final Lifecycle lifecycle, final ServiceEmitter serviceEmitter) {
+  public NamespaceExtractionCacheManager(final Lifecycle lifecycle, final ServiceEmitter serviceEmitter)
+  {
     this.scheduledExecutorService = new ScheduledThreadPoolExecutor(
         1,
         new ThreadFactoryBuilder()

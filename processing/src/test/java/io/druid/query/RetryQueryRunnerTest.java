@@ -43,6 +43,30 @@ import java.util.Map;
 
 public class RetryQueryRunnerTest
 {
+  private static class TestRetryQueryRunnerConfig extends RetryQueryRunnerConfig
+  {
+    private int numTries;
+    private boolean returnPartialResults;
+
+    public TestRetryQueryRunnerConfig(int numTries, boolean returnPartialResults)
+    {
+      this.numTries = numTries;
+      this.returnPartialResults = returnPartialResults;
+    }
+
+    @Override
+    public int getNumTries()
+    {
+      return numTries;
+    }
+
+    @Override
+    public boolean isReturnPartialResults()
+    {
+      return returnPartialResults;
+    }
+  }
+
   private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
   final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
@@ -160,16 +184,7 @@ public class RetryQueryRunnerTest
         (QueryToolChest) new TimeseriesQueryQueryToolChest(
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
-        new RetryQueryRunnerConfig()
-        {
-          private int numTries = 1;
-          private boolean returnPartialResults = true;
-
-          @Override
-          public int getNumTries() { return numTries; }
-
-          public boolean returnPartialResults() { return returnPartialResults; }
-        },
+        new TestRetryQueryRunnerConfig(1, true),
         jsonMapper
     );
 
@@ -228,16 +243,7 @@ public class RetryQueryRunnerTest
         (QueryToolChest) new TimeseriesQueryQueryToolChest(
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
-        new RetryQueryRunnerConfig()
-        {
-          private int numTries = 4;
-          private boolean returnPartialResults = true;
-
-          @Override
-          public int getNumTries() { return numTries; }
-
-          public boolean returnPartialResults() { return returnPartialResults; }
-        },
+        new TestRetryQueryRunnerConfig(4, true),
         jsonMapper
     );
 
@@ -281,16 +287,7 @@ public class RetryQueryRunnerTest
         (QueryToolChest) new TimeseriesQueryQueryToolChest(
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
-        new RetryQueryRunnerConfig()
-        {
-          private int numTries = 1;
-          private boolean returnPartialResults = false;
-
-          @Override
-          public int getNumTries() { return numTries; }
-
-          public boolean returnPartialResults() { return returnPartialResults; }
-        },
+        new TestRetryQueryRunnerConfig(1, false),
         jsonMapper
     );
 
@@ -352,7 +349,7 @@ public class RetryQueryRunnerTest
               );
             } else if ((int) context.get("count") == 1) {
               // this is first retry
-              Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 2);
+              Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec) ((BaseQuery) query).getQuerySegmentSpec()).getDescriptors().size() == 2);
               // assume only left 1 missing at first retry
               ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                   new SegmentDescriptor(
@@ -375,7 +372,7 @@ public class RetryQueryRunnerTest
               );
             } else {
               // this is second retry
-              Assert.assertTrue("Should retry with 1 missing segments", ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 1);
+              Assert.assertTrue("Should retry with 1 missing segments", ((MultipleSpecificSegmentSpec) ((BaseQuery) query).getQuerySegmentSpec()).getDescriptors().size() == 1);
               // assume no more missing at second retry
               context.put("count", 3);
               return Sequences.simple(
@@ -394,16 +391,7 @@ public class RetryQueryRunnerTest
         (QueryToolChest) new TimeseriesQueryQueryToolChest(
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
-        new RetryQueryRunnerConfig()
-        {
-          private int numTries = 2;
-          private boolean returnPartialResults = false;
-
-          @Override
-          public int getNumTries() { return numTries; }
-
-          public boolean returnPartialResults() { return returnPartialResults; }
-        },
+        new TestRetryQueryRunnerConfig(2, false),
         jsonMapper
     );
 

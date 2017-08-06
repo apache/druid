@@ -56,7 +56,7 @@ public class IndexedIterable<T> implements Iterable<T>
       @Override
       public T next()
       {
-        if (! hasNext()) {
+        if (!hasNext()) {
           throw new NoSuchElementException();
         }
         return indexed.get(currIndex++);

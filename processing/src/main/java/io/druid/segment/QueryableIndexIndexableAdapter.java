@@ -24,9 +24,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BitmapIndex;
@@ -35,6 +35,7 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.IndexedDoublesGenericColumn;
 import io.druid.segment.column.IndexedFloatsGenericColumn;
 import io.druid.segment.column.IndexedLongsGenericColumn;
 import io.druid.segment.column.ValueType;
@@ -227,6 +228,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
               switch (type) {
                 case FLOAT:
                 case LONG:
+                case DOUBLE:
                   metrics[i] = column.getGenericColumn();
                   break;
                 case COMPLEX:
@@ -270,6 +272,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
             for (int i = 0; i < metricArray.length; ++i) {
               if (metrics[i] instanceof IndexedFloatsGenericColumn) {
                 metricArray[i] = ((GenericColumn) metrics[i]).getFloatSingleValueRow(currRow);
+              } else if (metrics[i] instanceof IndexedDoublesGenericColumn) {
+                metricArray[i] = ((GenericColumn) metrics[i]).getDoubleSingleValueRow(currRow);
               } else if (metrics[i] instanceof IndexedLongsGenericColumn) {
                 metricArray[i] = ((GenericColumn) metrics[i]).getLongSingleValueRow(currRow);
               } else if (metrics[i] instanceof ComplexColumn) {
@@ -324,8 +328,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         return "float";
       case LONG:
         return "long";
+      case DOUBLE:
+        return "double";
       case COMPLEX: {
-        try (ComplexColumn complexColumn = column.getComplexColumn() ) {
+        try (ComplexColumn complexColumn = column.getComplexColumn()) {
           return complexColumn.getTypeName();
         }
       }

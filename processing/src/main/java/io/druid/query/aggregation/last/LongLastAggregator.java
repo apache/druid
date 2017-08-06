@@ -63,6 +63,12 @@ public class LongLastAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) lastValue;
+  }
+
+  @Override
   public Object get()
   {
     return new SerializablePair<>(lastTime, lastValue);
@@ -75,14 +81,14 @@ public class LongLastAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-
-  }
-
-  @Override
   public long getLong()
   {
     return lastValue;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }

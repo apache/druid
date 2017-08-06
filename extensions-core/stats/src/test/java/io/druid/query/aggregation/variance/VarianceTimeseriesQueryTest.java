@@ -25,6 +25,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerTest;
@@ -43,7 +44,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class VarianceTimeseriesQueryTest
 {
-  @Parameterized.Parameters(name="{0}:descending={1}")
+  @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return TimeseriesQueryRunnerTest.constructorFeeder();
@@ -52,7 +53,7 @@ public class VarianceTimeseriesQueryTest
   private final QueryRunner runner;
   private final boolean descending;
 
-  public VarianceTimeseriesQueryTest(QueryRunner runner, boolean descending)
+  public VarianceTimeseriesQueryTest(QueryRunner runner, boolean descending, List<AggregatorFactory> aggregatorFactories)
   {
     this.runner = runner;
     this.descending = descending;

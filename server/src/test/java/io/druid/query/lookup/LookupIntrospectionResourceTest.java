@@ -84,7 +84,8 @@ public class LookupIntrospectionResourceTest
     LookupIntrospectHandler lookupIntrospectHandler = new LookupIntrospectHandler()
     {
       @POST
-      public Response postMock(InputStream inputStream){
+      public Response postMock(InputStream inputStream)
+      {
         return Response.ok().build();
       }
     };

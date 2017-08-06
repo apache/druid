@@ -20,8 +20,16 @@
 package io.druid.segment.historical;
 
 import io.druid.segment.data.Offset;
+import io.druid.segment.data.ReadableOffset;
 
 public interface OffsetHolder
 {
   Offset getOffset();
+
+  /**
+   * Should return the same, or a "view" of the same offset as {@link #getOffset()}. The difference is that smaller
+   * interface allows to return unwrapped underlying offset sometimes, e. g. {@link
+   * io.druid.segment.FilteredOffset#baseOffset}, instead of the wrapper {@link io.druid.segment.FilteredOffset}.
+   */
+  ReadableOffset getReadableOffset();
 }

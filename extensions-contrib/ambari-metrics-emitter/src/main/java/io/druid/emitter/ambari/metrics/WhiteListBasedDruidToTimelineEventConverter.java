@@ -172,7 +172,7 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
       return null;
     }
     final ImmutableList.Builder<String> metricNameBuilder = new ImmutableList.Builder<>();
-    if(!Strings.isNullOrEmpty(namespacePrefix)) {
+    if (!Strings.isNullOrEmpty(namespacePrefix)) {
       metricNameBuilder.add(namespacePrefix);
     }
     metricNameBuilder.add(AmbariMetricsEmitter.sanitize(serviceMetricEvent.getService()));

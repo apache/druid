@@ -77,8 +77,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
       throw new ISE("handler already registered for service[%s]", service);
     }
 
-    if (announce)
-    {
+    if (announce) {
       try {
         serviceAnnouncer.announce(makeDruidNode(service));
         if (!announcements.add(service)) {
@@ -103,8 +102,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
       return;
     }
 
-    if (announcements.contains(service))
-    {
+    if (announcements.contains(service)) {
       try {
         serviceAnnouncer.unannounce(makeDruidNode(service));
       }

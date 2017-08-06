@@ -32,20 +32,23 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class GoogleTaskLogs implements TaskLogs {
+public class GoogleTaskLogs implements TaskLogs
+{
   private static final Logger LOG = new Logger(GoogleTaskLogs.class);
 
   private final GoogleTaskLogsConfig config;
   private final GoogleStorage storage;
 
   @Inject
-  public GoogleTaskLogs(GoogleTaskLogsConfig config, GoogleStorage storage) {
+  public GoogleTaskLogs(GoogleTaskLogsConfig config, GoogleStorage storage)
+  {
     this.config = config;
     this.storage = storage;
   }
 
   @Override
-  public void pushTaskLog(final String taskid, final File logFile) throws IOException {
+  public void pushTaskLog(final String taskid, final File logFile) throws IOException
+  {
     final String taskKey = getTaskLogKey(taskid);
     LOG.info("Pushing task log %s to: %s", logFile, taskKey);
 
@@ -58,7 +61,8 @@ public class GoogleTaskLogs implements TaskLogs {
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException {
+  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
+  {
     final String taskKey = getTaskLogKey(taskid);
 
     try {
@@ -69,9 +73,11 @@ public class GoogleTaskLogs implements TaskLogs {
       final long length = storage.size(config.getBucket(), taskKey);
 
       return Optional.<ByteSource>of(
-          new ByteSource() {
+          new ByteSource()
+          {
             @Override
-            public InputStream openStream() throws IOException {
+            public InputStream openStream() throws IOException
+            {
               try {
                 final long start;
 
@@ -87,18 +93,21 @@ public class GoogleTaskLogs implements TaskLogs {
                 stream.skip(start);
 
                 return stream;
-              } catch(Exception e) {
+              }
+              catch (Exception e) {
                 throw new IOException(e);
               }
             }
           }
       );
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       throw new IOE(e, "Failed to stream logs from: %s", taskKey);
     }
   }
 
-  private String getTaskLogKey(String taskid) {
+  private String getTaskLogKey(String taskid)
+  {
     return config.getPrefix() + "/" + taskid.replaceAll(":", "_");
   }
 

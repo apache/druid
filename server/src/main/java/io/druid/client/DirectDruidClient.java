@@ -128,6 +128,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     );
   }
 
+  /**
+   * Removes the magical fields added by {@link #makeResponseContextForQuery(Query, long)}.
+   */
+  public static void removeMagicResponseContextFields(Map<String, Object> responseContext)
+  {
+    responseContext.remove(DirectDruidClient.QUERY_FAIL_TIME);
+    responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
+  }
+
   public static Map<String, Object> makeResponseContextForQuery(Query query, long startTimeMillis)
   {
     final Map<String, Object> responseContext = new MapMaker().makeMap();

@@ -67,7 +67,8 @@ public class Filters
   public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(
       ValueType.STRING,
       ValueType.LONG,
-      ValueType.FLOAT
+      ValueType.FLOAT,
+      ValueType.DOUBLE
   );
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 

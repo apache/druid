@@ -174,7 +174,8 @@ public class DatasourceInputFormatTest
       return new TextInputFormat()
       {
         @Override
-        protected boolean isSplitable(FileSystem fs, Path file) {
+        protected boolean isSplitable(FileSystem fs, Path file)
+        {
           return false;
         }
 
@@ -357,8 +358,8 @@ public class DatasourceInputFormatTest
   @Test
   public void testGetLocationsInputFormatException() throws IOException
   {
-    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
-        org.apache.hadoop.mapred.InputFormat.class
+    final InputFormat fio = EasyMock.mock(
+        InputFormat.class
     );
 
     EasyMock.expect(fio.getSplits(config, 1)).andThrow(new IOException("testing"));
@@ -373,8 +374,8 @@ public class DatasourceInputFormatTest
   @Test
   public void testGetLocationsSplitException() throws IOException
   {
-    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
-        org.apache.hadoop.mapred.InputFormat.class
+    final InputFormat fio = EasyMock.mock(
+        InputFormat.class
     );
 
     final org.apache.hadoop.mapred.InputSplit split = EasyMock.mock(
@@ -397,8 +398,8 @@ public class DatasourceInputFormatTest
   @Test
   public void testGetLocations() throws IOException
   {
-    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
-        org.apache.hadoop.mapred.InputFormat.class
+    final InputFormat fio = EasyMock.mock(
+        InputFormat.class
     );
 
     final org.apache.hadoop.mapred.InputSplit split = EasyMock.mock(

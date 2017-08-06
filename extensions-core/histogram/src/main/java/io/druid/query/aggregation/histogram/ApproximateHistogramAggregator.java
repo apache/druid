@@ -93,6 +93,12 @@ public class ApproximateHistogramAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getDouble()");
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

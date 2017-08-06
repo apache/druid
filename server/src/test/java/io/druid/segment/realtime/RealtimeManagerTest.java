@@ -466,7 +466,7 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
@@ -535,7 +535,7 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
@@ -643,7 +643,7 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
@@ -684,8 +684,7 @@ public class RealtimeManagerTest
             factory,
             "druid.sample.numeric.tsv.top",
             null
-        )
-        ,
+        ),
         interval_28_29,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
@@ -819,6 +818,12 @@ public class RealtimeManagerTest
         public long getLongMetric(String metric)
         {
           return 0L;
+        }
+
+        @Override
+        public double getDoubleMetric(String metric)
+        {
+          return 0.0d;
         }
 
         @Override

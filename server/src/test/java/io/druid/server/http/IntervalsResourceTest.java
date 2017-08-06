@@ -189,7 +189,8 @@ public class IntervalsResourceTest
   }
 
   @After
-  public void tearDown() {
+  public void tearDown()
+  {
     EasyMock.verify(inventoryView);
   }
 

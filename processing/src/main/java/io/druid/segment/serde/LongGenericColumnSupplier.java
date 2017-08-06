@@ -30,9 +30,8 @@ public class LongGenericColumnSupplier implements Supplier<GenericColumn>
 {
   private final CompressedLongsIndexedSupplier column;
 
-  public LongGenericColumnSupplier(
-      CompressedLongsIndexedSupplier column
-  ) {
+  public LongGenericColumnSupplier(CompressedLongsIndexedSupplier column)
+  {
     this.column = column;
   }
 

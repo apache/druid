@@ -67,8 +67,7 @@ public class DataSegmentUtils
    *
    * @param dataSource the dataSource corresponding to this identifier
    * @param identifier segment identifier
-   * @return a {@link io.druid.timeline.DataSegmentUtils.SegmentIdentifierParts} object if the identifier could be
-   *         parsed, null otherwise
+   * @return a {@link DataSegmentUtils.SegmentIdentifierParts} object if the identifier could be parsed, null otherwise
    */
   public static SegmentIdentifierParts valueOf(String dataSource, String identifier)
   {
@@ -96,7 +95,8 @@ public class DataSegmentUtils
           version,
           trail
       );
-    } catch (IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       return null;
     }
   }

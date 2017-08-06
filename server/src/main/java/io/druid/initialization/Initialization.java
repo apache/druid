@@ -76,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -122,8 +123,8 @@ public class Initialization
 
   /**
    * Look for implementations for the given class from both classpath and extensions directory, using {@link
-   * java.util.ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if
-   * he/she does that, the one that is in the classpath will be loaded, the other will be ignored.
+   * ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if he/she
+   * does that, the one that is in the classpath will be loaded, the other will be ignored.
    *
    * @param config        Extensions configuration
    * @param serviceClass  The class to look the implementations of (e.g., DruidModule)
@@ -219,7 +220,7 @@ public class Initialization
       throw new ISE("Root extensions directory [%s] is not a directory!?", rootExtensionsDir);
     }
     File[] extensionsToLoad;
-    final List<String> toLoad = config.getLoadList();
+    final LinkedHashSet<String> toLoad = config.getLoadList();
     if (toLoad == null) {
       extensionsToLoad = rootExtensionsDir.listFiles();
     } else {
@@ -330,7 +331,8 @@ public class Initialization
         }
       }
       return urls;
-    } catch (IOException ex) {
+    }
+    catch (IOException ex) {
       throw Throwables.propagate(ex);
     }
   }

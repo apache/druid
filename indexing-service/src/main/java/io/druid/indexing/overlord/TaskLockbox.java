@@ -97,7 +97,7 @@ public class TaskLockbox
   }
 
   /**
-   * Wipe out our current in-memory state and resync it from our bundled {@link io.druid.indexing.overlord.TaskStorage}.
+   * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
    */
   public void syncFromStorage()
   {
@@ -151,7 +151,7 @@ public class TaskLockbox
           final TaskLock taskLock = taskLockPosse.getTaskLock();
 
           if (savedTaskLock.getVersion().equals(taskLock.getVersion())) {
-            taskLockCount ++;
+            taskLockCount++;
             log.info(
                 "Reacquired lock on interval[%s] version[%s] for task: %s",
                 savedTaskLock.getInterval(),
@@ -159,7 +159,7 @@ public class TaskLockbox
                 task.getId()
             );
           } else {
-            taskLockCount ++;
+            taskLockCount++;
             log.info(
                 "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task: %s",
                 savedTaskLock.getInterval(),
@@ -183,7 +183,8 @@ public class TaskLockbox
           activeTasks.size(),
           storedLocks.size() - taskLockCount
       );
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -196,7 +197,7 @@ public class TaskLockbox
    * @param interval interval to lock
    * @return acquired TaskLock
    *
-   * @throws java.lang.InterruptedException if the lock cannot be acquired
+   * @throws InterruptedException if the lock cannot be acquired
    */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {
@@ -268,7 +269,7 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      if(!activeTasks.contains(task.getId())){
+      if (!activeTasks.contains(task.getId())) {
         throw new ISE("Unable to grant lock to inactive Task [%s]", task.getId());
       }
       Preconditions.checkArgument(interval.toDurationMillis() > 0, "interval empty");
@@ -283,7 +284,8 @@ public class TaskLockbox
           try {
             taskStorage.addLock(task.getId(), posseToUse.getTaskLock());
             return Optional.of(posseToUse.getTaskLock());
-          } catch(Exception e) {
+          }
+          catch (Exception e) {
             log.makeAlert("Failed to persist lock in storage")
                .addData("task", task.getId())
                .addData("dataSource", posseToUse.getTaskLock().getDataSource())
@@ -402,7 +404,8 @@ public class TaskLockbox
             }
           }
       );
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -425,9 +428,9 @@ public class TaskLockbox
       // So we can alert if activeTasks try to release stuff they don't have
       boolean removed = false;
 
-      if(dsRunning != null) {
+      if (dsRunning != null) {
         final TaskLockPosse taskLockPosse = dsRunning.get(interval);
-        if(taskLockPosse != null) {
+        if (taskLockPosse != null) {
           final TaskLock taskLock = taskLockPosse.getTaskLock();
 
           // Remove task from live list
@@ -449,7 +452,8 @@ public class TaskLockbox
           // Remove lock from storage. If it cannot be removed, just ignore the failure.
           try {
             taskStorage.removeLock(task.getId(), taskLock);
-          } catch(Exception e) {
+          }
+          catch (Exception e) {
             log.makeAlert(e, "Failed to clean up lock from storage")
                .addData("task", task.getId())
                .addData("dataSource", taskLock.getDataSource())
@@ -460,13 +464,14 @@ public class TaskLockbox
         }
       }
 
-      if(!removed) {
+      if (!removed) {
         log.makeAlert("Lock release without acquire")
            .addData("task", task.getId())
            .addData("interval", interval)
            .emit();
       }
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -509,7 +514,7 @@ public class TaskLockbox
 
       // Scan through all locks for this datasource
       final NavigableMap<Interval, TaskLockPosse> dsRunning = running.get(task.getDataSource());
-      if(dsRunning == null) {
+      if (dsRunning == null) {
         searchSpace = ImmutableList.of();
       } else {
         searchSpace = dsRunning.values();
@@ -598,7 +603,8 @@ public class TaskLockbox
     try {
       log.info("Adding task[%s] to activeTasks", task.getId());
       activeTasks.add(task.getId());
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }

@@ -72,7 +72,8 @@ public class QueryRunnerHelper
     );
   }
 
-  public static <T>  QueryRunner<T> makeClosingQueryRunner(final QueryRunner<T> runner, final Closeable closeable){
+  public static <T> QueryRunner<T> makeClosingQueryRunner(final QueryRunner<T> runner, final Closeable closeable)
+  {
     return new QueryRunner<T>()
     {
       @Override

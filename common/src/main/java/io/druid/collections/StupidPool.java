@@ -118,7 +118,8 @@ public class StupidPool<T> implements NonBlockingPool<T>
   }
 
   @VisibleForTesting
-  long poolSize() {
+  long poolSize()
+  {
     return poolSize.get();
   }
 
