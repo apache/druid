@@ -130,7 +130,7 @@ public class FloatFirstAggregationTest
     aggregate(agg);
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
-    Pair<Long, Float> expected = (Pair<Long, Float>)pairs[2];
+    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[2];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
@@ -156,7 +156,7 @@ public class FloatFirstAggregationTest
     aggregate(agg, buffer, 0);
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
-    Pair<Long, Float> expected = (Pair<Long, Float>)pairs[2];
+    Pair<Long, Float> expected = (Pair<Long, Float>) pairs[2];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);

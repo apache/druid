@@ -52,7 +52,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
    * Prepend 0xFF before the analysisTypes as a separator to avoid
    * any potential confusion with string values.
    */
-  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[] { (byte) 0xFF };
+  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[] {(byte) 0xFF};
 
   public enum AnalysisType
   {
@@ -80,7 +80,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 
     public byte[] getCacheKey()
     {
-      return new byte[] { (byte) this.ordinal() };
+      return new byte[] {(byte) this.ordinal()};
     }
   }
 

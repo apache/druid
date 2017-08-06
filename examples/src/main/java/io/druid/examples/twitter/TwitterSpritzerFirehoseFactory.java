@@ -352,7 +352,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         theMap.put("location", hasUser ? user.getLocation() : "");
         theMap.put("verified", hasUser ? user.isVerified() : "");
 
-        theMap.put("ts",status.getCreatedAt().getTime());
+        theMap.put("ts", status.getCreatedAt().getTime());
 
         List<String> dimensions = Lists.newArrayList(theMap.keySet());
 

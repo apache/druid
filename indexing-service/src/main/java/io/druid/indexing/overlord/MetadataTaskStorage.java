@@ -142,7 +142,7 @@ public class MetadataTaskStorage implements TaskStorage
       );
     }
     catch (Exception e) {
-      if(e instanceof EntryExistsException) {
+      if (e instanceof EntryExistsException) {
         throw (EntryExistsException) e;
       } else {
         Throwables.propagate(e);

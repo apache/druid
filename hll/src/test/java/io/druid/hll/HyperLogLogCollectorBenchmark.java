@@ -60,7 +60,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     Random rand = new Random(0);
     int defaultOffset = 0;
 
-    switch(alignment) {
+    switch (alignment) {
       case "default":
         alignSource = false;
         alignTarget = false;
@@ -81,9 +81,9 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     );
 
     int pos = 0;
-    for(int i = 0; i < count; ++i) {
+    for (int i = 0; i < count; ++i) {
       HyperLogLogCollector c = HyperLogLogCollector.makeLatestCollector();
-      for(int k = 0; k < 40; ++k) {
+      for (int k = 0; k < 40; ++k) {
         c.add(fn.hashInt(++val).asBytes());
       }
       final ByteBuffer sparseHeapCopy = c.toByteBuffer();
@@ -91,9 +91,9 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
       final ByteBuffer buf;
 
-      final int offset = random ? (int)(rand.nextDouble() * 64) : defaultOffset;
+      final int offset = random ? (int) (rand.nextDouble() * 64) : defaultOffset;
 
-      if(alignSource && (pos % CACHE_LINE) != offset) {
+      if (alignSource && (pos % CACHE_LINE) != offset) {
         pos += (pos % CACHE_LINE) < offset ? offset - (pos % CACHE_LINE) : (CACHE_LINE + offset - pos % CACHE_LINE);
       }
 
@@ -118,8 +118,8 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     final int size = HyperLogLogCollector.getLatestNumBytesForDenseStorage();
     final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
     final ByteBuffer buf;
-    if(direct) {
-      if(aligned) {
+    if (direct) {
+      if (aligned) {
         buf = ByteBuffers.allocateAlignedByteBuffer(size + offset, CACHE_LINE);
         buf.position(offset);
         buf.mark();
@@ -146,7 +146,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     final ByteBuffer buf = allocateEmptyHLLBuffer(targetIsDirect, alignTarget, 0);
 
     for (int k = 0; k < reps; ++k) {
-      for(int i = 0; i < count; ++i) {
+      for (int i = 0; i < count; ++i) {
         final int pos = positions[i];
         final int size = sizes[i];
 

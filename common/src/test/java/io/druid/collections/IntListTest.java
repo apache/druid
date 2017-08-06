@@ -83,7 +83,7 @@ public class IntListTest
   @Test
   public void testToArray()
   {
-    int[] inputArray = {1,3,4};
+    int[] inputArray = {1, 3, 4};
     IntList list = new IntList();
     for (int e : inputArray) {
       list.add(e);
@@ -97,10 +97,10 @@ public class IntListTest
   {
     final int intSize = 2;
     IntList list = new IntList(intSize);
-    list.set(2 * intSize,100);
+    list.set(2 * intSize, 100);
     IntBuffer outBuffer;
     outBuffer = list.getBaseList(0);
-    Assert.assertNull("Should be Null",outBuffer);
+    Assert.assertNull("Should be Null", outBuffer);
   }
   
   @Test
@@ -108,13 +108,13 @@ public class IntListTest
   {
     int listSize = 2;
     IntList list = new IntList(listSize);
-    int[] expectedArray = {1,2};
+    int[] expectedArray = {1, 2};
     list.add(expectedArray[0]);
     list.add(expectedArray[1]);
     IntBuffer outputBuffer = list.getBaseList(0);
-    Assert.assertEquals("Buffer size does not match",2, outputBuffer.limit());
+    Assert.assertEquals("Buffer size does not match", 2, outputBuffer.limit());
     int[] actualArray = new int[outputBuffer.capacity()];
     outputBuffer.get(actualArray);
-    Assert.assertArrayEquals("Arrays are not matching",expectedArray, actualArray);
+    Assert.assertArrayEquals("Arrays are not matching", expectedArray, actualArray);
   }
 }

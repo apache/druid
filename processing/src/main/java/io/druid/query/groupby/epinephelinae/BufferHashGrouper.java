@@ -35,9 +35,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class BufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
+public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyType>
 {
-  private static final Logger log = new Logger(BufferGrouper.class);
+  private static final Logger log = new Logger(BufferHashGrouper.class);
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
   private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
@@ -51,7 +51,7 @@ public class BufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
   private ByteBuffer offsetListBuffer;
   private ByteBufferIntList offsetList;
 
-  public BufferGrouper(
+  public BufferHashGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
       final ColumnSelectorFactory columnSelectorFactory,

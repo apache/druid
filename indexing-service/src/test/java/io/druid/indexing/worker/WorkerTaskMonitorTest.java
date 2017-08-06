@@ -179,8 +179,8 @@ public class WorkerTaskMonitorTest
                       {
                         return Lists.newArrayList();
                       }
-                    }
-                    , jsonMapper
+                    },
+                    jsonMapper
                 )
             ),
                 jsonMapper,

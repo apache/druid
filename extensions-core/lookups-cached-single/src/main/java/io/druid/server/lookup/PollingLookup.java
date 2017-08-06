@@ -60,7 +60,7 @@ public class PollingLookup extends LookupExtractor
 
   private final ListenableFuture<?> pollFuture;
 
-  private final String id =  Integer.toHexString(System.identityHashCode(this));
+  private final String id = Integer.toHexString(System.identityHashCode(this));
 
   public PollingLookup(
       long pollPeriodMs,

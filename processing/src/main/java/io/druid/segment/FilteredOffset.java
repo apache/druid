@@ -162,7 +162,7 @@ public final class FilteredOffset extends Offset
           @Override
           public boolean matches()
           {
-            int currentOffset = holder.getOffset().getOffset();
+            int currentOffset = holder.getReadableOffset().getOffset();
             while (iterOffset > currentOffset && iter.hasNext()) {
               iterOffset = iter.next();
             }
@@ -174,6 +174,7 @@ public final class FilteredOffset extends Offset
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
             inspector.visit("holder", holder);
+            inspector.visit("offset", holder.getReadableOffset());
             inspector.visit("iter", iter);
           }
         };
@@ -185,7 +186,7 @@ public final class FilteredOffset extends Offset
           @Override
           public boolean matches()
           {
-            int currentOffset = holder.getOffset().getOffset();
+            int currentOffset = holder.getReadableOffset().getOffset();
             while (iterOffset < currentOffset && iter.hasNext()) {
               iterOffset = iter.next();
             }
@@ -197,6 +198,7 @@ public final class FilteredOffset extends Offset
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
             inspector.visit("holder", holder);
+            inspector.visit("offset", holder.getReadableOffset());
             inspector.visit("iter", iter);
           }
         };

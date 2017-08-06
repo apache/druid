@@ -175,7 +175,7 @@ public class ScheduledExecutors
               log.debug("Running %s (period %s)", callable, rate);
               prevSignal = callable.call();
             }
-            catch(Throwable e) {
+            catch (Throwable e) {
               log.error(e, "Uncaught exception.");
             }
           }

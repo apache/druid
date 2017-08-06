@@ -105,7 +105,7 @@ public class AzureTaskLogs implements TaskLogs
                 return stream;
 
               }
-              catch(Exception e) {
+              catch (Exception e) {
                 throw new IOException(e);
               }
             }

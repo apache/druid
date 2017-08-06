@@ -341,7 +341,7 @@ public class SegmentChangeRequestHistory
     {
       Preconditions.checkArgument(index >= 0 && index < size, "invalid index");
 
-      int bufferIndex = (start-size+index) % buffer.length;
+      int bufferIndex = (start - size + index) % buffer.length;
       if (bufferIndex < 0) {
         bufferIndex += buffer.length;
       }

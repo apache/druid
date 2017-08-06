@@ -150,12 +150,13 @@ public class StringComparatorsTest
 
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.LEXICOGRAPHIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(StringComparators.LEXICOGRAPHIC
-        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.LEXICOGRAPHIC, jsonMapper.readValue(expectJsonSpec, StringComparator.class));
 
     String makeFromJsonSpec = "\"lexicographic\"";
-    Assert.assertEquals(StringComparators.LEXICOGRAPHIC
-        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(
+        StringComparators.LEXICOGRAPHIC,
+        jsonMapper.readValue(makeFromJsonSpec, StringComparator.class)
+    );
   }
   
   @Test
@@ -166,12 +167,10 @@ public class StringComparatorsTest
 
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.ALPHANUMERIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(StringComparators.ALPHANUMERIC
-        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.ALPHANUMERIC, jsonMapper.readValue(expectJsonSpec, StringComparator.class));
 
     String makeFromJsonSpec = "\"alphanumeric\"";
-    Assert.assertEquals(StringComparators.ALPHANUMERIC
-        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.ALPHANUMERIC, jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
   
   @Test
@@ -182,12 +181,10 @@ public class StringComparatorsTest
     
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.STRLEN);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(StringComparators.STRLEN
-        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.STRLEN, jsonMapper.readValue(expectJsonSpec, StringComparator.class));
 
     String makeFromJsonSpec = "\"strlen\"";
-    Assert.assertEquals(StringComparators.STRLEN
-        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.STRLEN, jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
 
   @Test
@@ -198,15 +195,12 @@ public class StringComparatorsTest
 
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.NUMERIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(StringComparators.NUMERIC
-        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.NUMERIC, jsonMapper.readValue(expectJsonSpec, StringComparator.class));
 
     String makeFromJsonSpec = "\"numeric\"";
-    Assert.assertEquals(StringComparators.NUMERIC
-        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.NUMERIC, jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
 
     makeFromJsonSpec = "\"NuMeRiC\"";
-    Assert.assertEquals(StringComparators.NUMERIC
-        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.NUMERIC, jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
 }

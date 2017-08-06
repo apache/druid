@@ -35,7 +35,7 @@ import org.junit.rules.ExpectedException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class LimitedBufferGrouperTest
+public class LimitedBufferHashGrouperTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -46,7 +46,7 @@ public class LimitedBufferGrouperTest
     final int limit = 100;
     final int keyBase = 100000;
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final LimitedBufferGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 20000, 2, limit);
+    final LimitedBufferHashGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 20000, 2, limit);
     final int numRows = 1000;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
@@ -100,7 +100,7 @@ public class LimitedBufferGrouperTest
   {
     expectedException.expect(IAE.class);
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final LimitedBufferGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10, 2, 100);
+    final LimitedBufferHashGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10, 2, 100);
   }
 
   @Test
@@ -109,7 +109,7 @@ public class LimitedBufferGrouperTest
     final int limit = 100;
     final int keyBase = 100000;
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final LimitedBufferGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 11716, 2, limit);
+    final LimitedBufferHashGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 11716, 2, limit);
     final int numRows = 1000;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
@@ -146,14 +146,14 @@ public class LimitedBufferGrouperTest
     Assert.assertEquals(expected, Lists.newArrayList(grouper.iterator(true)));
   }
 
-  private static LimitedBufferGrouper<Integer> makeGrouper(
+  private static LimitedBufferHashGrouper<Integer> makeGrouper(
       TestColumnSelectorFactory columnSelectorFactory,
       int bufferSize,
       int initialBuckets,
       int limit
   )
   {
-    LimitedBufferGrouper<Integer> grouper = new LimitedBufferGrouper<>(
+    LimitedBufferHashGrouper<Integer> grouper = new LimitedBufferHashGrouper<>(
         Suppliers.ofInstance(ByteBuffer.allocate(bufferSize)),
         GrouperTestUtil.intKeySerde(),
         columnSelectorFactory,

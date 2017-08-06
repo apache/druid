@@ -57,7 +57,7 @@ public class TimestampGroupByAggregationTest
 
   private Timestamp[] values = new Timestamp[10];
 
-  @Parameterized.Parameters(name="{index}: Test for {0}, config = {1}")
+  @Parameterized.Parameters(name = "{index}: Test for {0}, config = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = Lists.newArrayList();
@@ -182,6 +182,6 @@ public class TimestampGroupByAggregationTest
 
     List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
     Assert.assertEquals(36, results.size());
-    Assert.assertEquals(expected, ((MapBasedRow)results.get(0)).getEvent().get(groupByField));
+    Assert.assertEquals(expected, ((MapBasedRow) results.get(0)).getEvent().get(groupByField));
   }
 }
