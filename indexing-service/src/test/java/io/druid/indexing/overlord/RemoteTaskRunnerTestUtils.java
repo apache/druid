@@ -47,7 +47,6 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.zookeeper.CreateMode;
 
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -229,7 +228,6 @@ public class RemoteTaskRunnerTestUtils
         PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
         HttpClient httpClient,
         Supplier<WorkerBehaviorConfig> workerConfigRef,
-        ScheduledExecutorService cleanupExec,
         ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
     )
     {
@@ -241,7 +239,6 @@ public class RemoteTaskRunnerTestUtils
           pathChildrenCacheFactory,
           httpClient,
           workerConfigRef,
-          cleanupExec,
           provisioningStrategy
       );
     }
