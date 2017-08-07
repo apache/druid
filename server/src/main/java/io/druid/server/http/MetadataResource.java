@@ -31,7 +31,7 @@ import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -58,20 +58,20 @@ public class MetadataResource
   private final MetadataSegmentManager metadataSegmentManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public MetadataResource(
       MetadataSegmentManager metadataSegmentManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   )
   {
     this.metadataSegmentManager = metadataSegmentManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @GET
@@ -109,7 +109,7 @@ public class MetadataResource
           req,
           dataSourceNamesPreAuth,
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-          authorizationManagerMapper
+          authorizerMapper
       );
 
       dataSourceNamesPostAuth = Sets.newTreeSet(datasourceNamesList);

@@ -32,7 +32,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
@@ -57,10 +57,10 @@ public class TaskResourceFilter extends AbstractResourceFilter
   public TaskResourceFilter(
       TaskStorageQueryAdapter taskStorageQueryAdapter,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   )
   {
-    super(authConfig, authorizationManagerMapper);
+    super(authConfig, authorizerMapper);
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
   }
 
@@ -103,7 +103,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
       final Access authResult = AuthorizationUtils.authorizeResourceAction(
           getReq(),
           resourceAction,
-          getAuthorizationManagerMapper()
+          getAuthorizerMapper()
       );
 
       if (!authResult.isAllowed()) {

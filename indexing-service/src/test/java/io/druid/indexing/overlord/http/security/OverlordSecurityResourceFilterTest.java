@@ -35,7 +35,7 @@ import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.indexing.worker.http.WorkerResource;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.http.security.ResourceFilterTestHelper;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -60,15 +60,15 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
         Iterables.concat(
             getRequestPaths(OverlordResource.class, ImmutableList.<Class<?>>of(
                 TaskStorageQueryAdapter.class,
-                AuthorizationManagerMapper.class
+                AuthorizerMapper.class
                             )
             ),
             getRequestPaths(WorkerResource.class, ImmutableList.<Class<?>>of(
-                AuthorizationManagerMapper.class
+                AuthorizerMapper.class
             )),
             getRequestPaths(SupervisorResource.class, ImmutableList.<Class<?>>of(
                 SupervisorManager.class,
-                AuthorizationManagerMapper.class
+                AuthorizerMapper.class
                             )
             )
         )
@@ -150,7 +150,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
     // As request object is a strict mock the ordering of expected calls matters
     // therefore adding the expectation below again as getEntity is called before getMethod
     EasyMock.expect(request.getMethod()).andReturn(requestMethod).anyTimes();
-    EasyMock.replay(req, request, authorizationManagerMapper);
+    EasyMock.replay(req, request, authorizerMapper);
     resourceFilter.getRequestFilter().filter(request);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
   }
@@ -160,7 +160,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     setUpMockExpectations(requestPath, false, requestMethod);
     EasyMock.expect(request.getEntity(Task.class)).andReturn(noopTask).anyTimes();
-    EasyMock.replay(req, request, authorizationManagerMapper);
+    EasyMock.replay(req, request, authorizerMapper);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
       resourceFilter.getRequestFilter().filter(request);
@@ -176,14 +176,14 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     final String badRequestPath = requestPath.replaceAll("\\w+", "droid");
     EasyMock.expect(request.getPath()).andReturn(badRequestPath).anyTimes();
-    EasyMock.replay(req, request, authorizationManagerMapper);
+    EasyMock.replay(req, request, authorizerMapper);
     Assert.assertFalse(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(badRequestPath));
   }
 
   @After
   public void tearDown()
   {
-    EasyMock.verify(req, request, authorizationManagerMapper);
+    EasyMock.verify(req, request, authorizerMapper);
     if (tsqa != null) {
       EasyMock.verify(tsqa);
     }

@@ -56,20 +56,20 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     return ImmutableList.copyOf(
         Iterables.concat(
-            getRequestPathsWithAuthorizationManager(CoordinatorResource.class),
-            getRequestPathsWithAuthorizationManager(DatasourcesResource.class),
-            getRequestPathsWithAuthorizationManager(BrokerResource.class),
-            getRequestPathsWithAuthorizationManager(HistoricalResource.class),
-            getRequestPathsWithAuthorizationManager(IntervalsResource.class),
-            getRequestPathsWithAuthorizationManager(MetadataResource.class),
-            getRequestPathsWithAuthorizationManager(RulesResource.class),
-            getRequestPathsWithAuthorizationManager(ServersResource.class),
-            getRequestPathsWithAuthorizationManager(TiersResource.class),
-            getRequestPathsWithAuthorizationManager(ClientInfoResource.class),
-            getRequestPathsWithAuthorizationManager(CoordinatorDynamicConfigsResource.class),
-            getRequestPathsWithAuthorizationManager(QueryResource.class),
-            getRequestPathsWithAuthorizationManager(StatusResource.class),
-            getRequestPathsWithAuthorizationManager(BrokerQueryResource.class)
+            getRequestPathsWithAuthorizer(CoordinatorResource.class),
+            getRequestPathsWithAuthorizer(DatasourcesResource.class),
+            getRequestPathsWithAuthorizer(BrokerResource.class),
+            getRequestPathsWithAuthorizer(HistoricalResource.class),
+            getRequestPathsWithAuthorizer(IntervalsResource.class),
+            getRequestPathsWithAuthorizer(MetadataResource.class),
+            getRequestPathsWithAuthorizer(RulesResource.class),
+            getRequestPathsWithAuthorizer(ServersResource.class),
+            getRequestPathsWithAuthorizer(TiersResource.class),
+            getRequestPathsWithAuthorizer(ClientInfoResource.class),
+            getRequestPathsWithAuthorizer(CoordinatorDynamicConfigsResource.class),
+            getRequestPathsWithAuthorizer(QueryResource.class),
+            getRequestPathsWithAuthorizer(StatusResource.class),
+            getRequestPathsWithAuthorizer(BrokerQueryResource.class)
         )
     );
   }
@@ -102,17 +102,17 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   public void testResourcesFilteringAccess()
   {
     setUpMockExpectations(requestPath, true, requestMethod);
-    EasyMock.replay(req, request, authorizationManagerMapper);
+    EasyMock.replay(req, request, authorizerMapper);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     resourceFilter.getRequestFilter().filter(request);
-    EasyMock.verify(req, request, authorizationManagerMapper);
+    EasyMock.verify(req, request, authorizerMapper);
   }
 
   @Test(expected = WebApplicationException.class)
   public void testResourcesFilteringNoAccess()
   {
     setUpMockExpectations(requestPath, false, requestMethod);
-    EasyMock.replay(req, request, authorizationManagerMapper);
+    EasyMock.replay(req, request, authorizerMapper);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
       resourceFilter.getRequestFilter().filter(request);
@@ -121,16 +121,16 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
       Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), e.getResponse().getStatus());
       throw e;
     }
-    EasyMock.verify(req, request, authorizationManagerMapper);
+    EasyMock.verify(req, request, authorizerMapper);
   }
 
   @Test
   public void testResourcesFilteringBadPath()
   {
-    EasyMock.replay(req, request, authorizationManagerMapper);
+    EasyMock.replay(req, request, authorizerMapper);
     final String badRequestPath = requestPath.replaceAll("\\w+", "droid");
     Assert.assertFalse(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(badRequestPath));
-    EasyMock.verify(req, request, authorizationManagerMapper);
+    EasyMock.verify(req, request, authorizerMapper);
   }
 
 }

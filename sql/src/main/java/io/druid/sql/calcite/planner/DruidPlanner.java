@@ -28,7 +28,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.sql.calcite.rel.DruidConvention;
 import io.druid.sql.calcite.rel.DruidRel;
@@ -68,19 +68,19 @@ public class DruidPlanner implements Closeable
   private final Planner planner;
   private final PlannerContext plannerContext;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
 
   public DruidPlanner(
       final Planner planner,
       final PlannerContext plannerContext,
       final AuthConfig authConfig,
-      final AuthorizationManagerMapper authorizationManagerMapper
+      final AuthorizerMapper authorizerMapper
   )
   {
     this.planner = planner;
     this.plannerContext = plannerContext;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   public PlannerResult plan(final String sql) throws SqlParseException, ValidationException, RelConversionException
@@ -154,7 +154,7 @@ public class DruidPlanner implements Closeable
             request,
             datasourceNames,
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-            authorizationManagerMapper
+            authorizerMapper
         );
       } else {
         authResult = AuthorizationUtils.authorizeAllResourceActions(
@@ -162,7 +162,7 @@ public class DruidPlanner implements Closeable
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
             user,
             namespace,
-            authorizationManagerMapper
+            authorizerMapper
         );
       }
 
@@ -232,7 +232,7 @@ public class DruidPlanner implements Closeable
           req,
           datasourceNames,
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-          authorizationManagerMapper
+          authorizerMapper
       );
     } else {
       return AuthorizationUtils.authorizeAllResourceActions(
@@ -240,7 +240,7 @@ public class DruidPlanner implements Closeable
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
           user,
           namespace,
-          authorizationManagerMapper
+          authorizerMapper
       );
     }
   }

@@ -45,8 +45,8 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -142,7 +142,7 @@ public class QueryResourceTest
             new NoopRequestLogger(),
             serverConfig,
             new AuthConfig(),
-            new AuthorizationManagerMapper(null)
+            new AuthorizerMapper(null)
         ),
         jsonMapper,
         jsonMapper,
@@ -211,11 +211,11 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
 
-    AuthorizationManagerMapper authMapper = new AuthorizationManagerMapper(null) {
+    AuthorizerMapper authMapper = new AuthorizerMapper(null) {
       @Override
-      public AuthorizationManager getAuthorizationManager(String namespace)
+      public Authorizer getAuthorizer(String namespace)
       {
-        return new AuthorizationManager()
+        return new Authorizer()
         {
           @Override
           public Access authorize(String identity, Resource resource, Action action)
@@ -289,11 +289,11 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
 
-    AuthorizationManagerMapper authMapper = new AuthorizationManagerMapper(null) {
+    AuthorizerMapper authMapper = new AuthorizerMapper(null) {
       @Override
-      public AuthorizationManager getAuthorizationManager(String namespace)
+      public Authorizer getAuthorizer(String namespace)
       {
-        return new AuthorizationManager()
+        return new Authorizer()
         {
           @Override
           public Access authorize(String identity, Resource resource, Action action)
@@ -417,12 +417,12 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
 
-    AuthorizationManagerMapper authMapper = new AuthorizationManagerMapper(null)
+    AuthorizerMapper authMapper = new AuthorizerMapper(null)
     {
       @Override
-      public AuthorizationManager getAuthorizationManager(String namespace)
+      public Authorizer getAuthorizer(String namespace)
       {
-        return new AuthorizationManager()
+        return new Authorizer()
         {
           @Override
           public Access authorize(String identity, Resource resource, Action action)

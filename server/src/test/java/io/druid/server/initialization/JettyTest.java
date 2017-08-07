@@ -41,9 +41,9 @@ import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.AuthorizationManagerMapper;
-import io.druid.server.security.NoopAuthorizationManager;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.NoopAuthorizer;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Server;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -129,13 +129,13 @@ public class JettyTest extends BaseJettyTest
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
-                binder.bind(AuthorizationManagerMapper.class).toInstance(
-                    new AuthorizationManagerMapper(null) {
+                binder.bind(AuthorizerMapper.class).toInstance(
+                    new AuthorizerMapper(null) {
 
                       @Override
-                      public AuthorizationManager getAuthorizationManager(String namespace)
+                      public Authorizer getAuthorizer(String namespace)
                       {
-                        return new NoopAuthorizationManager();
+                        return new NoopAuthorizer();
                       }
                     }
                 );

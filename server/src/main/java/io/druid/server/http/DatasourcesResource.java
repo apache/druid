@@ -42,7 +42,7 @@ import io.druid.metadata.MetadataSegmentManager;
 import io.druid.query.TableDataSource;
 import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
@@ -80,7 +80,7 @@ public class DatasourcesResource
   private final MetadataSegmentManager databaseSegmentManager;
   private final IndexingServiceClient indexingServiceClient;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public DatasourcesResource(
@@ -88,14 +88,14 @@ public class DatasourcesResource
       MetadataSegmentManager databaseSegmentManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
     this.databaseSegmentManager = databaseSegmentManager;
     this.indexingServiceClient = indexingServiceClient;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @GET
@@ -110,7 +110,7 @@ public class DatasourcesResource
     final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
                                              InventoryViewUtils.getSecuredDataSources(
                                                  serverInventoryView,
-                                                 authorizationManagerMapper,
+                                                 authorizerMapper,
                                                  (String) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
                                                  (String) req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)
                                              ) :

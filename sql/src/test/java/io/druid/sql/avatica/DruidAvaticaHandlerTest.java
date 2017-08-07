@@ -36,7 +36,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -129,7 +129,7 @@ public class DruidAvaticaHandlerTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            new AuthorizationManagerMapper(null)
+            new AuthorizerMapper(null)
         ),
         AVATICA_CONFIG,
         new AuthConfig(),
@@ -572,7 +572,7 @@ public class DruidAvaticaHandlerTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            new AuthorizationManagerMapper(null)
+            new AuthorizerMapper(null)
         ),
         smallFrameConfig,
         new AuthConfig(),

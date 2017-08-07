@@ -34,7 +34,7 @@ import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.ResourceAction;
 
@@ -50,11 +50,11 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
   @Inject
   public SupervisorResourceFilter(
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper,
+      AuthorizerMapper authorizerMapper,
       SupervisorManager supervisorManager
   )
   {
-    super(authConfig, authorizationManagerMapper);
+    super(authConfig, authorizerMapper);
     this.supervisorManager = supervisorManager;
   }
 
@@ -103,7 +103,7 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
           getReq(),
           spec.getDataSources(),
           resourceActionFunction,
-          getAuthorizationManagerMapper()
+          getAuthorizerMapper()
       );
 
       if (!authResult.isAllowed()) {

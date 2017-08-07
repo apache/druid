@@ -50,19 +50,19 @@ public class AuthorizationUtils
    *
    * @param request HTTP request to be authorized
    * @param resourceAction A resource identifier and the action to be taken the resource.
-   * @param authorizationManagerMapper The singleton AuthorizationManagerMapper instance
-   * @return ACCESS_OK or the failed Access object returned by the AuthorizationManager that checked the request.
+   * @param authorizerMapper The singleton AuthorizerMapper instance
+   * @return ACCESS_OK or the failed Access object returned by the Authorizer that checked the request.
    */
   public static Access authorizeResourceAction(
       final HttpServletRequest request,
       final ResourceAction resourceAction,
-      final AuthorizationManagerMapper authorizationManagerMapper
+      final AuthorizerMapper authorizerMapper
   )
   {
     return authorizeAllResourceActions(
         request,
         Lists.newArrayList(resourceAction),
-        authorizationManagerMapper
+        authorizerMapper
     );
   }
 
@@ -84,7 +84,7 @@ public class AuthorizationUtils
   public static Access authorizeAllResourceActions(
       final HttpServletRequest request,
       final List<ResourceAction> resourceActions,
-      final AuthorizationManagerMapper authorizationManagerMapper
+      final AuthorizerMapper authorizerMapper
   )
   {
     final String identity = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
@@ -97,9 +97,9 @@ public class AuthorizationUtils
       throw new ISE("Null namespace.");
     }
 
-    final AuthorizationManager authorizationManager = authorizationManagerMapper.getAuthorizationManager(namespace);
-    if (authorizationManager == null) {
-      throw new ISE("No authorization manager found for namespace: [%s].", namespace);
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    if (authorizer == null) {
+      throw new ISE("No authorizer found for namespace: [%s].", namespace);
     }
 
     // this method returns on first failure, so only successful Access results are kept in the cache
@@ -109,7 +109,7 @@ public class AuthorizationUtils
       if (resultCache.contains(resourceAction)) {
         continue;
       }
-      final Access access = authorizationManager.authorize(
+      final Access access = authorizer.authorize(
           identity,
           resourceAction.getResource(),
           resourceAction.getAction()
@@ -137,7 +137,7 @@ public class AuthorizationUtils
    *
    * This function will set the DRUID_AUTH_TOKEN_CHECKED attribute in the request.
    *
-   * If this attribute is already set when this fImmutableList.<Class<?>>of(SupervisorManager.class, AuthorizationManager.class)unction is called, an exception is thrown.
+   * If this attribute is already set when this fImmutableList.<Class<?>>of(SupervisorManager.class, Authorizer.class)unction is called, an exception is thrown.
    *
    * @param request HTTP request to be generated
    * @param resources List of resources
@@ -149,7 +149,7 @@ public class AuthorizationUtils
       final HttpServletRequest request,
       final Collection<ResType> resources,
       final Function<? super ResType, ResourceAction> raGenerator,
-      final AuthorizationManagerMapper authorizationManagerMapper
+      final AuthorizerMapper authorizerMapper
   )
   {
     final String identity = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
@@ -162,9 +162,9 @@ public class AuthorizationUtils
       throw new ISE("Null namespace.");
     }
 
-    final AuthorizationManager authorizationManager = authorizationManagerMapper.getAuthorizationManager(namespace);
-    if (authorizationManager == null) {
-      throw new ISE("No authorization manager found for namespace: [%s].", namespace);
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    if (authorizer == null) {
+      throw new ISE("No authorizer found for namespace: [%s].", namespace);
     }
 
     // this method returns on first failure, so only successful Access results are kept in the cache
@@ -175,7 +175,7 @@ public class AuthorizationUtils
       if (resultCache.contains(resourceAction)) {
         continue;
       }
-      final Access access = authorizationManager.authorize(
+      final Access access = authorizer.authorize(
           identity,
           resourceAction.getResource(),
           resourceAction.getAction()
@@ -211,15 +211,15 @@ public class AuthorizationUtils
       final Function<? super ResType, ResourceAction> raGenerator,
       final String user,
       final String namespace,
-      final AuthorizationManagerMapper authorizationManagerMapper
+      final AuthorizerMapper authorizerMapper
   )
   {
     if (user == null || namespace == null) {
       throw new ISE("null user or namespace");
     }
-    final AuthorizationManager authorizationManager = authorizationManagerMapper.getAuthorizationManager(namespace);
-    if (authorizationManager == null) {
-      throw new ISE("No authorization manager found for namespace: [%s].", namespace);
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    if (authorizer == null) {
+      throw new ISE("No authorizer found for namespace: [%s].", namespace);
     }
 
     // this method returns on first failure, so only successful Access results are kept in the cache
@@ -230,7 +230,7 @@ public class AuthorizationUtils
       if (resultCache.contains(resourceAction)) {
         continue;
       }
-      final Access access = authorizationManager.authorize(
+      final Access access = authorizer.authorize(
           user,
           resourceAction.getResource(),
           resourceAction.getAction()
@@ -262,7 +262,7 @@ public class AuthorizationUtils
       final HttpServletRequest request,
       final Collection<ResType> resources,
       final Function<? super ResType, ResourceAction> resourceActionGenerator,
-      final AuthorizationManagerMapper authorizationManagerMapper
+      final AuthorizerMapper authorizerMapper
   )
   {
     final String identity = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
@@ -275,9 +275,9 @@ public class AuthorizationUtils
       throw new ISE("Null namespace.");
     }
 
-    final AuthorizationManager authorizationManager = authorizationManagerMapper.getAuthorizationManager(namespace);
-    if (authorizationManager == null) {
-      throw new ISE("No authorization manager found for namespace: [%s].", namespace);
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    if (authorizer == null) {
+      throw new ISE("No authorizer found for namespace: [%s].", namespace);
     }
 
     int initialSize = resources.size();
@@ -287,7 +287,7 @@ public class AuthorizationUtils
       final ResourceAction resourceAction = resourceActionGenerator.apply(resource);
       Access access = resultCache.get(resourceAction);
       if (access == null) {
-        access = authorizationManager.authorize(
+        access = authorizer.authorize(
             identity,
             resourceAction.getResource(),
             resourceAction.getAction()

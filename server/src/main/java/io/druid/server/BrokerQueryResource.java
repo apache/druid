@@ -31,7 +31,7 @@ import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -60,7 +60,7 @@ public class BrokerQueryResource extends QueryResource
       @Smile ObjectMapper smileMapper,
       QueryManager queryManager,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper,
+      AuthorizerMapper authorizerMapper,
       GenericQueryMetricsFactory queryMetricsFactory,
       TimelineServerView brokerServerView
   )
@@ -71,7 +71,7 @@ public class BrokerQueryResource extends QueryResource
         smileMapper,
         queryManager,
         authConfig,
-        authorizationManagerMapper,
+        authorizerMapper,
         queryMetricsFactory
     );
     this.brokerServerView = brokerServerView;

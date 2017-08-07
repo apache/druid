@@ -24,10 +24,10 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import io.druid.guice.ManageLifecycle;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.NoopAuthorizationManager;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.NoopAuthorizer;
 
-public class NoopAuthorizationManagerModule implements Module
+public class NoopAuthorizerModule implements Module
 {
   public static final String TYPE = "noop";
 
@@ -39,8 +39,8 @@ public class NoopAuthorizationManagerModule implements Module
   @Provides
   @ManageLifecycle
   @Named(TYPE)
-  public AuthorizationManager makeAuthorizationManager()
+  public Authorizer makeAuthorizer()
   {
-    return new NoopAuthorizationManager();
+    return new NoopAuthorizer();
   }
 }

@@ -27,7 +27,7 @@ import io.druid.client.InventoryView;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -51,18 +51,18 @@ public class IntervalsResource
 {
   private final InventoryView serverInventoryView;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public IntervalsResource(
       InventoryView serverInventoryView,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @GET
@@ -73,7 +73,7 @@ public class IntervalsResource
     final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
                                              InventoryViewUtils.getSecuredDataSources(
                                                  serverInventoryView,
-                                                 authorizationManagerMapper,
+                                                 authorizerMapper,
                                                  (String) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
                                                  (String) req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)
                                              ) :
@@ -108,7 +108,7 @@ public class IntervalsResource
     final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
                                              InventoryViewUtils.getSecuredDataSources(
                                                  serverInventoryView,
-                                                 authorizationManagerMapper,
+                                                 authorizerMapper,
                                                  (String) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
                                                  (String) req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)
                                              ) :

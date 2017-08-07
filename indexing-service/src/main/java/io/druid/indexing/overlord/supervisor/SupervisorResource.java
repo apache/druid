@@ -33,7 +33,7 @@ import io.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 
 import javax.servlet.http.HttpServletRequest;
@@ -59,18 +59,18 @@ public class SupervisorResource
 {
   private final TaskMaster taskMaster;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public SupervisorResource(
       TaskMaster taskMaster,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   )
   {
     this.taskMaster = taskMaster;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @POST
@@ -94,7 +94,7 @@ public class SupervisorResource
                   req,
                   spec.getDataSources(),
                   AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-                  authorizationManagerMapper
+                  authorizerMapper
               );
 
               if (!authResult.isAllowed()) {
@@ -128,7 +128,7 @@ public class SupervisorResource
                       req,
                       supervisorSpecOptional.get().getDataSources(),
                       AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-                      authorizationManagerMapper
+                      authorizerMapper
                   );
 
                   if (accessResult.isAllowed()) {
@@ -247,7 +247,7 @@ public class SupervisorResource
                           req,
                           supervisorSpecOptional.get().getDataSources(),
                           AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-                          authorizationManagerMapper
+                          authorizerMapper
                       );
                       return accessResult.isAllowed();
                     }

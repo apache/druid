@@ -52,10 +52,10 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
-import io.druid.server.security.AuthorizationManagerMapper;
-import io.druid.server.security.NoopAuthorizationManager;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.NoopAuthorizer;
 import org.eclipse.jetty.client.HttpClient;
-import io.druid.server.security.AuthorizationManager;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -114,13 +114,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                     binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null, null, new ServerConfig())
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
-                binder.bind(AuthorizationManagerMapper.class).toInstance(
-                    new AuthorizationManagerMapper(null) {
+                binder.bind(AuthorizerMapper.class).toInstance(
+                    new AuthorizerMapper(null) {
 
                       @Override
-                      public AuthorizationManager getAuthorizationManager(String namespace)
+                      public Authorizer getAuthorizer(String namespace)
                       {
-                        return new NoopAuthorizationManager();
+                        return new NoopAuthorizer();
                       }
                     }
                 );

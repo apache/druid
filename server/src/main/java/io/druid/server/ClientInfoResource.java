@@ -39,7 +39,7 @@ import io.druid.query.TableDataSource;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
@@ -79,7 +79,7 @@ public class ClientInfoResource
   private TimelineServerView timelineServerView;
   private SegmentMetadataQueryConfig segmentMetadataQueryConfig;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public ClientInfoResource(
@@ -87,7 +87,7 @@ public class ClientInfoResource
       TimelineServerView timelineServerView,
       SegmentMetadataQueryConfig segmentMetadataQueryConfig,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -95,7 +95,7 @@ public class ClientInfoResource
     this.segmentMetadataQueryConfig = (segmentMetadataQueryConfig == null) ?
                                       new SegmentMetadataQueryConfig() : segmentMetadataQueryConfig;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   private Map<String, List<DataSegment>> getSegmentsForDatasources()
@@ -122,7 +122,7 @@ public class ClientInfoResource
           request,
           getSegmentsForDatasources().keySet(),
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-          authorizationManagerMapper
+          authorizerMapper
       );
     } else {
       return getSegmentsForDatasources().keySet();

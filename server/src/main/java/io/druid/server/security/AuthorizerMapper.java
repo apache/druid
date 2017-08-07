@@ -25,35 +25,35 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import java.util.Map;
 
 @ManageLifecycle
-public class AuthorizationManagerMapper
+public class AuthorizerMapper
 {
-  private Map<String, AuthorizationManager> authorizationManagerMap;
+  private Map<String, Authorizer> authorizerMap;
 
-  public AuthorizationManagerMapper(
-      Map<String, AuthorizationManager> authorizationManagerMap
+  public AuthorizerMapper(
+      Map<String, Authorizer> authorizerMap
   )
   {
-    this.authorizationManagerMap = authorizationManagerMap;
+    this.authorizerMap = authorizerMap;
   }
 
-  public AuthorizationManager getAuthorizationManager(String namespace)
+  public Authorizer getAuthorizer(String namespace)
   {
-    return authorizationManagerMap.get(namespace);
+    return authorizerMap.get(namespace);
   }
 
   @LifecycleStart
   public void start()
   {
-    for (AuthorizationManager authorizationManager : authorizationManagerMap.values()) {
-      authorizationManager.start();
+    for (Authorizer authorizer : authorizerMap.values()) {
+      authorizer.start();
     }
   }
 
   @LifecycleStart
   public void stop()
   {
-    for (AuthorizationManager authorizationManager : authorizationManagerMap.values()) {
-      authorizationManager.stop();
+    for (Authorizer authorizer : authorizerMap.values()) {
+      authorizer.stop();
     }
   }
 }

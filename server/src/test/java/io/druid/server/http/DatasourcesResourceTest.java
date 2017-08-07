@@ -29,8 +29,8 @@ import io.druid.server.coordination.ServerType;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -156,11 +156,11 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
     EasyMock.replay(inventoryView, server, request);
 
-    AuthorizationManagerMapper authMapper = new AuthorizationManagerMapper(null) {
+    AuthorizerMapper authMapper = new AuthorizerMapper(null) {
       @Override
-      public AuthorizationManager getAuthorizationManager(String namespace)
+      public Authorizer getAuthorizer(String namespace)
       {
-        return new AuthorizationManager()
+        return new Authorizer()
         {
           @Override
           public Access authorize(String identity, Resource resource, Action action)

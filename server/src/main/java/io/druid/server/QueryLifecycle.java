@@ -40,7 +40,7 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import org.joda.time.DateTime;
 
@@ -75,7 +75,7 @@ public class QueryLifecycle
   private final RequestLogger requestLogger;
   private final ServerConfig serverConfig;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
   private final long startMs;
   private final long startNs;
 
@@ -91,7 +91,7 @@ public class QueryLifecycle
       final RequestLogger requestLogger,
       final ServerConfig serverConfig,
       final AuthConfig authConfig,
-      final AuthorizationManagerMapper authorizationManagerMapper,
+      final AuthorizerMapper authorizerMapper,
       final long startMs,
       final long startNs
   )
@@ -103,7 +103,7 @@ public class QueryLifecycle
     this.requestLogger = requestLogger;
     this.serverConfig = serverConfig;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -217,7 +217,7 @@ public class QueryLifecycle
             req,
             queryPlus.getQuery().getDataSource().getNames(),
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-            authorizationManagerMapper
+            authorizerMapper
         );
       } else {
         authResult = AuthorizationUtils.authorizeAllResourceActions(
@@ -225,7 +225,7 @@ public class QueryLifecycle
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
             token,
             namespace,
-            authorizationManagerMapper
+            authorizerMapper
         );
       }
 

@@ -32,26 +32,26 @@ import io.druid.guice.LifecycleModule;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.AuthorizationManagerMapper;
-import io.druid.server.security.DefaultAuthorizationManager;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.DefaultAuthorizer;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class AuthorizationManagerMapperModule implements DruidModule
+public class AuthorizerMapperModule implements DruidModule
 {
-  private static Logger log = new Logger(AuthorizationManagerMapperModule.class);
+  private static Logger log = new Logger(AuthorizerMapperModule.class);
 
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(AuthorizationManagerMapper.class)
-          .toProvider(new AuthorizationManagerMapperProvider())
+    binder.bind(AuthorizerMapper.class)
+          .toProvider(new AuthorizerMapperProvider())
           .in(LazySingleton.class);
 
-    LifecycleModule.register(binder, AuthorizationManagerMapper.class);
+    LifecycleModule.register(binder, AuthorizerMapper.class);
   }
 
   @SuppressWarnings("unchecked")
@@ -61,7 +61,7 @@ public class AuthorizationManagerMapperModule implements DruidModule
     return Collections.EMPTY_LIST;
   }
 
-  private static class AuthorizationManagerMapperProvider implements Provider<AuthorizationManagerMapper>
+  private static class AuthorizerMapperProvider implements Provider<AuthorizerMapper>
   {
     private AuthConfig authConfig;
     private Injector injector;
@@ -74,33 +74,33 @@ public class AuthorizationManagerMapperModule implements DruidModule
     }
 
     @Override
-    public AuthorizationManagerMapper get()
+    public AuthorizerMapper get()
     {
-      Map<String, AuthorizationManager> authorizationManagerMap = Maps.newHashMap();
+      Map<String, Authorizer> authorizerMap = Maps.newHashMap();
 
-      List<String> authorizationManagers = authConfig.getAuthorizationManagers();
+      List<String> authorizers = authConfig.getAuthorizers();
 
-      // If user didn't configure any AuthorizationManagers, use the default which rejects all requests.
-      if (authorizationManagers == null || authorizationManagers.isEmpty()) {
-        return new AuthorizationManagerMapper(null) {
+      // If user didn't configure any Authorizers, use the default which rejects all requests.
+      if (authorizers == null || authorizers.isEmpty()) {
+        return new AuthorizerMapper(null) {
           @Override
-          public AuthorizationManager getAuthorizationManager(String namespace)
+          public Authorizer getAuthorizer(String namespace)
           {
-            return new DefaultAuthorizationManager();
+            return new DefaultAuthorizer();
           }
         };
       }
 
-      for (String authorizationManagerName : authorizationManagers) {
-        AuthorizationManager authorizationManager = injector.getInstance(Key.get(
-            AuthorizationManager.class,
-            Names.named(authorizationManagerName)
+      for (String authorizerName : authorizers) {
+        Authorizer authorizer = injector.getInstance(Key.get(
+            Authorizer.class,
+            Names.named(authorizerName)
         ));
 
-        authorizationManagerMap.put(authorizationManager.getNamespace(), authorizationManager);
+        authorizerMap.put(authorizer.getNamespace(), authorizer);
       }
 
-      return new AuthorizationManagerMapper(authorizationManagerMap);
+      return new AuthorizerMapper(authorizerMap);
     }
   }
 }

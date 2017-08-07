@@ -28,26 +28,26 @@ import com.google.inject.name.Named;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.NoopAuthorizationManager;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.NoopAuthorizer;
 
-public class AuthorizationManagerModule implements Module
+public class AuthorizerModule implements Module
 {
   @Override
   public void configure(Binder binder)
   {
-    final MapBinder<String, AuthorizationManager> authorizationManagerMapBinder = PolyBind.optionBinder(
+    final MapBinder<String, Authorizer> authorizerMapBinder = PolyBind.optionBinder(
         binder,
-        Key.get(AuthorizationManager.class)
+        Key.get(Authorizer.class)
     );
-    authorizationManagerMapBinder.addBinding("noop").to(NoopAuthorizationManager.class).in(LazySingleton.class);
+    authorizerMapBinder.addBinding("noop").to(NoopAuthorizer.class).in(LazySingleton.class);
   }
 
   @Provides
   @ManageLifecycle
   @Named("noop")
-  public AuthorizationManager getAuthorizationManager()
+  public Authorizer getAuthorizer()
   {
-    return new NoopAuthorizationManager();
+    return new NoopAuthorizer();
   }
 }

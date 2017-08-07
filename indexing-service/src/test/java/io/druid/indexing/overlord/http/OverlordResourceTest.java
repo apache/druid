@@ -39,8 +39,8 @@ import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -73,11 +73,11 @@ public class OverlordResourceTest
         Optional.of(taskRunner)
     ).anyTimes();
 
-    AuthorizationManagerMapper authMapper = new AuthorizationManagerMapper(null) {
+    AuthorizerMapper authMapper = new AuthorizerMapper(null) {
       @Override
-      public AuthorizationManager getAuthorizationManager(String namespace)
+      public Authorizer getAuthorizer(String namespace)
       {
-        return new AuthorizationManager()
+        return new Authorizer()
         {
           @Override
           public Access authorize(String identity, Resource resource, Action action)

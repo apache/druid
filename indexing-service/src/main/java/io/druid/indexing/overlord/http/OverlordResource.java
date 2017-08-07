@@ -56,7 +56,7 @@ import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
@@ -100,7 +100,7 @@ public class OverlordResource
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
 
@@ -112,7 +112,7 @@ public class OverlordResource
       JacksonConfigManager configManager,
       AuditManager auditManager,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   ) throws Exception
   {
     this.taskMaster = taskMaster;
@@ -121,7 +121,7 @@ public class OverlordResource
     this.configManager = configManager;
     this.auditManager = auditManager;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @POST
@@ -143,7 +143,7 @@ public class OverlordResource
       Access authResult = AuthorizationUtils.authorizeResourceAction(
           req,
           resourceAction,
-          authorizationManagerMapper
+          authorizerMapper
       );
 
       if (!authResult.isAllowed()) {
@@ -389,7 +389,7 @@ public class OverlordResource
                   req,
                   allActiveTasks,
                   raGenerator,
-                  authorizationManagerMapper
+                  authorizerMapper
               );
 
             } else {
@@ -511,7 +511,7 @@ public class OverlordResource
           req,
           taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(),
           raGenerator,
-          authorizationManagerMapper
+          authorizerMapper
       );
     } else {
       recentlyFinishedTasks = taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses();
@@ -697,7 +697,7 @@ public class OverlordResource
         req,
         collectionToFilter,
         raGenerator,
-        authorizationManagerMapper
+        authorizerMapper
     );
   }
 

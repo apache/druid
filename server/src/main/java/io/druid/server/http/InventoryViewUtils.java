@@ -33,8 +33,8 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceType;
 
@@ -81,18 +81,18 @@ public class InventoryViewUtils
 
   public static Set<DruidDataSource> getSecuredDataSources(
       InventoryView inventoryView,
-      final AuthorizationManagerMapper authorizationManagerMapper,
+      final AuthorizerMapper authorizerMapper,
       final String identity,
       final String namespace
   )
   {
-    if (authorizationManagerMapper == null) {
+    if (authorizerMapper == null) {
       throw new ISE("No authorization mapper found");
     }
 
-    final AuthorizationManager authorizationManager = authorizationManagerMapper.getAuthorizationManager(namespace);
-    if (authorizationManager == null) {
-      throw new ISE("Invalid to call a secured method with null AuthorizationManager!!");
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    if (authorizer == null) {
+      throw new ISE("Invalid to call a secured method with null Authorizer!!");
     } else {
       final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
       return ImmutableSet.copyOf(
@@ -109,7 +109,7 @@ public class InventoryViewUtils
                   if (resourceAccessMap.containsKey(key)) {
                     return resourceAccessMap.get(key).isAllowed();
                   } else {
-                    Access access = authorizationManager.authorize(identity, key.lhs, key.rhs);
+                    Access access = authorizer.authorize(identity, key.lhs, key.rhs);
                     resourceAccessMap.put(key, access);
                     return access.isAllowed();
                   }

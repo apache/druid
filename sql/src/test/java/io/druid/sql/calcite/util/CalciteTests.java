@@ -88,7 +88,7 @@ import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -313,7 +313,7 @@ public class CalciteTests
         new NoopRequestLogger(),
         new ServerConfig(),
         new AuthConfig(),
-        new AuthorizationManagerMapper(null)
+        new AuthorizerMapper(null)
     );
   }
 

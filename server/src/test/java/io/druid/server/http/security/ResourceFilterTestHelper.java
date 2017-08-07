@@ -36,8 +36,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManager;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 
@@ -57,19 +57,19 @@ import java.util.List;
 public class ResourceFilterTestHelper
 {
   public HttpServletRequest req;
-  public AuthorizationManagerMapper authorizationManagerMapper;
+  public AuthorizerMapper authorizerMapper;
   public ContainerRequest request;
 
   public void setUp(ResourceFilter resourceFilter) throws Exception
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     request = EasyMock.createStrictMock(ContainerRequest.class);
-    authorizationManagerMapper = EasyMock.createStrictMock(AuthorizationManagerMapper.class);
+    authorizerMapper = EasyMock.createStrictMock(AuthorizerMapper.class);
 
     // Memory barrier
     synchronized (this) {
       ((AbstractResourceFilter) resourceFilter).setReq(req);
-      ((AbstractResourceFilter) resourceFilter).setAuthorizationManagerMapper(authorizationManagerMapper);
+      ((AbstractResourceFilter) resourceFilter).setAuthorizerMapper(authorizerMapper);
     }
   }
 
@@ -114,10 +114,10 @@ public class ResourceFilterTestHelper
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)).andReturn("namespace").atLeastOnce();
     req.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, authCheckResult);
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(authorizationManagerMapper.getAuthorizationManager(
+    EasyMock.expect(authorizerMapper.getAuthorizer(
         EasyMock.anyString()
     )).andReturn(
-        new AuthorizationManager()
+        new Authorizer()
         {
           @Override
           public Access authorize(String identity, Resource resource, Action action)
@@ -139,9 +139,9 @@ public class ResourceFilterTestHelper
     return getRequestPaths(clazz, ImmutableList.<Class<?>>of(), ImmutableList.<Key<?>>of());
   }
 
-  public static Collection<Object[]> getRequestPathsWithAuthorizationManager(final Class clazz)
+  public static Collection<Object[]> getRequestPathsWithAuthorizer(final Class clazz)
   {
-    return getRequestPaths(clazz, ImmutableList.<Class<?>>of(AuthorizationManagerMapper.class), ImmutableList.<Key<?>>of());
+    return getRequestPaths(clazz, ImmutableList.<Class<?>>of(AuthorizerMapper.class), ImmutableList.<Key<?>>of());
   }
 
   public static Collection<Object[]> getRequestPaths(

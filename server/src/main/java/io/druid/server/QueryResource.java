@@ -45,7 +45,7 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import org.joda.time.DateTime;
 
@@ -91,7 +91,7 @@ public class QueryResource implements QueryCountStatsProvider
   protected final ObjectMapper serializeDateTimeAsLongSmileMapper;
   protected final QueryManager queryManager;
   protected final AuthConfig authConfig;
-  protected final AuthorizationManagerMapper authorizationManagerMapper;
+  protected final AuthorizerMapper authorizerMapper;
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AtomicLong successfulQueryCount = new AtomicLong();
@@ -105,7 +105,7 @@ public class QueryResource implements QueryCountStatsProvider
       @Smile ObjectMapper smileMapper,
       QueryManager queryManager,
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper,
+      AuthorizerMapper authorizerMapper,
       GenericQueryMetricsFactory queryMetricsFactory
   )
   {
@@ -116,7 +116,7 @@ public class QueryResource implements QueryCountStatsProvider
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
     this.queryManager = queryManager;
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -139,7 +139,7 @@ public class QueryResource implements QueryCountStatsProvider
           req,
           datasources,
           AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-          authorizationManagerMapper
+          authorizerMapper
       );
 
       if (!authResult.isAllowed()) {

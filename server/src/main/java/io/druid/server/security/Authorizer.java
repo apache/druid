@@ -22,23 +22,23 @@ package io.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultAuthorizationManager.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultAuthorizer.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultAuthorizationManager.class),
-    @JsonSubTypes.Type(name = "noop", value = NoopAuthorizationManager.class)
+    @JsonSubTypes.Type(name = "default", value = DefaultAuthorizer.class),
+    @JsonSubTypes.Type(name = "noop", value = NoopAuthorizer.class)
 })
 /**
- * An AuthorizationManager is responsible for performing authorization checks for resource accesses.
+ * An Authorizer is responsible for performing authorization checks for resource accesses.
  *
- * A single instance of each AuthorizationManager implementation will be created per node.
+ * A single instance of each Authorizer implementation will be created per node.
  * Security-sensitive endpoints will need to extract the identity string contained in the request's Druid-Auth-Token
  * attribute, previously set by an Authenticator. Each endpoint will pass this identity String to the
- * AuthorizationManager's authorize() method along with any Resource/Action pairs created for the request being
+ * Authorizer's authorize() method along with any Resource/Action pairs created for the request being
  * handled. The endpoint can use these checks to filter out resources or deny the request as needed.
  * After a request is authorized, a new attribute, "Druid-Auth-Token-Checked", should be set in the
  * request header with the result of the authorization decision.
  */
-public interface AuthorizationManager
+public interface Authorizer
 {
   /**
    * Check if the entity represented by `identity` in `namespace` is authorized to perform `action` on `resource`.
@@ -53,7 +53,7 @@ public interface AuthorizationManager
   Access authorize(String identity, Resource resource, Action action);
 
   /**
-   * @return The namespace associated with this AuthorizationManager. Authenticator implementations will
+   * @return The namespace associated with this Authorizer. Authenticator implementations will
    * put the namespace in request headers.
    */
   String getNamespace();

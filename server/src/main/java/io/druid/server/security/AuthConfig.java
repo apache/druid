@@ -39,7 +39,7 @@ public class AuthConfig
 
   /**
    * HTTP attribute that indicates the namespace for a request. Set by Authenticator implementations when
-   * they successfully authenticate a request. The AuthorizationManager with a matching namespace will be used to
+   * they successfully authenticate a request. The Authorizer with a matching namespace will be used to
    * authorize the request.
    */
   public static final String DRUID_AUTH_NAMESPACE = "Druid-Auth-Namespace";
@@ -54,13 +54,13 @@ public class AuthConfig
       @JsonProperty("enabled") boolean enabled,
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
       @JsonProperty("internalAuthenticator") String internalAuthenticator,
-      @JsonProperty("authorizationManagers") List<String> authorizationManagers
+      @JsonProperty("authorizers") List<String> authorizers
   )
   {
     this.enabled = enabled;
     this.authenticatorChain = authenticationChain;
     this.internalAuthenticator = internalAuthenticator;
-    this.authorizationManagers = authorizationManagers;
+    this.authorizers = authorizers;
   }
 
   @JsonProperty
@@ -73,7 +73,7 @@ public class AuthConfig
   private final String internalAuthenticator;
 
   @JsonProperty
-  private List<String> authorizationManagers;
+  private List<String> authorizers;
 
   public boolean isEnabled()
   {
@@ -90,9 +90,9 @@ public class AuthConfig
     return internalAuthenticator;
   }
 
-  public List<String> getAuthorizationManagers()
+  public List<String> getAuthorizers()
   {
-    return authorizationManagers;
+    return authorizers;
   }
 
   @Override
@@ -102,7 +102,7 @@ public class AuthConfig
            "enabled=" + enabled +
            ", authenticatorChain='" + authenticatorChain + '\'' +
            ", internalAuthenticator='" + internalAuthenticator + '\'' +
-           ", authorizationManagers='" + authorizationManagers + '\'' +
+           ", authorizers='" + authorizers + '\'' +
            '}';
   }
 
@@ -131,9 +131,9 @@ public class AuthConfig
         : that.getInternalAuthenticator() != null) {
       return false;
     }
-    return getAuthorizationManagers() != null
-           ? getAuthorizationManagers().equals(that.getAuthorizationManagers())
-           : that.getAuthorizationManagers() == null;
+    return getAuthorizers() != null
+           ? getAuthorizers().equals(that.getAuthorizers())
+           : that.getAuthorizers() == null;
 
   }
 
@@ -143,7 +143,7 @@ public class AuthConfig
     int result = (isEnabled() ? 1 : 0);
     result = 31 * result + (getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0);
     result = 31 * result + (getInternalAuthenticator() != null ? getInternalAuthenticator().hashCode() : 0);
-    result = 31 * result + (getAuthorizationManagers() != null ? getAuthorizationManagers().hashCode() : 0);
+    result = 31 * result + (getAuthorizers() != null ? getAuthorizers().hashCode() : 0);
     return result;
   }
 

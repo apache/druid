@@ -49,7 +49,7 @@ public interface Authenticator extends ServletFilterHolder
 
   /**
    * @return The namespace associated with this Authenticator. This will be used for choosing the correct
-   * AuthorizationManager for authorizing requests that have been authenticated by this Authenticator.
+   * Authorizer for authorizing requests that have been authenticated by this Authenticator.
    */
   public String getNamespace();
 

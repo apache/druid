@@ -26,7 +26,7 @@ import com.sun.jersey.spi.container.ContainerResponseFilter;
 import com.sun.jersey.spi.container.ResourceFilter;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
@@ -38,16 +38,16 @@ public abstract class AbstractResourceFilter implements ResourceFilter, Containe
   private HttpServletRequest req;
 
   private final AuthConfig authConfig;
-  private AuthorizationManagerMapper authorizationManagerMapper;
+  private AuthorizerMapper authorizerMapper;
 
   @Inject
   public AbstractResourceFilter(
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   )
   {
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @Override
@@ -72,14 +72,14 @@ public abstract class AbstractResourceFilter implements ResourceFilter, Containe
     return authConfig;
   }
 
-  public AuthorizationManagerMapper getAuthorizationManagerMapper()
+  public AuthorizerMapper getAuthorizerMapper()
   {
-    return authorizationManagerMapper;
+    return authorizerMapper;
   }
 
-  public void setAuthorizationManagerMapper(AuthorizationManagerMapper authorizationManagerMapper)
+  public void setAuthorizerMapper(AuthorizerMapper authorizerMapper)
   {
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
   }
 
   public AbstractResourceFilter setReq(HttpServletRequest req)

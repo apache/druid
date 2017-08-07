@@ -76,7 +76,7 @@ import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
@@ -140,7 +140,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final KafkaTuningConfig tuningConfig;
   private final KafkaIOConfig ioConfig;
   private final AuthConfig authConfig;
-  private final AuthorizationManagerMapper authorizationManagerMapper;
+  private final AuthorizerMapper authorizerMapper;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   private final Map<Integer, Long> endOffsets = new ConcurrentHashMap<>();
@@ -207,7 +207,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthConfig authConfig,
-      @JacksonInject AuthorizationManagerMapper authorizationManagerMapper
+      @JacksonInject AuthorizerMapper authorizerMapper
   )
   {
     super(
@@ -224,7 +224,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     this.authConfig = authConfig;
-    this.authorizationManagerMapper = authorizationManagerMapper;
+    this.authorizerMapper = authorizerMapper;
 
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
   }
@@ -634,7 +634,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         action
     );
 
-    return AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizationManagerMapper);
+    return AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
   }
 
   @Override

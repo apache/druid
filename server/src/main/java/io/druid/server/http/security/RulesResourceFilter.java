@@ -28,7 +28,7 @@ import com.sun.jersey.spi.container.ContainerRequest;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationManagerMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
@@ -51,10 +51,10 @@ public class RulesResourceFilter extends AbstractResourceFilter
   @Inject
   public RulesResourceFilter(
       AuthConfig authConfig,
-      AuthorizationManagerMapper authorizationManagerMapper
+      AuthorizerMapper authorizerMapper
   )
   {
-    super(authConfig, authorizationManagerMapper);
+    super(authConfig, authorizerMapper);
   }
 
   @Override
@@ -85,7 +85,7 @@ public class RulesResourceFilter extends AbstractResourceFilter
       final Access authResult = AuthorizationUtils.authorizeResourceAction(
           getReq(),
           resourceAction,
-          getAuthorizationManagerMapper()
+          getAuthorizerMapper()
       );
 
       if (!authResult.isAllowed()) {

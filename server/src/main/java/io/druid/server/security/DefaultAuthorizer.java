@@ -19,17 +19,17 @@
 
 package io.druid.server.security;
 
-public class NoopAuthorizationManager implements AuthorizationManager
+public class DefaultAuthorizer implements Authorizer
 {
   @Override
   public Access authorize(String identity, Resource resource, Action action)
   {
-    return new Access(true);
+    return new Access(false, "Please configure a non-default Authorizer.");
   }
 
   @Override
   public String getNamespace()
   {
-    return "noop";
+    return "default";
   }
 }
