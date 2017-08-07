@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -136,6 +137,13 @@ public class SupervisorResource
                   }
                 }
               }
+
+              AuthorizationUtils.authorizeAllResourceActions(
+                  req,
+                  Lists.newArrayList(),
+                  AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+                  authorizerMapper
+              );
             } else {
               supervisorIds = manager.getSupervisorIds();
             }
