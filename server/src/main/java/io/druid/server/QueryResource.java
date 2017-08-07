@@ -185,6 +185,7 @@ public class QueryResource implements QueryCountStatsProvider
       @Context final HttpServletRequest req // used to get request content-type, remote address and AuthorizationInfo
   ) throws IOException
   {
+    // Both startMs and startNs are needed: startMs is absolute time and startNs is high-resolution.
     final long startMs = System.currentTimeMillis();
     final long startNs = System.nanoTime();
     Query<?> query = null;
@@ -323,7 +324,7 @@ public class QueryResource implements QueryCountStatsProvider
 
                         requestLogger.log(
                             new RequestLogLine(
-                                new DateTime(TimeUnit.MILLISECONDS.toMillis(startMs)),
+                                new DateTime(startMs),
                                 req.getRemoteAddr(),
                                 theQuery,
                                 new QueryStats(
@@ -389,7 +390,7 @@ public class QueryResource implements QueryCountStatsProvider
         queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(TimeUnit.MILLISECONDS.toMillis(startMs)),
+                new DateTime(startMs),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
@@ -434,7 +435,7 @@ public class QueryResource implements QueryCountStatsProvider
         queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(TimeUnit.MILLISECONDS.toMillis(startMs)),
+                new DateTime(startMs),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(ImmutableMap.<String, Object>of(
