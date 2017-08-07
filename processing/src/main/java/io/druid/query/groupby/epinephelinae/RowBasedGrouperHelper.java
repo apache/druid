@@ -33,6 +33,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
@@ -65,6 +66,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -92,7 +94,9 @@ public class RowBasedGrouperHelper
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final AggregatorFactory[] aggregatorFactories
+      final AggregatorFactory[] aggregatorFactories,
+      @Nullable final ListeningExecutorService grouperSorter,
+      final int priority
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -160,7 +164,9 @@ public class RowBasedGrouperHelper
           spillMapper,
           concurrencyHint,
           limitSpec,
-          sortHasNonGroupingFields
+          sortHasNonGroupingFields,
+          grouperSorter,
+          priority
       );
     }
 

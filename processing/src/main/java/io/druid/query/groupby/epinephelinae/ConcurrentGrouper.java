@@ -23,17 +23,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.java.util.common.ISE;
+import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Grouper based around a set of underlying {@link SpillingGrouper} instances. Thread-safe.
@@ -51,7 +58,6 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final AtomicInteger threadNumber = new AtomicInteger();
   private volatile boolean spilling = false;
   private volatile boolean closed = false;
-  private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
 
   private final Supplier<ByteBuffer> bufferSupplier;
   private final ColumnSelectorFactory columnSelectorFactory;
@@ -65,6 +71,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final KeySerdeFactory<KeyType> keySerdeFactory;
   private final DefaultLimitSpec limitSpec;
   private final boolean sortHasNonGroupingFields;
+  private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
+  @Nullable
+  private final ListeningExecutorService grouperSorter;
+  private final int priority;
 
   private volatile boolean initialized = false;
 
@@ -80,7 +90,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final ObjectMapper spillMapper,
       final int concurrencyHint,
       final DefaultLimitSpec limitSpec,
-      final boolean sortHasNonGroupingFields
+      final boolean sortHasNonGroupingFields,
+      @Nullable final ListeningExecutorService grouperSorter,
+      final int priority
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -108,6 +120,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     this.limitSpec = limitSpec;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
     this.keyObjComparator = keySerdeFactory.objectComparator(sortHasNonGroupingFields);
+    this.grouperSorter = grouperSorter;
+    this.priority = priority;
   }
 
   @Override
@@ -216,15 +230,53 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       throw new ISE("Grouper is closed");
     }
 
-    final List<Iterator<Entry<KeyType>>> iterators = new ArrayList<>(groupers.size());
+    return Groupers.mergeIterators(
+        sorted && isParallelSortAvailable() ? parallelSortAndGetGroupersIterator() : getGroupersIterator(sorted),
+        sorted ? keyObjComparator : null
+    );
+  }
 
-    for (Grouper<KeyType> grouper : groupers) {
-      synchronized (grouper) {
-        iterators.add(grouper.iterator(sorted));
-      }
+  private boolean isParallelSortAvailable()
+  {
+    return grouperSorter != null && concurrencyHint > 1;
+  }
+
+  private List<Iterator<Entry<KeyType>>> parallelSortAndGetGroupersIterator()
+  {
+    // The number of groupers is same with the number of processing threads in grouperSorter
+    final List<ListenableFuture<Iterator<Entry<KeyType>>>> futures = groupers
+        .stream()
+        .map(grouper ->
+                 grouperSorter.submit(
+                     new AbstractPrioritizedCallable<Iterator<Entry<KeyType>>>(priority)
+                     {
+                       @Override
+                       public Iterator<Entry<KeyType>> call() throws Exception
+                       {
+                         synchronized (grouper) {
+                           return grouper.iterator(true);
+                         }
+                       }
+                     }
+                 )
+        ).collect(Collectors.toList());
+
+    try {
+      return Futures.allAsList(futures).get();
     }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
-    return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
+  private List<Iterator<Entry<KeyType>>> getGroupersIterator(boolean sorted)
+  {
+    return groupers.stream()
+                   .map(grouper -> {
+                     synchronized (grouper) {
+                       return grouper.iterator(sorted);
+                     }
+                   }).collect(Collectors.toList());
   }
 
   @Override

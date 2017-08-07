@@ -158,7 +158,9 @@ public class GroupByRowProcessor
                   -1,
                   temporaryStorage,
                   spillMapper,
-                  aggregatorFactories
+                  aggregatorFactories,
+                  null,
+                  -1 // priority doesn't matter if grouperMerger is null
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, Row> accumulator = pair.rhs;

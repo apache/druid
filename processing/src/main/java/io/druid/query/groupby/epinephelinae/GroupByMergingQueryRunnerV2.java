@@ -194,7 +194,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   concurrencyHint,
                   temporaryStorage,
                   spillMapper,
-                  combiningAggregatorFactories
+                  combiningAggregatorFactories,
+                  exec,
+                  priority
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
