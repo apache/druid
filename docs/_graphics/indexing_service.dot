@@ -32,10 +32,11 @@ digraph g {
     peon_12[label = "peon"]
     peon_13[label = "peon"]
     
-    mm1 -> peon_11 [label = "new_task"]
-    mm1 -> { peon_12; peon_13 }
+    mm1 -> {peon_11;peon_12}
+    mm1 -> peon_13 [label = "new_task"]
+    mm1 -> peon_13:e [label = "new_task_status" dir=back]
   }
   
-  zk_status:new_task:s -> peon_11:e [label = "new_task_status" dir = back]
+  zk_status:new_task:s -> mm1:e [label = "new_task_status" dir = back]
   overlord:e -> zk_status:new_task:n [dir=back label="new_task_status"]
 }
