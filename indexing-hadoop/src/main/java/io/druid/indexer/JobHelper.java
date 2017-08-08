@@ -339,13 +339,15 @@ public class JobHelper
     return conf;
   }
 
-  public static Configuration injectJobProperties(Configuration conf, HadoopDruidIndexerConfig config)
+  public static Configuration injectSystemAndJobProperties(Configuration conf, HadoopDruidIndexerConfig config)
   {
-    HadoopIngestionSpec schema = config.getSchema() ;
+    Configuration updatedConf = injectSystemProperties(conf);
+    HadoopIngestionSpec schema = config.getSchema();
+
     for (final Map.Entry<String, String> entry : schema.getTuningConfig().getJobProperties().entrySet()) {
-      conf.set(entry.getKey(), entry.getValue());
+      updatedConf.set(entry.getKey(), entry.getValue());
     }
-    return conf;
+    return updatedConf;
   }
 
   public static void ensurePaths(HadoopDruidIndexerConfig config)
@@ -385,7 +387,7 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          workingPath.getFileSystem(injectJobProperties(injectSystemProperties(new Configuration()), config)).delete(workingPath, true);
+          workingPath.getFileSystem(injectSystemAndJobProperties(new Configuration(), config)).delete(workingPath, true);
         }
         catch (IOException e) {
           log.error(e, "Failed to cleanup path[%s]", workingPath);

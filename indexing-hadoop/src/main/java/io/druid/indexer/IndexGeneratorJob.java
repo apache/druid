@@ -100,7 +100,7 @@ public class IndexGeneratorJob implements Jobby
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
-    final Configuration conf = JobHelper.injectJobProperties(JobHelper.injectSystemProperties(new Configuration()), config);
+    final Configuration conf = JobHelper.injectSystemAndJobProperties(new Configuration(), config);
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
 
     ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
