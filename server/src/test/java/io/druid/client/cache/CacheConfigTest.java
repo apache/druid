@@ -66,7 +66,7 @@ public class CacheConfigTest
     @Override
     public void configure(Binder binder)
     {
-      JsonConfigProvider.bind(binder,propertyPrefix,CacheConfig.class);
+      JsonConfigProvider.bind(binder, propertyPrefix, CacheConfig.class);
     }
   }
 

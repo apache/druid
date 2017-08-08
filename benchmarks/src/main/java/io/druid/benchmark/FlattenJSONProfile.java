@@ -95,12 +95,12 @@ public class FlattenJSONProfile
     control.clearCPUData();
     Thread.sleep(5000);
     control.startCPUSampling(null);
-    for(int i = 0; i < numEvents; i++) {
+    for (int i = 0; i < numEvents; i++) {
       //parsedMap = parser.parse(fjp.nestedInputs.get(i));
       parsedMap = fjp.parseFlat(forcedParser);
       //parsedMap = fjp.parseFlat(parser);
       //parsedMap = fjp.parseNested(nestedPar);
-      if(parsedMap != null) {
+      if (parsedMap != null) {
         j++;
       }
     }

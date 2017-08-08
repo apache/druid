@@ -214,9 +214,9 @@ public class IndexerZkConfigTest
 
 
     // Rewind value before we potentially fail
-    if(priorValue == null){
+    if (priorValue == null) {
       System.clearProperty(indexerPropertyKey);
-    }else {
+    } else {
       System.setProperty(indexerPropertyKey, priorValue);
     }
 

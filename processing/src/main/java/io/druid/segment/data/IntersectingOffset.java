@@ -63,7 +63,7 @@ public class IntersectingOffset extends Offset
     while (lhsOffset != rhsOffset) {
       while (lhsOffset < rhsOffset) {
         lhs.increment();
-        if (! lhs.withinBounds()) {
+        if (!lhs.withinBounds()) {
           return;
         }
 
@@ -72,7 +72,7 @@ public class IntersectingOffset extends Offset
 
       while (rhsOffset < lhsOffset) {
         rhs.increment();
-        if (! rhs.withinBounds()) {
+        if (!rhs.withinBounds()) {
           return;
         }
 

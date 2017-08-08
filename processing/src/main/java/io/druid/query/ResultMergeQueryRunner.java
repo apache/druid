@@ -46,5 +46,5 @@ public abstract class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRu
 
   protected abstract Ordering<T> makeOrdering(Query<T> query);
 
-  protected abstract BinaryFn<T,T,T> createMergeFn(Query<T> query);
+  protected abstract BinaryFn<T, T, T> createMergeFn(Query<T> query);
 }

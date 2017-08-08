@@ -83,7 +83,7 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
       @Override
       public String[] get()
       {
-        return new String[]{ Double.toString(selector.get()) };
+        return new String[]{Double.toString(selector.get())};
       }
     };
   }

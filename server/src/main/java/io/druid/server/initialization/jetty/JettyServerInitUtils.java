@@ -66,7 +66,7 @@ public class JettyServerInitUtils
         throw new ISE("Filter[%s] for path[%s] didn't have a Filter!?", servletFilterHolder, servletFilterHolder.getPath());
       }
 
-      if(servletFilterHolder.getInitParameters() != null) {
+      if (servletFilterHolder.getInitParameters() != null) {
         holder.setInitParameters(servletFilterHolder.getInitParameters());
       }
 

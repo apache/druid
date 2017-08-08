@@ -132,7 +132,7 @@ public class SingleDimensionShardSpecTest
   {
     Preconditions.checkState(arguments.length % 2 == 0);
 
-    final ArrayList<Pair<Boolean,Map<String,String>>> retVal = Lists.newArrayList();
+    final ArrayList<Pair<Boolean, Map<String, String>>> retVal = Lists.newArrayList();
 
     for (int i = 0; i < arguments.length; i += 2) {
       retVal.add(Pair.of((Boolean) arguments[i], makeMap((String) arguments[i + 1])));

@@ -252,8 +252,7 @@ public class BoundFilter implements Filter
               || (boundDimFilter.getLower().isEmpty() && !boundDimFilter.isLowerStrict())) // lower bound allows null
              && (!boundDimFilter.hasUpperBound()
                  || !boundDimFilter.getUpper().isEmpty()
-                 || !boundDimFilter.isUpperStrict()) // upper bound allows null
-          ;
+                 || !boundDimFilter.isUpperStrict()); // upper bound allows null
     }
     int lowerComparing = 1;
     int upperComparing = 1;

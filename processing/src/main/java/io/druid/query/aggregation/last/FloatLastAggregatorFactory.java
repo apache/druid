@@ -199,7 +199,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
     return ByteBuffer.allocate(2 + fieldNameBytes.length)
                      .put(AggregatorUtil.FLOAT_LAST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
-                     .put((byte)0xff)
+                     .put((byte) 0xff)
                      .array();
   }
 

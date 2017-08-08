@@ -167,42 +167,42 @@ public class DruidNodeTest
 
     plainTextField.setBoolean(serverConfig, false);
     tlsField.setBoolean(serverConfig, true);
-    node = new DruidNode("test",null, null, 123, serverConfig);
+    node = new DruidNode("test", null, null, 123, serverConfig);
     Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
     Assert.assertEquals(-1, node.getPlaintextPort());
     Assert.assertEquals(123, node.getTlsPort());
 
     plainTextField.setBoolean(serverConfig, false);
     tlsField.setBoolean(serverConfig, true);
-    node = new DruidNode("test",null, -1, 123, serverConfig);
+    node = new DruidNode("test", null, -1, 123, serverConfig);
     Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
     Assert.assertEquals(-1, node.getPlaintextPort());
     Assert.assertEquals(123, node.getTlsPort());
 
     plainTextField.setBoolean(serverConfig, false);
     tlsField.setBoolean(serverConfig, true);
-    node = new DruidNode("test","host", -1, 123, serverConfig);
+    node = new DruidNode("test", "host", -1, 123, serverConfig);
     Assert.assertEquals("host", node.getHost());
     Assert.assertEquals(-1, node.getPlaintextPort());
     Assert.assertEquals(123, node.getTlsPort());
 
     plainTextField.setBoolean(serverConfig, true);
     tlsField.setBoolean(serverConfig, false);
-    node = new DruidNode("test","host", -1, 123, serverConfig);
+    node = new DruidNode("test", "host", -1, 123, serverConfig);
     Assert.assertEquals("host", node.getHost());
     Assert.assertEquals(-1, node.getPlaintextPort());
     Assert.assertEquals(-1, node.getTlsPort());
 
     plainTextField.setBoolean(serverConfig, true);
     tlsField.setBoolean(serverConfig, false);
-    node = new DruidNode("test","host:123", 123, null, serverConfig);
+    node = new DruidNode("test", "host:123", 123, null, serverConfig);
     Assert.assertEquals("host", node.getHost());
     Assert.assertEquals(123, node.getPlaintextPort());
     Assert.assertEquals(-1, node.getTlsPort());
 
     plainTextField.setBoolean(serverConfig, true);
     tlsField.setBoolean(serverConfig, false);
-    node = new DruidNode("test","host:123", null, 123, serverConfig);
+    node = new DruidNode("test", "host:123", null, 123, serverConfig);
     Assert.assertEquals("host", node.getHost());
     Assert.assertEquals(123, node.getPlaintextPort());
     Assert.assertEquals(-1, node.getTlsPort());
