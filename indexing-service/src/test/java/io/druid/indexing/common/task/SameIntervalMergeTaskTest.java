@@ -232,6 +232,12 @@ public class SameIntervalMergeTaskTest
           public void cleanup(DataSegment segment) throws SegmentLoadingException
           {
           }
+
+          @Override
+          public List<File> getStorageLocations()
+          {
+            return null;
+          }
         }, jsonMapper, temporaryFolder.newFolder(),
             indexIO, null, null, EasyMock.createMock(IndexMergerV9.class)
         )

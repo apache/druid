@@ -49,6 +49,7 @@ import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
+import org.apache.commons.io.FileUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -59,6 +60,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -92,6 +94,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   private ServerManager serverManager;
   private DataSegmentAnnouncer announcer;
   private File infoDir;
+  private List<File> locationsDir;
   private AtomicInteger announceCount;
   private ConcurrentSkipListSet<DataSegment> segmentsAnnouncedByMe;
   private CacheTestSegmentLoader segmentLoader;
@@ -110,6 +113,16 @@ public class ZkCoordinatorTest extends CuratorTestBase
       for (File file : infoDir.listFiles()) {
         file.delete();
       }
+
+      locationsDir = new ArrayList<>();
+      File parent = File.createTempFile("blah", "blah2").getParentFile();
+      File locationsDir1 = new File(parent, "ZkCoordinatorLocations" + System.currentTimeMillis());
+      locationsDir1.mkdirs();
+      File locationsDir2 = new File(parent, "ZkCoordinatorLocations2" + System.currentTimeMillis());
+      locationsDir2.mkdirs();
+      locationsDir.add(locationsDir1);
+      locationsDir.add(locationsDir2);
+
       log.info("Creating tmp test files in [%s]", infoDir);
     }
     catch (IOException e) {
@@ -118,7 +131,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     scheduledRunnable = Lists.newArrayList();
 
-    segmentLoader = new CacheTestSegmentLoader();
+    segmentLoader = new CacheTestSegmentLoader(locationsDir);
     segmentManager = new SegmentManager(segmentLoader);
 
     serverManager = new ServerManager(
@@ -408,6 +421,10 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     Assert.assertEquals(0, infoDir.listFiles().length);
     Assert.assertTrue(infoDir.delete());
+    FileUtils.cleanDirectory(locationsDir.get(0));
+    FileUtils.cleanDirectory(locationsDir.get(1));
+    Assert.assertTrue(locationsDir.get(0).delete());
+    Assert.assertTrue(locationsDir.get(1).delete());
   }
 
   private DataSegment makeSegment(String dataSource, String version, Interval interval)
@@ -562,5 +579,9 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     Assert.assertEquals(0, infoDir.listFiles().length);
     Assert.assertTrue(infoDir.delete());
+    FileUtils.cleanDirectory(locationsDir.get(0));
+    FileUtils.cleanDirectory(locationsDir.get(1));
+    Assert.assertTrue(locationsDir.get(0).delete());
+    Assert.assertTrue(locationsDir.get(1).delete());
   }
 }
