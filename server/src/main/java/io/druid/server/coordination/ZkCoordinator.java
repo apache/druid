@@ -37,6 +37,7 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.SegmentManager;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.io.FileUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -46,6 +47,7 @@ import org.apache.curator.utils.ZKPaths;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -58,6 +60,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -77,6 +80,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService exec;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
+  private static final String SEGMENT_CACHE_FILENAME = "segmentInfo.json";
 
 
   private volatile PathChildrenCache loadQueueCache;
@@ -248,24 +252,65 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     return started;
   }
 
-  public void loadLocalCache()
+  private void moveSegmentFiles()
   {
-    final long start = System.currentTimeMillis();
-    File baseDir = config.getInfoDir();
-    if (!baseDir.exists() && !config.getInfoDir().mkdirs()) {
-      return;
-    }
+    File[] listOfFiles = config.getInfoDir().listFiles();
 
-    List<DataSegment> cachedSegments = Lists.newArrayList();
-    File[] segmentsToLoad = baseDir.listFiles();
-    int ignored = 0;
-    for (int i = 0; i < segmentsToLoad.length; i++) {
-      File file = segmentsToLoad[i];
-      log.info("Loading segment cache file [%d/%d][%s].", i, segmentsToLoad.length, file);
+    for (File file : listOfFiles) {
       try {
         final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
 
-        if (!segment.getIdentifier().equals(file.getName())) {
+        // Ignore segment if file name doesn't match or it is cached
+        if (!segment.getIdentifier().equals(file.getName()) || !segmentManager.isSegmentCached(segment)) {
+          log.warn("Ignoring moving cache file[%s] for segment[%s].", file.getPath(), segment.getIdentifier());
+          continue;
+        }
+
+        File toLocation = new File(segmentManager.getSegmentFiles(segment), SEGMENT_CACHE_FILENAME);
+        log.info("Moving cache file[%s] to location[%s].", file.toPath(), toLocation);
+        FileUtils.copyFile(file, toLocation);
+      }
+      catch (Exception e) {
+        log.info("Failed to move segment file [%s]", file);
+      }
+    }
+  }
+
+  public void loadLocalCache()
+  {
+    final long start = System.currentTimeMillis();
+
+    // If info_dir exists, colocate the files with the segments. This will be removed after 0.11.0
+    if (config.getInfoDir() != null) {
+      moveSegmentFiles();
+    }
+
+    // Load all segment cache files
+    List<File> segmentLocations = segmentManager.getSegmentLocations();
+    List<File> segmentsToLoad = Lists.newArrayList();
+    for (File location : segmentLocations) {
+      try {
+        segmentsToLoad.addAll(
+            Files.walk(location.toPath())
+                .filter(p -> p.toFile().getName().equals(SEGMENT_CACHE_FILENAME))
+                .map(p -> p.toFile())
+                .collect(Collectors.toList())
+        );
+      }
+      catch (IOException e) {
+        log.error("Could not load storage location[%s] , skipping this storage location ... ",
+            location);
+      }
+    }
+
+    List<DataSegment> cachedSegments = Lists.newArrayList();
+    int ignored = 0;
+    for (File file : segmentsToLoad) {
+      log.info("Loading segment cache file [%d][%s].", segmentsToLoad.size(), file);
+      try {
+        final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+
+        if (!file.getName().equals(SEGMENT_CACHE_FILENAME)) {
           log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getIdentifier());
           ignored++;
         } else if (segmentManager.isSegmentCached(segment)) {
@@ -273,9 +318,8 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         } else {
           log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
 
-          File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-          if (!segmentInfoCacheFile.delete()) {
-            log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
+          if (!file.delete()) {
+            log.warn("Unable to delete segmentInfoCacheFile[%s]", file);
           }
         }
       }
@@ -328,7 +372,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     }
 
     if (loaded) {
-      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+      File segmentInfoCacheFile = new File(segmentManager.getSegmentFiles(segment), SEGMENT_CACHE_FILENAME);
       if (!segmentInfoCacheFile.exists()) {
         try {
           jsonMapper.writeValue(segmentInfoCacheFile, segment);
@@ -477,10 +521,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
             {
               try {
                 synchronized (lock) {
+                  File segmentToRemove = segmentManager.getSegmentFiles(segment);
                   if (segmentsToDelete.remove(segment)) {
                     segmentManager.dropSegment(segment);
 
-                    File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+                    File segmentInfoCacheFile = new File(segmentToRemove, SEGMENT_CACHE_FILENAME);
                     if (!segmentInfoCacheFile.delete()) {
                       log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
                     }

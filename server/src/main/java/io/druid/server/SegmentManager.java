@@ -34,7 +34,9 @@ import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -135,6 +137,16 @@ public class SegmentManager
   public boolean isSegmentCached(final DataSegment segment) throws SegmentLoadingException
   {
     return segmentLoader.isSegmentLoaded(segment);
+  }
+
+  public File getSegmentFiles(final DataSegment dataSegment) throws SegmentLoadingException
+  {
+    return segmentLoader.getSegmentFiles(dataSegment);
+  }
+
+  public List<File> getSegmentLocations()
+  {
+    return segmentLoader.getStorageLocations();
   }
 
   @Nullable
