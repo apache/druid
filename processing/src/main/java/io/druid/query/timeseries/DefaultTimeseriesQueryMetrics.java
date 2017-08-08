@@ -56,6 +56,5 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
   @Override
   public void granularity(TimeseriesQuery query)
   {
-    setDimension("granularity", query.getGranularity().toString());
   }
 }

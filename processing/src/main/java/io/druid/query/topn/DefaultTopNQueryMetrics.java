@@ -72,7 +72,6 @@ public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> impl
   @Override
   public void granularity(TopNQuery query)
   {
-    setDimension("granularity", query.getGranularity().toString());
   }
 
   @Override

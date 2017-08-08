@@ -39,6 +39,5 @@ public class DefaultSearchQueryMetrics extends DefaultQueryMetrics<SearchQuery> 
   @Override
   public void granularity(SearchQuery query)
   {
-    setDimension("granularity", query.getGranularity().toString());
   }
 }

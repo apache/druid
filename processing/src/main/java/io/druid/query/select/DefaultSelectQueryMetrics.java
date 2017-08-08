@@ -39,6 +39,5 @@ public class DefaultSelectQueryMetrics extends DefaultQueryMetrics<SelectQuery> 
   @Override
   public void granularity(SelectQuery query)
   {
-    setDimension("granularity", query.getGranularity().toString());
   }
 }
