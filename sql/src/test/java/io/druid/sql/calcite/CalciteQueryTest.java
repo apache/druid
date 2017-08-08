@@ -1213,7 +1213,6 @@ public class CalciteQueryTest
 
     final List<String> queries = ImmutableList.of(
         "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT query with order by
-        "SELECT TRIM(dim1) FROM druid.foo", // TRIM function
         "SELECT COUNT(*) FROM druid.foo x, druid.foo y", // Self-join
         "SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5" // DISTINCT with OFFSET
     );
@@ -3795,6 +3794,41 @@ public class CalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{4L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountDistinctOfTrim() throws Exception
+  {
+    // Test a couple different syntax variants of TRIM.
+
+    testQuery(
+        "SELECT COUNT(DISTINCT TRIM(BOTH ' ' FROM dim1)) FROM druid.foo WHERE TRIM(dim1) <> ''",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .filters(NOT(SELECTOR("dim1", "", null)))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("a0:v", "trim(\"dim1\",' ')", ValueType.STRING))
+                  .filters(EXPRESSION_FILTER("(trim(\"dim1\",' ') != '')"))
+                  .aggregators(
+                      AGGS(
+                          new CardinalityAggregatorFactory(
+                              "a0",
+                              null,
+                              DIMS(new DefaultDimensionSpec("a0:v", "a0:v", ValueType.STRING)),
+                              false,
+                              true
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{5L}
         )
     );
   }

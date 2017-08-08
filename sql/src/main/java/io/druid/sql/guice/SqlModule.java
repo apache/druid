@@ -50,6 +50,7 @@ import io.druid.sql.calcite.expression.TimeFormatOperatorConversion;
 import io.druid.sql.calcite.expression.TimeParseOperatorConversion;
 import io.druid.sql.calcite.expression.TimeShiftOperatorConversion;
 import io.druid.sql.calcite.expression.TimestampToMillisOperatorConversion;
+import io.druid.sql.calcite.expression.TrimOperatorConversion;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
@@ -82,6 +83,7 @@ public class SqlModule implements Module
       .add(TimeParseOperatorConversion.class)
       .add(TimeShiftOperatorConversion.class)
       .add(TimestampToMillisOperatorConversion.class)
+      .add(TrimOperatorConversion.class)
       .build();
 
   private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
