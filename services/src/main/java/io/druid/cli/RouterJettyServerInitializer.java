@@ -30,6 +30,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
@@ -53,7 +54,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
   @Inject
   public RouterJettyServerInitializer(
-      DruidHttpClientConfig httpClientConfig,
+      @Router DruidHttpClientConfig httpClientConfig,
       AsyncQueryForwardingServlet asyncQueryForwardingServlet
   )
   {
@@ -72,6 +73,11 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     ServletHolder sh = new ServletHolder(asyncQueryForwardingServlet);
     //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
     sh.setInitParameter("maxThreads", Integer.toString(httpClientConfig.getNumMaxThreads()));
+
+    //Needs to be set in servlet config or else overridden to default value in AbstractProxyServlet.createHttpClient()
+    sh.setInitParameter("maxConnections", Integer.toString(httpClientConfig.getNumConnections()));
+    sh.setInitParameter("idleTimeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
+    sh.setInitParameter("timeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
 
     root.addServlet(sh, "/druid/v2/*");
 

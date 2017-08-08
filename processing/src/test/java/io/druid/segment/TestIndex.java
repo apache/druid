@@ -308,8 +308,8 @@ public class TestIndex
             Arrays.asList(COLUMNS),
             false,
             0
-        )
-        , "utf8"
+        ),
+        "utf8"
     );
     return loadIncrementalIndex(retVal, source, parser);
   }

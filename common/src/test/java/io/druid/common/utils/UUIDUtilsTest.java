@@ -53,7 +53,7 @@ public class UUIDUtilsTest
         }
       }
     }
-    for(String possibleArg : possibleArgs){
+    for (String possibleArg : possibleArgs) {
       args.add(new String[]{possibleArg});
     }
     return Collections2.transform(

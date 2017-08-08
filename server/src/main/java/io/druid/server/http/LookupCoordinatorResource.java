@@ -500,7 +500,7 @@ public class LookupCoordinatorResource
         for (HostAndPort node : nodes) {
           LookupsState<LookupExtractorFactoryMapContainer> lookupsState = lookupsStateOnHosts.get(node);
           if (lookupsState == null) {
-            tierNodesStatus.put(node, new LookupsState<>(null,null,null));
+            tierNodesStatus.put(node, new LookupsState<>(null, null, null));
           } else {
             tierNodesStatus.put(node, lookupsState);
           }
@@ -532,7 +532,7 @@ public class LookupCoordinatorResource
       for (HostAndPort node : nodes) {
         LookupsState<LookupExtractorFactoryMapContainer> lookupsState = lookupsStateOnHosts.get(node);
         if (lookupsState == null) {
-          tierNodesStatus.put(node, new LookupsState<>(null,null,null));
+          tierNodesStatus.put(node, new LookupsState<>(null, null, null));
         } else {
           tierNodesStatus.put(node, lookupsState);
         }

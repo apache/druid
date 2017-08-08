@@ -30,7 +30,6 @@ import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
-import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.apache.curator.framework.CuratorFramework;
@@ -48,7 +47,6 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
   private final ProvisioningSchedulerConfig provisioningSchedulerConfig;
   private final ProvisioningStrategy provisioningStrategy;
-  private final ScheduledExecutorFactory factory;
 
   @Inject
   public RemoteTaskRunnerFactory(
@@ -58,7 +56,6 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
       final ObjectMapper jsonMapper,
       @Global final HttpClient httpClient,
       final Supplier<WorkerBehaviorConfig> workerConfigRef,
-      final ScheduledExecutorFactory factory,
       final ProvisioningSchedulerConfig provisioningSchedulerConfig,
       final ProvisioningStrategy provisioningStrategy,
       final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
@@ -72,7 +69,6 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
     this.workerConfigRef = workerConfigRef;
     this.provisioningSchedulerConfig = provisioningSchedulerConfig;
     this.provisioningStrategy = provisioningStrategy;
-    this.factory = factory;
   }
 
   @Override
@@ -86,10 +82,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
         new PathChildrenCacheFactory.Builder().withCompressed(true),
         httpClient,
         workerConfigRef,
-        factory.create(1, "RemoteTaskRunner-Scheduled-Cleanup--%d"),
-        provisioningSchedulerConfig.isDoAutoscale()
-        ? provisioningStrategy
-        : new NoopProvisioningStrategy<>()
+        provisioningSchedulerConfig.isDoAutoscale() ? provisioningStrategy : new NoopProvisioningStrategy<>()
     );
   }
 }

@@ -126,7 +126,7 @@ public class DimFilterUtils
         for (Map.Entry<String, Range<String>> entry : domain.entrySet()) {
           String dimension = entry.getKey();
           Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
-              .computeIfAbsent(dimension, d-> Optional.fromNullable(dimFilter.getDimensionRangeSet(d)));
+              .computeIfAbsent(dimension, d -> Optional.fromNullable(dimFilter.getDimensionRangeSet(d)));
           if (optFilterRangeSet.isPresent() && optFilterRangeSet.get().subRangeSet(entry.getValue()).isEmpty()) {
             include = false;
           }

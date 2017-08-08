@@ -163,7 +163,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
   {
     // remove the leading "/"
-    return makeLoadSpec(config.getBucket(),finalIndexZipFilePath.getPath().substring(1));
+    return makeLoadSpec(config.getBucket(), finalIndexZipFilePath.getPath().substring(1));
   }
 
   private Map<String, Object> makeLoadSpec(String bucket, String path)

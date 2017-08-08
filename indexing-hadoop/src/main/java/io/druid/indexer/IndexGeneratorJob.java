@@ -712,7 +712,7 @@ public class IndexGeneratorJob implements Jobby
         // ShardSpec to be published.
         final ShardSpec shardSpecForPublishing;
         if (config.isForceExtendableShardSpecs()) {
-          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(),config.getShardSpecCount(bucket));
+          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(), config.getShardSpecCount(bucket));
         } else {
           shardSpecForPublishing = shardSpecForPartitioning;
         }

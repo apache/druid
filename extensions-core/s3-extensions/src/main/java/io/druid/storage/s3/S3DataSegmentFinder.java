@@ -71,7 +71,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
           workingDirPath.length() == 0 ? config.getBaseKey() : workingDirPath,
           config.getMaxListingLength());
 
-      while(objectsIterator.hasNext()) {
+      while (objectsIterator.hasNext()) {
         StorageObject storageObject = objectsIterator.next();
         storageObject.closeDataInputStream();
 

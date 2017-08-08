@@ -51,7 +51,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class VarianceTopNQueryTest
 {
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners());

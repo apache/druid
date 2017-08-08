@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
@@ -108,6 +109,18 @@ public class QueryInterruptedException extends RuntimeException
   public String getHost()
   {
     return host;
+  }
+
+  @Override
+  public String toString()
+  {
+    return StringUtils.format(
+        "QueryInterruptedException{msg=%s, code=%s, class=%s, host=%s}",
+        getMessage(),
+        errorCode,
+        errorClass,
+        host
+    );
   }
 
   private static String getErrorCodeFromThrowable(Throwable e)

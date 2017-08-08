@@ -81,7 +81,7 @@ public class LoadSpecTest
         )
     );
     mapper = new DefaultObjectMapper();
-    mapper.registerModule( new SimpleModule("loadSpecTest").registerSubtypes(LocalLoadSpec.class));
+    mapper.registerModule(new SimpleModule("loadSpecTest").registerSubtypes(LocalLoadSpec.class));
     mapper.setInjectableValues(new GuiceInjectableValues(injector));
 
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();

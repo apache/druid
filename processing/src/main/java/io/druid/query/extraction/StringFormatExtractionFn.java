@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -94,8 +95,9 @@ public class StringFormatExtractionFn extends DimExtractionFn
                      .array();
   }
 
+  @Nullable
   @Override
-  public String apply(String value)
+  public String apply(@Nullable String value)
   {
     if (value == null) {
       if (nullHandling == NullHandling.RETURNNULL) {

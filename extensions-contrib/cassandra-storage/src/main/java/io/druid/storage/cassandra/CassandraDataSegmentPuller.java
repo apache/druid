@@ -100,8 +100,8 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
     catch (Exception e) {
       throw new SegmentLoadingException(e, "Unable to copy key [%s] to file [%s]", key, tmpFile.getAbsolutePath());
     }
-    try{
-    final FileUtils.FileCopyResult result =  CompressionUtils.unzip(tmpFile, outDir);
+    try {
+      final FileUtils.FileCopyResult result = CompressionUtils.unzip(tmpFile, outDir);
       log.info(
           "Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime,
           result.size()
