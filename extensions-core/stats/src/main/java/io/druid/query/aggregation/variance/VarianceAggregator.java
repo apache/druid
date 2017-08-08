@@ -63,6 +63,12 @@ public abstract class VarianceAggregator implements Aggregator
     throw new UnsupportedOperationException("VarianceAggregator does not support getLong()");
   }
 
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("VarianceAggregator does not support getDouble()");
+  }
+
   public static final class FloatVarianceAggregator extends VarianceAggregator
   {
     private final FloatColumnSelector selector;

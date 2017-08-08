@@ -22,7 +22,7 @@ package io.druid.query.topn;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -51,9 +51,9 @@ public class TopNQueryEngine
 {
   private static final Logger log = new Logger(TopNQueryEngine.class);
 
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
 
-  public TopNQueryEngine(StupidPool<ByteBuffer> bufferPool)
+  public TopNQueryEngine(NonBlockingPool<ByteBuffer> bufferPool)
   {
     this.bufferPool = bufferPool;
   }
@@ -94,7 +94,6 @@ public class TopNQueryEngine
               @Override
               public Result<TopNResultValue> apply(Cursor input)
               {
-                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
                 if (queryMetrics != null) {
                   queryMetrics.cursor(input);
                 }

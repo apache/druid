@@ -36,6 +36,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -121,7 +122,7 @@ public class HyperLogLogCollectorTest
     System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
     System.out.println("Simple  buffer cardinality " + simple.estimateCardinality());
     System.out.println(
-        String.format(
+        StringUtils.format(
             "Rolling cardinality estimate off by %4.1f%%",
             100 * (1 - rolling.estimateCardinality() / n)
         )
@@ -144,14 +145,18 @@ public class HyperLogLogCollectorTest
       theCollector.add(fn.hashLong(count).asBytes());
       rolling.fold(theCollector);
     }
-    System.out.printf("testHighCardinalityRollingFold2 took %d ms%n", System.currentTimeMillis() - start);
+    System.out.printf(
+        Locale.ENGLISH,
+        "testHighCardinalityRollingFold2 took %d ms%n",
+        System.currentTimeMillis() - start
+    );
 
     int n = count;
 
     System.out.println("True cardinality " + n);
     System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
     System.out.println(
-        String.format(
+        StringUtils.format(
             "Rolling cardinality estimate off by %4.1f%%",
             100 * (1 - rolling.estimateCardinality() / n)
         )
@@ -484,7 +489,7 @@ public class HyperLogLogCollectorTest
     }
 
     final short numNonZeroInRemaining = computeNumNonZero((byte) remainingBytes);
-    numNonZero += (short)((HyperLogLogCollector.NUM_BYTES_FOR_BUCKETS - initialBytes.length) * numNonZeroInRemaining);
+    numNonZero += (short) ((HyperLogLogCollector.NUM_BYTES_FOR_BUCKETS - initialBytes.length) * numNonZeroInRemaining);
 
     ByteBuffer biggerOffset = ByteBuffer.allocate(HyperLogLogCollector.getLatestNumBytesForDenseStorage());
     biggerOffset.put(HLLCV1.VERSION);
@@ -693,23 +698,24 @@ public class HyperLogLogCollectorTest
     fillBuckets(collector, (byte) 0, (byte) 63);
     collector.add(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-    Assert.assertEquals(Double.MAX_VALUE, collector.estimateCardinality(), 1000);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, collector.estimateCardinality(), 1000);
   }
 
   @Test
-  public void testMaxOverflow() {
+  public void testMaxOverflow()
+  {
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
-    collector.add((short)23, (byte)16);
+    collector.add((short) 23, (byte) 16);
     Assert.assertEquals(23, collector.getMaxOverflowRegister());
     Assert.assertEquals(16, collector.getMaxOverflowValue());
     Assert.assertEquals(0, collector.getRegisterOffset());
     Assert.assertEquals(0, collector.getNumNonZeroRegisters());
 
-    collector.add((short)56, (byte)17);
+    collector.add((short) 56, (byte) 17);
     Assert.assertEquals(56, collector.getMaxOverflowRegister());
     Assert.assertEquals(17, collector.getMaxOverflowValue());
 
-    collector.add((short)43, (byte)16);
+    collector.add((short) 43, (byte) 16);
     Assert.assertEquals(56, collector.getMaxOverflowRegister());
     Assert.assertEquals(17, collector.getMaxOverflowValue());
     Assert.assertEquals(0, collector.getRegisterOffset());
@@ -717,13 +723,14 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testMergeMaxOverflow() {
+  public void testMergeMaxOverflow()
+  {
     // no offset
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
-    collector.add((short)23, (byte)16);
+    collector.add((short) 23, (byte) 16);
 
     HyperLogLogCollector other = HyperLogLogCollector.makeLatestCollector();
-    collector.add((short)56, (byte)17);
+    collector.add((short) 56, (byte) 17);
 
     collector.fold(other);
     Assert.assertEquals(56, collector.getMaxOverflowRegister());
@@ -733,11 +740,11 @@ public class HyperLogLogCollectorTest
     // fill up all the buckets so we reach a registerOffset of 49
     collector = HyperLogLogCollector.makeLatestCollector();
     fillBuckets(collector, (byte) 0, (byte) 49);
-    collector.add((short)23, (byte)65);
+    collector.add((short) 23, (byte) 65);
 
     other = HyperLogLogCollector.makeLatestCollector();
     fillBuckets(other, (byte) 0, (byte) 43);
-    other.add((short)47, (byte)67);
+    other.add((short) 47, (byte) 67);
 
     collector.fold(other);
     Assert.assertEquals(47, collector.getMaxOverflowRegister());
@@ -785,7 +792,7 @@ public class HyperLogLogCollectorTest
 
     Collection<List<HyperLogLogCollector>> permutations = Collections2.permutations(collectors);
 
-    for(List<HyperLogLogCollector> permutation : permutations) {
+    for (List<HyperLogLogCollector> permutation : permutations) {
       HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
       for (HyperLogLogCollector foldee : permutation) {
@@ -837,6 +844,7 @@ public class HyperLogLogCollectorTest
     error += errorThisTime;
 
     System.out.printf(
+        Locale.ENGLISH,
         "%,d ==? %,f in %,d millis. actual error[%,f%%], avg. error [%,f%%]%n",
         numThings,
         estimatedValue,

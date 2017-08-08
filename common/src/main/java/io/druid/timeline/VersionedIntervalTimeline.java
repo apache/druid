@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
 import io.druid.timeline.partition.PartitionChunk;
@@ -212,7 +213,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   }
 
   @Override
-  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval)
+  public List<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval)
   {
     try {
       lock.readLock().lock();
@@ -415,13 +416,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
           // This occurs when restoring segments
           timeline.remove(currKey);
         } else {
-          throw new UnsupportedOperationException(
-              String.format(
-                  "Cannot add overlapping segments [%s and %s] with the same version [%s]",
-                  currKey,
-                  entryInterval,
-                  entry.getVersion()
-              )
+          throw new UOE(
+              "Cannot add overlapping segments [%s and %s] with the same version [%s]",
+              currKey,
+              entryInterval,
+              entry.getVersion()
           );
         }
       }

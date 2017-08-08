@@ -71,7 +71,7 @@ public class AmbariMetricsEmitterConfigTest
   {
     SendAllTimelineEventConverter sendAllConverter = new SendAllTimelineEventConverter("prefix", "druid");
     DruidToTimelineMetricConverter serde = mapper.reader(DruidToTimelineMetricConverter.class)
-                                                                        .readValue( mapper.writeValueAsBytes(sendAllConverter));
+                                                                        .readValue(mapper.writeValueAsBytes(sendAllConverter));
     Assert.assertEquals(sendAllConverter, serde);
 
     WhiteListBasedDruidToTimelineEventConverter whiteListBasedDruidToTimelineEventConverter = new WhiteListBasedDruidToTimelineEventConverter(

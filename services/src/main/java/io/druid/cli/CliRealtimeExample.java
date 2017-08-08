@@ -29,7 +29,10 @@ import io.airlift.airline.Command;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
+import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.guice.RealtimeModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
@@ -68,6 +71,9 @@ public class CliRealtimeExample extends ServerRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new RealtimeModule(),
         new Module()
         {
@@ -76,6 +82,7 @@ public class CliRealtimeExample extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/realtime");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8084);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8284);
 
             binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class).in(LazySingleton.class);
             binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class).in(LazySingleton.class);

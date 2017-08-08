@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,8 +58,9 @@ public class MatchingDimExtractionFn extends DimExtractionFn
                      .array();
   }
 
+  @Nullable
   @Override
-  public String apply(String dimValue)
+  public String apply(@Nullable String dimValue)
   {
     if (Strings.isNullOrEmpty(dimValue)) {
       // We'd return null whether or not the pattern matched
@@ -90,7 +92,7 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   @Override
   public String toString()
   {
-    return String.format("regex_matches(%s)", expr);
+    return StringUtils.format("regex_matches(%s)", expr);
   }
 
   @Override

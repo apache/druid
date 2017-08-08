@@ -31,7 +31,9 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+//CHECKSTYLE.OFF: Regexp
 import com.metamx.common.logger.Logger;
+//CHECKSTYLE.ON: Regexp
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -781,7 +783,7 @@ public class RealtimeIndexTaskTest
 
     // Corrupt the data:
     final File smooshFile = new File(
-        String.format(
+        StringUtils.format(
             "%s/persistent/task/%s/work/persist/%s/%s_%s/0/00000.smoosh",
             directory,
             task1.getId(),
@@ -931,7 +933,7 @@ public class RealtimeIndexTaskTest
   )
   {
     final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
+    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, 300);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
@@ -1025,7 +1027,7 @@ public class RealtimeIndexTaskTest
         new TestDataSegmentAnnouncer(),
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
-        conglomerate,
+        () -> conglomerate,
         MoreExecutors.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(

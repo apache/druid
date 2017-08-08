@@ -47,6 +47,6 @@ public class ServletResourceUtils
    */
   public static Map<String, String> jsonize(String msgFormat, Object... args)
   {
-    return ImmutableMap.of("error", StringUtils.safeFormat(msgFormat, args));
+    return ImmutableMap.of("error", StringUtils.nonStrictFormat(msgFormat, args));
   }
 }

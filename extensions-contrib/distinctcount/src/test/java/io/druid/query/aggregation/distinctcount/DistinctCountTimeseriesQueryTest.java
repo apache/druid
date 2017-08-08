@@ -47,7 +47,7 @@ public class DistinctCountTimeseriesQueryTest
   @Test
   public void testTopNWithDistinctCountAgg() throws Exception
   {
-    TimeseriesQueryEngine engine =  new TimeseriesQueryEngine();
+    TimeseriesQueryEngine engine = new TimeseriesQueryEngine();
 
     IncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(

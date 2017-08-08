@@ -38,7 +38,8 @@ public class SQLMetadataConnectorTest
   private MetadataStorageTablesConfig tablesConfig;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() throws Exception
+  {
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
   }
@@ -72,7 +73,7 @@ public class SQLMetadataConnectorTest
           {
             for (String table : tables) {
               Assert.assertTrue(
-                  String.format("table %s was not created!", table),
+                  StringUtils.format("table %s was not created!", table),
                   connector.tableExists(handle, table)
               );
             }
@@ -131,7 +132,7 @@ public class SQLMetadataConnectorTest
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format("DROP TABLE %s", tableName))
+            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                   .execute();
             return null;
           }

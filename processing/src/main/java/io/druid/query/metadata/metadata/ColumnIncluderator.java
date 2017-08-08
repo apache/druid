@@ -26,9 +26,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "none", value= NoneColumnIncluderator.class),
-    @JsonSubTypes.Type(name = "all", value= AllColumnIncluderator.class),
-    @JsonSubTypes.Type(name = "list", value= ListColumnIncluderator.class)
+    @JsonSubTypes.Type(name = "none", value = NoneColumnIncluderator.class),
+    @JsonSubTypes.Type(name = "all", value = AllColumnIncluderator.class),
+    @JsonSubTypes.Type(name = "list", value = ListColumnIncluderator.class)
 })
 public interface ColumnIncluderator
 {

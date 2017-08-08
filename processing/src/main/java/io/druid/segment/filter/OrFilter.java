@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
@@ -106,7 +107,8 @@ public class OrFilter implements BooleanFilter
   }
 
 
-  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers){
+  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  {
     Preconditions.checkState(baseMatchers.length > 0);
 
     if (baseMatchers.length == 1) {
@@ -147,7 +149,7 @@ public class OrFilter implements BooleanFilter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     for (Filter filter : filters) {
-      if(!filter.supportsBitmapIndex(selector)) {
+      if (!filter.supportsBitmapIndex(selector)) {
         return false;
       }
     }
@@ -160,7 +162,7 @@ public class OrFilter implements BooleanFilter
   )
   {
     for (Filter filter : filters) {
-      if(!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
+      if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
         return false;
       }
     }
@@ -181,6 +183,6 @@ public class OrFilter implements BooleanFilter
   @Override
   public String toString()
   {
-    return String.format("(%s)", OR_JOINER.join(filters));
+    return StringUtils.format("(%s)", OR_JOINER.join(filters));
   }
 }

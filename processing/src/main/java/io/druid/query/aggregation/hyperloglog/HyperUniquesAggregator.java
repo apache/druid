@@ -73,6 +73,12 @@ public class HyperUniquesAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("HyperUniquesAggregator does not support getDouble()");
+  }
+
+  @Override
   public Aggregator clone()
   {
     return new HyperUniquesAggregator(selector);

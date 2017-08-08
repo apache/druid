@@ -26,8 +26,11 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.IndexingServiceTaskLogsModule;
 import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.HadoopTask;
@@ -36,6 +39,7 @@ import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.tasklogs.TaskLogKiller;
 
 import java.util.List;
@@ -76,13 +80,19 @@ public class ResetCluster extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.<Module>of(
+        // It's unknown if those modules are required in ResetCluster.
+        // Maybe some of those modules could be removed.
+        // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new Module()
         {
           @Override
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1)
+                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, new ServerConfig())
             );
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
           }
@@ -153,7 +163,8 @@ public class ResetCluster extends GuiceRunnable
 
       DataSegmentKiller segmentKiller = injector.getInstance(DataSegmentKiller.class);
       segmentKiller.killAll();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       log.error(ex, "Failed to cleanup Segment Files.");
     }
   }
@@ -167,7 +178,8 @@ public class ResetCluster extends GuiceRunnable
 
       TaskLogKiller taskLogKiller = injector.getInstance(TaskLogKiller.class);;
       taskLogKiller.killAll();
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       log.error(ex, "Failed to cleanup TaskLogs.");
     }
   }

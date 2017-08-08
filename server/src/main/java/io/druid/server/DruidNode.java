@@ -25,13 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
-
 import io.druid.common.utils.SocketUtil;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.server.initialization.ServerConfig;
 
 import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -48,9 +47,32 @@ public class DruidNode
   @NotNull
   private String host;
 
+  /**
+   * This property is now deprecated, this is present just so that JsonConfigurator does not fail if this is set.
+   * Please use {@link DruidNode#plaintextPort} instead, which if set will be used and hence this has -1 as default value.
+   * */
+  @Deprecated
   @JsonProperty
-  @Min(0) @Max(0xffff)
+  @Max(0xffff)
   private int port = -1;
+
+  @JsonProperty
+  @Max(0xffff)
+  private int plaintextPort = -1;
+
+  @JsonProperty
+  @Max(0xffff)
+  private int tlsPort = -1;
+
+  @JacksonInject
+  @NotNull
+  private ServerConfig serverConfig;
+
+  public DruidNode(String serviceName, String host, Integer plaintextPort, Integer tlsPort, ServerConfig serverConfig)
+  {
+    this(serviceName, host, plaintextPort, null, tlsPort, serverConfig);
+    this.serverConfig = serverConfig;
+  }
 
   /**
    * host = null     , port = null -> host = _default_, port = -1
@@ -72,45 +94,69 @@ public class DruidNode
   public DruidNode(
       @JacksonInject @Named("serviceName") @JsonProperty("service") String serviceName,
       @JsonProperty("host") String host,
-      @JacksonInject @Named("servicePort") @JsonProperty("port") Integer port
+      @JsonProperty("plaintextPort") Integer plaintextPort,
+      @JacksonInject @Named("servicePort") @JsonProperty("port") Integer port,
+      @JacksonInject @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
+      @JacksonInject ServerConfig serverConfig
   )
   {
-    init(serviceName, host, port);
+    init(serviceName, host, plaintextPort != null ? plaintextPort : port, tlsPort, serverConfig);
   }
 
-
-  private void init(String serviceName, String host, Integer port)
+  private void init(String serviceName, String host, Integer plainTextPort, Integer tlsPort, ServerConfig serverConfig)
   {
     Preconditions.checkNotNull(serviceName);
-    this.serviceName = serviceName;
 
-    if(host == null && port == null) {
-      host = getDefaultHost();
-      port = -1;
+    if (!serverConfig.isTls() && !serverConfig.isPlaintext()) {
+      throw new IAE("At least one of the druid.server.http.plainText or druid.server.http.tls needs to be enabled");
     }
-    else {
-      final HostAndPort hostAndPort;
-      if (host != null) {
-        hostAndPort = HostAndPort.fromString(host);
-        if (port != null && hostAndPort.hasPort() && port != hostAndPort.getPort()) {
-          throw new IAE("Conflicting host:port [%s] and port [%d] settings", host, port);
-        }
-      } else {
-        hostAndPort = HostAndPort.fromParts(getDefaultHost(), port);
-      }
 
+    final boolean nullHost = host == null;
+    HostAndPort hostAndPort;
+    Integer portFromHostConfig;
+    if (host != null) {
+      hostAndPort = HostAndPort.fromString(host);
       host = hostAndPort.getHostText();
-
-      if (hostAndPort.hasPort()) {
-        port = hostAndPort.getPort();
+      portFromHostConfig = hostAndPort.hasPort() ? hostAndPort.getPort() : null;
+      if (plainTextPort != null && portFromHostConfig != null && !plainTextPort.equals(portFromHostConfig)) {
+        throw new IAE("Conflicting host:port [%s] and port [%d] settings", host, plainTextPort);
       }
-
-      if (port == null) {
-        port = SocketUtil.findOpenPort(8080);
+      if (portFromHostConfig != null) {
+        plainTextPort = portFromHostConfig;
       }
+    } else {
+      host = getDefaultHost();
     }
 
-    this.port = port;
+    if (serverConfig.isPlaintext() && serverConfig.isTls() && ((plainTextPort == null || tlsPort == null)
+                                                               || plainTextPort.equals(tlsPort))) {
+      // If both plainTExt and tls are enabled then do not allow plaintextPort to be null or
+      throw new IAE("plaintextPort and tlsPort cannot be null or same if both http and https connectors are enabled");
+    }
+    if (serverConfig.isTls() && (tlsPort == null || tlsPort < 0)) {
+      throw new IAE("A valid tlsPort needs to specified when druid.server.http.tls is set");
+    }
+
+    if (serverConfig.isPlaintext()) {
+      // to preserve backwards compatible behaviour
+      if (nullHost && plainTextPort == null) {
+        plainTextPort = -1;
+      } else {
+        if (plainTextPort == null) {
+          plainTextPort = SocketUtil.findOpenPort(8080);
+        }
+      }
+      this.plaintextPort = plainTextPort;
+    } else {
+      this.plaintextPort = -1;
+    }
+    if (serverConfig.isTls()) {
+      this.tlsPort = tlsPort;
+    } else {
+      this.tlsPort = -1;
+    }
+
+    this.serviceName = serviceName;
     this.host = host;
   }
 
@@ -124,43 +170,62 @@ public class DruidNode
     return host;
   }
 
-  public int getPort()
+  public int getPlaintextPort()
   {
-    return port;
+    return plaintextPort;
+  }
+
+  public int getTlsPort()
+  {
+    return tlsPort;
   }
 
   public DruidNode withService(String service)
   {
-    return new DruidNode(service, host, port);
+    return new DruidNode(service, host, plaintextPort, tlsPort, serverConfig);
+  }
+
+  public String getServiceScheme()
+  {
+    return tlsPort >= 0 ? "https" : "http";
   }
 
   /**
    * Returns host and port together as something that can be used as part of a URI.
    */
-  public String getHostAndPort() {
-    if(port < 0) {
-      return HostAndPort.fromString(host).toString();
-    } else {
-      return HostAndPort.fromParts(host, port).toString();
+  public String getHostAndPort()
+  {
+    if (serverConfig.isPlaintext()) {
+      if (plaintextPort < 0) {
+        return HostAndPort.fromString(host).toString();
+      } else {
+        return HostAndPort.fromParts(host, plaintextPort).toString();
+      }
     }
+    return null;
   }
 
-  public static String getDefaultHost() {
+  public String getHostAndTlsPort()
+  {
+    if (serverConfig.isTls()) {
+      return HostAndPort.fromParts(host, tlsPort).toString();
+    }
+    return null;
+  }
+
+  public String getHostAndPortToUse()
+  {
+    return getHostAndTlsPort() != null ? getHostAndTlsPort() : getHostAndPort();
+  }
+
+  public static String getDefaultHost()
+  {
     try {
       return InetAddress.getLocalHost().getCanonicalHostName();
-    } catch(UnknownHostException e) {
+    }
+    catch (UnknownHostException e) {
       throw new ISE(e, "Unable to determine host name");
     }
-  }
-
-  @Override
-  public String toString()
-  {
-    return "DruidNode{" +
-           "serviceName='" + serviceName + '\'' +
-           ", host='" + host + '\'' +
-           ", port=" + port +
-           '}';
   }
 
   @Override
@@ -173,24 +238,43 @@ public class DruidNode
       return false;
     }
 
-    DruidNode node = (DruidNode) o;
+    DruidNode druidNode = (DruidNode) o;
 
-    if (port != node.port) {
+    if (plaintextPort != druidNode.plaintextPort) {
       return false;
     }
-    if (!serviceName.equals(node.serviceName)) {
+    if (tlsPort != druidNode.tlsPort) {
       return false;
     }
-    return host.equals(node.host);
-
+    if (serviceName != null ? !serviceName.equals(druidNode.serviceName) : druidNode.serviceName != null) {
+      return false;
+    }
+    if (host != null ? !host.equals(druidNode.host) : druidNode.host != null) {
+      return false;
+    }
+    return serverConfig != null ? serverConfig.equals(druidNode.serverConfig) : druidNode.serverConfig == null;
   }
 
   @Override
   public int hashCode()
   {
-    int result = serviceName.hashCode();
-    result = 31 * result + host.hashCode();
-    result = 31 * result + port;
+    int result = serviceName != null ? serviceName.hashCode() : 0;
+    result = 31 * result + (host != null ? host.hashCode() : 0);
+    result = 31 * result + plaintextPort;
+    result = 31 * result + tlsPort;
+    result = 31 * result + (serverConfig != null ? serverConfig.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DruidNode{" +
+           "serviceName='" + serviceName + '\'' +
+           ", host='" + host + '\'' +
+           ", plaintextPort=" + plaintextPort +
+           ", tlsPort=" + tlsPort +
+           ", serverConfig=" + serverConfig +
+           '}';
   }
 }

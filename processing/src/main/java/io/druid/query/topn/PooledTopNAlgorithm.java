@@ -22,8 +22,8 @@ package io.druid.query.topn;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.BaseQuery;
@@ -185,13 +185,13 @@ public class PooledTopNAlgorithm
   }
 
   private final TopNQuery query;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
   private static final int AGG_UNROLL_COUNT = 8; // Must be able to fit loop below
 
   public PooledTopNAlgorithm(
       Capabilities capabilities,
       TopNQuery query,
-      StupidPool<ByteBuffer> bufferPool
+      NonBlockingPool<ByteBuffer> bufferPool
   )
   {
     super(capabilities);
@@ -458,7 +458,7 @@ public class PooledTopNAlgorithm
 
       final int dimSize = dimValues.size();
       final int dimExtra = dimSize % AGG_UNROLL_COUNT;
-      switch(dimExtra){
+      switch (dimExtra) {
         case 7:
           currentPosition = aggregateDimValue(
               positions,
@@ -675,7 +675,7 @@ public class PooledTopNAlgorithm
     }
     final int position = positions[dimIndex];
 
-    switch(aggExtra) {
+    switch (aggExtra) {
       case 7:
         theAggregators[6].aggregate(resultsBuf, position + aggregatorOffsets[6]);
         // fall through
@@ -699,13 +699,13 @@ public class PooledTopNAlgorithm
     }
     for (int j = aggExtra; j < aggSize; j += AGG_UNROLL_COUNT) {
       theAggregators[j].aggregate(resultsBuf, position + aggregatorOffsets[j]);
-      theAggregators[j+1].aggregate(resultsBuf, position + aggregatorOffsets[j+1]);
-      theAggregators[j+2].aggregate(resultsBuf, position + aggregatorOffsets[j+2]);
-      theAggregators[j+3].aggregate(resultsBuf, position + aggregatorOffsets[j+3]);
-      theAggregators[j+4].aggregate(resultsBuf, position + aggregatorOffsets[j+4]);
-      theAggregators[j+5].aggregate(resultsBuf, position + aggregatorOffsets[j+5]);
-      theAggregators[j+6].aggregate(resultsBuf, position + aggregatorOffsets[j+6]);
-      theAggregators[j+7].aggregate(resultsBuf, position + aggregatorOffsets[j+7]);
+      theAggregators[j + 1].aggregate(resultsBuf, position + aggregatorOffsets[j + 1]);
+      theAggregators[j + 2].aggregate(resultsBuf, position + aggregatorOffsets[j + 2]);
+      theAggregators[j + 3].aggregate(resultsBuf, position + aggregatorOffsets[j + 3]);
+      theAggregators[j + 4].aggregate(resultsBuf, position + aggregatorOffsets[j + 4]);
+      theAggregators[j + 5].aggregate(resultsBuf, position + aggregatorOffsets[j + 5]);
+      theAggregators[j + 6].aggregate(resultsBuf, position + aggregatorOffsets[j + 6]);
+      theAggregators[j + 7].aggregate(resultsBuf, position + aggregatorOffsets[j + 7]);
     }
     return currentPosition;
   }

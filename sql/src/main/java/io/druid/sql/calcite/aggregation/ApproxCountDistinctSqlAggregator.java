@@ -23,17 +23,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.segment.VirtualColumn;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
+import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
-import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.planner.Calcites;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -47,6 +47,7 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ApproxCountDistinctSqlAggregator implements SqlAggregator
@@ -64,7 +65,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
   public Aggregation toDruidAggregation(
       final String name,
       final RowSignature rowSignature,
-      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<Aggregation> existingAggregations,
       final Project project,
@@ -77,46 +77,45 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         project,
         Iterables.getOnlyElement(aggregateCall.getArgList())
     );
-    final RowExtraction rex = Expressions.toRowExtraction(
+    final DruidExpression input = Expressions.toDruidExpression(
         plannerContext,
-        rowSignature.getRowOrder(),
+        rowSignature,
         rexNode
     );
-    if (rex == null) {
+    if (input == null) {
       return null;
     }
 
+    final List<VirtualColumn> virtualColumns = new ArrayList<>();
     final AggregatorFactory aggregatorFactory;
 
-    if (rowSignature.getColumnType(rex.getColumn()) == ValueType.COMPLEX) {
-      aggregatorFactory = new HyperUniquesAggregatorFactory(name, rex.getColumn());
+    if (input.isDirectColumnAccess() && rowSignature.getColumnType(input.getDirectColumn()) == ValueType.COMPLEX) {
+      aggregatorFactory = new HyperUniquesAggregatorFactory(name, input.getDirectColumn());
     } else {
       final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-      final ValueType outputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
-      if (outputType == null) {
+      final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      if (inputType == null) {
         throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, name);
       }
 
-      final DimensionSpec dimensionSpec = rex.toDimensionSpec(rowSignature, null, ValueType.STRING);
-      if (dimensionSpec == null) {
-        return null;
+      final DimensionSpec dimensionSpec;
+
+      if (input.isSimpleExtraction()) {
+        dimensionSpec = input.getSimpleExtraction().toDimensionSpec(null, ValueType.STRING);
+      } else {
+        final ExpressionVirtualColumn virtualColumn = input.toVirtualColumn(
+            String.format("%s:v", name),
+            inputType,
+            plannerContext.getExprMacroTable()
+        );
+        dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
+        virtualColumns.add(virtualColumn);
       }
 
       aggregatorFactory = new CardinalityAggregatorFactory(name, ImmutableList.of(dimensionSpec), false);
     }
 
-    return Aggregation.createFinalizable(
-        ImmutableList.<AggregatorFactory>of(aggregatorFactory),
-        null,
-        new PostAggregatorFactory()
-        {
-          @Override
-          public PostAggregator factorize(String outputName)
-          {
-            return new HyperUniqueFinalizingPostAggregator(outputName, name);
-          }
-        }
-    ).filter(filter);
+    return Aggregation.create(virtualColumns, aggregatorFactory).filter(filter);
   }
 
   private static class ApproxCountDistinctSqlAggFunction extends SqlAggFunction

@@ -23,6 +23,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.hll.HLLCV0;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -127,7 +128,8 @@ public class HyperUniquesAggregatorFactoryTest
   }
 
   @Test
-  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception {
+  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception
+  {
     // given
     Random rand = new Random(0);
     HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
@@ -154,11 +156,11 @@ public class HyperUniquesAggregatorFactoryTest
 
       // then, assert hyperloglog comparator behaves consistently with estimated cardinalities
       Assert.assertEquals(
-              String.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
-                              "Left={cardinality=%f, hll=%s},\n" +
-                              "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
-                      leftCollector.estimateCardinality(), leftCollector,
-                      rightCollector.estimateCardinality(), rightCollector),
+              StringUtils.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
+                                 "Left={cardinality=%f, hll=%s},\n" +
+                                 "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
+                                 leftCollector.estimateCardinality(), leftCollector,
+                                 rightCollector.estimateCardinality(), rightCollector),
               orderedByCardinality,
               orderedByComparator
       );

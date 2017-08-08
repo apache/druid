@@ -62,7 +62,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Committer is guaranteed to be *created* synchronously with the call to add, but will actually be used
    * asynchronously.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread.
+   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
+   * metadata committed by Committer in sync.
    *
    * @param identifier        the segment into which this row should be added
    * @param row               the row to add
@@ -93,11 +94,19 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   int getRowCount(final SegmentIdentifier identifier);
 
   /**
+   * Returns the number of total rows in this appenderator.
+   *
+   * @return total number of rows
+   */
+  int getTotalRowCount();
+
+  /**
    * Drop all in-memory and on-disk data, and forget any previously-remembered commit metadata. This could be useful if,
    * for some reason, rows have been added that we do not actually want to hand off. Blocks until all data has been
    * cleared. This may take some time, since all pending persists must finish first.
    *
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread.
+   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
+   * metadata committed by Committer in sync.
    */
   void clear() throws InterruptedException;
 
@@ -121,7 +130,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * persist, but will actually be used asynchronously. Any metadata returned by the committer will be associated with
    * the data persisted to disk.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread.
+   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
+   * metadata committed by Committer in sync.
    *
    * @param identifiers segment identifiers to be persisted
    * @param committer   a committer associated with all data that has been added to segments of the given identifiers so
@@ -138,7 +148,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * be used asynchronously. Any metadata returned by the committer will be associated with the data persisted to
    * disk.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread.
+   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
+   * metadata committed by Committer in sync.
    *
    * @param committer a committer associated with all data that has been added so far
    *
@@ -155,7 +166,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * <p>
    * After this method is called, you cannot add new data to any segments that were previously under construction.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread.
+   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
+   * metadata committed by Committer in sync.
    *
    * @param identifiers list of segments to push
    * @param committer   a committer associated with all data that has been added so far

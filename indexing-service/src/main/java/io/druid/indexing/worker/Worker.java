@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class Worker
 {
+  private final String scheme;
   private final String host;
   private final String ip;
   private final int capacity;
@@ -34,16 +35,24 @@ public class Worker
 
   @JsonCreator
   public Worker(
+      @JsonProperty("scheme") String scheme,
       @JsonProperty("host") String host,
       @JsonProperty("ip") String ip,
       @JsonProperty("capacity") int capacity,
       @JsonProperty("version") String version
   )
   {
+    this.scheme = scheme;
     this.host = host;
     this.ip = ip;
     this.capacity = capacity;
     this.version = version;
+  }
+
+  @JsonProperty
+  public String getScheme()
+  {
+    return scheme;
   }
 
   @JsonProperty
@@ -71,17 +80,6 @@ public class Worker
   }
 
   @Override
-  public String toString()
-  {
-    return "Worker{" +
-           "host='" + host + '\'' +
-           ", ip='" + ip + '\'' +
-           ", capacity=" + capacity +
-           ", version='" + version + '\'' +
-           '}';
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -96,6 +94,9 @@ public class Worker
     if (capacity != worker.capacity) {
       return false;
     }
+    if (!scheme.equals(worker.scheme)) {
+      return false;
+    }
     if (!host.equals(worker.host)) {
       return false;
     }
@@ -103,16 +104,29 @@ public class Worker
       return false;
     }
     return version.equals(worker.version);
-
   }
 
   @Override
   public int hashCode()
   {
-    int result = host.hashCode();
+    int result = scheme.hashCode();
+    result = 31 * result + host.hashCode();
     result = 31 * result + ip.hashCode();
     result = 31 * result + capacity;
     result = 31 * result + version.hashCode();
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return "Worker{" +
+           "scheme='" + scheme + '\'' +
+           ", host='" + host + '\'' +
+           ", ip='" + ip + '\'' +
+           ", capacity=" + capacity +
+           ", version='" + version + '\'' +
+           '}';
+  }
+
 }

@@ -21,10 +21,12 @@ package io.druid.storage.s3;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
@@ -37,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -66,9 +69,9 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop()
   {
     if (config.isUseS3aSchema()) {
-      return String.format("s3a://%s/%s", config.getBucket(), config.getBaseKey());
+      return StringUtils.format("s3a://%s/%s", config.getBucket(), config.getBaseKey());
     }
-    return String.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
+    return StringUtils.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
   }
 
   @Deprecated
@@ -76,6 +79,12 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop(String dataSource)
   {
     return getPathForHadoop();
+  }
+
+  @Override
+  public List<String> getAllowedPropertyPrefixesForHadoop()
+  {
+    return ImmutableList.of("druid.s3");
   }
 
   @Override

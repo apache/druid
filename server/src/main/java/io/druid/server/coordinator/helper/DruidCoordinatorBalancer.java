@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.BalancerSegmentHolder;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -179,7 +180,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         );
       }
       catch (Exception e) {
-        log.makeAlert(e, String.format("[%s] : Moving exception", segmentName)).emit();
+        log.makeAlert(e, StringUtils.format("[%s] : Moving exception", segmentName)).emit();
         if (callback != null) {
           callback.execute();
         }

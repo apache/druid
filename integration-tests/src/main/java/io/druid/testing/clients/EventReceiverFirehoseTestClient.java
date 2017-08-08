@@ -29,6 +29,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -69,7 +70,7 @@ public class EventReceiverFirehoseTestClient
 
   private String getURL()
   {
-    return String.format(
+    return StringUtils.format(
         "http://%s/druid/worker/v1/chat/%s/push-events/",
         host,
         chatID

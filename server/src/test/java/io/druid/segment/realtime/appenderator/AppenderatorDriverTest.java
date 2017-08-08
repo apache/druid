@@ -34,6 +34,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.SegmentDescriptor;
@@ -137,6 +138,8 @@ public class AppenderatorDriverTest
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    Assert.assertFalse(driver.getActiveSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getPublishPendingSegments().containsKey("dummy"));
     final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
                                                           .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
 
@@ -165,7 +168,7 @@ public class AppenderatorDriverTest
           ImmutableList.of("dim2"),
           ImmutableMap.of(
               "dim2",
-              String.format("bar-%d", i),
+              StringUtils.format("bar-%d", i),
               "met1",
               2.0
           )
@@ -182,6 +185,8 @@ public class AppenderatorDriverTest
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    Assert.assertFalse(driver.getActiveSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getPublishPendingSegments().containsKey("dummy"));
     final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
                                                           .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
     Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
@@ -206,6 +211,8 @@ public class AppenderatorDriverTest
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    Assert.assertFalse(driver.getActiveSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getPublishPendingSegments().containsKey("dummy"));
     driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
   }
 
@@ -404,13 +411,13 @@ public class AppenderatorDriverTest
 
     @Override
     public SegmentIdentifier allocate(
-        final DateTime timestamp,
+        final InputRow row,
         final String sequenceName,
         final String previousSegmentId
     ) throws IOException
     {
       synchronized (counters) {
-        final long timestampTruncated = granularity.bucketStart(timestamp).getMillis();
+        final long timestampTruncated = granularity.bucketStart(row.getTimestamp()).getMillis();
         if (!counters.containsKey(timestampTruncated)) {
           counters.put(timestampTruncated, new AtomicInteger());
         }

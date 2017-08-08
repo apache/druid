@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.ExtensionsConfig;
@@ -136,8 +135,7 @@ public class PullDependencies implements Runnable
   );
 
   private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
-      "https://repo1.maven.org/maven2/",
-      "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
+      "https://repo1.maven.org/maven2/"
   );
 
   private TeslaAether aether;
@@ -176,11 +174,11 @@ public class PullDependencies implements Runnable
       title = "A local repository that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed.",
       required = false
   )
-  public String localRepository = String.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
+  public String localRepository = StringUtils.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
 
   @Option(
       name = {"-r", "--remoteRepository"},
-      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/ and https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local",
+      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/",
       required = false
   )
   List<String> remoteRepositories = Lists.newArrayList();
@@ -314,7 +312,7 @@ public class PullDependencies implements Runnable
               {
                 String scope = node.getDependency().getScope();
                 if (scope != null) {
-                  scope = scope.toLowerCase();
+                  scope = StringUtils.toLowerCase(scope);
                   if (scope.equals("provided")) {
                     return false;
                   }
@@ -442,8 +440,9 @@ public class PullDependencies implements Runnable
                 {
 
                 }
-              }
-              , false, StringUtils.UTF8_STRING
+              },
+              false,
+              StringUtils.UTF8_STRING
           )
       );
       return new DefaultTeslaAether(
@@ -473,11 +472,9 @@ public class PullDependencies implements Runnable
 
     if (!atLocation.mkdir()) {
       throw new ISE(
-          String.format(
-              "Unable to create directory at [%s] for coordinate [%s]",
-              atLocation.getAbsolutePath(),
-              coordinate
-          )
+          "Unable to create directory at [%s] for coordinate [%s]",
+          atLocation.getAbsolutePath(),
+          coordinate
       );
     }
   }

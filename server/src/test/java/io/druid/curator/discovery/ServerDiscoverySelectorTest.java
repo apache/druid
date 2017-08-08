@@ -20,6 +20,7 @@
 package io.druid.curator.discovery;
 
 import io.druid.client.selector.Server;
+import io.druid.java.util.common.StringUtils;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.easymock.EasyMock;
@@ -53,6 +54,7 @@ public class ServerDiscoverySelectorTest
     EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
     EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
     EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
+    EasyMock.expect(instance.getSslPort()).andReturn(-1).anyTimes();
     EasyMock.replay(instance, serviceProvider);
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
@@ -83,6 +85,7 @@ public class ServerDiscoverySelectorTest
     EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
     EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
     EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
+    EasyMock.expect(instance.getSslPort()).andReturn(-1).anyTimes();
     EasyMock.replay(instance, serviceProvider);
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
@@ -101,7 +104,7 @@ public class ServerDiscoverySelectorTest
         null
     );
     Assert.assertEquals(PORT, uri.getPort());
-    Assert.assertEquals(String.format("[%s]", ADDRESS), uri.getHost());
+    Assert.assertEquals(StringUtils.format("[%s]", ADDRESS), uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
   }
 
@@ -113,6 +116,7 @@ public class ServerDiscoverySelectorTest
     EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
     EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
     EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
+    EasyMock.expect(instance.getSslPort()).andReturn(-1).anyTimes();
     EasyMock.replay(instance, serviceProvider);
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());

@@ -27,17 +27,19 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.sql.calcite.aggregation.Aggregation;
+import io.druid.sql.calcite.aggregation.DimensionExpression;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Grouping
 {
-  private final List<DimensionSpec> dimensions;
+  private final List<DimensionExpression> dimensions;
   private final List<Aggregation> aggregations;
 
   private Grouping(
-      final List<DimensionSpec> dimensions,
+      final List<DimensionExpression> dimensions,
       final List<Aggregation> aggregations
   )
   {
@@ -46,9 +48,9 @@ public class Grouping
 
     // Verify no collisions.
     final Set<String> seen = Sets.newHashSet();
-    for (DimensionSpec dimensionSpec : dimensions) {
-      if (!seen.add(dimensionSpec.getOutputName())) {
-        throw new ISE("Duplicate field name: %s", dimensionSpec.getOutputName());
+    for (DimensionExpression dimensionExpression : dimensions) {
+      if (!seen.add(dimensionExpression.getOutputName())) {
+        throw new ISE("Duplicate field name: %s", dimensionExpression.getOutputName());
       }
     }
     for (Aggregation aggregation : aggregations) {
@@ -58,20 +60,20 @@ public class Grouping
         }
       }
       if (aggregation.getPostAggregator() != null && !seen.add(aggregation.getPostAggregator().getName())) {
-        throw new ISE("Duplicate field name in rowOrder: %s", aggregation.getPostAggregator().getName());
+        throw new ISE("Duplicate field name: %s", aggregation.getPostAggregator().getName());
       }
     }
   }
 
   public static Grouping create(
-      final List<DimensionSpec> dimensions,
+      final List<DimensionExpression> dimensions,
       final List<Aggregation> aggregations
   )
   {
     return new Grouping(dimensions, aggregations);
   }
 
-  public List<DimensionSpec> getDimensions()
+  public List<DimensionExpression> getDimensions()
   {
     return dimensions;
   }
@@ -79,6 +81,11 @@ public class Grouping
   public List<Aggregation> getAggregations()
   {
     return aggregations;
+  }
+
+  public List<DimensionSpec> getDimensionSpecs()
+  {
+    return dimensions.stream().map(DimensionExpression::toDimensionSpec).collect(Collectors.toList());
   }
 
   public List<AggregatorFactory> getAggregatorFactories()

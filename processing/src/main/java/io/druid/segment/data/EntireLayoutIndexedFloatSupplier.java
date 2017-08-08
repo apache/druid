@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
+import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -62,7 +63,7 @@ public class EntireLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     {
       if (totalSize - index < toFill.length) {
         throw new IndexOutOfBoundsException(
-            String.format(
+            StringUtils.format(
                 "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
             )
         );

@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
@@ -38,6 +39,7 @@ import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
+import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -45,7 +47,6 @@ import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
-import org.apache.calcite.schema.SchemaPlus;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -115,28 +116,29 @@ public class DruidAvaticaHandlerTest
     Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema = Calcites.createRootSchema(
-        CalciteTests.createMockSchema(
-            walker,
-            plannerConfig
-        )
-    );
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     druidMeta = new DruidMeta(
-        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
+        new PlannerFactory(
+            druidSchema,
+            CalciteTests.createMockQueryLifecycleFactory(walker),
+            operatorTable,
+            macroTable,
+            plannerConfig
+        ),
         AVATICA_CONFIG
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1),
+        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 10000;
     server = new Server(new InetSocketAddress("127.0.0.1", port));
     server.setHandler(handler);
     server.start();
-    url = String.format(
+    url = StringUtils.format(
         "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
         port,
         DruidAvaticaHandler.AVATICA_PATH
@@ -254,7 +256,7 @@ public class DruidAvaticaHandlerTest
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
+                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{virtualColumns=[], aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null}]])\n"
             )
         ),
         getRows(resultSet)
@@ -339,7 +341,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "dim1"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -347,7 +349,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "dim2"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -355,6 +357,14 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
+                Pair.of("IS_NULLABLE", "NO")
+            ),
+            ROW(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", "foo"),
+                Pair.of("COLUMN_NAME", "m2"),
+                Pair.of("DATA_TYPE", Types.DOUBLE),
+                Pair.of("TYPE_NAME", "DOUBLE"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
@@ -381,7 +391,7 @@ public class DruidAvaticaHandlerTest
         Executors.newFixedThreadPool(AVATICA_CONFIG.getMaxStatementsPerConnection())
     );
     for (int i = 0; i < 2000; i++) {
-      final String query = String.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
+      final String query = StringUtils.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
       futures.add(
           exec.submit(() -> {
             try (
@@ -543,18 +553,19 @@ public class DruidAvaticaHandlerTest
     };
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema = Calcites.createRootSchema(
-        CalciteTests.createMockSchema(
-            walker,
-            plannerConfig
-        )
-    );
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        new PlannerFactory(rootSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig()),
+        new PlannerFactory(
+            druidSchema,
+            CalciteTests.createMockQueryLifecycleFactory(walker),
+            operatorTable,
+            macroTable,
+            plannerConfig
+        ),
         smallFrameConfig
     )
     {
@@ -569,19 +580,19 @@ public class DruidAvaticaHandlerTest
         Frame frame = super.fetch(statement, offset, fetchMaxRowCount);
         frames.add(frame);
         return frame;
-      };
+      }
     };
 
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", 1),
+        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 20000;
     Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
     smallFrameServer.setHandler(handler);
     smallFrameServer.start();
-    String smallFrameUrl = String.format(
+    String smallFrameUrl = StringUtils.format(
         "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
         port,
         DruidAvaticaHandler.AVATICA_PATH

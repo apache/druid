@@ -62,34 +62,34 @@ public class ScanQueryRunnerTest
 {
   // copied from druid.sample.numeric.tsv
   public static final String[] V_0112 = {
-      "2011-01-12T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tnews\t1500\t15000.0\t150000\tpreferred\tnpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t170000\tpreferred\ttpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\tspot\ttravel\t1800\t18000.0\t180000\tpreferred\ttpreferred\t100.000000",
-      "2011-01-12T00:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t1000.000000",
-      "2011-01-12T00:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1000.000000",
-      "2011-01-12T00:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t800.000000\tvalue",
-      "2011-01-12T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t800.000000\tvalue"
+      "2011-01-12T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t10000.0\t100000\tpreferred\tapreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t11000.0\t110000\tpreferred\tbpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t12000.0\t120000\tpreferred\tepreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\thealth\t1300\t13000.0\t13000.0\t130000\tpreferred\thpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tnews\t1500\t15000.0\t15000.0\t150000\tpreferred\tnpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t17000.0\t170000\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\ttravel\t1800\t18000.0\t18000.0\t180000\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t1000.000000",
+      "2011-01-12T00:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t1000.000000",
+      "2011-01-12T00:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t800.000000\tvalue",
+      "2011-01-12T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t800.000000\tvalue"
   };
   public static final String[] V_0113 = {
-      "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t94.874713",
-      "2011-01-13T00:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t103.629399",
-      "2011-01-13T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
-      "2011-01-13T00:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t114.947403",
-      "2011-01-13T00:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t104.465767",
-      "2011-01-13T00:00:00.000Z\tspot\tnews\t1500\t15000.0\t150000\tpreferred\tnpreferred\t102.851683",
-      "2011-01-13T00:00:00.000Z\tspot\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t108.863011",
-      "2011-01-13T00:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t170000\tpreferred\ttpreferred\t111.356672",
-      "2011-01-13T00:00:00.000Z\tspot\ttravel\t1800\t18000.0\t180000\tpreferred\ttpreferred\t106.236928",
-      "2011-01-13T00:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t1040.945505",
-      "2011-01-13T00:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1689.012875",
-      "2011-01-13T00:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t826.060182\tvalue",
-      "2011-01-13T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1564.617729\tvalue"
+      "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t10000.0\t100000\tpreferred\tapreferred\t94.874713",
+      "2011-01-13T00:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t11000.0\t110000\tpreferred\tbpreferred\t103.629399",
+      "2011-01-13T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
+      "2011-01-13T00:00:00.000Z\tspot\thealth\t1300\t13000.0\t13000.0\t130000\tpreferred\thpreferred\t114.947403",
+      "2011-01-13T00:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t104.465767",
+      "2011-01-13T00:00:00.000Z\tspot\tnews\t1500\t15000.0\t15000.0\t150000\tpreferred\tnpreferred\t102.851683",
+      "2011-01-13T00:00:00.000Z\tspot\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t108.863011",
+      "2011-01-13T00:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t17000.0\t170000\tpreferred\ttpreferred\t111.356672",
+      "2011-01-13T00:00:00.000Z\tspot\ttravel\t1800\t18000.0\t18000.0\t180000\tpreferred\ttpreferred\t106.236928",
+      "2011-01-13T00:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t1040.945505",
+      "2011-01-13T00:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t1689.012875",
+      "2011-01-13T00:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t14000.0\t140000\tpreferred\tmpreferred\t826.060182\tvalue",
+      "2011-01-13T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t16000.0\t160000\tpreferred\tppreferred\t1564.617729\tvalue"
   };
 
   public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
@@ -139,6 +139,7 @@ public class ScanQueryRunnerTest
         "quality",
         "qualityLong",
         "qualityFloat",
+        "qualityDouble",
         "qualityNumericString",
         "placement",
         "placementish",
@@ -147,7 +148,10 @@ public class ScanQueryRunnerTest
         "index",
         "indexMin",
         "indexMaxPlusTen",
-        "quality_uniques"
+        "quality_uniques",
+        "indexFloat",
+        "indexMaxFloat",
+        "indexMinFloat"
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
@@ -177,6 +181,7 @@ public class ScanQueryRunnerTest
         "quality",
         "qualityLong",
         "qualityFloat",
+        "qualityDouble",
         "qualityNumericString",
         "placement",
         "placementish",
@@ -185,7 +190,10 @@ public class ScanQueryRunnerTest
         "index",
         "indexMin",
         "indexMaxPlusTen",
-        "quality_uniques"
+        "quality_uniques",
+        "indexFloat",
+        "indexMaxFloat",
+        "indexMinFloat"
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
@@ -232,7 +240,8 @@ public class ScanQueryRunnerTest
                 null,
                 null,
                 null,
-                QueryRunnerTestHelper.indexMetric + ":FLOAT"
+                null,
+                QueryRunnerTestHelper.indexMetric + ":DOUBLE"
             },
             V_0112_0114
         ),
@@ -269,7 +278,8 @@ public class ScanQueryRunnerTest
                 null,
                 null,
                 null,
-                QueryRunnerTestHelper.indexMetric + ":FLOAT"
+                null,
+                QueryRunnerTestHelper.indexMetric + ":DOUBLE"
             },
             V_0112_0114
         ),
@@ -305,7 +315,7 @@ public class ScanQueryRunnerTest
               QueryRunnerTestHelper.qualityDimension + ":STRING",
               null,
               null,
-              QueryRunnerTestHelper.indexMetric + ":FLOAT"
+              QueryRunnerTestHelper.indexMetric + ":DOUBLE"
           },
           // filtered values with day granularity
           new String[]{
@@ -360,8 +370,9 @@ public class ScanQueryRunnerTest
         Lists.<ScanResultValue>newArrayList()
     );
     Iterable<ScanResultValue> resultsOptimize = Sequences.toList(
-        toolChest.postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner))).
-            run(query, Maps.<String, Object>newHashMap()), Lists.<ScanResultValue>newArrayList()
+        toolChest
+            .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
+            .run(query, Maps.<String, Object>newHashMap()), Lists.<ScanResultValue>newArrayList()
     );
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -371,7 +382,7 @@ public class ScanQueryRunnerTest
             QueryRunnerTestHelper.qualityDimension + ":STRING",
             null,
             null,
-            QueryRunnerTestHelper.indexMetric + ":FLOAT"
+            QueryRunnerTestHelper.indexMetric + ":DOUBLE"
         },
         // filtered values with day granularity
         new String[]{
@@ -458,10 +469,11 @@ public class ScanQueryRunnerTest
             QueryRunnerTestHelper.qualityDimension + ":STRING",
             "qualityLong" + ":LONG",
             "qualityFloat" + ":FLOAT",
+            "qualityDouble" + ":DOUBLE",
             "qualityNumericString" + ":STRING",
             QueryRunnerTestHelper.placementDimension + ":STRING",
             QueryRunnerTestHelper.placementishDimension + ":STRINGS",
-            QueryRunnerTestHelper.indexMetric + ":FLOAT",
+            QueryRunnerTestHelper.indexMetric + ":DOUBLE",
             QueryRunnerTestHelper.partialNullDimension + ":STRING"
         },
         valueSet
@@ -566,9 +578,6 @@ public class ScanQueryRunnerTest
           Object actVal = acHolder.get(ex.getKey());
 
           // work around for current II limitations
-          if (acHolder.get(ex.getKey()) instanceof Double) {
-            actVal = ((Double) actVal).floatValue();
-          }
           Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
         }
       }
@@ -600,7 +609,8 @@ public class ScanQueryRunnerTest
     return results;
   }
 
-  private Iterable<ScanResultValue> compactedListToRow(Iterable<ScanResultValue> results) {
+  private Iterable<ScanResultValue> compactedListToRow(Iterable<ScanResultValue> results)
+  {
     return Iterables.transform(results, new Function<ScanResultValue, ScanResultValue>()
     {
       @Override

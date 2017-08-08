@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -31,6 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -125,7 +127,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       factorizeAggs(metrics, aggs, rowContainer, row);
       doAggregate(metrics, aggs, rowContainer, row, reportParseExceptions);
 
-      final Integer rowIndex = indexIncrement.getAndIncrement();
+      final int rowIndex = indexIncrement.getAndIncrement();
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
@@ -237,7 +239,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     final boolean canAdd = size() < maxRowCount;
     if (!canAdd) {
-      outOfRowsReason = String.format("Maximum number of rows [%d] reached", maxRowCount);
+      outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
     }
     return canAdd;
   }
@@ -278,6 +280,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     return concurrentGet(rowOffset)[aggOffset].get();
   }
 
+  @Override
+  protected double getMetricDoubleValue(int rowOffset, int aggOffset)
+  {
+    return concurrentGet(rowOffset)[aggOffset].getDouble();
+  }
+
   /**
    * Clear out maps to allow GC
    * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
@@ -303,6 +311,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     private final Map<String, LongColumnSelector> longColumnSelectorMap;
     private final Map<String, FloatColumnSelector> floatColumnSelectorMap;
     private final Map<String, ObjectColumnSelector> objectColumnSelectorMap;
+    private final Map<String, DoubleColumnSelector> doubleColumnSelectorMap;
     private final ColumnSelectorFactory delegate;
 
     public ObjectCachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
@@ -313,10 +322,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         longColumnSelectorMap = new ConcurrentHashMap<>();
         floatColumnSelectorMap = new ConcurrentHashMap<>();
         objectColumnSelectorMap = new ConcurrentHashMap<>();
+        doubleColumnSelectorMap = new ConcurrentHashMap<>();
       } else {
         longColumnSelectorMap = new HashMap<>();
         floatColumnSelectorMap = new HashMap<>();
         objectColumnSelectorMap = new HashMap<>();
+        doubleColumnSelectorMap = new HashMap<>();
       }
     }
 
@@ -354,6 +365,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         return existing;
       }
       return objectColumnSelectorMap.computeIfAbsent(columnName, delegate::makeObjectColumnSelector);
+    }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+    {
+      final DoubleColumnSelector existing = doubleColumnSelectorMap.get(columnName);
+      if (existing != null) {
+        return existing;
+      }
+      return doubleColumnSelectorMap.computeIfAbsent(columnName, delegate::makeDoubleColumnSelector);
     }
 
     @Nullable

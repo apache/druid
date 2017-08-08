@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.SQLMetadataConnector;
 import io.druid.timeline.DataSegment;
@@ -58,7 +59,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
           public Void withHandle(Handle handle) throws Exception
           {
             final PreparedBatch batch = handle.prepareBatch(
-                String.format(
+                StringUtils.format(
                     "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                     tableName, connector.getQuoteString()

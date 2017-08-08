@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -57,7 +58,7 @@ import java.util.Map;
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
   @SuppressWarnings("unchecked")
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     GroupByQueryConfig config = new GroupByQueryConfig();
@@ -132,7 +133,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
   public GroupByTimeseriesQueryRunnerTest(QueryRunner runner)
   {
-    super(runner, false);
+    super(runner, false, QueryRunnerTestHelper.commonDoubleAggregators);
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
@@ -164,14 +165,14 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());
     Assert.assertFalse(
-        String.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
+        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
         result.getTimestamp().isAfter(expectedLast)
     );
 
     final TimeseriesResultValue value = result.getValue();
 
-    Assert.assertEquals(result.toString(), 1870.06103515625, value.getDoubleMetric("maxIndex"), 0.0);
-    Assert.assertEquals(result.toString(), 59.02102279663086, value.getDoubleMetric("minIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 1870.061029, value.getDoubleMetric("maxIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 59.021022, value.getDoubleMetric("minIndex"), 0.0);
   }
 
 

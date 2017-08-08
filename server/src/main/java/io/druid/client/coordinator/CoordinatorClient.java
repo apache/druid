@@ -34,6 +34,7 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 
+import io.druid.java.util.common.StringUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
@@ -70,7 +71,7 @@ public class CoordinatorClient
           new Request(
               HttpMethod.GET,
               new URL(
-                  String.format(
+                  StringUtils.format(
                       "%s/datasources/%s/intervals/%s/serverview?partial=%s",
                       baseUrl(),
                       dataSource,

@@ -21,6 +21,7 @@ package io.druid.server.lookup.namespace;
 
 import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
@@ -78,7 +79,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
           public List<Pair<String, String>> withHandle(Handle handle) throws Exception
           {
             final String query;
-            query = String.format(
+            query = StringUtils.format(
                 "SELECT %s, %s FROM %s",
                 keyColumn,
                 valueColumn,
@@ -109,7 +110,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     if (lastDBUpdate != null) {
       newVersion = lastDBUpdate.toString();
     } else {
-      newVersion = String.format("%d", dbQueryStart);
+      newVersion = StringUtils.format("%d", dbQueryStart);
     }
     final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
     try {
@@ -165,7 +166,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
           @Override
           public Timestamp withHandle(Handle handle) throws Exception
           {
-            final String query = String.format(
+            final String query = StringUtils.format(
                 "SELECT MAX(%s) FROM %s",
                 tsColumn, table
             );

@@ -41,6 +41,7 @@ import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
@@ -158,7 +159,7 @@ public class IndexGeneratorJob implements Jobby
     try {
       Job job = Job.getInstance(
           new Configuration(),
-          String.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.23");
@@ -435,6 +436,12 @@ public class IndexGeneratorJob implements Jobby
         }
 
         @Override
+        public double getDoubleMetric(String metric)
+        {
+          return row.getDoubleMetric(metric);
+        }
+
+        @Override
         public int compareTo(Row o)
         {
           return row.compareTo(o);
@@ -618,14 +625,14 @@ public class IndexGeneratorJob implements Jobby
             );
             runningTotalLineCount = lineCount;
 
-            final File file = new File(baseFlushFile, String.format("index%,05d", indexCount));
+            final File file = new File(baseFlushFile, StringUtils.format("index%,05d", indexCount));
             toMerge.add(file);
 
             context.progress();
             final IncrementalIndex persistIndex = index;
             persistFutures.add(
                 persistExecutor.submit(
-                    new ThreadRenamingRunnable(String.format("%s-persist", file.getName()))
+                    new ThreadRenamingRunnable(StringUtils.format("%s-persist", file.getName()))
                     {
                       @Override
                       public void doRun()
@@ -705,7 +712,7 @@ public class IndexGeneratorJob implements Jobby
         // ShardSpec to be published.
         final ShardSpec shardSpecForPublishing;
         if (config.isForceExtendableShardSpecs()) {
-          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(),config.getShardSpecCount(bucket));
+          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(), config.getShardSpecCount(bucket));
         } else {
           shardSpecForPublishing = shardSpecForPartitioning;
         }

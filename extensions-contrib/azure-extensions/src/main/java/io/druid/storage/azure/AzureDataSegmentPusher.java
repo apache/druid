@@ -21,11 +21,13 @@ package io.druid.storage.azure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
 
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -36,6 +38,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -72,6 +75,12 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     return null;
   }
 
+  @Override
+  public List<String> getAllowedPropertyPrefixesForHadoop()
+  {
+    return ImmutableList.of("druid.azure");
+  }
+
   public File createSegmentDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment) throws
                                                                                                     IOException
   {
@@ -88,8 +97,8 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     final String storageDir = this.getStorageDir(segment);
 
     return ImmutableMap.of(
-        "index", String.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
-        "descriptor", String.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME)
+        "index", StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
+        "descriptor", StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME)
     );
 
   }

@@ -66,6 +66,8 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
         supplier = columnSelectorFactory.makeFloatColumnSelector(columnName)::get;
       } else if (nativeType == ValueType.LONG) {
         supplier = columnSelectorFactory.makeLongColumnSelector(columnName)::get;
+      } else if (nativeType == ValueType.DOUBLE) {
+        supplier = columnSelectorFactory.makeDoubleColumnSelector(columnName)::get;
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))

@@ -123,9 +123,9 @@ public class RulesResource
   )
   {
     try {
-      return Response.ok(getRuleHistory(dataSourceName, interval, count))
-                     .build();
-    } catch (IllegalArgumentException e) {
+      return Response.ok(getRuleHistory(dataSourceName, interval, count)).build();
+    }
+    catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
                      .build();
@@ -142,9 +142,9 @@ public class RulesResource
   )
   {
     try {
-      return Response.ok(getRuleHistory(null, interval, count))
-                     .build();
-    } catch (IllegalArgumentException e) {
+      return Response.ok(getRuleHistory(null, interval, count)).build();
+    }
+    catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
                      .build();
@@ -157,18 +157,18 @@ public class RulesResource
       final Integer count
   ) throws IllegalArgumentException
   {
-      if (interval == null && count != null) {
-        if (dataSourceName != null) {
-          return auditManager.fetchAuditHistory(dataSourceName, "rules", count);
-        }
-        return auditManager.fetchAuditHistory("rules", count);
-      }
-
-      Interval theInterval = interval == null ? null : new Interval(interval);
+    if (interval == null && count != null) {
       if (dataSourceName != null) {
-        return auditManager.fetchAuditHistory(dataSourceName, "rules", theInterval);
+        return auditManager.fetchAuditHistory(dataSourceName, "rules", count);
       }
-      return auditManager.fetchAuditHistory("rules", theInterval);
+      return auditManager.fetchAuditHistory("rules", count);
+    }
+
+    Interval theInterval = interval == null ? null : new Interval(interval);
+    if (dataSourceName != null) {
+      return auditManager.fetchAuditHistory(dataSourceName, "rules", theInterval);
+    }
+    return auditManager.fetchAuditHistory("rules", theInterval);
   }
 
 }

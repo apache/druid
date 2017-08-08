@@ -26,6 +26,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
@@ -92,6 +93,31 @@ public class ExpressionSelectors
       }
     }
     return new ExpressionFloatColumnSelector();
+  }
+
+  public static DoubleColumnSelector makeDoubleColumnSelector(
+      ColumnSelectorFactory columnSelectorFactory,
+      Expr expression,
+      double nullValue
+  )
+  {
+    final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
+    class ExpressionDoubleColumnSelector implements DoubleColumnSelector
+    {
+      @Override
+      public double get()
+      {
+        final Double number = baseSelector.get().asDouble();
+        return number != null ? number.doubleValue() : nullValue;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("baseSelector", baseSelector);
+      }
+    }
+    return new ExpressionDoubleColumnSelector();
   }
 
   public static DimensionSelector makeDimensionSelector(

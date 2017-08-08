@@ -36,8 +36,6 @@ import java.util.Objects;
 
 public class TimestampAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 31;
-
   final String name;
   final String fieldName;
   final String timeFormat;
@@ -118,7 +116,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    return new DateTime((long)object);
+    return new DateTime((long) object);
   }
 
   @Override
@@ -152,7 +150,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
     return ByteBuffer.allocate(1 + fieldNameBytes.length)
-        .put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+                     .put(AggregatorUtil.TIMESTAMP_CACHE_TYPE_ID).put(fieldNameBytes).array();
   }
 
   @Override
@@ -208,11 +206,11 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   static Long convertLong(TimestampSpec timestampSpec, Object input)
   {
     if (input instanceof Number) {
-      return ((Number)input).longValue();
+      return ((Number) input).longValue();
     } else if (input instanceof DateTime) {
-      return ((DateTime)input).getMillis();
+      return ((DateTime) input).getMillis();
     } else if (input instanceof Timestamp) {
-      return ((Timestamp)input).getTime();
+      return ((Timestamp) input).getTime();
     } else if (input instanceof String) {
       return timestampSpec.parseDateTime(input).getMillis();
     }

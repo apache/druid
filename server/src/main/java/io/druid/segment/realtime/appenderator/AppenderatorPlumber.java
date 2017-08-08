@@ -36,6 +36,7 @@ import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
@@ -110,7 +111,8 @@ public class AppenderatorPlumber implements Plumber
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
 
-  public Map<Long, SegmentIdentifier> getSegmentsView() {
+  public Map<Long, SegmentIdentifier> getSegmentsView()
+  {
     return ImmutableMap.copyOf(segments);
   }
 
@@ -355,7 +357,7 @@ public class AppenderatorPlumber implements Plumber
             ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                String.format(
+                StringUtils.format(
                     "%s-overseer-%d",
                     schema.getDataSource(),
                     config.getShardSpec().getPartitionNum()

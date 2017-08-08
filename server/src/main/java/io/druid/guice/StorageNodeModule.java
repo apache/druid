@@ -26,9 +26,7 @@ import com.google.inject.ProvisionException;
 import com.google.inject.util.Providers;
 import io.druid.client.DruidServerConfig;
 import io.druid.guice.annotations.Self;
-import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
-import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.DruidNode;
@@ -48,10 +46,6 @@ public class StorageNodeModule implements Module
 
     binder.bind(NodeTypeConfig.class).toProvider(Providers.<NodeTypeConfig>of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
-
-    binder.bind(QueryRunnerFactoryConglomerate.class)
-          .to(DefaultQueryRunnerFactoryConglomerate.class)
-          .in(LazySingleton.class);
   }
 
   @Provides
@@ -63,8 +57,9 @@ public class StorageNodeModule implements Module
     }
 
     return new DruidServerMetadata(
+        node.getHostAndPortToUse(),
         node.getHostAndPort(),
-        node.getHostAndPort(),
+        node.getHostAndTlsPort(),
         config.getMaxSize(),
         nodeType.getNodeType(),
         config.getTier(),

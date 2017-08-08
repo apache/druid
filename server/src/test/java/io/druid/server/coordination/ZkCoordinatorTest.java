@@ -81,6 +81,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   private final DruidServerMetadata me = new DruidServerMetadata(
       "dummyServer",
       "dummyHost",
+      null,
       0,
       ServerType.HISTORICAL,
       "normal",
@@ -515,7 +516,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
                 }
             );
             binder.bind(DruidServerMetadata.class)
-                  .toInstance(new DruidServerMetadata("dummyServer", "dummyHost", 0, ServerType.HISTORICAL, "normal", 0));
+                  .toInstance(new DruidServerMetadata("dummyServer", "dummyHost", null, 0, ServerType.HISTORICAL, "normal", 0));
             binder.bind(DataSegmentAnnouncer.class).toInstance(announcer);
             binder.bind(DataSegmentServerAnnouncer.class).toInstance(EasyMock.createNiceMock(DataSegmentServerAnnouncer.class));
             binder.bind(CuratorFramework.class).toInstance(curator);

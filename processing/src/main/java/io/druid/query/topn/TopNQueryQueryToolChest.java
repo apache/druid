@@ -139,7 +139,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       {
         TopNQuery query = (TopNQuery) input;
         return new TopNBinaryFn(
-            TopNResultMerger.identity,
             query.getGranularity(),
             query.getDimensionSpec(),
             query.getTopNMetricSpec(),
@@ -445,8 +444,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               return runner.run(queryPlus.withQuery(delegateTopNQuery), responseContext);
             }
           }
-        }
-        , this
+        },
+        this
     );
   }
 

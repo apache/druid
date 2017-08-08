@@ -61,7 +61,7 @@ public class FileTaskLogsTest
       for (Map.Entry<Long, String> entry : expected.entrySet()) {
         final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get().getInput());
         final String string = StringUtils.fromUtf8(bytes);
-        Assert.assertEquals(String.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
+        Assert.assertEquals(StringUtils.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
       }
     }
     finally {
@@ -104,7 +104,7 @@ public class FileTaskLogsTest
     //is necessary to separate 2 file creations by a timestamp that would result in only one
     //of them getting deleted
     Thread.sleep(1500);
-    long time = (System.currentTimeMillis()/1000)*1000;
+    long time = (System.currentTimeMillis() / 1000) * 1000;
     Assert.assertTrue(new File(logDir, "log1.log").lastModified() < time);
 
     Files.write("log2content", logFile, Charsets.UTF_8);

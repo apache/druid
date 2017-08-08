@@ -205,7 +205,7 @@ public class WrappedRoaringBitmap implements MutableBitmap
       );
     }
     catch (IOException e) {
-      e.printStackTrace(); // impossible in theory
+      throw new RuntimeException(e); // impossible in theory
     }
   }
 

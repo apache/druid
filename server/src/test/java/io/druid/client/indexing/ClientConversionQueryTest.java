@@ -60,7 +60,7 @@ public class ClientConversionQueryTest
   {
     clientConversionQuery = new ClientConversionQuery(DATA_SEGMENT);
     Assert.assertEquals(DATA_SEGMENT, clientConversionQuery.getSegment());
-    clientConversionQuery = new ClientConversionQuery(DATA_SOURCE,INTERVAL);
+    clientConversionQuery = new ClientConversionQuery(DATA_SOURCE, INTERVAL);
     Assert.assertNull(clientConversionQuery.getSegment());
   }
 }

@@ -59,6 +59,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.orc.CompressionKind;
 import org.apache.orc.OrcFile;
 import org.apache.orc.TypeDescription;
+import org.apache.orc.Writer;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
@@ -141,7 +142,7 @@ public class OrcIndexGeneratorJobTest
         .addField("host", TypeDescription.createString())
         .addField("visited_num", TypeDescription.createInt());
     Configuration conf = new Configuration();
-    org.apache.orc.Writer writer = OrcFile.createWriter(
+    Writer writer = OrcFile.createWriter(
         new Path(outputFile.getPath()),
         OrcFile.writerOptions(conf)
             .setSchema(schema)
@@ -252,7 +253,7 @@ public class OrcIndexGeneratorJobTest
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
       Integer[][] shardInfo = shardInfoForEachSegment[segmentNum++];
       File segmentOutputFolder = new File(
-          String.format(
+          StringUtils.format(
               "%s/%s/%s_%s/%s",
               config.getSchema().getIOConfig().getSegmentOutputPath(),
               config.getSchema().getDataSchema().getDataSource(),
@@ -301,8 +302,7 @@ public class OrcIndexGeneratorJobTest
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
         QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
 
-        for(Rowboat row: adapter.getRows())
-        {
+        for (Rowboat row: adapter.getRows()) {
           Object[] metrics = row.getMetrics();
 
           rowCount++;

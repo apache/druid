@@ -21,6 +21,7 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
+import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 
@@ -51,7 +52,7 @@ public class ByteBufferIntList
   public void add(int val)
   {
     if (numElements == maxElements) {
-      throw new IndexOutOfBoundsException(String.format("List is full with %s elements.", maxElements));
+      throw new IndexOutOfBoundsException(StringUtils.format("List is full with %d elements.", maxElements));
     }
     buffer.putInt(numElements * Ints.BYTES, val);
     numElements++;
@@ -62,7 +63,8 @@ public class ByteBufferIntList
     buffer.putInt(index * Ints.BYTES, val);
   }
 
-  public int get(int index) {
+  public int get(int index)
+  {
     return buffer.getInt(index * Ints.BYTES);
   }
 

@@ -53,7 +53,8 @@ public class AzureUtils
     }
   };
 
-  public static <T> T retryAzureOperation(Callable<T> f, int maxTries) throws Exception {
+  public static <T> T retryAzureOperation(Callable<T> f, int maxTries) throws Exception
+  {
     return RetryUtils.retry(f, AZURE_RETRY, maxTries);
   }
 }

@@ -56,7 +56,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
       ObjectMapper jsonMapper)
   {
     super(config);
-    this.jsonMapper=jsonMapper;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -88,8 +88,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 
     int version = SegmentUtils.getVersionFromDir(indexFilesDir);
 
-    try
-    {
+    try {
       long start = System.currentTimeMillis();
       ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
           .withConcurrencyLevel(CONCURRENCY).call();
@@ -100,8 +99,8 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
         .putColumn("descriptor", json, null);
       mutation.execute();
       log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
-    } catch (Exception e)
-    {
+    }
+    catch (Exception e) {
       throw new IOException(e);
     }
 

@@ -29,8 +29,10 @@ import com.google.common.io.OutputSupplier;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
@@ -225,13 +227,7 @@ public class JobHelper
         log.info("Renaming jar to path[%s]", hdfsPath);
         fs.rename(intermediateHdfsPath, hdfsPath);
         if (!fs.exists(hdfsPath)) {
-          throw new IOException(
-              String.format(
-                  "File does not exist even after moving from[%s] to [%s]",
-                  intermediateHdfsPath,
-                  hdfsPath
-              )
-          );
+          throw new IOE("File does not exist even after moving from[%s] to [%s]", intermediateHdfsPath, hdfsPath);
         }
       }
       catch (IOException e) {
@@ -312,14 +308,14 @@ public class JobHelper
 
   public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
   {
-    String mapJavaOpts = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
-    String reduceJavaOpts = configuration.get(MRJobConfig.REDUCE_JAVA_OPTS);
+    String mapJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
+    String reduceJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
 
     for (String propName : System.getProperties().stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {
-        if (propName.startsWith(prefix)) {
-          mapJavaOpts = String.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
-          reduceJavaOpts = String.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
+          mapJavaOpts = StringUtils.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
+          reduceJavaOpts = StringUtils.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
           break;
         }
       }
@@ -350,7 +346,7 @@ public class JobHelper
     try {
       Job job = Job.getInstance(
           new Configuration(),
-          String.format("%s-determine_partitions-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-determine_partitions-%s", config.getDataSource(), config.getIntervals())
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.19");
@@ -370,7 +366,7 @@ public class JobHelper
     for (Jobby job : jobs) {
       if (failedMessage == null) {
         if (!job.run()) {
-          failedMessage = String.format("Job[%s] failed!", job.getClass());
+          failedMessage = StringUtils.format("Job[%s] failed!", job.getClass());
         }
       }
     }
@@ -442,12 +438,10 @@ public class JobHelper
         .withBinaryVersion(SegmentUtils.getVersionFromDir(mergedBase));
 
     if (!renameIndexFiles(outputFS, tmpPath, finalIndexZipFilePath)) {
-      throw new IOException(
-          String.format(
-              "Unable to rename [%s] to [%s]",
-              tmpPath.toUri().toString(),
-              finalIndexZipFilePath.toUri().toString()
-          )
+      throw new IOE(
+          "Unable to rename [%s] to [%s]",
+          tmpPath.toUri().toString(),
+          finalIndexZipFilePath.toUri().toString()
       );
     }
 
@@ -478,7 +472,7 @@ public class JobHelper
               progressable.progress();
               if (outputFS.exists(descriptorPath)) {
                 if (!outputFS.delete(descriptorPath, false)) {
-                  throw new IOException(String.format("Failed to delete descriptor at [%s]", descriptorPath));
+                  throw new IOE("Failed to delete descriptor at [%s]", descriptorPath);
                 }
               }
               try (final OutputStream descriptorOut = outputFS.create(
@@ -586,9 +580,9 @@ public class JobHelper
   {
     return new Path(
         prependFSIfNullScheme(fs, basePath),
-        String.format("./%s.%d",
-                      dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
-                      taskAttemptID.getId()
+        StringUtils.format("./%s.%d",
+                           dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+                           taskAttemptID.getId()
         )
     );
   }
@@ -739,10 +733,10 @@ public class JobHelper
     final URI segmentLocURI;
     if ("s3_zip".equals(type)) {
       if ("s3a".equals(loadSpec.get("S3Schema"))) {
-        segmentLocURI = URI.create(String.format("s3a://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+        segmentLocURI = URI.create(StringUtils.format("s3a://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
 
       } else {
-        segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+        segmentLocURI = URI.create(StringUtils.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
       }
     } else if ("hdfs".equals(type)) {
       segmentLocURI = URI.create(loadSpec.get("path").toString());
@@ -755,7 +749,7 @@ public class JobHelper
       // getHdfsStorageDir. But that wouldn't fix this issue for people who already have segments with ":".
       // Because of this we just URL encode the : making everything work as it should.
       segmentLocURI = URI.create(
-          String.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
+          StringUtils.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
       );
     } else if ("local".equals(type)) {
       try {
@@ -809,7 +803,7 @@ public class JobHelper
       public void startSection(String section)
       {
         context.progress();
-        context.setStatus(String.format("STARTED [%s]", section));
+        context.setStatus(StringUtils.format("STARTED [%s]", section));
       }
 
       @Override
@@ -817,14 +811,14 @@ public class JobHelper
       {
         log.info("Progress message for section [%s] : [%s]", section, message);
         context.progress();
-        context.setStatus(String.format("PROGRESS [%s]", section));
+        context.setStatus(StringUtils.format("PROGRESS [%s]", section));
       }
 
       @Override
       public void stopSection(String section)
       {
         context.progress();
-        context.setStatus(String.format("STOPPED [%s]", section));
+        context.setStatus(StringUtils.format("STOPPED [%s]", section));
       }
     };
   }

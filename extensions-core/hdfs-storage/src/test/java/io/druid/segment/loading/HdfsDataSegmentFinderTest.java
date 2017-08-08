@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.IOE;
 import io.druid.storage.hdfs.HdfsDataSegmentFinder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -157,7 +158,7 @@ public class HdfsDataSegmentFinderTest
 
     hdfsTmpDir = File.createTempFile("hdfsDataSource", "dir");
     if (!hdfsTmpDir.delete()) {
-      throw new IOException(String.format("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath()));
+      throw new IOE("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath());
     }
     conf = new Configuration(true);
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, hdfsTmpDir.getAbsolutePath());
@@ -184,7 +185,7 @@ public class HdfsDataSegmentFinderTest
     descriptor3 = new Path(dataSourceDir, "interval3/v2/0/" + DESCRIPTOR_JSON);
     descriptor4_0 = new Path(dataSourceDir, "interval4/v1/0/" + DESCRIPTOR_JSON);
     descriptor4_1 = new Path(dataSourceDir, "interval4/v1/1/" + DESCRIPTOR_JSON);
-    descriptor5 = new Path(dataSourceDir, "interval5/v1/1/" + "1_" +DESCRIPTOR_JSON);
+    descriptor5 = new Path(dataSourceDir, "interval5/v1/1/" + "1_" + DESCRIPTOR_JSON);
     indexZip1 = new Path(descriptor1.getParent(), INDEX_ZIP);
     indexZip2 = new Path(descriptor2.getParent(), INDEX_ZIP);
     indexZip3 = new Path(descriptor3.getParent(), INDEX_ZIP);
@@ -244,8 +245,7 @@ public class HdfsDataSegmentFinderTest
         updatedSegment4_1 = dataSegment;
       } else if (dataSegment.getIdentifier().equals(SEGMENT_5.getIdentifier())) {
         updatedSegment5 = dataSegment;
-      }
-      else {
+      } else {
         Assert.fail("Unexpected segment");
       }
     }

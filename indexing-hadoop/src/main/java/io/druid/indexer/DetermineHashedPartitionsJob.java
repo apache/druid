@@ -32,6 +32,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -86,7 +87,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       final long startTime = System.currentTimeMillis();
       final Job groupByJob = Job.getInstance(
           new Configuration(),
-          String.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
       );
 
       JobHelper.injectSystemProperties(groupByJob);

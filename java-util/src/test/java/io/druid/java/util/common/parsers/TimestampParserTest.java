@@ -28,13 +28,15 @@ public class TimestampParserTest
 {
 
   @Test
-  public void testStripQuotes() throws Exception {
+  public void testStripQuotes() throws Exception
+  {
     Assert.assertEquals("hello world", ParserUtils.stripQuotes("\"hello world\""));
     Assert.assertEquals("hello world", ParserUtils.stripQuotes("    \"    hello world   \"    "));
   }
 
   @Test
-  public void testAuto() throws Exception {
+  public void testAuto() throws Exception
+  {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("1234567890000"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("2009-02-13T23:31:30Z"));
@@ -42,14 +44,16 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testRuby() throws Exception {
+  public void testRuby() throws Exception
+  {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("ruby");
     Assert.assertEquals(new DateTime("2013-01-16T15:41:47+01:00"), parser.apply("1358347307.435447"));
     Assert.assertEquals(new DateTime("2013-01-16T15:41:47+01:00"), parser.apply(1358347307.435447D));
   }
 
   @Test
-  public void testNano() throws Exception {
+  public void testNano() throws Exception
+  {
     String timeNsStr = "1427504794977098494";
     DateTime expectedDt = new DateTime("2015-3-28T01:06:34.977Z");
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("nano");

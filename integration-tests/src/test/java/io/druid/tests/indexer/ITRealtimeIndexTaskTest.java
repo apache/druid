@@ -26,6 +26,7 @@ import com.metamx.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
@@ -258,7 +259,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
 
   private String getRouterURL()
   {
-    return String.format(
+    return StringUtils.format(
         "%s/druid/v2?pretty",
         config.getRouterUrl()
     );

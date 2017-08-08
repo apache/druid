@@ -64,7 +64,6 @@ public class QueryRunnerHelper
               @Override
               public Result<T> apply(Cursor input)
               {
-                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
                 return mapFn.apply(input);
               }
             }
@@ -73,7 +72,8 @@ public class QueryRunnerHelper
     );
   }
 
-  public static <T>  QueryRunner<T> makeClosingQueryRunner(final QueryRunner<T> runner, final Closeable closeable){
+  public static <T> QueryRunner<T> makeClosingQueryRunner(final QueryRunner<T> runner, final Closeable closeable)
+  {
     return new QueryRunner<T>()
     {
       @Override
