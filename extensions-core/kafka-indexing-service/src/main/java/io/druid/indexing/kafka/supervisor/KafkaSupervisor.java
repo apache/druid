@@ -963,7 +963,7 @@ public class KafkaSupervisor implements Supervisor
 
     log.info("Creating new pending completion task group for discovered task [%s]", taskId);
 
-    // reading the minimumMessageTime&maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
+    // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
     // change to a state where it will read any more events
     TaskGroup newTaskGroup = new TaskGroup(ImmutableMap.copyOf(startingPartitions), Optional.<DateTime>absent(), Optional.<DateTime>absent());
 
@@ -1312,7 +1312,7 @@ public class KafkaSupervisor implements Supervisor
 
       // Iterate the list of known tasks in this group and:
       //   1) Kill any tasks which are not "current" (have the partitions, starting offsets, and minimumMessageTime
-      //      &maximumMessageTime (if applicable) in [taskGroups])
+      //      & maximumMessageTime (if applicable) in [taskGroups])
       //   2) Remove any tasks that have failed from the list
       //   3) If any task completed successfully, stop all the tasks in this group and move to the next group
 
