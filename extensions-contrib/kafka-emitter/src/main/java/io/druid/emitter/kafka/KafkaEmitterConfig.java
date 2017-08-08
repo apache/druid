@@ -55,7 +55,7 @@ public class KafkaEmitterConfig
     this.metricTopic = Preconditions.checkNotNull(metricTopic, "metric.topic can not be null");
     this.alertTopic = Preconditions.checkNotNull(alertTopic, "alert.topic can not be null");
     this.clusterName = clusterName;
-    this.kafkaProducerConfig = kafkaProducerConfig == null? ImmutableMap.<String,String>of() : kafkaProducerConfig;
+    this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
   }
 
   @JsonProperty
