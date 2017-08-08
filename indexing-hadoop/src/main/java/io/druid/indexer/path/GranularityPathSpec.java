@@ -125,17 +125,16 @@ public class GranularityPathSpec implements PathSpec
     Pattern fileMatcher = Pattern.compile(filePattern);
 
     DateTimeFormatter customFormatter = null;
-    if(pathFormat != null) {
+    if (pathFormat != null) {
       customFormatter = DateTimeFormat.forPattern(pathFormat);
     }
 
     for (Interval interval : intervals) {
       DateTime t = interval.getStart();
-      String intervalPath = null;
-      if(customFormatter != null) {
+      String intervalPath;
+      if (customFormatter != null) {
         intervalPath = customFormatter.print(t);
-      }
-      else {
+      } else {
         intervalPath = dataGranularity.toPath(t);
       }
 

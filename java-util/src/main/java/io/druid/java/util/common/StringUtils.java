@@ -100,9 +100,22 @@ public class StringUtils
     }
   }
 
-  public static String safeFormat(String message, Object... formatArgs)
+  /**
+   * Equivalent of String.format(Locale.ENGLISH, message, formatArgs).
+   */
+  public static String format(String message, Object... formatArgs)
   {
-    if(formatArgs == null || formatArgs.length == 0) {
+    return String.format(Locale.ENGLISH, message, formatArgs);
+  }
+
+  /**
+   * Formats the string as {@link #format(String, Object...)}, but instead of failing on illegal format, returns the
+   * concatenated format string and format arguments. Should be used for unimportant formatting like logging,
+   * exception messages, typically not directly.
+   */
+  public static String nonStrictFormat(String message, Object... formatArgs)
+  {
+    if (formatArgs == null || formatArgs.length == 0) {
       return message;
     }
     try {
@@ -115,5 +128,15 @@ public class StringUtils
       }
       return bob.toString();
     }
+  }
+
+  public static String toLowerCase(String s)
+  {
+    return s.toLowerCase(Locale.ENGLISH);
+  }
+
+  public static String toUpperCase(String s)
+  {
+    return s.toUpperCase(Locale.ENGLISH);
   }
 }

@@ -29,7 +29,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>io.druid</groupId>
-        <version>0.10.1-SNAPSHOT</version>
+        <version>0.11.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -110,6 +110,8 @@
                                 <argument>io.druid.extensions:druid-stats</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-examples</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:simple-client-sslcontext</argument>
                                 <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>

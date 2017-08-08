@@ -22,6 +22,7 @@ package io.druid.query.aggregation.histogram;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -118,7 +119,7 @@ public class ApproximateHistogramGroupByQueryTest
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        final String testName = String.format(
+        final String testName = StringUtils.format(
             "config=%s, runner=%s",
             config.toString(),
             runner.toString()

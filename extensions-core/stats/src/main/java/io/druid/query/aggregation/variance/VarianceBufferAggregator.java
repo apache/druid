@@ -75,6 +75,12 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("VarianceBufferAggregator does not support getDouble()");
+  }
+
+  @Override
   public void close()
   {
   }

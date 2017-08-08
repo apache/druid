@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.regex.Pattern;
 
@@ -74,7 +75,7 @@ public class RegexSearchQuerySpec implements SearchQuerySpec
   }
 
   @Override
-  public boolean accept(String dimVal)
+  public boolean accept(@Nullable String dimVal)
   {
     if (dimVal == null) {
       return false;

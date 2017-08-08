@@ -44,6 +44,10 @@ public class DruidHttpClientConfig
   private int numMaxThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2) + 30;
 
   @JsonProperty
+  @Min(1)
+  private int numRequestsQueued = 1024;
+
+  @JsonProperty
   private String compressionCodec = DEFAULT_COMPRESSION_CODEC;
 
   public int getNumConnections()
@@ -64,5 +68,10 @@ public class DruidHttpClientConfig
   public String getCompressionCodec()
   {
     return compressionCodec;
+  }
+
+  public int getNumRequestsQueued()
+  {
+    return numRequestsQueued;
   }
 }

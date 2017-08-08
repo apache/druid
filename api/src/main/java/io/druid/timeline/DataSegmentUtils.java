@@ -20,10 +20,9 @@
 package io.druid.timeline;
 
 import com.google.common.base.Function;
-
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
@@ -68,12 +67,11 @@ public class DataSegmentUtils
    *
    * @param dataSource the dataSource corresponding to this identifier
    * @param identifier segment identifier
-   * @return a {@link io.druid.timeline.DataSegmentUtils.SegmentIdentifierParts} object if the identifier could be
-   *         parsed, null otherwise
+   * @return a {@link DataSegmentUtils.SegmentIdentifierParts} object if the identifier could be parsed, null otherwise
    */
   public static SegmentIdentifierParts valueOf(String dataSource, String identifier)
   {
-    if (!identifier.startsWith(String.format("%s_", dataSource))) {
+    if (!identifier.startsWith(StringUtils.format("%s_", dataSource))) {
       return null;
     }
 
@@ -97,7 +95,8 @@ public class DataSegmentUtils
           version,
           trail
       );
-    } catch (IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       return null;
     }
   }

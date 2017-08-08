@@ -25,13 +25,11 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
-
+import io.druid.server.http.HostAndPortWithScheme;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.KeeperException;
@@ -46,7 +44,7 @@ import java.util.Map;
 public class ListenerDiscoverer
 {
   private static final Logger LOG = new Logger(ListenerDiscoverer.class);
-  private volatile Map<HostAndPort, Long> lastSeenMap = ImmutableMap.of();
+  private volatile Map<HostAndPortWithScheme, Long> lastSeenMap = ImmutableMap.of();
   private final CuratorFramework cf;
   private final ListeningAnnouncerConfig listeningAnnouncerConfig;
   private final Object startStopSync = new Object();
@@ -98,20 +96,20 @@ public class ListenerDiscoverer
    *
    * @throws IOException if there was an error refreshing the zookeeper cache
    */
-  public Collection<HostAndPort> getNodes(final String listener_key) throws IOException
+  public Collection<HostAndPortWithScheme> getNodes(final String listener_key) throws IOException
   {
     return getCurrentNodes(listener_key).keySet();
   }
 
-  Map<HostAndPort, Long> getCurrentNodes(final String listener_key) throws IOException
+  Map<HostAndPortWithScheme, Long> getCurrentNodes(final String listener_key) throws IOException
   {
-    final HashMap<HostAndPort, Long> retVal = new HashMap<>();
+    final HashMap<HostAndPortWithScheme, Long> retVal = new HashMap<>();
     final String zkPath = listeningAnnouncerConfig.getAnnouncementPath(listener_key);
     final Collection<String> children;
     try {
       children = cf.getChildren().forPath(zkPath);
     }
-    catch (org.apache.zookeeper.KeeperException.NoNodeException e) {
+    catch (KeeperException.NoNodeException e) {
       LOG.debug(e, "No path found at [%s]", zkPath);
       return ImmutableMap.of();
     }
@@ -132,9 +130,9 @@ public class ListenerDiscoverer
           LOG.debug("Lost data at path [%s]", childPath);
           continue;
         }
-        final HostAndPort hostAndPort = HostAndPort.fromString(child);
+        final HostAndPortWithScheme hostAndPortWithScheme = HostAndPortWithScheme.fromString(child);
         final Long l = ByteBuffer.wrap(data).getLong();
-        retVal.put(hostAndPort, l);
+        retVal.put(hostAndPortWithScheme, l);
       }
       catch (IllegalArgumentException iae) {
         LOG.warn(iae, "Error parsing [%s]", childPath);
@@ -152,16 +150,16 @@ public class ListenerDiscoverer
    *
    * @throws IOException If there was an error in refreshing the Zookeeper cache
    */
-  public synchronized Collection<HostAndPort> getNewNodes(final String listener_key) throws IOException
+  public synchronized Collection<HostAndPortWithScheme> getNewNodes(final String listener_key) throws IOException
   {
-    final Map<HostAndPort, Long> priorSeenMap = lastSeenMap;
-    final Map<HostAndPort, Long> currentMap = getCurrentNodes(listener_key);
-    final Collection<HostAndPort> retVal = Collections2.filter(
+    final Map<HostAndPortWithScheme, Long> priorSeenMap = lastSeenMap;
+    final Map<HostAndPortWithScheme, Long> currentMap = getCurrentNodes(listener_key);
+    final Collection<HostAndPortWithScheme> retVal = Collections2.filter(
         currentMap.keySet(),
-        new Predicate<HostAndPort>()
+        new Predicate<HostAndPortWithScheme>()
         {
           @Override
-          public boolean apply(HostAndPort input)
+          public boolean apply(HostAndPortWithScheme input)
           {
             final Long l = priorSeenMap.get(input);
             return l == null || l < currentMap.get(input);

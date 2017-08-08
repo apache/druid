@@ -42,7 +42,8 @@ public class AppenderatorPlumberTest
   private final AppenderatorPlumber plumber;
   private final AppenderatorTester appenderatorTester;
 
-  public AppenderatorPlumberTest() throws Exception {
+  public AppenderatorPlumberTest() throws Exception
+  {
     this.appenderatorTester = new AppenderatorTester(10);
     DataSegmentAnnouncer segmentAnnouncer = EasyMock
         .createMock(DataSegmentAnnouncer.class);
@@ -92,7 +93,8 @@ public class AppenderatorPlumberTest
   }
 
   @Test
-  public void testSimpleIngestion() throws Exception {
+  public void testSimpleIngestion() throws Exception
+  {
 
     final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();    
     
@@ -129,7 +131,7 @@ public class AppenderatorPlumberTest
     SegmentIdentifier si = plumber.getSegmentsView().values().toArray(new SegmentIdentifier[1])[0];
     
     Assert.assertEquals(3,
-        appenderator.getRowCount(si));    
+        appenderator.getRowCount(si));
 
     appenderator.clear();    
     Assert.assertTrue(appenderator.getSegments().isEmpty());

@@ -65,6 +65,12 @@ public class FilteredAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return delegate.getDouble();
+  }
+
+  @Override
   public void close()
   {
     delegate.close();

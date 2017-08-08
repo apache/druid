@@ -26,9 +26,9 @@ import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = WhiteListBasedDruidToTimelineEventConverter.class)
-@JsonSubTypes(value= {
-    @JsonSubTypes.Type(name="all", value = SendAllTimelineEventConverter.class),
-    @JsonSubTypes.Type(name="whiteList", value = WhiteListBasedDruidToTimelineEventConverter.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "all", value = SendAllTimelineEventConverter.class),
+    @JsonSubTypes.Type(name = "whiteList", value = WhiteListBasedDruidToTimelineEventConverter.class)
 })
 
 public interface DruidToTimelineMetricConverter

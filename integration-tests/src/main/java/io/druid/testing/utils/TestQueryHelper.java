@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Druids;
@@ -121,7 +122,7 @@ public class TestQueryHelper
 
   private String getBrokerURL()
   {
-    return String.format("%s/druid/v2?pretty", broker);
+    return StringUtils.format("%s/druid/v2?pretty", broker);
   }
 
   @SuppressWarnings("unchecked")
@@ -133,7 +134,8 @@ public class TestQueryHelper
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory("rows", "count")
                                       )
-                                  ).granularity(Granularities.ALL)
+                                  )
+                                  .granularity(Granularities.ALL)
                                   .intervals(interval)
                                   .build();
 

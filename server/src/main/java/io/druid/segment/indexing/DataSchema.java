@@ -85,7 +85,7 @@ public class DataSchema
       log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
     }
 
-    this.aggregators = aggregators;
+    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
   }
 
   @JsonProperty
@@ -103,7 +103,7 @@ public class DataSchema
   @JsonIgnore
   public InputRowParser getParser()
   {
-    if(parser == null) {
+    if (parser == null) {
       log.warn("No parser has been specified");
       return null;
     }

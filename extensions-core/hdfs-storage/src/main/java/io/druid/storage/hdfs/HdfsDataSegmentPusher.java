@@ -26,6 +26,8 @@ import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.common.utils.UUIDUtils;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -98,7 +100,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         storageDir
     );
 
-    Path tmpIndexFile = new Path(String.format(
+    Path tmpIndexFile = new Path(StringUtils.format(
         "%s/%s/%s/%s_index.zip",
         fullyQualifiedStorageDirectory,
         segment.getDataSource(),
@@ -114,13 +116,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
       size = CompressionUtils.zip(inDir, out);
-      final Path outIndexFile = new Path(String.format(
+      final Path outIndexFile = new Path(StringUtils.format(
           "%s/%s/%d_index.zip",
           fullyQualifiedStorageDirectory,
           storageDir,
           segment.getShardSpec().getPartitionNum()
       ));
-      final Path outDescriptorFile = new Path(String.format(
+      final Path outDescriptorFile = new Path(StringUtils.format(
           "%s/%s/%d_descriptor.json",
           fullyQualifiedStorageDirectory,
           storageDir,
@@ -133,7 +135,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       final Path tmpDescriptorFile = new Path(
           tmpIndexFile.getParent(),
-          String.format("%s_descriptor.json", dataSegment.getShardSpec().getPartitionNum())
+          StringUtils.format("%s_descriptor.json", dataSegment.getShardSpec().getPartitionNum())
       );
 
       log.info("Creating descriptor file at[%s]", tmpDescriptorFile);
@@ -171,11 +173,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
             to
         );
       } else {
-        throw new IOException(String.format(
-            "Failed to rename temp Index file[%s] and final segment path[%s] is not present.",
-            from,
-            to
-        ));
+        throw new IOE("Failed to rename temp Index file[%s] and final segment path[%s] is not present.", from, to);
       }
     }
   }
@@ -201,7 +199,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
   {
-    return  ImmutableMap.<String, Object>of("type", "hdfs", "path", finalIndexZipFilePath.toString());
+    return ImmutableMap.<String, Object>of("type", "hdfs", "path", finalIndexZipFilePath.toString());
   }
 
   /**
@@ -214,7 +212,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   {
     return JOINER.join(
         segment.getDataSource(),
-        String.format(
+        StringUtils.format(
             "%s_%s",
             segment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
             segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
@@ -226,7 +224,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String makeIndexPathName(DataSegment dataSegment, String indexName)
   {
-    return String.format(
+    return StringUtils.format(
         "./%s/%d_%s",
         this.getStorageDir(dataSegment),
         dataSegment.getShardSpec().getPartitionNum(),

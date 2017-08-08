@@ -37,7 +37,7 @@ public class HistogramBufferAggregator implements BufferAggregator
   public HistogramBufferAggregator(FloatColumnSelector selector, float[] breaks)
   {
     this.selector = selector;
-    this.breaks   = breaks;
+    this.breaks = breaks;
     this.minOffset = Longs.BYTES * (breaks.length + 1);
     this.maxOffset = this.minOffset + Floats.BYTES;
   }
@@ -50,8 +50,8 @@ public class HistogramBufferAggregator implements BufferAggregator
 
     final long[] bins = new long[breaks.length + 1];
     mutationBuffer.asLongBuffer().put(bins);
-    mutationBuffer.putFloat(position + minOffset, Float.MAX_VALUE);
-    mutationBuffer.putFloat(position + maxOffset, Float.MIN_VALUE);
+    mutationBuffer.putFloat(position + minOffset, Float.POSITIVE_INFINITY);
+    mutationBuffer.putFloat(position + maxOffset, Float.NEGATIVE_INFINITY);
   }
 
   @Override
@@ -61,10 +61,10 @@ public class HistogramBufferAggregator implements BufferAggregator
     final int minPos = position + minOffset;
     final int maxPos = position + maxOffset;
 
-    if(value < buf.getFloat(minPos)) {
+    if (value < buf.getFloat(minPos)) {
       buf.putFloat(minPos, value);
     }
-    if(value > buf.getFloat(maxPos)) {
+    if (value > buf.getFloat(maxPos)) {
       buf.putFloat(maxPos, value);
     }
 
@@ -99,6 +99,12 @@ public class HistogramBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     throw new UnsupportedOperationException("HistogramBufferAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getDouble");
   }
 
   @Override

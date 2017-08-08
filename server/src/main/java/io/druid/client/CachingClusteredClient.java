@@ -24,13 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
@@ -50,9 +49,9 @@ import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.LazySequence;
-import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentResultValueClass;
@@ -61,6 +60,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
@@ -73,25 +73,29 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
-import io.druid.timeline.partition.ShardSpec;
+import io.druid.timeline.partition.PartitionHolder;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.SortedMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 /**
  */
-public class CachingClusteredClient<T> implements QueryRunner<T>
+public class CachingClusteredClient implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
   private final QueryToolChestWarehouse warehouse;
@@ -140,49 +144,180 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final Query<T> query = queryPlus.getQuery();
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    final CacheStrategy<T, Object, Query<T>> strategy = toolChest.getCacheStrategy(query);
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      {
+        return CachingClusteredClient.this.run(queryPlus, responseContext, timeline -> timeline);
+      }
+    };
+  }
 
-    final Map<DruidServer, List<SegmentDescriptor>> serverSegments = Maps.newTreeMap();
+  /**
+   * Run a query. The timelineConverter will be given the "master" timeline and can be used to return a different
+   * timeline, if desired. This is used by getQueryRunnerForSegments.
+   */
+  private <T> Sequence<T> run(
+      final QueryPlus<T> queryPlus,
+      final Map<String, Object> responseContext,
+      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
+  )
+  {
+    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+  }
 
-    final List<Pair<Interval, byte[]>> cachedResults = Lists.newArrayList();
-    final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
+  {
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      {
+        return CachingClusteredClient.this.run(
+            queryPlus,
+            responseContext,
+            timeline -> {
+              final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
+                  new VersionedIntervalTimeline<>(Ordering.natural());
+              for (SegmentDescriptor spec : specs) {
+                final PartitionHolder<ServerSelector> entry = timeline.findEntry(spec.getInterval(), spec.getVersion());
+                if (entry != null) {
+                  final PartitionChunk<ServerSelector> chunk = entry.getChunk(spec.getPartitionNumber());
+                  if (chunk != null) {
+                    timeline2.add(spec.getInterval(), spec.getVersion(), chunk);
+                  }
+                }
+              }
+              return timeline2;
+            }
+        );
+      }
+    };
+  }
 
-    final boolean useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
-    final boolean populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
-    final boolean isBySegment = QueryContexts.isBySegment(query);
+  /**
+   * This class essentially incapsulates the major part of the logic of {@link CachingClusteredClient}. It's state and
+   * methods couldn't belong to {@link CachingClusteredClient} itself, because they depend on the specific query object
+   * being run, but {@link QuerySegmentWalker} API is designed so that implementations should be able to accept
+   * arbitrary queries.
+   */
+  private class SpecificQueryRunnable<T>
+  {
+    private final QueryPlus<T> queryPlus;
+    private final Map<String, Object> responseContext;
+    private final Query<T> query;
+    private final QueryToolChest<T, Query<T>> toolChest;
+    @Nullable
+    private final CacheStrategy<T, Object, Query<T>> strategy;
+    private final boolean useCache;
+    private final boolean populateCache;
+    private final boolean isBySegment;
+    private final int uncoveredIntervalsLimit;
+    private final Query<T> downstreamQuery;
+    private final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
+    SpecificQueryRunnable(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+    {
+      this.queryPlus = queryPlus;
+      this.responseContext = responseContext;
+      this.query = queryPlus.getQuery();
+      this.toolChest = warehouse.getToolChest(query);
+      this.strategy = toolChest.getCacheStrategy(query);
 
-    final int priority = QueryContexts.getPriority(query);
-    contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
-
-    if (populateCache) {
-      // prevent down-stream nodes from caching results as well if we are populating the cache
-      contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
-      contextBuilder.put("bySegment", true);
+      this.useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
+      this.populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
+      this.isBySegment = QueryContexts.isBySegment(query);
+      // Note that enabling this leads to putting uncovered intervals information in the response headers
+      // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
+      this.uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query);
+      this.downstreamQuery = query.withOverriddenContext(makeDownstreamQueryContext());
     }
 
-    TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+    private ImmutableMap<String, Object> makeDownstreamQueryContext()
+    {
+      final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    if (timeline == null) {
-      return Sequences.empty();
+      final int priority = QueryContexts.getPriority(query);
+      contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
+
+      if (populateCache) {
+        // prevent down-stream nodes from caching results as well if we are populating the cache
+        contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
+        contextBuilder.put("bySegment", true);
+      }
+      return contextBuilder.build();
     }
 
-    // build set of segments to query
-    Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
+    Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
+    {
+      @Nullable TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+      if (timeline == null) {
+        return Sequences.empty();
+      }
+      timeline = timelineConverter.apply(timeline);
+      if (uncoveredIntervalsLimit > 0) {
+        computeUncoveredIntervals(timeline);
+      }
 
-    List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
+      final Set<ServerToSegment> segments = computeSegmentsToQuery(timeline);
+      @Nullable final byte[] queryCacheKey = computeQueryCacheKey();
+      if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
+        @Nullable final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
+        @Nullable final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
+        if (currentEtag != null && currentEtag.equals(prevEtag)) {
+          return Sequences.empty();
+        }
+      }
 
-    // Note that enabling this leads to putting uncovered intervals information in the response headers
-    // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
-    int uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query);
+      final List<Pair<Interval, byte[]>> alreadyCachedResults = pruneSegmentsWithCachedResults(queryCacheKey, segments);
+      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segments);
+      return new LazySequence<>(() -> {
+        List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
+        addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
+        addSequencesFromServer(sequencesByInterval, segmentsByServer);
+        return Sequences
+            .simple(sequencesByInterval)
+            .flatMerge(seq -> seq, query.getResultOrdering());
+      });
+    }
 
-    if (uncoveredIntervalsLimit > 0) {
-      List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);
+    private Set<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
+    {
+      final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
+          query,
+          query.getIntervals().stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
+      );
+
+      final Set<ServerToSegment> segments = Sets.newLinkedHashSet();
+      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = Maps.newHashMap();
+      // Filter unneeded chunks based on partition dimension
+      for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
+        final Set<PartitionChunk<ServerSelector>> filteredChunks = DimFilterUtils.filterShards(
+            query.getFilter(),
+            holder.getObject(),
+            partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
+            dimensionRangeCache
+        );
+        for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
+          ServerSelector server = chunk.getObject();
+          final SegmentDescriptor segment = new SegmentDescriptor(
+              holder.getInterval(),
+              holder.getVersion(),
+              chunk.getChunkNumber()
+          );
+          segments.add(new ServerToSegment(server, segment));
+        }
+      }
+      return segments;
+    }
+
+    private void computeUncoveredIntervals(TimelineLookup<String, ServerSelector> timeline)
+    {
+      final List<Interval> uncoveredIntervals = new ArrayList<>(uncoveredIntervalsLimit);
       boolean uncoveredIntervalsOverflowed = false;
 
       for (Interval interval : query.getIntervals()) {
@@ -200,7 +335,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             }
           }
           startMillis = holderInterval.getEndMillis();
-          serversLookup.add(holder);
         }
 
         if (!uncoveredIntervalsOverflowed && startMillis < endMillis) {
@@ -220,387 +354,329 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         responseContext.put("uncoveredIntervals", uncoveredIntervals);
         responseContext.put("uncoveredIntervalsOverflowed", uncoveredIntervalsOverflowed);
       }
-    } else {
-      for (Interval interval : query.getIntervals()) {
-        Iterables.addAll(serversLookup, timeline.lookup(interval));
-      }
     }
 
-    // Let tool chest filter out unneeded segments
-    final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
-        toolChest.filterSegments(query, serversLookup);
-    Map<String, Optional<RangeSet<String>>> dimensionRangeCache = Maps.newHashMap();
-
-    // Filter unneeded chunks based on partition dimension
-    for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
-      final Set<PartitionChunk<ServerSelector>> filteredChunks = DimFilterUtils.filterShards(
-          query.getFilter(),
-          holder.getObject(),
-          new Function<PartitionChunk<ServerSelector>, ShardSpec>()
-          {
-            @Override
-            public ShardSpec apply(PartitionChunk<ServerSelector> input)
-            {
-              return input.getObject().getSegment().getShardSpec();
-            }
-          },
-          dimensionRangeCache
-      );
-      for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
-        ServerSelector selector = chunk.getObject();
-        final SegmentDescriptor descriptor = new SegmentDescriptor(
-            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
-        );
-        segments.add(Pair.of(selector, descriptor));
-      }
-    }
-
-    final byte[] queryCacheKey;
-
-    if ((populateCache || useCache) // implies strategy != null
-        && !isBySegment) // explicit bySegment queries are never cached
+    @Nullable
+    private byte[] computeQueryCacheKey()
     {
-      queryCacheKey = strategy.computeCacheKey(query);
-    } else {
-      queryCacheKey = null;
+      if ((populateCache || useCache) // implies strategy != null
+          && !isBySegment) { // explicit bySegment queries are never cached
+        assert strategy != null;
+        return strategy.computeCacheKey(query);
+      } else {
+        return null;
+      }
     }
 
-    if (query.getContext().get(QueryResource.HDR_IF_NONE_MATCH) != null) {
-      String prevEtag = (String) query.getContext().get(QueryResource.HDR_IF_NONE_MATCH);
-
-      //compute current Etag
+    @Nullable
+    private String computeCurrentEtag(final Set<ServerToSegment> segments, @Nullable byte[] queryCacheKey)
+    {
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
-      for (Pair<ServerSelector, SegmentDescriptor> p : segments) {
-        if (!p.lhs.pick().getServer().segmentReplicatable()) {
+      for (ServerToSegment p : segments) {
+        if (!p.getServer().pick().getServer().segmentReplicatable()) {
           hasOnlyHistoricalSegments = false;
           break;
         }
-        hasher.putString(p.lhs.getSegment().getIdentifier(), Charsets.UTF_8);
+        hasher.putString(p.getServer().getSegment().getIdentifier(), Charsets.UTF_8);
       }
 
       if (hasOnlyHistoricalSegments) {
         hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
+
         String currEtag = Base64.encodeBase64String(hasher.hash().asBytes());
-        responseContext.put(QueryResource.HDR_ETAG, currEtag);
-        if (prevEtag.equals(currEtag)) {
-          return Sequences.empty();
-        }
+        responseContext.put(QueryResource.HEADER_ETAG, currEtag);
+        return currEtag;
+      } else {
+        return null;
       }
     }
 
-    if (queryCacheKey != null) {
-      // cachKeys map must preserve segment ordering, in order for shards to always be combined in the same order
-      Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
-      for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
-        final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
-            segment.lhs.getSegment().getIdentifier(),
-            segment.rhs,
-            queryCacheKey
-        );
-        cacheKeys.put(segment, segmentCacheKey);
+    private List<Pair<Interval, byte[]>> pruneSegmentsWithCachedResults(
+        final byte[] queryCacheKey,
+        final Set<ServerToSegment> segments
+    )
+    {
+      if (queryCacheKey == null) {
+        return Collections.emptyList();
       }
-
+      final List<Pair<Interval, byte[]>> alreadyCachedResults = Lists.newArrayList();
+      Map<ServerToSegment, Cache.NamedKey> perSegmentCacheKeys = computePerSegmentCacheKeys(segments, queryCacheKey);
       // Pull cached segments from cache and remove from set of segments to query
-      final Map<Cache.NamedKey, byte[]> cachedValues;
-      if (useCache) {
-        cachedValues = cache.getBulk(Iterables.limit(cacheKeys.values(), cacheConfig.getCacheBulkMergeLimit()));
-      } else {
-        cachedValues = ImmutableMap.of();
-      }
+      final Map<Cache.NamedKey, byte[]> cachedValues = computeCachedValues(perSegmentCacheKeys);
 
-      for (Map.Entry<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> entry : cacheKeys.entrySet()) {
-        Pair<ServerSelector, SegmentDescriptor> segment = entry.getKey();
-        Cache.NamedKey segmentCacheKey = entry.getValue();
-        final Interval segmentQueryInterval = segment.rhs.getInterval();
+      perSegmentCacheKeys.forEach((segment, segmentCacheKey) -> {
+        final Interval segmentQueryInterval = segment.getSegmentDescriptor().getInterval();
 
         final byte[] cachedValue = cachedValues.get(segmentCacheKey);
         if (cachedValue != null) {
           // remove cached segment from set of segments to query
           segments.remove(segment);
-          cachedResults.add(Pair.of(segmentQueryInterval, cachedValue));
+          alreadyCachedResults.add(Pair.of(segmentQueryInterval, cachedValue));
         } else if (populateCache) {
           // otherwise, if populating cache, add segment to list of segments to cache
-          final String segmentIdentifier = segment.lhs.getSegment().getIdentifier();
-          cachePopulatorMap.put(
-              String.format("%s_%s", segmentIdentifier, segmentQueryInterval),
-              new CachePopulator(cache, objectMapper, segmentCacheKey)
-          );
+          final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
+          addCachePopulator(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
         }
-      }
+      });
+      return alreadyCachedResults;
     }
 
-    // Compile list of all segments not pulled from cache
-    for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
-      final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
+    private Map<ServerToSegment, Cache.NamedKey> computePerSegmentCacheKeys(
+        Set<ServerToSegment> segments,
+        byte[] queryCacheKey
+    )
+    {
+      // cacheKeys map must preserve segment ordering, in order for shards to always be combined in the same order
+      Map<ServerToSegment, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
+      for (ServerToSegment serverToSegment : segments) {
+        final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
+            serverToSegment.getServer().getSegment().getIdentifier(),
+            serverToSegment.getSegmentDescriptor(),
+            queryCacheKey
+        );
+        cacheKeys.put(serverToSegment, segmentCacheKey);
+      }
+      return cacheKeys;
+    }
 
-      if (queryableDruidServer == null) {
-        log.makeAlert(
-            "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
-            segment.rhs,
-            query.getDataSource()
-        ).emit();
+    private Map<Cache.NamedKey, byte[]> computeCachedValues(Map<ServerToSegment, Cache.NamedKey> cacheKeys)
+    {
+      if (useCache) {
+        return cache.getBulk(Iterables.limit(cacheKeys.values(), cacheConfig.getCacheBulkMergeLimit()));
       } else {
-        final DruidServer server = queryableDruidServer.getServer();
-        List<SegmentDescriptor> descriptors = serverSegments.get(server);
-
-        if (descriptors == null) {
-          descriptors = Lists.newArrayList();
-          serverSegments.put(server, descriptors);
-        }
-
-        descriptors.add(segment.rhs);
+        return ImmutableMap.of();
       }
     }
 
-    return new LazySequence<>(
-        new Supplier<Sequence<T>>()
-        {
-          @Override
-          public Sequence<T> get()
-          {
-            ArrayList<Sequence<T>> sequencesByInterval = Lists.newArrayList();
-            addSequencesFromCache(sequencesByInterval);
-            addSequencesFromServer(sequencesByInterval);
+    private void addCachePopulator(
+        Cache.NamedKey segmentCacheKey,
+        String segmentIdentifier,
+        Interval segmentQueryInterval
+    )
+    {
+      cachePopulatorMap.put(
+          StringUtils.format("%s_%s", segmentIdentifier, segmentQueryInterval),
+          new CachePopulator(cache, objectMapper, segmentCacheKey)
+      );
+    }
 
-            return mergeCachedAndUncachedSequences(query, sequencesByInterval);
-          }
+    @Nullable
+    private CachePopulator getCachePopulator(String segmentId, Interval segmentInterval)
+    {
+      return cachePopulatorMap.get(StringUtils.format("%s_%s", segmentId, segmentInterval));
+    }
 
-          private void addSequencesFromCache(ArrayList<Sequence<T>> listOfSequences)
-          {
-            if (strategy == null) {
-              return;
-            }
+    private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(Set<ServerToSegment> segments)
+    {
+      final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = Maps.newTreeMap();
+      for (ServerToSegment serverToSegment : segments) {
+        final QueryableDruidServer queryableDruidServer = serverToSegment.getServer().pick();
 
-            final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
-            final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
-            for (Pair<Interval, byte[]> cachedResultPair : cachedResults) {
-              final byte[] cachedResult = cachedResultPair.rhs;
-              Sequence<Object> cachedSequence = new BaseSequence<>(
-                  new BaseSequence.IteratorMaker<Object, Iterator<Object>>()
-                  {
-                    @Override
-                    public Iterator<Object> make()
-                    {
-                      try {
-                        if (cachedResult.length == 0) {
-                          return Iterators.emptyIterator();
-                        }
+        if (queryableDruidServer == null) {
+          log.makeAlert(
+              "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
+              serverToSegment.getSegmentDescriptor(),
+              query.getDataSource()
+          ).emit();
+        } else {
+          final DruidServer server = queryableDruidServer.getServer();
+          serverSegments.computeIfAbsent(server, s -> new ArrayList<>()).add(serverToSegment.getSegmentDescriptor());
+        }
+      }
+      return serverSegments;
+    }
 
-                        return objectMapper.readValues(
-                            objectMapper.getFactory().createParser(cachedResult),
-                            cacheObjectClazz
-                        );
-                      }
-                      catch (IOException e) {
-                        throw Throwables.propagate(e);
-                      }
-                    }
+    private void addSequencesFromCache(
+        final List<Sequence<T>> listOfSequences,
+        final List<Pair<Interval, byte[]>> cachedResults
+    )
+    {
+      if (strategy == null) {
+        return;
+      }
 
-                    @Override
-                    public void cleanup(Iterator<Object> iterFromMake)
-                    {
-                    }
+      final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
+      final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
+      for (Pair<Interval, byte[]> cachedResultPair : cachedResults) {
+        final byte[] cachedResult = cachedResultPair.rhs;
+        Sequence<Object> cachedSequence = new BaseSequence<>(
+            new BaseSequence.IteratorMaker<Object, Iterator<Object>>()
+            {
+              @Override
+              public Iterator<Object> make()
+              {
+                try {
+                  if (cachedResult.length == 0) {
+                    return Iterators.emptyIterator();
                   }
-              );
-              listOfSequences.add(Sequences.map(cachedSequence, pullFromCacheFunction));
-            }
-          }
 
-          private void addSequencesFromServer(ArrayList<Sequence<T>> listOfSequences)
-          {
-            listOfSequences.ensureCapacity(listOfSequences.size() + serverSegments.size());
-
-            final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
-
-            // Loop through each server, setting up the query and initiating it.
-            // The data gets handled as a Future and parsed in the long Sequence chain in the resultSeqToAdd setter.
-            for (Map.Entry<DruidServer, List<SegmentDescriptor>> entry : serverSegments.entrySet()) {
-              final DruidServer server = entry.getKey();
-              final List<SegmentDescriptor> descriptors = entry.getValue();
-
-              final QueryRunner clientQueryable = serverView.getQueryRunner(server);
-
-              if (clientQueryable == null) {
-                log.error("WTF!? server[%s] doesn't have a client Queryable?", server);
-                continue;
-              }
-
-              final MultipleSpecificSegmentSpec segmentSpec = new MultipleSpecificSegmentSpec(descriptors);
-
-              final Sequence<T> resultSeqToAdd;
-              if (!server.segmentReplicatable() || !populateCache || isBySegment) { // Direct server queryable
-                if (!isBySegment) {
-                  resultSeqToAdd = clientQueryable.run(queryPlus.withQuerySegmentSpec(segmentSpec), responseContext);
-                } else {
-                  // bySegment queries need to be de-serialized, see DirectDruidClient.run()
-                  @SuppressWarnings("unchecked")
-                  final Sequence<Result<BySegmentResultValueClass<T>>> resultSequence = clientQueryable.run(
-                      queryPlus.withQuerySegmentSpec(segmentSpec),
-                      responseContext
-                  );
-
-                  resultSeqToAdd = (Sequence) Sequences.map(
-                      resultSequence,
-                      new Function<Result<BySegmentResultValueClass<T>>, Result<BySegmentResultValueClass<T>>>()
-                      {
-                        @Override
-                        public Result<BySegmentResultValueClass<T>> apply(Result<BySegmentResultValueClass<T>> input)
-                        {
-                          final BySegmentResultValueClass<T> bySegmentValue = input.getValue();
-                          return new Result<>(
-                              input.getTimestamp(),
-                              new BySegmentResultValueClass<T>(
-                                  Lists.transform(
-                                      bySegmentValue.getResults(),
-                                      toolChest.makePreComputeManipulatorFn(
-                                          query,
-                                          MetricManipulatorFns.deserializing()
-                                      )
-                                  ),
-                                  bySegmentValue.getSegmentId(),
-                                  bySegmentValue.getInterval()
-                              )
-                          );
-                        }
-                      }
+                  return objectMapper.readValues(
+                      objectMapper.getFactory().createParser(cachedResult),
+                      cacheObjectClazz
                   );
                 }
-              } else { // Requires some manipulation on broker side
-                @SuppressWarnings("unchecked")
-                final Sequence<Result<BySegmentResultValueClass<T>>> runningSequence = clientQueryable.run(
-                    queryPlus.withQuery(rewrittenQuery.withQuerySegmentSpec(segmentSpec)),
-                    responseContext
-                );
-                resultSeqToAdd = new MergeSequence(
-                    query.getResultOrdering(),
-                    Sequences.<Result<BySegmentResultValueClass<T>>, Sequence<T>>map(
-                        runningSequence,
-                        new Function<Result<BySegmentResultValueClass<T>>, Sequence<T>>()
-                        {
-                          private final Function<T, Object> cacheFn = strategy.prepareForCache();
-
-                          // Acctually do something with the results
-                          @Override
-                          public Sequence<T> apply(Result<BySegmentResultValueClass<T>> input)
-                          {
-                            final BySegmentResultValueClass<T> value = input.getValue();
-                            final CachePopulator cachePopulator = cachePopulatorMap.get(
-                                String.format("%s_%s", value.getSegmentId(), value.getInterval())
-                            );
-
-                            final Queue<ListenableFuture<Object>> cacheFutures = new ConcurrentLinkedQueue<>();
-
-                            return Sequences.<T>withEffect(
-                                Sequences.<T, T>map(
-                                    Sequences.<T, T>map(
-                                        Sequences.<T>simple(value.getResults()),
-                                        new Function<T, T>()
-                                        {
-                                          @Override
-                                          public T apply(final T input)
-                                          {
-                                            if (cachePopulator != null) {
-                                              // only compute cache data if populating cache
-                                              cacheFutures.add(
-                                                  backgroundExecutorService.submit(
-                                                      new Callable<Object>()
-                                                      {
-                                                        @Override
-                                                        public Object call()
-                                                        {
-                                                          return cacheFn.apply(input);
-                                                        }
-                                                      }
-                                                  )
-                                              );
-                                            }
-                                            return input;
-                                          }
-                                        }
-                                    ),
-                                    toolChest.makePreComputeManipulatorFn(
-                                        // Ick... most makePreComputeManipulatorFn directly cast to their ToolChest query type of choice
-                                        // This casting is sub-optimal, but hasn't caused any major problems yet...
-                                        (Query) rewrittenQuery,
-                                        MetricManipulatorFns.deserializing()
-                                    )
-                                ),
-                                new Runnable()
-                                {
-                                  @Override
-                                  public void run()
-                                  {
-                                    if (cachePopulator != null) {
-                                      Futures.addCallback(
-                                          Futures.allAsList(cacheFutures),
-                                          new FutureCallback<List<Object>>()
-                                          {
-                                            @Override
-                                            public void onSuccess(List<Object> cacheData)
-                                            {
-                                              cachePopulator.populate(cacheData);
-                                              // Help out GC by making sure all references are gone
-                                              cacheFutures.clear();
-                                            }
-
-                                            @Override
-                                            public void onFailure(Throwable throwable)
-                                            {
-                                              log.error(throwable, "Background caching failed");
-                                            }
-                                          },
-                                          backgroundExecutorService
-                                      );
-                                    }
-                                  }
-                                },
-                                MoreExecutors.sameThreadExecutor()
-                            );// End withEffect
-                          }
-                        }
-                    )
-                );
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
               }
 
-              listOfSequences.add(resultSeqToAdd);
+              @Override
+              public void cleanup(Iterator<Object> iterFromMake)
+              {
+              }
             }
-          }
-        }// End of Supplier
-    );
-  }
-
-  protected Sequence<T> mergeCachedAndUncachedSequences(
-      Query<T> query,
-      List<Sequence<T>> sequencesByInterval
-  )
-  {
-    if (sequencesByInterval.isEmpty()) {
-      return Sequences.empty();
+        );
+        listOfSequences.add(Sequences.map(cachedSequence, pullFromCacheFunction));
+      }
     }
 
-    return new MergeSequence<>(
-        query.getResultOrdering(),
-        Sequences.simple(sequencesByInterval)
-    );
+    private void addSequencesFromServer(
+        final List<Sequence<T>> listOfSequences,
+        final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer
+    )
+    {
+      segmentsByServer.forEach((server, segmentsOfServer) -> {
+        final QueryRunner serverRunner = serverView.getQueryRunner(server);
+
+        if (serverRunner == null) {
+          log.error("Server[%s] doesn't have a query runner", server);
+          return;
+        }
+
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec = new MultipleSpecificSegmentSpec(segmentsOfServer);
+
+        Sequence<T> serverResults;
+        if (isBySegment) {
+          serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec);
+        } else if (!server.segmentReplicatable() || !populateCache) {
+          serverResults = getSimpleServerResults(serverRunner, segmentsOfServerSpec);
+        } else {
+          serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
+        }
+        listOfSequences.add(serverResults);
+      });
+    }
+
+    @SuppressWarnings("unchecked")
+    private Sequence<T> getBySegmentServerResults(
+        final QueryRunner serverRunner,
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+    )
+    {
+      Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner
+          .run(queryPlus.withQuerySegmentSpec(segmentsOfServerSpec), responseContext);
+      // bySegment results need to be de-serialized, see DirectDruidClient.run()
+      return (Sequence<T>) resultsBySegments
+          .map(result -> result.map(
+              resultsOfSegment -> resultsOfSegment.mapResults(
+                  toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing())::apply
+              )
+          ));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Sequence<T> getSimpleServerResults(
+        final QueryRunner serverRunner,
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+    )
+    {
+      return serverRunner.run(queryPlus.withQuerySegmentSpec(segmentsOfServerSpec), responseContext);
+    }
+
+    private Sequence<T> getAndCacheServerResults(
+        final QueryRunner serverRunner,
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+    )
+    {
+      @SuppressWarnings("unchecked")
+      final Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner.run(
+          queryPlus
+              .withQuery((Query<Result<BySegmentResultValueClass<T>>>) downstreamQuery)
+              .withQuerySegmentSpec(segmentsOfServerSpec),
+          responseContext
+      );
+      final Function<T, Object> cacheFn = strategy.prepareForCache();
+      return resultsBySegments
+          .map(result -> {
+            final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
+            final CachePopulator cachePopulator =
+                getCachePopulator(resultsOfSegment.getSegmentId(), resultsOfSegment.getInterval());
+            Sequence<T> res = Sequences
+                .simple(resultsOfSegment.getResults())
+                .map(r -> {
+                  if (cachePopulator != null) {
+                    // only compute cache data if populating cache
+                    cachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cacheFn.apply(r)));
+                  }
+                  return r;
+                })
+                .map(
+                    toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
+                );
+            if (cachePopulator != null) {
+              res = res.withEffect(cachePopulator::populate, MoreExecutors.sameThreadExecutor());
+            }
+            return res;
+          })
+          .flatMerge(seq -> seq, query.getResultOrdering());
+    }
   }
 
-  private static class CachePopulator
+  private static class ServerToSegment extends Pair<ServerSelector, SegmentDescriptor>
+  {
+    private ServerToSegment(ServerSelector server, SegmentDescriptor segment)
+    {
+      super(server, segment);
+    }
+
+    ServerSelector getServer()
+    {
+      return lhs;
+    }
+
+    SegmentDescriptor getSegmentDescriptor()
+    {
+      return rhs;
+    }
+  }
+
+  private class CachePopulator
   {
     private final Cache cache;
     private final ObjectMapper mapper;
     private final Cache.NamedKey key;
+    private final ConcurrentLinkedQueue<ListenableFuture<Object>> cacheFutures = new ConcurrentLinkedQueue<>();
 
-    public CachePopulator(Cache cache, ObjectMapper mapper, Cache.NamedKey key)
+    CachePopulator(Cache cache, ObjectMapper mapper, Cache.NamedKey key)
     {
       this.cache = cache;
       this.mapper = mapper;
       this.key = key;
     }
 
-    public void populate(Iterable<Object> results)
+    public void populate()
     {
-      CacheUtil.populate(cache, mapper, key, results);
+      Futures.addCallback(
+          Futures.allAsList(cacheFutures),
+          new FutureCallback<List<Object>>()
+          {
+            @Override
+            public void onSuccess(List<Object> cacheData)
+            {
+              CacheUtil.populate(cache, mapper, key, cacheData);
+              // Help out GC by making sure all references are gone
+              cacheFutures.clear();
+            }
+
+            @Override
+            public void onFailure(Throwable throwable)
+            {
+              log.error(throwable, "Background caching failed");
+            }
+          },
+          backgroundExecutorService
+      );
     }
   }
 }

@@ -450,7 +450,8 @@ public class DruidCoordinator
               }
             }
         );
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
         Throwables.propagate(e);
       }
@@ -520,7 +521,7 @@ public class DruidCoordinator
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, ZKPaths.makePath(zkPaths.getCoordinatorPath(), COORDINATOR_OWNER_NODE), self.getHostAndPort()
+        curator, ZKPaths.makePath(zkPaths.getCoordinatorPath(), COORDINATOR_OWNER_NODE), self.getHostAndPortToUse()
     );
 
     newLeaderLatch.addListener(
@@ -748,8 +749,9 @@ public class DruidCoordinator
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
-      } finally {
-        if(balancerExec != null){
+      }
+      finally {
+        if (balancerExec != null) {
           balancerExec.shutdownNow();
         }
       }

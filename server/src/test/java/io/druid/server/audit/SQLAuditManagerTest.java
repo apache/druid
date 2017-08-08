@@ -24,6 +24,7 @@ import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.DateTime;
@@ -220,13 +221,13 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry2, auditEntries.get(1));
   }
 
-  @Test(expected=IllegalArgumentException.class, timeout = 10_000L)
+  @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
   public void testFetchAuditHistoryLimitBelowZero() throws IOException
   {
     auditManager.fetchAuditHistory("testType", -1);
   }
 
-  @Test(expected=IllegalArgumentException.class, timeout = 10_000L)
+  @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
   public void testFetchAuditHistoryLimitZero() throws IOException
   {
     auditManager.fetchAuditHistory("testType", 0);
@@ -246,7 +247,7 @@ public class SQLAuditManagerTest
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format("DROP TABLE %s", tableName))
+            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                   .execute();
             return null;
           }

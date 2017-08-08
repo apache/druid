@@ -47,14 +47,15 @@ public class TaskLogAutoCleanerConfig
       @JsonProperty("initialDelay") Long initialDelay,
       @JsonProperty("delay") Long delay,
       @JsonProperty("durationToRetain") Long durationToRetain
-  ){
+  )
+  {
     if (enabled) {
       Preconditions.checkNotNull(durationToRetain, "durationToRetain must be provided.");
     }
 
     this.enabled = enabled;
-    this.initialDelay = initialDelay == null ? 60000 + new Random().nextInt(4*60000) : initialDelay.longValue();
-    this.delay = delay == null ? 6*60*60*1000 : delay.longValue();
+    this.initialDelay = initialDelay == null ? 60000 + new Random().nextInt(4 * 60000) : initialDelay.longValue();
+    this.delay = delay == null ? 6 * 60 * 60 * 1000 : delay.longValue();
     this.durationToRetain = durationToRetain == null ? Long.MAX_VALUE : durationToRetain.longValue();
 
     Preconditions.checkArgument(this.initialDelay > 0, "initialDelay must be > 0.");

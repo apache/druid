@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
@@ -72,13 +73,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
       if (intervalIterator.hasNext()) {
         final Interval nextInterval = intervalIterator.peek();
         if (currentInterval.overlaps(nextInterval)) {
-          throw new IllegalArgumentException(
-              String.format(
-                  "Overlapping intervals: %s, %s",
-                  currentInterval,
-                  nextInterval
-              )
-          );
+          throw new IAE("Overlapping intervals: %s, %s", currentInterval, nextInterval);
         }
       }
     }
@@ -183,7 +178,8 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public GranularitySpec withIntervals(List<Interval> inputIntervals) {
+  public GranularitySpec withIntervals(List<Interval> inputIntervals)
+  {
     return new ArbitraryGranularitySpec(queryGranularity, rollup, inputIntervals);
   }
 }

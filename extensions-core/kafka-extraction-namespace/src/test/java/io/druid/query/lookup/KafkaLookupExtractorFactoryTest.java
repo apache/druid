@@ -299,7 +299,8 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expectLastCall().andAnswer(new IAnswer<Object>()
     {
       @Override
-      public Object answer() throws Throwable {
+      public Object answer() throws Throwable
+      {
         threadWasInterrupted.set(Thread.currentThread().isInterrupted());
         return null;
       }

@@ -63,7 +63,7 @@ public abstract class AbstractIndexerTest
       // to the 2nd date in the last string
       Collections.sort (intervals);
       String first = intervals.get(0).split("/")[0];
-      String last = intervals.get(intervals.size() -1).split("/")[1];
+      String last = intervals.get(intervals.size() - 1).split("/")[1];
       unloadAndKillData (dataSource, first, last);
   }
 
@@ -88,7 +88,8 @@ public abstract class AbstractIndexerTest
     waitForAllTasksToComplete();
   }
 
-  protected void waitForAllTasksToComplete(){
+  protected void waitForAllTasksToComplete()
+  {
     RetryUtil.retryUntilTrue(
       new Callable<Boolean>()
       {

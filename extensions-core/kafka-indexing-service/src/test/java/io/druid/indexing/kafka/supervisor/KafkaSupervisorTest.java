@@ -97,7 +97,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
-import static java.lang.String.format;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
 import static org.easymock.EasyMock.capture;
@@ -166,7 +165,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ImmutableMap.of("num.partitions", String.valueOf(NUM_PARTITIONS))
     );
     kafkaServer.start();
-    kafkaHost = String.format("localhost:%d", kafkaServer.getPort());
+    kafkaHost = StringUtils.format("localhost:%d", kafkaServer.getPort());
 
     dataSchema = getDataSchema(DATASOURCE);
   }
@@ -498,51 +497,56 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor = getSupervisor(2, 1, true, "PT1H", null, false);
     addSomeEvents(1);
 
-    Task id1 = createKafkaIndexTask( // unexpected # of partitions (kill)
-                                     "id1",
-                                     DATASOURCE,
-                                     "index_kafka_testDS__some_other_sequenceName",
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
-                                     null
+    // unexpected # of partitions (kill)
+    Task id1 = createKafkaIndexTask(
+        "id1",
+        DATASOURCE,
+        "index_kafka_testDS__some_other_sequenceName",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
+        null
     );
 
-    Task id2 = createKafkaIndexTask( // correct number of partitions and ranges (don't kill)
-                                     "id2",
-                                     DATASOURCE,
-                                     "sequenceName-0",
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 333L)),
-                                     null
+    // correct number of partitions and ranges (don't kill)
+    Task id2 = createKafkaIndexTask(
+        "id2",
+        DATASOURCE,
+        "sequenceName-0",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 333L)),
+        null
     );
 
-    Task id3 = createKafkaIndexTask( // unexpected range on partition 2 (kill)
-                                     "id3",
-                                     DATASOURCE,
-                                     "index_kafka_testDS__some_other_sequenceName",
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 1L)),
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 330L)),
-                                     null
+    // unexpected range on partition 2 (kill)
+    Task id3 = createKafkaIndexTask(
+        "id3",
+        DATASOURCE,
+        "index_kafka_testDS__some_other_sequenceName",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 1L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 330L)),
+        null
     );
 
-    Task id4 = createKafkaIndexTask( // different datasource (don't kill)
-                                     "id4",
-                                     "other-datasource",
-                                     "index_kafka_testDS_d927edff33c4b3f",
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
-                                     new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
-                                     null
+    // different datasource (don't kill)
+    Task id4 = createKafkaIndexTask(
+        "id4",
+        "other-datasource",
+        "index_kafka_testDS_d927edff33c4b3f",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
+        null
     );
 
-    Task id5 = new RealtimeIndexTask( // non KafkaIndexTask (don't kill)
-                                      "id5",
-                                      null,
-                                      new FireDepartment(
-                                          dataSchema,
-                                          new RealtimeIOConfig(null, null, null),
-                                          null
-                                      ),
-                                      null
+    // non KafkaIndexTask (don't kill)
+    Task id5 = new RealtimeIndexTask(
+        "id5",
+        null,
+        new FireDepartment(
+            dataSchema,
+            new RealtimeIOConfig(null, null, null),
+            null
+        ),
+        null
     );
 
     List<Task> existingTasks = ImmutableList.of(id1, id2, id3, id4, id5);
@@ -879,7 +883,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testBeginPublishAndQueueNextTasks() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(2, 2, true, "PT1M", null, false);
     addSomeEvents(100);
@@ -962,7 +966,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingTask() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
     addSomeEvents(1);
@@ -1052,7 +1056,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
     addSomeEvents(1);
@@ -1142,8 +1146,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingAndReadingTask() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145);
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = new DateTime();
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
@@ -1282,7 +1286,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhilePausing() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(2, 2, true, "PT1M", null, false);
     addSomeEvents(100);
@@ -1349,7 +1353,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhileSettingEndOffsets() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234);
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getSupervisor(2, 2, true, "PT1M", null, false);
     addSomeEvents(100);
@@ -1433,7 +1437,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     taskClient.close();
-    taskRunner.unregisterListener(String.format("KafkaSupervisor-%s", DATASOURCE));
+    taskRunner.unregisterListener(StringUtils.format("KafkaSupervisor-%s", DATASOURCE));
     replayAll();
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, false);
@@ -1446,8 +1450,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testStopGracefully() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145);
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = new DateTime();
 
     supervisor = getSupervisor(2, 1, true, "PT1H", null, false);
@@ -1632,8 +1636,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResetRunningTasks() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145);
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = new DateTime();
 
     supervisor = getSupervisor(2, 1, true, "PT1H", null, false);
@@ -1719,7 +1723,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                   topic,
                   i,
                   null,
-                  StringUtils.toUtf8(format("event-%d", j))
+                  StringUtils.toUtf8(StringUtils.format("event-%d", j))
               )
           ).get();
         }
@@ -1888,7 +1892,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     @Override
     protected String generateSequenceName(int groupId)
     {
-      return String.format("sequenceName-%d", groupId);
+      return StringUtils.format("sequenceName-%d", groupId);
     }
   }
 }

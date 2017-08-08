@@ -72,7 +72,8 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             final long start = VMUtils.getCurrentThreadCpuTime();
             try {
               return sequenceProcessing.get();
-            } finally {
+            }
+            finally {
               cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
             }
           }

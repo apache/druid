@@ -22,6 +22,7 @@ package io.druid.server.http;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.DruidCoordinator;
 
 import java.net.URL;
@@ -51,7 +52,7 @@ public class CoordinatorRedirectInfo implements RedirectInfo
   }
 
   @Override
-  public URL getRedirectURL(String queryString, String requestURI)
+  public URL getRedirectURL(String scheme, String queryString, String requestURI)
   {
     try {
       final String leader = coordinator.getCurrentLeader();
@@ -59,10 +60,10 @@ public class CoordinatorRedirectInfo implements RedirectInfo
         return null;
       }
 
-      String location = String.format("http://%s%s", leader, requestURI);
+      String location = StringUtils.format("%s://%s%s", scheme, leader, requestURI);
 
       if (queryString != null) {
-        location = String.format("%s?%s", location, queryString);
+        location = StringUtils.format("%s?%s", location, queryString);
       }
 
       return new URL(location);

@@ -76,6 +76,12 @@ public class LongMinAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) min;
+  }
+
+  @Override
   public Aggregator clone()
   {
     return new LongMinAggregator(selector);

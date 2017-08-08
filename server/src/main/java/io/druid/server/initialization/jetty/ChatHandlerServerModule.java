@@ -37,6 +37,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.initialization.TLSServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
@@ -85,10 +86,17 @@ public class ChatHandlerServerModule implements Module
           ServerConfig.class,
           RemoteChatHandler.class
       );
+      JsonConfigProvider.bind(
+          binder,
+          "druid.indexer.server.chathandler.https",
+          TLSServerConfig.class,
+          RemoteChatHandler.class
+      );
       LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
     } else {
       binder.bind(DruidNode.class).annotatedWith(RemoteChatHandler.class).to(Key.get(DruidNode.class, Self.class));
       binder.bind(ServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(ServerConfig.class));
+      binder.bind(TLSServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(TLSServerConfig.class));
     }
   }
 
@@ -108,10 +116,11 @@ public class ChatHandlerServerModule implements Module
       Injector injector,
       Lifecycle lifecycle,
       @RemoteChatHandler DruidNode node,
-      @RemoteChatHandler ServerConfig config
+      @RemoteChatHandler ServerConfig config,
+      @RemoteChatHandler TLSServerConfig TLSServerConfig
   )
   {
-    final Server server = JettyServerModule.makeJettyServer(node, config);
+    final Server server = JettyServerModule.makeJettyServer(node, config, TLSServerConfig);
     JettyServerModule.initializeServer(injector, lifecycle, server);
     return server;
   }

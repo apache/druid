@@ -37,7 +37,7 @@ public class ClientMergeQueryTest
       null, null, null, 0, 0);
   private static final List<DataSegment> SEGMENT_LIST = Lists.newArrayList(DATA_SEGMENT);
   private static final List<AggregatorFactory> AGGREGATOR_LIST = Lists.newArrayList();
-  private static final ClientMergeQuery CLIENT_MERGE_QUERY = new ClientMergeQuery(DATA_SOURCE,SEGMENT_LIST,AGGREGATOR_LIST);;
+  private static final ClientMergeQuery CLIENT_MERGE_QUERY = new ClientMergeQuery(DATA_SOURCE, SEGMENT_LIST, AGGREGATOR_LIST);;
 
   @Test
   public void testGetType()

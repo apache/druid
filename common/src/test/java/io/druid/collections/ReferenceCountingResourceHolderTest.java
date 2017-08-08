@@ -45,20 +45,16 @@ public class ReferenceCountingResourceHolderTest
     final ReferenceCountingResourceHolder<Closeable> resourceHolder = makeReleasingHandler(released);
     List<Thread> threads = new ArrayList<>();
     for (int i = 0; i < 100; i++) {
-      Thread thread = new Thread() {
-        @Override
-        public void run()
-        {
-          try (Releaser r = resourceHolder.increment()) {
-            try {
-              Thread.sleep(1);
-            }
-            catch (InterruptedException e) {
-              throw new RuntimeException(e);
-            }
+      Thread thread = new Thread(() -> {
+        try (Releaser r = resourceHolder.increment()) {
+          try {
+            Thread.sleep(1);
+          }
+          catch (InterruptedException e) {
+            throw new RuntimeException(e);
           }
         }
-      };
+      });
       thread.start();
       threads.add(thread);
     }

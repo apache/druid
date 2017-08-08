@@ -69,7 +69,7 @@ public class AppenderatorDriverFailTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final long PUBLISH_TIMEOUT = 1000;
+  private static final long PUBLISH_TIMEOUT = 5000;
 
   private static final List<InputRow> ROWS = ImmutableList.of(
       new MapBasedInputRow(
@@ -115,7 +115,11 @@ public class AppenderatorDriverFailTest
   @Test
   public void testFailDuringPersist() throws IOException, InterruptedException, TimeoutException, ExecutionException
   {
-    expectedException.expect(TimeoutException.class);
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
+    expectedException.expectMessage("Fail test while persisting segments"
+                                    + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
+                                    + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
 
     driver = new AppenderatorDriver(
         createPersistFailAppenderator(),
@@ -146,43 +150,13 @@ public class AppenderatorDriverFailTest
   }
 
   @Test
-  public void testInterruptDuringPush() throws IOException, InterruptedException, TimeoutException, ExecutionException
-  {
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(InterruptedException.class));
-
-    driver = new AppenderatorDriver(
-        createPushInterruptAppenderator(),
-        allocator,
-        segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
-        OBJECT_MAPPER,
-        new FireDepartmentMetrics()
-    );
-
-    driver.startJob();
-
-    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
-    segmentHandoffNotifierFactory.setHandoffDelay(100);
-
-    Assert.assertNull(driver.startJob());
-
-    for (int i = 0; i < ROWS.size(); i++) {
-      committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
-    }
-
-    driver.publish(
-        AppenderatorDriverTest.makeOkPublisher(),
-        committerSupplier.get(),
-        ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-  }
-
-  @Test
   public void testFailDuringPush() throws IOException, InterruptedException, TimeoutException, ExecutionException
   {
-    expectedException.expect(TimeoutException.class);
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
+    expectedException.expectMessage("Fail test while pushing segments"
+                                    + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
+                                    + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
 
     driver = new AppenderatorDriver(
         createPushFailAppenderator(),
@@ -281,7 +255,6 @@ public class AppenderatorDriverFailTest
   }
 
   private static class FailableAppenderator implements Appenderator
-
   {
     private final Map<SegmentIdentifier, List<InputRow>> rows = new HashMap<>();
 
@@ -354,6 +327,12 @@ public class AppenderatorDriverFailTest
       } else {
         return 0;
       }
+    }
+
+    @Override
+    public int getTotalRowCount()
+    {
+      return numRows;
     }
 
     @Override

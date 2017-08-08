@@ -26,7 +26,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
-import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.table.RowSignature;
 
 import java.util.List;
@@ -62,7 +62,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
           final BoundRefKey boundRefKey = BoundRefKey.from(
               selector,
               sourceRowSignature.naturalStringComparator(
-                  RowExtraction.of(selector.getDimension(), selector.getExtractionFn())
+                  SimpleExtraction.of(selector.getDimension(), selector.getExtractionFn())
               )
           );
           List<SelectorDimFilter> filterList = selectors.get(boundRefKey);

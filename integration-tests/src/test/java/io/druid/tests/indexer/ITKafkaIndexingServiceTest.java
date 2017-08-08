@@ -22,6 +22,7 @@ package io.druid.tests.indexer;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
@@ -173,7 +174,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       num_events++;
       added += num_events;
       // construct the event to send
-      String event = String.format(event_template, event_fmt.print(dt), num_events, 0, num_events);
+      String event = StringUtils.format(event_template, event_fmt.print(dt), num_events, 0, num_events);
       LOG.info("sending event: [%s]", event);
       try {
         producer.send(new ProducerRecord<String, String>(TOPIC_NAME, event)).get();

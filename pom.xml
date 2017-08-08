@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.10.1-SNAPSHOT</version>
+    <version>0.11.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,14 +54,14 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.10.1-SNAPSHOT</tag>
+        <tag>0.11.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
         <!-- Curator cannot be updated to 2.12.0 yet, see https://github.com/druid-io/druid/pull/4103 -->
         <apache.curator.version>2.11.0</apache.curator.version>
         <avatica.version>1.9.0</avatica.version>
-        <calcite.version>1.11.0</calcite.version>
+        <calcite.version>1.12.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
@@ -114,6 +114,7 @@
         <module>extensions-core/lookups-cached-global</module>
         <module>extensions-core/lookups-cached-single</module>
         <module>extensions-core/s3-extensions</module>
+        <module>extensions-core/simple-client-sslcontext</module>
         <!-- Community extensions -->
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
@@ -154,13 +155,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>server-metrics</artifactId>
-                <version>0.2.8</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.metamx</groupId>
-                        <artifactId>java-util</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>0.5.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
@@ -876,9 +871,32 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>6.19</version>
+                        <version>8.0</version>
                     </dependency>
                 </dependencies>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.8</version>
+                <configuration>
+                    <printFailingErrors>true</printFailingErrors>
+                    <rulesets>
+                        <ruleset>/rulesets/java/imports.xml</ruleset>
+                    </rulesets>
+                    <excludeRoots>
+                        <excludeRoot>target/generated-sources/</excludeRoot>
+                    </excludeRoots>
+                </configuration>
                 <executions>
                     <execution>
                         <id>validate</id>

@@ -167,7 +167,7 @@ public interface IndexMerger
    *
    * @return the index output directory
    *
-   * @throws java.io.IOException if an IO error occurs persisting the index
+   * @throws IOException if an IO error occurs persisting the index
    */
   File persist(IncrementalIndex index, Interval dataInterval, File outDir, IndexSpec indexSpec) throws IOException;
 

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.StringUtils;
 
 /**
  */
@@ -34,6 +35,7 @@ import com.google.common.base.Preconditions;
     @JsonSubTypes.Type(name = DimensionSchema.STRING_TYPE_NAME, value = StringDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.LONG_TYPE_NAME, value = LongDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.FLOAT_TYPE_NAME, value = FloatDimensionSchema.class),
+    @JsonSubTypes.Type(name = DimensionSchema.DOUBLE_TYPE_NAME, value = DoubleDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.SPATIAL_TYPE_NAME, value = NewSpatialDimensionSchema.class),
 })
 public abstract class DimensionSchema
@@ -42,6 +44,7 @@ public abstract class DimensionSchema
   public static final String LONG_TYPE_NAME = "long";
   public static final String FLOAT_TYPE_NAME = "float";
   public static final String SPATIAL_TYPE_NAME = "spatial";
+  public static final String DOUBLE_TYPE_NAME = "double";
 
 
   // main druid and druid-api should really use the same ValueType enum.
@@ -51,19 +54,20 @@ public abstract class DimensionSchema
     FLOAT,
     LONG,
     STRING,
+    DOUBLE,
     COMPLEX;
 
     @JsonValue
     @Override
     public String toString()
     {
-      return this.name().toUpperCase();
+      return StringUtils.toUpperCase(this.name());
     }
 
     @JsonCreator
     public static ValueType fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
   }
 
@@ -73,7 +77,10 @@ public abstract class DimensionSchema
     SORTED_SET,
     ARRAY {
       @Override
-      public boolean needSorting() { return false;}
+      public boolean needSorting()
+      {
+        return false;
+      }
     };
 
     public boolean needSorting()
@@ -85,13 +92,13 @@ public abstract class DimensionSchema
     @JsonValue
     public String toString()
     {
-      return name().toUpperCase();
+      return StringUtils.toUpperCase(name());
     }
 
     @JsonCreator
     public static MultiValueHandling fromString(String name)
     {
-      return name == null ? ofDefault() : valueOf(name.toUpperCase());
+      return name == null ? ofDefault() : valueOf(StringUtils.toUpperCase(name));
     }
 
     // this can be system configuration

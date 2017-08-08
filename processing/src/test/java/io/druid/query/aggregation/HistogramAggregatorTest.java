@@ -54,7 +54,8 @@ public class HistogramAggregatorTest
   }
 
   @Test
-  public void testAggregate() throws Exception {
+  public void testAggregate() throws Exception
+  {
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
@@ -62,9 +63,9 @@ public class HistogramAggregatorTest
 
     HistogramAggregator agg = new HistogramAggregator(selector, breaks);
 
-    Assert.assertArrayEquals(new long[]{0,0,0,0,0,0}, ((Histogram)agg.get()).bins);
-    Assert.assertArrayEquals(new long[]{0,0,0,0,0,0}, ((Histogram)agg.get()).bins);
-    Assert.assertArrayEquals(new long[]{0,0,0,0,0,0}, ((Histogram)agg.get()).bins);
+    Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 0, 0}, ((Histogram) agg.get()).bins);
+    Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 0, 0}, ((Histogram) agg.get()).bins);
+    Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 0, 0}, ((Histogram) agg.get()).bins);
     aggregate(selector, agg);
     Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 1, 0}, ((Histogram) agg.get()).bins);
     Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 1, 0}, ((Histogram) agg.get()).bins);
@@ -90,7 +91,7 @@ public class HistogramAggregatorTest
     aggregate(selector, agg);
     Assert.assertArrayEquals(new long[]{0, 3, 2, 3, 1, 1}, ((Histogram) agg.get()).bins);
     aggregate(selector, agg);
-    Assert.assertArrayEquals(new long[]{1,3,2,3,1,1}, ((Histogram)agg.get()).bins);
+    Assert.assertArrayEquals(new long[]{1, 3, 2, 3, 1, 1}, ((Histogram) agg.get()).bins);
   }
 
   private void aggregateBuffer(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
@@ -100,7 +101,8 @@ public class HistogramAggregatorTest
   }
 
   @Test
-  public void testBufferAggregate() throws Exception {
+  public void testBufferAggregate() throws Exception
+  {
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
@@ -160,6 +162,6 @@ public class HistogramAggregatorTest
     Assert.assertArrayEquals(new long[]{0, 3, 2, 3, 1, 1}, ((Histogram) agg.get(buf, position)).bins);
 
     aggregateBuffer(selector, agg, buf, position);
-    Assert.assertArrayEquals(new long[]{1,3,2,3,1,1}, ((Histogram)agg.get(buf, position)).bins);
+    Assert.assertArrayEquals(new long[]{1, 3, 2, 3, 1, 1}, ((Histogram) agg.get(buf, position)).bins);
   }
 }

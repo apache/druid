@@ -46,11 +46,13 @@ import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;
 import io.druid.server.initialization.BaseJettyTest;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -85,7 +87,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     setProperties();
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
-    port = node.getPort();
+    port = node.getPlaintextPort();
     port1 = SocketUtil.findOpenPortFrom(port + 1);
     port2 = SocketUtil.findOpenPortFrom(port1 + 1);
 
@@ -106,7 +108,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null, null, new ServerConfig())
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
                 Jerseys.addResource(binder, SlowResource.class);
@@ -197,20 +199,20 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         @Override
         public String getHost(Query query)
         {
-          return "localhost:" + node.getPort();
+          return "localhost:" + node.getPlaintextPort();
         }
 
         @Override
         public String getDefaultHost()
         {
-          return "localhost:" + node.getPort();
+          return "localhost:" + node.getPlaintextPort();
         }
 
         @Override
         public Collection<String> getAllHosts()
         {
           return ImmutableList.of(
-              "localhost:" + node.getPort(),
+              "localhost:" + node.getPlaintextPort(),
               "localhost:" + port1,
               "localhost:" + port2
           );
@@ -224,7 +226,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               jsonMapper,
               injector.getInstance(Key.get(ObjectMapper.class, Smile.class)),
               hostFinder,
-              injector.getProvider(org.eclipse.jetty.client.HttpClient.class),
+              injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
               new RequestLogger()

@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntArrays;
@@ -82,7 +83,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
     );
   }
 
-  private static final int[] MAX_VALUES = new int[] { 0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF };
+  private static final int[] MAX_VALUES = new int[] {0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
 
   public CompressedVSizeIntsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy, ByteOrder byteOrder)
   {
@@ -156,7 +157,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   {
     vals = new int[totalSize];
     Random rand = new Random(0);
-    for(int i = 0; i < vals.length; ++i) {
+    for (int i = 0; i < vals.length; ++i) {
       // VSizeIndexed only allows positive values
       vals[i] = rand.nextInt(maxValue);
     }
@@ -207,12 +208,13 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   @Test
   public void testChunkTooBig() throws Exception
   {
-    for(int maxValue : MAX_VALUES) {
+    for (int maxValue : MAX_VALUES) {
       final int maxChunkSize = CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue);
       try {
         setupLargeChunks(maxChunkSize + 1, 10 * (maxChunkSize + 1), maxValue);
         Assert.fail();
-      } catch(IllegalArgumentException e) {
+      }
+      catch (IllegalArgumentException e) {
         Assert.assertTrue("chunk too big for maxValue " + maxValue, true);
       }
     }
@@ -279,7 +281,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
               final long indexedVal = indexed.get(j);
               if (Longs.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(String.format("Thread1[%d]: %d != %d", j, val, indexedVal));
+                reason.set(StringUtils.format("Thread1[%d]: %d != %d", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -318,7 +320,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
                 final long indexedVal = indexed2.get(j);
                 if (Longs.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(String.format("Thread2[%d]: %d != %d", j, val, indexedVal));
+                  reason.set(StringUtils.format("Thread2[%d]: %d != %d", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }

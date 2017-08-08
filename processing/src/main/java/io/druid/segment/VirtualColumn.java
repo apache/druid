@@ -99,6 +99,18 @@ public interface VirtualColumn extends Cacheable
   LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory);
 
   /**
+   * Build a selector corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   *
+   * @param columnName the name this virtual column was referenced with
+   * @param factory    column selector factory
+   *
+   * @return the selector, or null if we can't make a selector
+   */
+  @Nullable
+  DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory);
+
+  /**
    * Returns the capabilities of this virtual column, which includes a type that should match
    * the type returned by "makeObjectColumnSelector" and should correspond to the best
    * performing selector. May vary based on columnName if this column uses dot notation.

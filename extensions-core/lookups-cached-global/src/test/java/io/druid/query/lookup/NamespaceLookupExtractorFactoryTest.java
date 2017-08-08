@@ -41,6 +41,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.easymock.EasyMock;
@@ -524,7 +525,7 @@ public class NamespaceLookupExtractorFactoryTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
                 );
               }
             }

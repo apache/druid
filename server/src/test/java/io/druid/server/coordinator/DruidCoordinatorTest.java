@@ -44,6 +44,7 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -143,7 +144,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
       druidCoordinatorConfig
     );
     loadQueuePeon.start();
-    druidNode = new DruidNode("hey", "what", 1234);
+    druidNode = new DruidNode("hey", "what", 1234, null, new ServerConfig());
     loadManagementPeons = new MapMaker().makeMap();
     scheduledExecutorFactory = new ScheduledExecutorFactory()
     {
@@ -175,7 +176,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         null,
-        new NoopServiceAnnouncer(){
+        new NoopServiceAnnouncer() {
           @Override
           public void announce(DruidNode node)
           {
@@ -228,7 +229,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(loadQueuePeon.getSegmentsToDrop()).andReturn(new HashSet<>()).once();
     EasyMock.replay(loadQueuePeon);
 
-    DruidDataSource druidDataSource= EasyMock.createNiceMock(DruidDataSource.class);
+    DruidDataSource druidDataSource = EasyMock.createNiceMock(DruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(segment);
     EasyMock.replay(druidDataSource);
     EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
@@ -238,7 +239,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(metadataRuleManager);
     EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("from", null, 5L, ServerType.HISTORICAL, null, 0),
+            new DruidServerMetadata("from", null, null, 5L, ServerType.HISTORICAL, null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment", segment)
@@ -249,7 +250,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     druidServer2 = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("to", null, 5L, ServerType.HISTORICAL, null, 0),
+            new DruidServerMetadata("to", null, null, 5L, ServerType.HISTORICAL, null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment2", segment)
@@ -283,9 +284,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test(timeout = 60_000L)
-  public void testCoordinatorRun() throws Exception{
+  public void testCoordinatorRun() throws Exception
+  {
     String dataSource = "dataSource1";
-    String tier= "hot";
+    String tier = "hot";
 
     // Setup MetadataRuleManager
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2));
@@ -315,7 +317,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    druidServer = new DruidServer("server1", "localhost", 5L, ServerType.HISTORICAL, tier, 0);
+    druidServer = new DruidServer("server1", "localhost", null, 5L, ServerType.HISTORICAL, tier, 0);
     loadManagementPeons.put("server1", loadQueuePeon);
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
         ImmutableList.of(druidServer)
@@ -340,7 +342,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
             CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
         ) throws Exception
         {
-          if(pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)){
+          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
             if (assignSegmentLatch.getCount() > 0) {
               //Coordinator should try to assign segment to druidServer historical
               //Simulate historical loading segment

@@ -36,7 +36,8 @@ import java.nio.file.Files;
 public class SegmentizerFactoryTest
 {
   @Test
-  public void testFactory() throws IOException{
+  public void testFactory() throws IOException
+  {
     File factoryFile = Files.createTempFile("", "factory.json").toFile();
     FileOutputStream fos = new FileOutputStream(factoryFile);
     ObjectMapper mapper = new DefaultObjectMapper();

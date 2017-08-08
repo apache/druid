@@ -20,9 +20,12 @@
 package io.druid.extendedset.intset;
 
 
+import io.druid.java.util.common.StringUtils;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,7 +62,7 @@ import java.util.SortedSet;
  * @author Alessandro Colantonio
  * @version $Id$
  */
-public class ConciseSet extends AbstractIntSet implements java.io.Serializable
+public class ConciseSet extends AbstractIntSet implements Serializable
 {
   /**
    * generated serial ID
@@ -713,16 +716,14 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           int minCount = Math.min(thisItr.count, otherItr.count);
           res.appendFill(minCount, operator.combineLiterals(thisItr.word, otherItr.word));
           //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(minCount) | !otherItr.prepareNext(minCount)) // NOT ||
-          {
+          if (!thisItr.prepareNext(minCount) | /* NOT || */ !otherItr.prepareNext(minCount)) {
             break;
           }
         } else {
           res.appendLiteral(operator.combineLiterals(thisItr.toLiteral(), otherItr.word));
           thisItr.word--;
           //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(1) | !otherItr.prepareNext()) // do NOT use "||"
-          {
+          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
             break;
           }
         }
@@ -730,15 +731,13 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         res.appendLiteral(operator.combineLiterals(thisItr.word, otherItr.toLiteral()));
         otherItr.word--;
         //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | !otherItr.prepareNext(1)) // do NOT use  "||"
-        {
+        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
           break;
         }
       } else {
         res.appendLiteral(operator.combineLiterals(thisItr.word, otherItr.word));
         //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | !otherItr.prepareNext()) // do NOT use  "||"
-        {
+        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
           break;
         }
       }
@@ -838,29 +837,25 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word & otherItr.word) != 0) {
             res += maxLiteralLengthMultiplication(minCount);
           }
-          if (!thisItr.prepareNext(minCount) | !otherItr.prepareNext(minCount)) // NOT ||
-          {
+          if (!thisItr.prepareNext(minCount) | /* NOT || */ !otherItr.prepareNext(minCount)) {
             break;
           }
         } else {
           res += getLiteralBitCount(thisItr.toLiteral() & otherItr.word);
           thisItr.word--;
-          if (!thisItr.prepareNext(1) | !otherItr.prepareNext()) // do NOT use "||"
-          {
+          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
             break;
           }
         }
       } else if (!otherItr.isLiteral) {
         res += getLiteralBitCount(thisItr.word & otherItr.toLiteral());
         otherItr.word--;
-        if (!thisItr.prepareNext() | !otherItr.prepareNext(1)) // do NOT use  "||"
-        {
+        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
           break;
         }
       } else {
         res += getLiteralBitCount(thisItr.word & otherItr.word);
-        if (!thisItr.prepareNext() | !otherItr.prepareNext()) // do NOT use  "||"
-        {
+        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
           break;
         }
       }
@@ -934,10 +929,9 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
             }
           } else {
             setBitsInCurrentWord = sequenceLength - 1;
-            if (position < setBitsInCurrentWord)
-            // check whether the desired set bit is after the
-            // flipped bit (or after the first block)
-            {
+            if (position < setBitsInCurrentWord) {
+              // check whether the desired set bit is after the
+              // flipped bit (or after the first block)
               return firstSetBitInWord + position + (position < getFlippedBit(w) ? 0 : 1);
             }
           }
@@ -1129,13 +1123,11 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
     // complement each word
     for (int i = 0; i <= lastWordIndex; i++) {
       int w = words[i];
-      if (isLiteral(w))
-      // negate the bits and set the most significant bit to 1
-      {
+      if (isLiteral(w)) {
+        // negate the bits and set the most significant bit to 1
         words[i] = ConciseSetUtils.ALL_ZEROS_LITERAL | ~w;
-      } else
-      // switch the sequence type
-      {
+      } else {
+        // switch the sequence type
         words[i] ^= ConciseSetUtils.SEQUENCE_BIT;
       }
     }
@@ -1721,8 +1713,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
             return true;
           }
           //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(minCount) | !otherItr.prepareNext(minCount)) // NOT ||
-          {
+          if (!thisItr.prepareNext(minCount) |  /* NOT || */ !otherItr.prepareNext(minCount)) {
             return false;
           }
         } else {
@@ -1731,8 +1722,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           }
           thisItr.word--;
           //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(1) | !otherItr.prepareNext()) // do NOT use "||"
-          {
+          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
             return false;
           }
         }
@@ -1742,8 +1732,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         }
         otherItr.word--;
         //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | !otherItr.prepareNext(1)) // do NOT use  "||"
-        {
+        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
           return false;
         }
       } else {
@@ -1751,8 +1740,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           return true;
         }
         //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | !otherItr.prepareNext()) // do NOT use  "||"
-        {
+        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
           return false;
         }
       }
@@ -1814,8 +1802,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
             }
           }
           //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(minCount) | !otherItr.prepareNext(minCount)) // NOT ||
-          {
+          if (!thisItr.prepareNext(minCount) |  /* NOT || */ !otherItr.prepareNext(minCount)) {
             return false;
           }
         } else {
@@ -1825,8 +1812,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           }
           thisItr.word--;
           //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(1) | !otherItr.prepareNext()) // do NOT use "||"
-          {
+          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
             return false;
           }
         }
@@ -1837,8 +1823,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         }
         otherItr.word--;
         //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | !otherItr.prepareNext(1)) // do NOT use  "||"
-        {
+        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
           return false;
         }
       } else {
@@ -1847,8 +1832,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           return true;
         }
         //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | !otherItr.prepareNext()) // do NOT use  "||"
-        {
+        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
           return false;
         }
       }
@@ -2060,9 +2044,8 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           // start comparing from the end, that is at blocks with no
           // (un)set bits
           if (isZeroSequence(thisWord)) {
-            if (isOneSequence(otherWord))
-            // zeros < ones
-            {
+            if (isOneSequence(otherWord)) {
+              // zeros < ones
               return -1;
             }
             // compare two sequences of zeros
@@ -2071,9 +2054,8 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
               return res < 0 ? -1 : 1;
             }
           } else {
-            if (isZeroSequence(otherWord))
-            // ones > zeros
-            {
+            if (isZeroSequence(otherWord)) {
+              // ones > zeros
               return 1;
             }
             // compare two sequences of ones
@@ -2276,7 +2258,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           if (bit == 0) {
             s.append("none");
           } else {
-            s.append(String.format("%4d", bit - 1));
+            s.append(StringUtils.format("%4d", bit - 1));
           }
           s.append(')');
         }
@@ -2315,9 +2297,8 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
    */
   private void writeObject(ObjectOutputStream s) throws IOException
   {
-    if (words != null && lastWordIndex < words.length - 1)
-    // compact before serializing
-    {
+    if (words != null && lastWordIndex < words.length - 1) {
+      // compact before serializing
       words = Arrays.copyOf(words, lastWordIndex + 1);
     }
     s.defaultWriteObject();
@@ -2559,7 +2540,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
         }
         return null;
       }
-    },;
+    };
 
     /**
      * Performs the operation on the given literals

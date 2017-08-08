@@ -20,7 +20,7 @@
 package io.druid.sql.calcite.rule;
 
 import com.google.common.base.Predicate;
-import io.druid.query.dimension.DimensionSpec;
+import io.druid.sql.calcite.aggregation.DimensionExpression;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.DruidSemiJoin;
@@ -119,8 +119,8 @@ public class DruidSemiJoinRule extends RelOptRule
 
     final JoinInfo joinInfo = join.analyzeCondition();
     final List<Integer> rightDimsOut = new ArrayList<>();
-    for (DimensionSpec dimensionSpec : right.getQueryBuilder().getGrouping().getDimensions()) {
-      rightDimsOut.add(right.getOutputRowSignature().getRowOrder().indexOf(dimensionSpec.getOutputName()));
+    for (DimensionExpression dimension : right.getQueryBuilder().getGrouping().getDimensions()) {
+      rightDimsOut.add(right.getOutputRowSignature().getRowOrder().indexOf(dimension.getOutputName()));
     }
 
     if (!joinInfo.isEqui() || !joinInfo.rightSet().equals(ImmutableBitSet.of(rightDimsOut))) {
@@ -130,7 +130,6 @@ public class DruidSemiJoinRule extends RelOptRule
     }
 
     final RelBuilder relBuilder = call.builder();
-    final PlannerConfig plannerConfig = left.getPlannerContext().getPlannerConfig();
 
     if (join.getJoinType() == JoinRelType.LEFT) {
       // Join can be eliminated since the right-hand side cannot have any effect (nothing is being selected,
@@ -142,7 +141,7 @@ public class DruidSemiJoinRule extends RelOptRule
           right,
           joinInfo.leftKeys,
           joinInfo.rightKeys,
-          plannerConfig
+          left.getPlannerContext()
       );
 
       if (druidSemiJoin == null) {
@@ -150,6 +149,7 @@ public class DruidSemiJoinRule extends RelOptRule
       }
 
       // Check maxQueryCount.
+      final PlannerConfig plannerConfig = left.getPlannerContext().getPlannerConfig();
       if (plannerConfig.getMaxQueryCount() > 0 && druidSemiJoin.getQueryCount() > plannerConfig.getMaxQueryCount()) {
         return;
       }

@@ -21,7 +21,6 @@ package io.druid.security.kerberos;
 
 import com.google.common.base.Strings;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +39,7 @@ import java.io.IOException;
 import java.net.CookieStore;
 import java.net.HttpCookie;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -81,7 +81,7 @@ public class DruidKerberosUtil
       byte[] outToken = gssContext.initSecContext(inToken, 0, inToken.length);
       gssContext.dispose();
       // Base64 encoded and stringified token for server
-      return StringUtils.fromUtf8(base64codec.encode(outToken));
+      return new String(base64codec.encode(outToken), StandardCharsets.US_ASCII);
     }
     catch (GSSException | IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
       throw new AuthenticationException(e);
@@ -113,7 +113,8 @@ public class DruidKerberosUtil
     }
   }
 
-  public static boolean needToSendCredentials(CookieStore cookieStore, URI uri){
+  public static boolean needToSendCredentials(CookieStore cookieStore, URI uri)
+  {
     return getAuthCookie(cookieStore, uri) == null;
   }
 

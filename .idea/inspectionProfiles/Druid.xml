@@ -43,6 +43,10 @@
     <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="JavadocReference" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="MalformedFormatString" enabled="true" level="ERROR" enabled_by_default="true">
+      <option name="additionalClasses" value="io.druid.java.util.common.StringUtils,io.druid.java.util.common.logger.Logger" />
+      <option name="additionalMethods" value="trace,debug,info,warn,error,wtf,format,nonStrictFormat" />
+    </inspection_tool>
     <inspection_tool class="MalformedRegex" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MathRandomCastToInt" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MavenModelInspection" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -100,6 +104,12 @@
     <inspection_tool class="SyntaxError" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TextLabelInSwitchStatement" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ThrowableNotThrown" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="UnnecessaryFullyQualifiedName" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
+        <option name="m_ignoreJavadoc" value="true" />
+      </scope>
+      <option name="m_ignoreJavadoc" value="true" />
+    </inspection_tool>
     <inspection_tool class="UseOfPropertiesAsHashtable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="VariableNotUsedInsideIf" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="XmlHighlighting" enabled="true" level="WARNING" enabled_by_default="true" />

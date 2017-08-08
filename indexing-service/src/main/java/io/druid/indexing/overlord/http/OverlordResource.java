@@ -53,6 +53,7 @@ import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.http.security.TaskResourceFilter;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import io.druid.server.http.security.ConfigResourceFilter;
@@ -163,7 +164,7 @@ public class OverlordResource
             }
             catch (EntryExistsException e) {
               return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(ImmutableMap.of("error", String.format("Task[%s] already exists!", task.getId())))
+                             .entity(ImmutableMap.of("error", StringUtils.format("Task[%s] already exists!", task.getId())))
                              .build();
             }
           }
@@ -506,7 +507,7 @@ public class OverlordResource
                   if (!optionalTask.isPresent()) {
                     throw new WebApplicationException(
                         Response.serverError().entity(
-                            String.format("No task information found for task with id: [%s]", taskId)
+                            StringUtils.format("No task information found for task with id: [%s]", taskId)
                         ).build()
                     );
                   }
@@ -697,7 +698,7 @@ public class OverlordResource
             if (!optionalTask.isPresent()) {
               throw new WebApplicationException(
                   Response.serverError().entity(
-                      String.format("No task information found for task with id: [%s]", taskId)
+                      StringUtils.format("No task information found for task with id: [%s]", taskId)
                   ).build()
               );
             }

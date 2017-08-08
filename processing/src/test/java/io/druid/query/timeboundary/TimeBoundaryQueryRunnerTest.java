@@ -62,7 +62,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class TimeBoundaryQueryRunnerTest
 {
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
@@ -140,7 +140,8 @@ public class TimeBoundaryQueryRunnerTest
     );
   }
 
-  private QueryRunner getCustomRunner() throws IOException {
+  private QueryRunner getCustomRunner() throws IOException
+  {
     CharSource v_0112 = CharSource.wrap(StringUtils.join(V_0112, "\n"));
     CharSource v_0113 = CharSource.wrap(StringUtils.join(V_0113, "\n"));
 
@@ -172,7 +173,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "automotive")
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
         customRunner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
@@ -198,7 +199,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "foobar") // foobar dimension does not exist
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
         customRunner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
@@ -215,7 +216,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .build();
     Assert.assertFalse(timeBoundaryQuery.hasFilters());
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
         runner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()

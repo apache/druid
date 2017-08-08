@@ -34,6 +34,7 @@ import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
@@ -85,7 +86,7 @@ public class HadoopConverterJob
     if (segments.size() == 1) {
       final DataSegment segment = segments.get(0);
       jobConf.setJobName(
-          String.format(
+          StringUtils.format(
               "druid-convert-%s-%s-%s",
               segment.getDataSource(),
               segment.getInterval(),
@@ -120,7 +121,7 @@ public class HadoopConverterJob
           )
       );
       jobConf.setJobName(
-          String.format(
+          StringUtils.format(
               "druid-convert-%s-%s",
               Arrays.toString(dataSources.toArray()),
               Arrays.toString(versions.toArray())
@@ -236,7 +237,7 @@ public class HadoopConverterJob
     }
     converterConfigIntoConfiguration(converterConfig, segments, jobConf);
 
-    jobConf.setNumReduceTasks(0);// Map only. Number of map tasks determined by input format
+    jobConf.setNumReduceTasks(0); // Map only. Number of map tasks determined by input format
     jobConf.setWorkingDirectory(new Path(converterConfig.getDistributedSuccessCache()));
 
     setJobName(jobConf, segments);
@@ -343,7 +344,7 @@ public class HadoopConverterJob
       }
     }
     catch (InterruptedException | ClassNotFoundException e) {
-      RuntimeException exception =  Throwables.propagate(e);
+      RuntimeException exception = Throwables.propagate(e);
       throwable = exception;
       throw exception;
     }
@@ -504,7 +505,7 @@ public class HadoopConverterJob
       final String tmpDirLoc = context.getConfiguration().get(TMP_FILE_LOC_KEY);
       final File tmpDir = Paths.get(tmpDirLoc).toFile();
 
-      final DataSegment segment  = Iterables.getOnlyElement(((DatasourceInputSplit) split).getSegments()).getSegment();
+      final DataSegment segment = Iterables.getOnlyElement(((DatasourceInputSplit) split).getSegments()).getSegment();
 
       final HadoopDruidConverterConfig config = converterConfigFromConfiguration(context.getConfiguration());
 

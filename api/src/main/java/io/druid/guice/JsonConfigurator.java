@@ -34,6 +34,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.ProvisionException;
 import com.google.inject.spi.Message;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import javax.validation.ConstraintViolation;
@@ -82,7 +83,7 @@ public class JsonConfigurator
         try {
           // If it's a String Jackson wants it to be quoted, so check if it's not an object or array and quote.
           String modifiedPropValue = propValue;
-          if (! (modifiedPropValue.startsWith("[") || modifiedPropValue.startsWith("{"))) {
+          if (!(modifiedPropValue.startsWith("[") || modifiedPropValue.startsWith("{"))) {
             modifiedPropValue = jsonMapper.writeValueAsString(propValue);
           }
           value = jsonMapper.readValue(modifiedPropValue, Object.class);
@@ -102,7 +103,7 @@ public class JsonConfigurator
     }
     catch (IllegalArgumentException e) {
       throw new ProvisionException(
-          String.format("Problem parsing object at prefix[%s]: %s.", propertyPrefix, e.getMessage()), e
+          StringUtils.format("Problem parsing object at prefix[%s]: %s.", propertyPrefix, e.getMessage()), e
       );
     }
 
@@ -111,7 +112,7 @@ public class JsonConfigurator
       List<String> messages = Lists.newArrayList();
 
       for (ConstraintViolation<T> violation : violations) {
-        String path = "";
+        StringBuilder path = new StringBuilder();
         try {
           Class<?> beanClazz = violation.getRootBeanClass();
           final Iterator<Path.Node> iter = violation.getPropertyPath().iterator();
@@ -122,18 +123,17 @@ public class JsonConfigurator
               final Field theField = beanClazz.getDeclaredField(fieldName);
 
               if (theField.getAnnotation(JacksonInject.class) != null) {
-                path = String.format(" -- Injected field[%s] not bound!?", fieldName);
+                path = new StringBuilder(StringUtils.format(" -- Injected field[%s] not bound!?", fieldName));
                 break;
               }
 
               JsonProperty annotation = theField.getAnnotation(JsonProperty.class);
               final boolean noAnnotationValue = annotation == null || Strings.isNullOrEmpty(annotation.value());
               final String pathPart = noAnnotationValue ? fieldName : annotation.value();
-              if (path.isEmpty()) {
-                path += pathPart;
-              }
-              else {
-                path += "." + pathPart;
+              if (path.length() == 0) {
+                path.append(pathPart);
+              } else {
+                path.append(".").append(pathPart);
               }
             }
           }
@@ -142,7 +142,7 @@ public class JsonConfigurator
           throw Throwables.propagate(e);
         }
 
-        messages.add(String.format("%s - %s", path, violation.getMessage()));
+        messages.add(StringUtils.format("%s - %s", path.toString(), violation.getMessage()));
       }
 
       throw new ProvisionException(
@@ -153,7 +153,7 @@ public class JsonConfigurator
                 @Override
                 public Message apply(String input)
                 {
-                  return new Message(String.format("%s%s", propertyBase, input));
+                  return new Message(StringUtils.format("%s%s", propertyBase, input));
                 }
               }
           )
@@ -175,7 +175,7 @@ public class JsonConfigurator
       final AnnotatedField field = beanDef.getField();
       if (field == null || !field.hasAnnotation(JsonProperty.class)) {
         throw new ProvisionException(
-            String.format(
+            StringUtils.format(
                 "JsonConfigurator requires Jackson-annotated Config objects to have field annotations. %s doesn't",
                 clazz
             )

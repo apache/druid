@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
@@ -51,7 +52,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
    * Prepend 0xFF before the analysisTypes as a separator to avoid
    * any potential confusion with string values.
    */
-  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[] { (byte) 0xFF };
+  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[] {(byte) 0xFF};
 
   public enum AnalysisType
   {
@@ -68,18 +69,18 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static AnalysisType fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
 
     public byte[] getCacheKey()
     {
-      return new byte[] { (byte) this.ordinal() };
+      return new byte[] {(byte) this.ordinal()};
     }
   }
 

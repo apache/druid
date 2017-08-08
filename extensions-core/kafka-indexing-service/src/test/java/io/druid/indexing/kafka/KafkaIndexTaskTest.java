@@ -37,7 +37,9 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+//CHECKSTYLE.OFF: Regexp
 import com.metamx.common.logger.Logger;
+//CHECKSTYLE.ON: Regexp
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -1476,7 +1478,7 @@ public class KafkaIndexTaskTest
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector
     );
-    taskLockbox = new TaskLockbox(taskStorage);
+    taskLockbox = new TaskLockbox(taskStorage, 3000);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         metadataStorageCoordinator,
@@ -1534,7 +1536,7 @@ public class KafkaIndexTaskTest
         new TestDataSegmentAnnouncer(),
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
-        makeTimeseriesOnlyConglomerate(),
+        this::makeTimeseriesOnlyConglomerate,
         MoreExecutors.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(
@@ -1593,7 +1595,7 @@ public class KafkaIndexTaskTest
   private List<String> readSegmentDim1(final SegmentDescriptor descriptor) throws IOException
   {
     File indexZip = new File(
-        String.format(
+        StringUtils.format(
             "%s/%s/%s_%s/%s/%d/index.zip",
             getSegmentDirectory(),
             DATA_SCHEMA.getDataSource(),
@@ -1605,7 +1607,7 @@ public class KafkaIndexTaskTest
     );
     File outputLocation = new File(
         directory,
-        String.format(
+        StringUtils.format(
             "%s_%s_%s_%s",
             descriptor.getInterval().getStart(),
             descriptor.getInterval().getEnd(),

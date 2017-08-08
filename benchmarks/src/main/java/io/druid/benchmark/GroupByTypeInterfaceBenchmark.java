@@ -32,6 +32,8 @@ import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.query.QueryBenchmarkUtil;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.DefaultBlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
@@ -348,7 +350,7 @@ public class GroupByTypeInterfaceBenchmark
       }
     }
 
-    StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
+    NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByBenchmark-computeBufferPool",
         new OffheapBufferGenerator("compute", 250_000_000),
         0,
@@ -356,7 +358,7 @@ public class GroupByTypeInterfaceBenchmark
     );
 
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    BlockingPool<ByteBuffer> mergePool = new BlockingPool<>(
+    BlockingPool<ByteBuffer> mergePool = new DefaultBlockingPool<>(
         new OffheapBufferGenerator("merge", 250_000_000),
         2
     );

@@ -132,7 +132,8 @@ public class ArbitraryGranularityTest
     boolean thrown = false;
     try {
       final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, intervals);
-    } catch(IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       thrown = true;
     }
 
@@ -165,7 +166,8 @@ public class ArbitraryGranularityTest
     boolean thrown = false;
     try {
       final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, intervals);
-    } catch(IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       thrown = true;
     }
 
@@ -186,7 +188,8 @@ public class ArbitraryGranularityTest
     try {
       final GranularitySpec rtSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals("Round-trip", spec.bucketIntervals(), rtSpec.bucketIntervals());
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }

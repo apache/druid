@@ -70,6 +70,8 @@ import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
@@ -102,6 +104,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -402,7 +405,7 @@ public class TaskLifecycleTest
       }
 
       default: {
-        throw new RuntimeException(String.format("Unknown task storage type [%s]", taskStorageType));
+        throw new RE("Unknown task storage type [%s]", taskStorageType);
       }
     }
     tsqa = new TaskStorageQueryAdapter(taskStorage);
@@ -511,7 +514,7 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage);
+    taskLockbox = new TaskLockbox(taskStorage, 300);
     tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
         SupervisorManager.class)));
     File tmpDir = temporaryFolder.newFolder();
@@ -574,7 +577,7 @@ public class TaskLifecycleTest
         }, // segment announcer
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
-        queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
+        () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         MoreExecutors.sameThreadExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
@@ -607,7 +610,7 @@ public class TaskLifecycleTest
         tb,
         taskConfig,
         emitter,
-        new DruidNode("dummy", "dummy", 10000)
+        new DruidNode("dummy", "dummy", 10000, null, new ServerConfig())
     );
   }
 
@@ -652,10 +655,9 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -710,10 +712,9 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -1075,10 +1076,9 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null, null)
+            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final long startTime = System.currentTimeMillis();
@@ -1168,7 +1168,7 @@ public class TaskLifecycleTest
 
   private RealtimeIndexTask newRealtimeIndexTask()
   {
-    String taskId = String.format("rt_task_%s", System.currentTimeMillis());
+    String taskId = StringUtils.format("rt_task_%s", System.currentTimeMillis());
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,

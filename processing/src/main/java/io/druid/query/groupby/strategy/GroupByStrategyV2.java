@@ -28,8 +28,8 @@ import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
@@ -80,7 +80,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
@@ -89,7 +89,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public GroupByStrategyV2(
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
-      @Global StupidPool<ByteBuffer> bufferPool,
+      @Global NonBlockingPool<ByteBuffer> bufferPool,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
       @Smile ObjectMapper spillMapper,
       QueryWatcher queryWatcher
@@ -246,7 +246,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
             "finalize", false,
             GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
             CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
-            CTX_KEY_OUTERMOST, false
+            CTX_KEY_OUTERMOST, false,
+            // the having spec shouldn't be passed down, so we need to convey the existing limit push down status
+            GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown()
         )
     );
 
@@ -287,7 +289,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
     );
 
-    // Don't apply limit here for inner results, that will be pushed down to the BufferGrouper
+    // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
     if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
       return query.postProcess(rowSequence);
     } else {

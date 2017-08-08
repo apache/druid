@@ -332,6 +332,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     return new DruidServerMetadata(
         name,
         name,
+        null,
         10000,
         type,
         "tier",

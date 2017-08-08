@@ -20,7 +20,6 @@
 package io.druid.indexer;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataOutput;
@@ -111,6 +110,8 @@ public class InputRowSerde
             out.writeFloat(agg.getFloat());
           } else if (t.equals("long")) {
             WritableUtils.writeVLong(out, agg.getLong());
+          } else if (t.equals("double")) {
+            out.writeDouble(agg.getDouble());
           } else {
             //its a complex metric
             Object val = agg.get();
@@ -121,8 +122,9 @@ public class InputRowSerde
       }
 
       return out.toByteArray();
-    } catch(IOException ex) {
-      throw Throwables.propagate(ex);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
   }
 
@@ -212,6 +214,8 @@ public class InputRowSerde
           event.put(metric, in.readFloat());
         } else if (type.equals("long")) {
           event.put(metric, WritableUtils.readVLong(in));
+        } else if (type.equals("double")) {
+          event.put(metric, in.readDouble());
         } else {
           ComplexMetricSerde serde = getComplexMetricSerde(type);
           byte[] value = readBytes(in);
@@ -220,8 +224,9 @@ public class InputRowSerde
       }
 
       return new MapBasedInputRow(timestamp, dimensions, event);
-    } catch(IOException ex) {
-      throw Throwables.propagate(ex);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
   }
 

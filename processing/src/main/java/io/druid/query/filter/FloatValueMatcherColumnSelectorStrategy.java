@@ -82,7 +82,7 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public String[] get()
       {
-        return new String[]{ Float.toString(selector.get()) };
+        return new String[]{Float.toString(selector.get())};
       }
     };
   }

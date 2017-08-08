@@ -67,7 +67,7 @@ public class UnionQueryRunnerTest
                         )
                     )
                     .intervals("2014-01-01T00:00:00Z/2015-01-01T00:00:00Z")
-                    .aggregators(QueryRunnerTestHelper.commonAggregators)
+                    .aggregators(QueryRunnerTestHelper.commonDoubleAggregators)
                     .build();
     Map<String, Object> responseContext = Maps.newHashMap();
     Sequence<?> result = runner.run(q, responseContext);

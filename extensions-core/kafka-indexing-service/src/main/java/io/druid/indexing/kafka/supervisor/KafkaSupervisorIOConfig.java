@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -63,7 +64,7 @@ public class KafkaSupervisorIOConfig
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     Preconditions.checkNotNull(
         consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
-        String.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
+        StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
 
     this.replicas = replicas != null ? replicas : 1;
