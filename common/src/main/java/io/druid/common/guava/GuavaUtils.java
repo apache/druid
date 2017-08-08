@@ -21,6 +21,7 @@ package io.druid.common.guava;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharStreams;
@@ -108,5 +109,30 @@ public class GuavaUtils
     return Strings.isNullOrEmpty(string)
            ? null
            : Longs.tryParse(string.charAt(0) == '+' ? string.substring(1) : string);
+  }
+
+  /**
+   * Like Guava's Enums.getIfPresent, with some differences.
+   * <ul>
+   * <li>Returns nullable rather than Optional</li>
+   * <li>Permits nullable value (and returns null in this case)</li>
+   * <li>Does not require Guava 12</li>
+   * </ul>
+   */
+  @Nullable
+  public static <T extends Enum<T>> T getEnumIfPresent(final Class<T> enumClass, @Nullable final String value)
+  {
+    Preconditions.checkNotNull(enumClass, "enumClass");
+
+    if (value == null) {
+      return null;
+    }
+
+    try {
+      return Enum.valueOf(enumClass, value);
+    }
+    catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 }
