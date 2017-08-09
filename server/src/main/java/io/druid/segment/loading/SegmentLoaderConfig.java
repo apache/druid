@@ -85,7 +85,10 @@ public class SegmentLoaderConfig
   public File getInfoDir()
   {
     if (infoDir == null) {
-      infoDir = new File(locations.get(0).getPath(), "info_dir");
+      StorageLocationConfig storageLocation = locations.get(0);
+      if (storageLocation != null) {
+        infoDir = new File(storageLocation.getPath(), "info_dir");
+      }
     }
 
     return infoDir;
