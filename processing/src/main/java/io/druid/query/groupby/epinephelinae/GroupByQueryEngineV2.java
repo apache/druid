@@ -446,11 +446,11 @@ public class GroupByQueryEngineV2
     protected void aggregateSingleValueDims(Grouper<ByteBuffer> grouper)
     {
       while (!cursor.isDone()) {
-        for (int i = 0; i < dims.length; i++) {
-          final GroupByColumnSelectorStrategy strategy = dims[i].getColumnSelectorStrategy();
+        for (GroupByColumnSelectorPlus dim : dims) {
+          final GroupByColumnSelectorStrategy strategy = dim.getColumnSelectorStrategy();
           strategy.writeToKeyBuffer(
-              dims[i].getKeyBufferPosition(),
-              strategy.getOnlyValue(dims[i].getSelector()),
+              dim.getKeyBufferPosition(),
+              strategy.getOnlyValue(dim.getSelector()),
               keyBuffer
           );
         }

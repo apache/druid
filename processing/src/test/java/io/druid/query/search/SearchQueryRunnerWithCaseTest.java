@@ -95,28 +95,28 @@ public class SearchQueryRunnerWithCaseTest
     QueryableIndex index4 = TestIndex.persistRealtimeAndLoadMMapped(index2);
 
     final List<QueryRunner<Result<SearchResultValue>>> runners = Lists.newArrayList();
-    for (int i = 0; i < configs.length; i++) {
+    for (SearchQueryConfig config : configs) {
       runners.addAll(Arrays.asList(
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index1",
               new IncrementalIndexSegment(index1, "index1"),
               "index1"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index2",
               new IncrementalIndexSegment(index2, "index2"),
               "index2"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index3",
               new QueryableIndexSegment("index3", index3),
               "index3"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index4",
               new QueryableIndexSegment("index4", index4),
               "index4"

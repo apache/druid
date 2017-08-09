@@ -231,12 +231,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
         int prevId = -1;
         int pos = 0;
-        for (int i = 0; i < dimensionValues.length; i++) {
+        for (String dimensionValue : dimensionValues) {
           if (multiValueHandling != MultiValueHandling.SORTED_SET) {
-            retVal[pos++] = dimLookup.add(dimensionValues[i]);
+            retVal[pos++] = dimLookup.add(dimensionValue);
             continue;
           }
-          int index = dimLookup.add(dimensionValues[i]);
+          int index = dimLookup.add(dimensionValue);
           if (index != prevId) {
             prevId = retVal[pos++] = index;
           }
@@ -636,8 +636,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     } else {
       if (asList) {
         List<Comparable> rowVals = new ArrayList<>(key.length);
-        for (int i = 0; i < key.length; i++) {
-          String val = getActualValue(key[i], false);
+        for (int id : key) {
+          String val = getActualValue(id, false);
           rowVals.add(Strings.nullToEmpty(val));
         }
         return rowVals;
