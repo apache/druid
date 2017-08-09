@@ -900,8 +900,9 @@ public class KafkaSupervisor implements Supervisor
                                     kafkaTask.getIOConfig()
                                              .getStartPartitions()
                                              .getPartitionOffsetMap()
-                                ), kafkaTask.getIOConfig().getMinimumMessageTime()
-                                , kafkaTask.getIOConfig().getMaximumMessageTime()
+                                ),
+                                kafkaTask.getIOConfig().getMinimumMessageTime(),
+                                kafkaTask.getIOConfig().getMaximumMessageTime()
                             )
                         ) == null) {
                           log.debug("Created new task group [%d]", taskGroupId);
