@@ -57,7 +57,7 @@ public class HistogramBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final float value = selector.get();
+    final float value = selector.getFloat();
     final int minPos = position + minOffset;
     final int maxPos = position + maxOffset;
 

@@ -21,7 +21,6 @@ package io.druid.query.groupby.epinephelinae.column;
 
 
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.DoubleColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -46,7 +45,19 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
-   values[columnIndex] = ((DoubleColumnSelector) selector).get();
+   values[columnIndex] = selector.getDouble();
+  }
+
+  @Override
+  public Object getOnlyValue(ColumnValueSelector selector)
+  {
+    return selector.getDouble();
+  }
+
+  @Override
+  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putDouble(keyBufferPosition, (Double) obj);
   }
 
   @Override
@@ -66,17 +77,5 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     // rows from a double column always have a single value, multi-value is not currently supported
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
-  }
-
-  @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
-  {
-    return ((DoubleColumnSelector) selector).get();
-  }
-
-  @Override
-  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putDouble(keyBufferPosition, (Double) obj);
   }
 }

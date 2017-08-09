@@ -487,11 +487,13 @@ public class RowBasedGrouperHelper
         case STRING:
           return new StringInputRawSupplierColumnSelectorStrategy();
         case LONG:
-          return (InputRawSupplierColumnSelectorStrategy<LongColumnSelector>) columnSelector -> columnSelector::get;
+          return (InputRawSupplierColumnSelectorStrategy<LongColumnSelector>) columnSelector -> columnSelector::getLong;
         case FLOAT:
-          return (InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>) columnSelector -> columnSelector::get;
+          return (InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>)
+              columnSelector -> columnSelector::getFloat;
         case DOUBLE:
-          return (InputRawSupplierColumnSelectorStrategy<DoubleColumnSelector>) columnSelector -> columnSelector::get;
+          return (InputRawSupplierColumnSelectorStrategy<DoubleColumnSelector>)
+              columnSelector -> columnSelector::getDouble;
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }

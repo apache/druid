@@ -48,7 +48,7 @@ public class FloatMinAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    min = Math.min(min, selector.get());
+    min = Math.min(min, selector.getFloat());
   }
 
   @Override
