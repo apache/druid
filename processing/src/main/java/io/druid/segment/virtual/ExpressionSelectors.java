@@ -107,8 +107,8 @@ public class ExpressionSelectors
       @Override
       public double getDouble()
       {
-        final Double number = baseSelector.get().asDouble();
-        return number != null ? number.doubleValue() : nullValue;
+        final ExprEval exprEval = baseSelector.get();
+        return exprEval.isNull() ? nullValue : exprEval.asDouble();
       }
 
       @Override
