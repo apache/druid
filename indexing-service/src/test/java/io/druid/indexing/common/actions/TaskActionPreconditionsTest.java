@@ -51,7 +51,7 @@ public class TaskActionPreconditionsTest
   @Before
   public void setup()
   {
-    lockbox = new TaskLockbox(new HeapMemoryTaskStorage(new TaskStorageConfig(null)), 5000);
+    lockbox = new TaskLockbox(new HeapMemoryTaskStorage(new TaskStorageConfig(null)));
     task = NoopTask.create();
     lockbox.add(task);
 

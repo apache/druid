@@ -467,7 +467,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 return new FloatColumnSelector()
                 {
                   @Override
-                  public float get()
+                  public float getFloat()
                   {
                     return index.getMetricFloatValue(currEntry.getValue(), metricIndex);
                   }
@@ -491,7 +491,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   class TimeLongColumnSelector implements LongColumnSelector
                   {
                     @Override
-                    public long get()
+                    public long getLong()
                     {
                       return currEntry.getKey().getTimestamp();
                     }
@@ -525,7 +525,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 return new LongColumnSelector()
                 {
                   @Override
-                  public long get()
+                  public long getLong()
                   {
                     return index.getMetricLongValue(
                         currEntry.getValue(),
@@ -652,7 +652,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 return new DoubleColumnSelector()
                 {
                   @Override
-                  public double get()
+                  public double getDouble()
                   {
                     return index.getMetricDoubleValue(currEntry.getValue(), metricIndex);
                   }

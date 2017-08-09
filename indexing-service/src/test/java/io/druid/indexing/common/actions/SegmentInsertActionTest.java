@@ -91,7 +91,7 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL), 5000);
     actionTestKit.getTaskLockbox().upgrade(task, new Interval(INTERVAL));
     action.perform(task, actionTestKit.getTaskActionToolbox());
 
@@ -110,7 +110,7 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, new Interval(INTERVAL), 5000);
     actionTestKit.getTaskLockbox().upgrade(task, new Interval(INTERVAL));
 
     thrown.expect(IllegalStateException.class);

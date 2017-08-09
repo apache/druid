@@ -21,7 +21,6 @@ package io.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.primitives.Longs;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -47,13 +46,13 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    valuess[columnIndex] = ((LongColumnSelector) selector).get();
+    valuess[columnIndex] = selector.getLong();
   }
 
   @Override
   public Object getOnlyValue(ColumnValueSelector selector)
   {
-    return ((LongColumnSelector) selector).get();
+    return selector.getLong();
   }
 
   @Override

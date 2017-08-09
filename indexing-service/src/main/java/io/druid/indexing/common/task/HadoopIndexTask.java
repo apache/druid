@@ -205,8 +205,10 @@ public class HadoopIndexTask extends HadoopTask
               indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get()
           )
       );
+      final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+      // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
       final LockResult lockResult = toolbox.getTaskActionClient().submit(
-          new LockAcquireAction(TaskLockType.EXCLUSIVE, interval)
+          new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs)
       );
       Tasks.checkLockResult(lockResult, interval);
       version = lockResult.getTaskLock().getVersion();

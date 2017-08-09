@@ -30,10 +30,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
-import io.druid.server.initialization.ServerConfig;
-import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -53,7 +50,6 @@ public class TaskLockBoxConcurrencyTest
 
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
   private ExecutorService service;
-  private ServerConfig serverConfig;
   private TaskStorage taskStorage;
   private TaskLockbox lockbox;
 
@@ -71,11 +67,8 @@ public class TaskLockBoxConcurrencyTest
             objectMapper
         )
     );
-    serverConfig = EasyMock.niceMock(ServerConfig.class);
-    EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(5000)).anyTimes();
-    EasyMock.replay(serverConfig);
 
-    lockbox = new TaskLockbox(taskStorage, serverConfig);
+    lockbox = new TaskLockbox(taskStorage);
     service = Executors.newFixedThreadPool(2);
   }
 

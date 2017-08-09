@@ -214,6 +214,9 @@ public class RealtimeIndexTask extends AbstractTask
     // which will typically be either the main data processing loop or the persist thread.
 
     // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
+    final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+    // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, http timeout error can occur while waiting for a
+    // lock to be acquired.
     final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
     {
       @Override
@@ -221,7 +224,7 @@ public class RealtimeIndexTask extends AbstractTask
       {
         // Side effect: Calling announceSegment causes a lock to be acquired
         final LockResult lockResult = toolbox.getTaskActionClient().submit(
-            new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval())
+            new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
         );
         Tasks.checkLockResult(lockResult, segment.getInterval());
         toolbox.getSegmentAnnouncer().announceSegment(segment);
@@ -244,7 +247,7 @@ public class RealtimeIndexTask extends AbstractTask
         // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
           final LockResult lockResult = toolbox.getTaskActionClient().submit(
-              new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval())
+              new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
           );
           Tasks.checkLockResult(lockResult, segment.getInterval());
         }
@@ -278,8 +281,9 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
-          final LockResult lockResult = toolbox.getTaskActionClient()
-                                           .submit(new LockAcquireAction(TaskLockType.EXCLUSIVE, interval));
+          final LockAcquireAction action = new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
+          final LockResult lockResult = toolbox.getTaskActionClient().submit(action);
+
           Tasks.checkLockResult(lockResult, interval);
           return lockResult.getTaskLock().getVersion();
         }

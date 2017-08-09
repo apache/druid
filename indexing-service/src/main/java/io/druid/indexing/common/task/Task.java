@@ -191,5 +191,4 @@ public interface Task
     final ContextValueType value = getContextValue(key);
     return value == null ? defaultValue : value;
   }
-
 }

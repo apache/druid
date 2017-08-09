@@ -35,10 +35,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
-import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,7 +58,6 @@ public class TaskLockboxTest
   public ExpectedException expectedException = ExpectedException.none();
 
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
-  private ServerConfig serverConfig;
   private TaskStorage taskStorage;
   private TaskLockbox lockbox;
 
@@ -81,15 +78,11 @@ public class TaskLockboxTest
             objectMapper
         )
     );
-    serverConfig = EasyMock.niceMock(ServerConfig.class);
-    EasyMock.expect(serverConfig.getMaxIdleTime()).andReturn(new Period(100)).anyTimes();
-    EasyMock.replay(serverConfig);
-
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 
-    lockbox = new TaskLockbox(taskStorage, serverConfig);
+    lockbox = new TaskLockbox(taskStorage);
   }
 
   @Test
@@ -226,14 +219,14 @@ public class TaskLockboxTest
 
     lockbox.add(task1);
     lockbox.add(task2);
-    Assert.assertTrue(lockbox.lock(TaskLockType.EXCLUSIVE, task1, new Interval("2015-01-01/2015-01-02")).isOk());
-    Assert.assertFalse(lockbox.lock(TaskLockType.EXCLUSIVE, task2, new Interval("2015-01-01/2015-01-15")).isOk());
+    Assert.assertTrue(lockbox.lock(TaskLockType.EXCLUSIVE, task1, new Interval("2015-01-01/2015-01-02"), 5000).isOk());
+    Assert.assertFalse(lockbox.lock(TaskLockType.EXCLUSIVE, task2, new Interval("2015-01-01/2015-01-15"), 1000).isOk());
   }
 
   @Test
   public void testSyncFromStorage() throws EntryExistsException
   {
-    final TaskLockbox originalBox = new TaskLockbox(taskStorage, serverConfig);
+    final TaskLockbox originalBox = new TaskLockbox(taskStorage);
     for (int i = 0; i < 5; i++) {
       final Task task = NoopTask.create();
       taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -251,7 +244,7 @@ public class TaskLockboxTest
                                                            .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
                                                            .collect(Collectors.toList());
 
-    final TaskLockbox newBox = new TaskLockbox(taskStorage, serverConfig);
+    final TaskLockbox newBox = new TaskLockbox(taskStorage);
     newBox.syncFromStorage();
 
     Assert.assertEquals(originalBox.getAllLocks(), newBox.getAllLocks());

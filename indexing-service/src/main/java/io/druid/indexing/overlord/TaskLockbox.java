@@ -39,7 +39,6 @@ import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
-import io.druid.server.initialization.ServerConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -76,7 +75,6 @@ public class TaskLockbox
   private final TaskStorage taskStorage;
   private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition lockReleaseCondition = giant.newCondition();
-  protected final long lockTimeoutMillis;
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
@@ -86,21 +84,10 @@ public class TaskLockbox
 
   @Inject
   public TaskLockbox(
-      TaskStorage taskStorage,
-      ServerConfig serverConfig
+      TaskStorage taskStorage
   )
   {
     this.taskStorage = taskStorage;
-    this.lockTimeoutMillis = serverConfig.getMaxIdleTime().getMillis();
-  }
-
-  public TaskLockbox(
-      TaskStorage taskStorage,
-      long lockTimeoutMillis
-  )
-  {
-    this.taskStorage = taskStorage;
-    this.lockTimeoutMillis = lockTimeoutMillis;
   }
 
   /**
@@ -198,14 +185,14 @@ public class TaskLockbox
   }
 
   /**
-   * Acquires a lock on behalf of a task. Blocks until the lock is acquired. Throws an exception if the lock
-   * cannot be acquired.
+   * Acquires a lock on behalf of a task. Blocks until the lock is acquired.
    *
-   * @param task task to acquire lock for
+   * @param lockType lock type
+   * @param task     task to acquire lock for
    * @param interval interval to lock
    * @return acquired TaskLock
    *
-   * @throws InterruptedException if the lock cannot be acquired
+   * @throws InterruptedException if the current thread is interrupted
    */
   public LockResult lock(
       final TaskLockType lockType,
@@ -213,32 +200,48 @@ public class TaskLockbox
       final Interval interval
   ) throws InterruptedException
   {
-    long timeout = lockTimeoutMillis;
     giant.lockInterruptibly();
     try {
       LockResult lockResult;
       while (!(lockResult = tryLock(lockType, task, interval)).isOk()) {
-        long startTime = System.currentTimeMillis();
-        if (lockTimeoutMillis == 0) {
-          lockReleaseCondition.await();
-        } else {
-          lockReleaseCondition.await(timeout, TimeUnit.MILLISECONDS);
-        }
-        long timeDelta = System.currentTimeMillis() - startTime;
-        if (timeDelta >= timeout) {
-          log.info(
-              "Task [%s] can not acquire lock for interval [%s] within [%s] ms",
-              task.getId(),
-              interval,
-              lockTimeoutMillis
-          );
-
-          return lockResult;
-        } else {
-          timeout -= timeDelta;
-        }
+        lockReleaseCondition.await();
       }
+      return lockResult;
+    }
+    finally {
+      giant.unlock();
+    }
+  }
 
+  /**
+   * Acquires a lock on behalf of a task, waiting up to the specified wait time if necessary.
+   *
+   * @param lockType  lock type
+   * @param task      task to acquire a lock for
+   * @param interval  interval to lock
+   * @param timeoutMs maximum time to wait
+   *
+   * @return acquired lock
+   *
+   * @throws InterruptedException if the current thread is interrupted
+   */
+  public LockResult lock(
+      final TaskLockType lockType,
+      final Task task,
+      final Interval interval,
+      long timeoutMs
+  ) throws InterruptedException
+  {
+    long nanos = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+    giant.lockInterruptibly();
+    try {
+      LockResult lockResult;
+      while (!(lockResult = tryLock(lockType, task, interval)).isOk()) {
+        if (nanos <= 0) {
+          return lockResult;
+        }
+        nanos = lockReleaseCondition.awaitNanos(nanos);
+      }
       return lockResult;
     }
     finally {
@@ -250,9 +253,9 @@ public class TaskLockbox
    * Attempt to acquire a lock for a task, without removing it from the queue. Can safely be called multiple times on
    * the same task until the lock is preempted.
    *
+   * @param lockType type of lock to be acquired
    * @param task     task that wants a lock
    * @param interval interval to lock
-   * @param lockType type of lock to be acquired
    *
    * @return lock version if lock was acquired, absent otherwise
    * @throws IllegalStateException if the task is not a valid active task

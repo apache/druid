@@ -34,7 +34,7 @@ public class TestDoubleColumnSelectorImpl extends TestDoubleColumnSelector
   }
 
   @Override
-  public double get()
+  public double getDouble()
   {
     return doubles[index];
   }

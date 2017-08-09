@@ -82,7 +82,7 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      holder.add(selector.get());
+      holder.add(selector.getFloat());
     }
   }
 
@@ -99,7 +99,7 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      holder.add(selector.get());
+      holder.add(selector.getLong());
     }
   }
 

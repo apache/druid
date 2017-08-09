@@ -39,7 +39,6 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -48,7 +47,6 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.zookeeper.CreateMode;
 
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -133,7 +131,6 @@ public class RemoteTaskRunnerTestUtils
         new PathChildrenCacheFactory.Builder(),
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
-        ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
         provisioningStrategy
     );
 
@@ -231,7 +228,6 @@ public class RemoteTaskRunnerTestUtils
         PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
         HttpClient httpClient,
         Supplier<WorkerBehaviorConfig> workerConfigRef,
-        ScheduledExecutorService cleanupExec,
         ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
     )
     {
@@ -243,7 +239,6 @@ public class RemoteTaskRunnerTestUtils
           pathChildrenCacheFactory,
           httpClient,
           workerConfigRef,
-          cleanupExec,
           provisioningStrategy
       );
     }

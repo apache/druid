@@ -180,7 +180,7 @@ public class IndexTask extends AbstractTask
       final List<TaskLock> locks = getTaskLocks(taskActionClient);
       if (locks.size() == 0) {
         try {
-          Tasks.acquireExclusiveLocks(taskActionClient, intervals.get());
+          Tasks.tryAcquireExclusiveLocks(taskActionClient, intervals.get());
         }
         catch (Exception e) {
           return false;
@@ -224,7 +224,7 @@ public class IndexTask extends AbstractTask
     if (determineIntervals) {
       final SortedSet<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
       intervals.addAll(shardSpecs.getIntervals());
-      final Map<Interval, TaskLock> locks = Tasks.acquireExclusiveLocks(toolbox.getTaskActionClient(), intervals);
+      final Map<Interval, TaskLock> locks = Tasks.tryAcquireExclusiveLocks(toolbox.getTaskActionClient(), intervals);
       versions = locks.entrySet().stream()
                       .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getVersion()));
 

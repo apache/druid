@@ -36,14 +36,19 @@ public class LockAcquireAction implements TaskAction<LockResult>
   @JsonIgnore
   private final Interval interval;
 
+  @JsonIgnore
+  private final long timeoutMs;
+
   @JsonCreator
   public LockAcquireAction(
       @JsonProperty("lockType") TaskLockType type,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("timeoutMs") long timeoutMs
   )
   {
     this.type = type;
     this.interval = interval;
+    this.timeoutMs = timeoutMs;
   }
 
   @JsonProperty("lockType")
@@ -58,6 +63,12 @@ public class LockAcquireAction implements TaskAction<LockResult>
     return interval;
   }
 
+  @JsonProperty
+  public long getTimeoutMs()
+  {
+    return timeoutMs;
+  }
+
   @Override
   public TypeReference<LockResult> getReturnTypeReference()
   {
@@ -70,7 +81,11 @@ public class LockAcquireAction implements TaskAction<LockResult>
   public LockResult perform(Task task, TaskActionToolbox toolbox)
   {
     try {
-      return toolbox.getTaskLockbox().lock(type, task, interval);
+      if (timeoutMs == 0) {
+        return toolbox.getTaskLockbox().lock(type, task, interval);
+      } else {
+        return toolbox.getTaskLockbox().lock(type, task, interval, timeoutMs);
+      }
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
@@ -89,6 +104,7 @@ public class LockAcquireAction implements TaskAction<LockResult>
     return "LockAcquireAction{" +
            "lockType=" + type +
            ", interval=" + interval +
+           ", timeoutMs=" + timeoutMs +
            '}';
   }
 }

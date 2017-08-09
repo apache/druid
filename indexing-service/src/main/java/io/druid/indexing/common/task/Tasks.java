@@ -43,8 +43,10 @@ public class Tasks
   public static final int DEFAULT_BATCH_INDEX_TASK_PRIORITY = 50;
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
   public static final int DEFAULT_TASK_PRIORITY = 0;
+  public static final long DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 min
 
   public static final String PRIORITY_KEY = "priority";
+  public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
 
   public static void checkLockResult(LockResult result, Interval interval)
   {
@@ -53,7 +55,7 @@ public class Tasks
     }
   }
 
-  public static Map<Interval, TaskLock> acquireExclusiveLocks(TaskActionClient client, SortedSet<Interval> intervals)
+  public static Map<Interval, TaskLock> tryAcquireExclusiveLocks(TaskActionClient client, SortedSet<Interval> intervals)
       throws IOException
   {
     final Map<Interval, TaskLock> lockMap = new HashMap<>();

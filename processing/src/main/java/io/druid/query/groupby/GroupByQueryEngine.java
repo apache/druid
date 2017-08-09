@@ -262,8 +262,8 @@ public class GroupByQueryEngine
       this.increments = increments;
 
       int theIncrement = 0;
-      for (int i = 0; i < increments.length; i++) {
-        theIncrement += increments[i];
+      for (int inc : increments) {
+        theIncrement += inc;
       }
       increment = theIncrement;
 
@@ -325,8 +325,7 @@ public class GroupByQueryEngine
       dimensions = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
       dimNames = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
 
-      for (int i = 0; i < dimensionSpecs.size(); ++i) {
-        final DimensionSpec dimSpec = dimensionSpecs.get(i);
+      for (final DimensionSpec dimSpec : dimensionSpecs) {
         if (dimSpec.getOutputType() != ValueType.STRING) {
           throw new UnsupportedOperationException(
               "GroupBy v1 only supports dimensions with an outputType of STRING."

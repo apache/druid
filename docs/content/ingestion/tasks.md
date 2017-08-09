@@ -89,7 +89,8 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 |--------|-----------|---------|
 |type|The task type, this should always be "index".|yes|
 |id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
-|spec|The ingestion spec. See below for more details. |yes|
+|spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
+|context|Context containing various task configuration parameters. See below for more details.|no|
 
 #### Task Priority
 
@@ -182,6 +183,19 @@ In the bulk publishing mode, every segment is published at the very end of the i
 On the contrary, in the incremental publishing mode, segments are incrementally published, that is they can be published in the middle of the index task. More precisely, the index task collects data and stores created segments in the memory and disks of the node running that task until the total number of collected rows exceeds `maxTotalRows`. Once it exceeds, the index task immediately publishes all segments created until that moment, cleans all published segments up, and continues to ingest remaining data.
 
 To enable bulk publishing mode, `forceGuaranteedRollup` should be set in the TuningConfig. Note that this option cannot be used with either `forceExtendableShardSpecs` of TuningConfig or `appendToExisting` of IOConfig.
+
+### Task Context
+
+The task context is used for various task configuration parameters. The following parameters apply to all tasks.
+
+|property|default|description|
+|--------|-------|-----------|
+|taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [the below Locking section](#locking).|
+
+<div class="note caution">
+When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
+As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of overlords.
+</div>
 
 Segment Merging Tasks
 ---------------------
@@ -333,7 +347,7 @@ Locking
 
 Once an overlord node accepts a task, the task acquires locks for the data source and intervals specified in the task.
 
-There are two locks types, i.e., _shared lock_ and _exclusive lock_.
+There are two lock types, i.e., _shared lock_ and _exclusive lock_.
 
 - A task needs to acquire a shared lock before it reads segments of an interval. Multiple shared locks can be acquired for the same dataSource and interval. Shared locks are always preemptable, but they don't preempt each other.
 - A task needs to acquire an exclusive lock before it writes segments for an interval. An exclusive lock is acquired as preemptable and can be upgraded as non-preemptable when publishing segments.
