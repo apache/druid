@@ -155,12 +155,9 @@ public class GroupByRowProcessor
                       return mergeBufferHolder.get();
                     }
                   },
-                  -1,
                   temporaryStorage,
                   spillMapper,
-                  aggregatorFactories,
-                  null,
-                  -1 // priority doesn't matter if grouperMerger is null
+                  aggregatorFactories
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, Row> accumulator = pair.rhs;

@@ -189,7 +189,7 @@ public class ConcurrentGrouperTest
     }
   };
 
-  @Test
+  @Test(timeout = 5000L)
   public void testAggregate() throws InterruptedException, ExecutionException
   {
     final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
@@ -206,6 +206,8 @@ public class ConcurrentGrouperTest
         null,
         false,
         MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "concurrent-grouper-test-%d")),
+        0,
+        false,
         0
     );
 

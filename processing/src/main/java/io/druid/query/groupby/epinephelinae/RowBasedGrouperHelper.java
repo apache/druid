@@ -80,6 +80,41 @@ import java.util.Set;
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
 {
+  private static final int SINGLE_THREAD_CONCURRENCY_HINT = -1;
+  private static final int UNKNOWN_THREAD_PRIORITY = -1;
+  private static final long UNKNOWN_TIMEOUT = -1L;
+
+  /**
+   * Create a single-threaded grouper and accumulator.
+   */
+  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
+      final GroupByQuery query,
+      final boolean isInputRaw,
+      final Map<String, ValueType> rawInputRowSignature,
+      final GroupByQueryConfig config,
+      final Supplier<ByteBuffer> bufferSupplier,
+      final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper spillMapper,
+      final AggregatorFactory[] aggregatorFactories
+  )
+  {
+    return createGrouperAccumulatorPair(
+        query,
+        isInputRaw,
+        rawInputRowSignature,
+        config,
+        bufferSupplier,
+        SINGLE_THREAD_CONCURRENCY_HINT,
+        temporaryStorage,
+        spillMapper,
+        aggregatorFactories,
+        null,
+        UNKNOWN_THREAD_PRIORITY,
+        false,
+        UNKNOWN_TIMEOUT
+    );
+  }
+
   /**
    * If isInputRaw is true, transformations such as timestamp truncation and extraction functions have not
    * been applied to the input rows yet, for example, in a nested query, if an extraction function is being
@@ -96,7 +131,9 @@ public class RowBasedGrouperHelper
       final ObjectMapper spillMapper,
       final AggregatorFactory[] aggregatorFactories,
       @Nullable final ListeningExecutorService grouperSorter,
-      final int priority
+      final int priority,
+      final boolean hasQueryTimeout,
+      final long queryTimeoutAt
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -166,7 +203,9 @@ public class RowBasedGrouperHelper
           limitSpec,
           sortHasNonGroupingFields,
           grouperSorter,
-          priority
+          priority,
+          hasQueryTimeout,
+          queryTimeoutAt
       );
     }
 
