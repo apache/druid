@@ -144,8 +144,6 @@ public class BufferArrayGrouper implements IntGrouper
         dimIndex
     );
 
-    Preconditions.checkNotNull(key);
-
     final int recordOffset = dimIndex * recordSize;
 
     if (recordOffset + recordSize > valBuffer.capacity()) {
