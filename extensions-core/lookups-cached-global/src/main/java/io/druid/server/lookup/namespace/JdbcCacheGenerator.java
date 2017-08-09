@@ -145,7 +145,6 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         table,
         filter
     );
-
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)
