@@ -25,6 +25,8 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,13 +47,23 @@ public abstract class DruidNodeDiscoveryProvider
   public static final String NODE_TYPE_ROUTER = "router";
   public static final String NODE_TYPE_MM = "middleManager";
 
+  public static final Set<String> ALL_NODE_TYPES = ImmutableSet.of(
+      NODE_TYPE_COORDINATOR,
+      NODE_TYPE_HISTORICAL,
+      NODE_TYPE_BROKER,
+      NODE_TYPE_OVERLORD,
+      NODE_TYPE_PEON,
+      NODE_TYPE_ROUTER,
+      NODE_TYPE_MM
+  );
+
   public static final Map<String, Set<String>> SERVICE_TO_NODE_TYPES = ImmutableMap.of(
       LookupNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_BROKER, NODE_TYPE_HISTORICAL, NODE_TYPE_PEON),
       DataNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_HISTORICAL, NODE_TYPE_PEON),
       WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_MM)
   );
 
-  private Map<String, ServiceListener> serviceDiscoveryMap = new ConcurrentHashMap<>(SERVICE_TO_NODE_TYPES.size());
+  private final Map<String, ServiceListener> serviceDiscoveryMap = new ConcurrentHashMap<>(SERVICE_TO_NODE_TYPES.size());
 
   /**
    * Get DruidNodeDiscovery instance to discover nodes of given nodeType.
@@ -125,9 +137,9 @@ public abstract class DruidNodeDiscoveryProvider
     }
 
     @Override
-    public Set<DiscoveryDruidNode> getAllNodes()
+    public Collection<DiscoveryDruidNode> getAllNodes()
     {
-      return ImmutableSet.<DiscoveryDruidNode>builder().addAll(nodes.values()).build();
+      return Collections.unmodifiableCollection(nodes.values());
     }
 
     @Override

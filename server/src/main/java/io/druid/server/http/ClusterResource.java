@@ -29,10 +29,11 @@ import io.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Set;
+import java.util.Collection;
 
 /**
  */
@@ -72,18 +73,41 @@ public class ClusterResource
                                                 .getAllNodes()
     );
 
-    Set<DiscoveryDruidNode> mmNodes = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM)
-                                                                .getAllNodes();
+    Collection<DiscoveryDruidNode> mmNodes = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM)
+                                                                       .getAllNodes();
     if (!mmNodes.isEmpty()) {
       entityBuilder.put(DruidNodeDiscoveryProvider.NODE_TYPE_MM, mmNodes);
     }
 
-    Set<DiscoveryDruidNode> routerNodes = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER)
+    Collection<DiscoveryDruidNode> routerNodes = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER)
                                                                     .getAllNodes();
     if (!routerNodes.isEmpty()) {
       entityBuilder.put(DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER, routerNodes);
     }
 
     return Response.status(Response.Status.OK).entity(entityBuilder.build()).build();
+  }
+
+  @GET
+  @Produces({MediaType.APPLICATION_JSON})
+  @Path("/{nodeType}")
+  public Response getClusterServers(
+      @PathParam("nodeType") String nodeType
+  )
+  {
+    if (nodeType == null || !DruidNodeDiscoveryProvider.ALL_NODE_TYPES.contains(nodeType)) {
+      return Response.serverError()
+                     .status(Response.Status.BAD_REQUEST)
+                     .entity(String.format(
+                         "Invalid nodeType [%s]. Valid node types are %s .",
+                         nodeType,
+                         DruidNodeDiscoveryProvider.ALL_NODE_TYPES
+                     ))
+                     .build();
+    } else {
+      return Response.status(Response.Status.OK).entity(
+          druidNodeDiscoveryProvider.getForNodeType(nodeType).getAllNodes()
+      ).build();
+    }
   }
 }

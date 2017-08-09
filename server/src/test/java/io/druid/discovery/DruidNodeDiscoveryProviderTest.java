@@ -79,10 +79,11 @@ public class DruidNodeDiscoveryProviderTest
         }
     );
 
-    Assert.assertEquals(ImmutableSet.of(), dataNodes);
-    Assert.assertEquals(ImmutableSet.of(), dataNodeDiscovery.getAllNodes());
-    Assert.assertEquals(ImmutableSet.of(), lookupNodes);
-    Assert.assertEquals(ImmutableSet.of(), lookupNodeDiscovery.getAllNodes());
+    Assert.assertTrue(dataNodes.isEmpty());
+    Assert.assertTrue(dataNodes.isEmpty());
+    Assert.assertTrue(dataNodeDiscovery.getAllNodes().isEmpty());
+    Assert.assertTrue(lookupNodes.isEmpty());
+    Assert.assertTrue(lookupNodeDiscovery.getAllNodes().isEmpty());
 
     DiscoveryDruidNode node1 = new DiscoveryDruidNode(
         new DruidNode("s1", "h1", 8080, null, new ServerConfig()),
@@ -158,10 +159,10 @@ public class DruidNodeDiscoveryProviderTest
     provider.add(node7Clone);
     provider.add(node8);
 
-    Assert.assertEquals(ImmutableSet.of(node1, node2, node4, node5), dataNodeDiscovery.getAllNodes());
+    Assert.assertEquals(ImmutableSet.of(node1, node2, node4, node5), ImmutableSet.copyOf(dataNodeDiscovery.getAllNodes()));
     Assert.assertEquals(ImmutableSet.of(node1, node2, node4, node5), dataNodes);
 
-    Assert.assertEquals(ImmutableSet.of(node1, node3, node4, node6, node7), lookupNodeDiscovery.getAllNodes());
+    Assert.assertEquals(ImmutableSet.of(node1, node3, node4, node6, node7), ImmutableSet.copyOf(lookupNodeDiscovery.getAllNodes()));
     Assert.assertEquals(ImmutableSet.of(node1, node3, node4, node6, node7), lookupNodes);
 
     provider.remove(node8);
@@ -170,10 +171,10 @@ public class DruidNodeDiscoveryProviderTest
     provider.remove(node5);
     provider.remove(node4);
 
-    Assert.assertEquals(ImmutableSet.of(node1, node2), dataNodeDiscovery.getAllNodes());
+    Assert.assertEquals(ImmutableSet.of(node1, node2), ImmutableSet.copyOf(dataNodeDiscovery.getAllNodes()));
     Assert.assertEquals(ImmutableSet.of(node1, node2), dataNodes);
 
-    Assert.assertEquals(ImmutableSet.of(node1, node3), lookupNodeDiscovery.getAllNodes());
+    Assert.assertEquals(ImmutableSet.of(node1, node3), ImmutableSet.copyOf(lookupNodeDiscovery.getAllNodes()));
     Assert.assertEquals(ImmutableSet.of(node1, node3), lookupNodes);
   }
 

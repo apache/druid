@@ -20,13 +20,10 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provider;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
@@ -35,9 +32,8 @@ import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
+import io.druid.client.indexing.IndexingService;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
-import io.druid.discovery.DiscoveryDruidNode;
-import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
@@ -50,7 +46,6 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ListProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
-import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
@@ -83,10 +78,8 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.overlord.supervisor.SupervisorResource;
 import io.druid.indexing.worker.config.WorkerConfig;
-import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
-import io.druid.server.DruidNode;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.http.RedirectFilter;
@@ -192,7 +185,13 @@ public class CliOverlord extends ServerRunnable
               LifecycleModule.register(binder, Server.class);
             }
 
-            binder.bind(ForSideEffectsOnlyProvider.Child.class).toProvider(ForSideEffectsOnlyProvider.class).asEagerSingleton();
+            binder.bind(SideEffectsProvider.Child.class).annotatedWith(IndexingService.class).toProvider(
+                new SideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(SideEffectsProvider.Child.class, IndexingService.class));
           }
 
           private void configureTaskStorage(Binder binder)
@@ -275,44 +274,6 @@ public class CliOverlord extends ServerRunnable
         new IndexingServiceFirehoseModule(),
         new IndexingServiceTaskLogsModule()
     );
-  }
-
-  private static class ForSideEffectsOnlyProvider implements Provider<ForSideEffectsOnlyProvider.Child>
-  {
-    final static class Child {};
-
-    @Inject
-    public ForSideEffectsOnlyProvider(DruidNodeAnnouncer announcer, @Self DruidNode druidNode, Lifecycle lifecycle)
-    {
-      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode,
-                                                                     DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
-                                                                     ImmutableMap.of()
-      );
-
-      lifecycle.addHandler(
-          new Lifecycle.Handler()
-          {
-            @Override
-            public void start() throws Exception
-            {
-              announcer.announce(discoveryDruidNode);
-            }
-
-            @Override
-            public void stop()
-            {
-              announcer.unannounce(discoveryDruidNode);
-            }
-          },
-          Lifecycle.Stage.LAST
-      );
-    }
-
-    @Override
-    public ForSideEffectsOnlyProvider.Child get()
-    {
-      return new Child();
-    }
   }
 
   /**

@@ -20,10 +20,11 @@
 package io.druid.curator.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.druid.concurrent.Execs;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
@@ -41,11 +42,13 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -58,11 +61,11 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
   private final CuratorDiscoveryConfig config;
   private final ObjectMapper jsonMapper;
 
-  private final ExecutorService listenerExecutor;
+  private ExecutorService listenerExecutor;
 
   private final Map<String, NodeTypeWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
 
-  private boolean stopped = false;
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   @Inject
   public CuratorDruidNodeDiscoveryProvider(
@@ -71,57 +74,69 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       @Json ObjectMapper jsonMapper
   )
   {
-    // This is single-threaded to ensure that all listener calls are executed precisesly in the oder of add/remove
-    // event occurences.
-    this.listenerExecutor = Execs.singleThreaded("CuratorDruidNodeDiscoveryProvider-ListenerExecutor");
     this.curatorFramework = curatorFramework;
     this.config = config;
     this.jsonMapper = jsonMapper;
   }
 
-
-
   @Override
-  public synchronized DruidNodeDiscovery getForNodeType(String nodeType)
+  public DruidNodeDiscovery getForNodeType(String nodeType)
   {
-    if (stopped) {
-      throw new ISE("Provider has been stopped.");
-    }
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
-    NodeTypeWatcher nodeTypeWatcher = nodeTypeWatchers.get(nodeType);
-    if (nodeTypeWatcher == null) {
-      log.info("Creating/Starting NodeTypeWatcher for nodeType [%s].", nodeType);
-      nodeTypeWatcher = new NodeTypeWatcher(
-          listenerExecutor,
-          curatorFramework,
-          config.getInternalDiscoveryPath(),
-          jsonMapper,
-          nodeType
-      );
-      nodeTypeWatcher.start();
-      nodeTypeWatchers.put(nodeType, nodeTypeWatcher);
-      log.info("Created/Started NodeTypeWatcher for nodeType [%s].", nodeType);
-    }
+    return nodeTypeWatchers.compute(
+        nodeType,
+        (k, v) -> {
+          if (v != null) {
+            return v;
+          }
 
-    return nodeTypeWatchers.get(nodeType);
+          log.info("Creating NodeTypeWatcher for nodeType [%s].", nodeType);
+          NodeTypeWatcher nodeTypeWatcher = new NodeTypeWatcher(
+              listenerExecutor,
+              curatorFramework,
+              config.getInternalDiscoveryPath(),
+              jsonMapper,
+              nodeType
+          );
+          nodeTypeWatcher.start();
+          log.info("Created NodeTypeWatcher for nodeType [%s].", nodeType);
+          return nodeTypeWatcher;
+        }
+    );
   }
 
   @LifecycleStart
-  public synchronized void start()
+  public void start()
   {
-    log.info("started");
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("can't start.");
+    }
+
+    try {
+      log.info("starting");
+
+      // This is single-threaded to ensure that all listener calls are executed precisely in the oder of add/remove
+      // event occurences.
+      listenerExecutor = Execs.singleThreaded("CuratorDruidNodeDiscoveryProvider-ListenerExecutor");
+
+      log.info("started");
+
+      lifecycleLock.started();
+    }
+    finally {
+      lifecycleLock.exitStart();
+    }
   }
 
   @LifecycleStop
-  public synchronized void stop()
+  public void stop()
   {
-    if (stopped) {
-      return;
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("can't stop.");
     }
 
     log.info("stopping");
-
-    stopped = true;
 
     for (NodeTypeWatcher watcher : nodeTypeWatchers.values()) {
       watcher.stop();
@@ -175,9 +190,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     }
 
     @Override
-    public Set<DiscoveryDruidNode> getAllNodes()
+    public Collection<DiscoveryDruidNode> getAllNodes()
     {
-      return new ImmutableSet.Builder().addAll(nodes.values()).build();
+      return Collections.unmodifiableCollection(nodes.values());
     }
 
     @Override
@@ -218,7 +233,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
             );
 
             if (!nodeType.equals(druidNode.getNodeType())) {
-              log.error(
+              log.warn(
                   "Node[%s:%s] add is discovered by node watcher of nodeType [%s]. Ignored.",
                   druidNode.getNodeType(),
                   druidNode,
@@ -237,7 +252,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
             DiscoveryDruidNode druidNode = jsonMapper.readValue(event.getData().getData(), DiscoveryDruidNode.class);
 
             if (!nodeType.equals(druidNode.getNodeType())) {
-              log.error(
+              log.warn(
                   "Node[%s:%s] removal is discovered by node watcher of nodeType [%s]. Ignored.",
                   druidNode.getNodeType(),
                   druidNode,
@@ -264,7 +279,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private synchronized void addNode(DiscoveryDruidNode druidNode)
     {
-      DiscoveryDruidNode prev = nodes.put(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
+      DiscoveryDruidNode prev = nodes.putIfAbsent(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
       if (prev == null) {
         for (DruidNodeDiscovery.Listener l : nodeListeners) {
           listenerExecutor.submit(() -> {

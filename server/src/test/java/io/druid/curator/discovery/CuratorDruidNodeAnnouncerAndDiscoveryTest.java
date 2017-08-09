@@ -43,7 +43,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  */
@@ -127,11 +129,11 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     DruidNodeDiscovery coordDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR);
     DruidNodeDiscovery overlordDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD);
 
-    while (!ImmutableSet.of(node1).equals(coordDiscovery.getAllNodes())) {
+    while (!checkNodes(ImmutableSet.of(node1), (coordDiscovery.getAllNodes()))) {
       Thread.sleep(100);
     }
 
-    while (!ImmutableSet.of(node3).equals(overlordDiscovery.getAllNodes())) {
+    while (!checkNodes(ImmutableSet.of(node3), overlordDiscovery.getAllNodes())) {
       Thread.sleep(100);
     }
 
@@ -182,11 +184,11 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     druidNodeAnnouncer.announce(node2);
     druidNodeAnnouncer.announce(node4);
 
-    while (!ImmutableSet.of(node1, node2).equals(coordDiscovery.getAllNodes())) {
+    while (!checkNodes(ImmutableSet.of(node1, node2), coordDiscovery.getAllNodes())) {
       Thread.sleep(100);
     }
 
-    while (!ImmutableSet.of(node3, node4).equals(overlordDiscovery.getAllNodes())) {
+    while (!checkNodes(ImmutableSet.of(node3, node4), overlordDiscovery.getAllNodes())) {
       Thread.sleep(100);
     }
 
@@ -203,11 +205,11 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     druidNodeAnnouncer.unannounce(node3);
     druidNodeAnnouncer.unannounce(node4);
 
-    while (!ImmutableSet.of().equals(coordDiscovery.getAllNodes())) {
+    while (!checkNodes(ImmutableSet.of(), coordDiscovery.getAllNodes())) {
       Thread.sleep(100);
     }
 
-    while (!ImmutableSet.of().equals(overlordDiscovery.getAllNodes())) {
+    while (!checkNodes(ImmutableSet.of(), overlordDiscovery.getAllNodes())) {
       Thread.sleep(100);
     }
 
@@ -221,6 +223,11 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 
     druidNodeDiscoveryProvider.stop();
     announcer.stop();
+  }
+
+  private boolean checkNodes(Set<DiscoveryDruidNode> expected, Collection<DiscoveryDruidNode> actual)
+  {
+    return expected.equals(ImmutableSet.copyOf(actual));
   }
 
   @After

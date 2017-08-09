@@ -30,9 +30,8 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import io.druid.discovery.DruidDiscoveryModule;
-import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.KeyHolder;
@@ -76,6 +75,8 @@ import java.util.concurrent.ThreadFactory;
 public class DiscoveryModule implements Module
 {
   private static final String NAME = "DiscoveryModule:internal";
+
+  private static final String INTERNAL_DISCOVERY_PROP = "druid.discovery.type";
   private static final String CURATOR_KEY = "curator";
 
   /**
@@ -152,7 +153,13 @@ public class DiscoveryModule implements Module
           .in(LazySingleton.class);
 
     // internal discovery bindings.
-    DruidDiscoveryModule.createBindingChoices(binder, CURATOR_KEY);
+    PolyBind.createChoiceWithDefault(
+        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeAnnouncer.class), CURATOR_KEY
+    );
+
+    PolyBind.createChoiceWithDefault(
+        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeDiscoveryProvider.class), CURATOR_KEY
+    );
 
     PolyBind.optionBinder(binder, Key.get(DruidNodeDiscoveryProvider.class))
             .addBinding(CURATOR_KEY)

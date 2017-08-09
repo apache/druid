@@ -19,14 +19,14 @@
 
 package io.druid.discovery;
 
-import java.util.Set;
+import java.util.Collection;
 
 /**
  * Interface for discovering Druid Nodes announced by DruidNodeAnnouncer.
  */
 public interface DruidNodeDiscovery
 {
-  Set<DiscoveryDruidNode> getAllNodes();
+  Collection<DiscoveryDruidNode> getAllNodes();
   void registerListener(Listener listener);
 
   interface Listener

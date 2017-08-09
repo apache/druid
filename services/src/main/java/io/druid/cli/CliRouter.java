@@ -20,11 +20,9 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
@@ -32,8 +30,6 @@ import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.discovery.DiscoveryDruidNode;
-import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -45,11 +41,9 @@ import io.druid.guice.QueryableModule;
 import io.druid.guice.RouterProcessingModule;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
-import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.AsyncQueryForwardingServlet;
-import io.druid.server.DruidNode;
 import io.druid.server.http.RouterResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.QueryCountStatsProvider;
@@ -118,7 +112,13 @@ public class CliRouter extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
 
-            binder.bind(ForSideEffectsOnlyProvider.Child.class).toProvider(ForSideEffectsOnlyProvider.class).asEagerSingleton();
+            binder.bind(SideEffectsProvider.Child.class).toProvider(
+                new SideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(SideEffectsProvider.Child.class));
           }
 
           @Provides
@@ -134,43 +134,5 @@ public class CliRouter extends ServerRunnable
         },
         new LookupModule()
     );
-  }
-
-  private static class ForSideEffectsOnlyProvider implements Provider<ForSideEffectsOnlyProvider.Child>
-  {
-    final static class Child {};
-
-    @Inject
-    public ForSideEffectsOnlyProvider(DruidNodeAnnouncer announcer, @Self DruidNode druidNode, Lifecycle lifecycle)
-    {
-      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode,
-                                                                     DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER,
-                                                                     ImmutableMap.of()
-      );
-
-      lifecycle.addHandler(
-          new Lifecycle.Handler()
-          {
-            @Override
-            public void start() throws Exception
-            {
-              announcer.announce(discoveryDruidNode);
-            }
-
-            @Override
-            public void stop()
-            {
-              announcer.unannounce(discoveryDruidNode);
-            }
-          },
-          Lifecycle.Stage.LAST
-      );
-    }
-
-    @Override
-    public ForSideEffectsOnlyProvider.Child get()
-    {
-      return new Child();
-    }
   }
 }

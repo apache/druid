@@ -21,19 +21,18 @@ package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
+import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.discovery.DiscoveryDruidNode;
-import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ConditionalMultibind;
 import io.druid.guice.ConfigProvider;
@@ -43,9 +42,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
-import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
-import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerConfig;
@@ -55,7 +52,6 @@ import io.druid.metadata.MetadataSegmentManagerConfig;
 import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageProvider;
-import io.druid.server.DruidNode;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.BalancerStrategyFactory;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -214,7 +210,13 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorSegmentKiller.class
             );
 
-            binder.bind(ForSideEffectsOnlyProvider.Child.class).toProvider(ForSideEffectsOnlyProvider.class).asEagerSingleton();
+            binder.bind(SideEffectsProvider.Child.class).annotatedWith(Coordinator.class).toProvider(
+                new SideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(SideEffectsProvider.Child.class, Coordinator.class));
           }
 
           @Provides
@@ -244,43 +246,5 @@ public class CliCoordinator extends ServerRunnable
   public static boolean isOverlord(Properties properties)
   {
     return Boolean.valueOf(properties.getProperty("druid.coordinator.asOverlord.enabled")).booleanValue();
-  }
-
-  private static class ForSideEffectsOnlyProvider implements Provider<ForSideEffectsOnlyProvider.Child>
-  {
-    final static class Child {};
-
-    @Inject
-    public ForSideEffectsOnlyProvider(DruidNodeAnnouncer announcer, @Self DruidNode druidNode, Lifecycle lifecycle)
-    {
-      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode,
-                                                                     DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
-                                                                     ImmutableMap.of()
-      );
-
-      lifecycle.addHandler(
-          new Lifecycle.Handler()
-          {
-            @Override
-            public void start() throws Exception
-            {
-              announcer.announce(discoveryDruidNode);
-            }
-
-            @Override
-            public void stop()
-            {
-              announcer.unannounce(discoveryDruidNode);
-            }
-          },
-          Lifecycle.Stage.LAST
-      );
-    }
-
-    @Override
-    public ForSideEffectsOnlyProvider.Child get()
-    {
-      return new Child();
-    }
   }
 }
