@@ -71,6 +71,12 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
+  public MetricCombiner makeMetricCombiner()
+  {
+    return new DoubleMaxMetricCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new DoubleMaxAggregatorFactory(name, name, null, macroTable);

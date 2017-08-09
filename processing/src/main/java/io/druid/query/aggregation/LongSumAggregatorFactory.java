@@ -101,6 +101,12 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public MetricCombiner makeMetricCombiner()
+  {
+    return new LongSumMetricCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new LongSumAggregatorFactory(name, name, null, macroTable);

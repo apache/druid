@@ -35,7 +35,7 @@ public class HistogramAggregator implements Aggregator
     }
   };
 
-  static Object combineHistograms(Object lhs, Object rhs)
+  static Histogram combineHistograms(Object lhs, Object rhs)
   {
     return ((Histogram) lhs).fold((Histogram) rhs);
   }

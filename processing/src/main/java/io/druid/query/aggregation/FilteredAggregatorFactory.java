@@ -80,6 +80,12 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public MetricCombiner makeMetricCombiner()
+  {
+    return delegate.makeMetricCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return delegate.getCombiningFactory();

@@ -70,6 +70,12 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
+  public MetricCombiner makeMetricCombiner()
+  {
+    return new DoubleMaxMetricCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new FloatMaxAggregatorFactory(name, name, null, macroTable);

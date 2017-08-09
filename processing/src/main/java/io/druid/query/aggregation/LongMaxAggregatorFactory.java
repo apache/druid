@@ -28,6 +28,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -98,6 +99,33 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return LongMaxAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public MetricCombiner makeMetricCombiner()
+  {
+    return new LongMetricCombiner()
+    {
+      private long max;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        max = selector.getLong();
+      }
+
+      @Override
+      public void combine(ColumnValueSelector selector)
+      {
+        max = Math.max(max, selector.getLong());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return max;
+      }
+    };
   }
 
   @Override

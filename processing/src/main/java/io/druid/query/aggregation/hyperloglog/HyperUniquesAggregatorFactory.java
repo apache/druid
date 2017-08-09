@@ -30,8 +30,10 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.MetricCombiner;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
+import io.druid.query.aggregation.cardinality.HyperLogLogCollectorMetricCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
@@ -134,6 +136,12 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
       return rhs;
     }
     return ((HyperLogLogCollector) lhs).fold((HyperLogLogCollector) rhs);
+  }
+
+  @Override
+  public MetricCombiner makeMetricCombiner()
+  {
+    return new HyperLogLogCollectorMetricCombiner();
   }
 
   @Override

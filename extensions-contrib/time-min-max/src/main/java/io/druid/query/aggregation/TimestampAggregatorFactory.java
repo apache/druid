@@ -21,8 +21,9 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Longs;
-import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.UOE;
 import io.druid.segment.ColumnSelectorFactory;
 import org.joda.time.DateTime;
 
@@ -83,6 +84,12 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return TimestampAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public MetricCombiner makeMetricCombiner()
+  {
+    throw new UOE("[%s] is not supported during ingestion for rollup", getClass().getSimpleName());
   }
 
   @Override

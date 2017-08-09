@@ -70,6 +70,12 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
+  public MetricCombiner makeMetricCombiner()
+  {
+    return new DoubleSumMetricCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new FloatSumAggregatorFactory(name, name, null, macroTable);
