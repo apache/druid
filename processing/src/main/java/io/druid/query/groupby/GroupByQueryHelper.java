@@ -243,10 +243,12 @@ public class GroupByQueryHelper
 
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
       final String typeName = aggregatorFactory.getTypeName();
-      final ValueType valueType = GuavaUtils.getEnumIfPresent(
-          ValueType.class,
-          typeName == null ? null : StringUtils.toUpperCase(typeName)
-      );
+      final ValueType valueType;
+      if (typeName != null) {
+        valueType = GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName));
+      } else {
+        valueType = null;
+      }
       if (valueType != null) {
         types.put(aggregatorFactory.getName(), valueType);
       }

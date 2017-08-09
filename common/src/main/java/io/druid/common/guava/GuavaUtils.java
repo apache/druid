@@ -115,24 +115,21 @@ public class GuavaUtils
    * Like Guava's Enums.getIfPresent, with some differences.
    * <ul>
    * <li>Returns nullable rather than Optional</li>
-   * <li>Permits nullable value (and returns null in this case)</li>
    * <li>Does not require Guava 12</li>
    * </ul>
    */
   @Nullable
-  public static <T extends Enum<T>> T getEnumIfPresent(final Class<T> enumClass, @Nullable final String value)
+  public static <T extends Enum<T>> T getEnumIfPresent(final Class<T> enumClass, final String value)
   {
     Preconditions.checkNotNull(enumClass, "enumClass");
+    Preconditions.checkNotNull(value, "value");
 
-    if (value == null) {
-      return null;
+    for (T enumValue : enumClass.getEnumConstants()) {
+      if (enumValue.name().equals(value)) {
+        return enumValue;
+      }
     }
 
-    try {
-      return Enum.valueOf(enumClass, value);
-    }
-    catch (IllegalArgumentException e) {
-      return null;
-    }
+    return null;
   }
 }
