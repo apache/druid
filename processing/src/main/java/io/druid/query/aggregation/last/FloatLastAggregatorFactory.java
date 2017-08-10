@@ -31,7 +31,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.MetricCombiner;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -96,7 +96,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("FloatLastAggregatorFactory is not supported during ingestion for rollup");
   }

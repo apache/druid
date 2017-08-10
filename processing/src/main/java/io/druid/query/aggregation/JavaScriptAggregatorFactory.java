@@ -142,9 +142,9 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    return new DoubleMetricCombiner()
+    return new DoubleAggregateCombiner()
     {
       private double combined;
 

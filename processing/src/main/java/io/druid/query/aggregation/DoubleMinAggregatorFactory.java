@@ -77,9 +77,9 @@ public class DoubleMinAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    return new DoubleMinMetricCombiner();
+    return new DoubleMinAggregateCombiner();
   }
 
   @Override

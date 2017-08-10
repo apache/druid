@@ -28,12 +28,12 @@ import com.google.common.collect.Lists;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.MetricCombiner;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
@@ -193,9 +193,9 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    return new HyperLogLogCollectorMetricCombiner();
+    return new HyperLogLogCollectorAggregateCombiner();
   }
 
   @Override

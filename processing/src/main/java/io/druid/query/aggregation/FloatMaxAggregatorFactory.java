@@ -70,9 +70,9 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    return new DoubleMaxMetricCombiner();
+    return new DoubleMaxAggregateCombiner();
   }
 
   @Override

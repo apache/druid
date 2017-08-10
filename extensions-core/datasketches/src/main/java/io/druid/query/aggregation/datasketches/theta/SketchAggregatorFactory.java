@@ -27,11 +27,11 @@ import com.yahoo.sketches.Util;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.MetricCombiner;
-import io.druid.query.aggregation.ObjectMetricCombiner;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -105,9 +105,9 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    return new ObjectMetricCombiner<SketchHolder>()
+    return new ObjectAggregateCombiner<SketchHolder>()
     {
       private final Union union = (Union) SetOperation.builder().build(size, Family.UNION);
       private final SketchHolder combined = SketchHolder.of(union);

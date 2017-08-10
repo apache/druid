@@ -19,27 +19,11 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.ObjectColumnSelector;
 
-public final class LongSumMetricCombiner extends LongMetricCombiner
+/**
+ * Specialization of {@link AggregateCombiner} for object aggregations.
+ */
+public abstract class ObjectAggregateCombiner<T> implements AggregateCombiner, ObjectColumnSelector<T>
 {
-  private long sum;
-
-  @Override
-  public void reset(ColumnValueSelector selector)
-  {
-    sum = selector.getLong();
-  }
-
-  @Override
-  public void combine(ColumnValueSelector selector)
-  {
-    sum += selector.getLong();
-  }
-
-  @Override
-  public long getLong()
-  {
-    return sum;
-  }
 }

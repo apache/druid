@@ -59,17 +59,17 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract Object combine(Object lhs, Object rhs);
 
   /**
-   * Creates a MetricCombiner to combine rollup aggregation results from serveral "rows" of different indexes during
-   * index merging. MetricCombiner implements the same logic as {@link #combine}, with the difference that it uses
+   * Creates an AggregateCombiner to combine rollup aggregation results from serveral "rows" of different indexes during
+   * index merging. AggregateCombiner implements the same logic as {@link #combine}, with the difference that it uses
    * {@link io.druid.segment.ColumnValueSelector} and it's subinterfaces to get inputs and implements {@code
    * ColumnValueSelector} to provide output.
    *
-   * @see MetricCombiner
+   * @see AggregateCombiner
    * @see io.druid.segment.IndexMerger
    */
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    throw new UOE("[%s] does not implement makeMetricCombiner()", this.getClass().getName());
+    throw new UOE("[%s] does not implement makeAggregateCombiner()", this.getClass().getName());
   }
 
   /**

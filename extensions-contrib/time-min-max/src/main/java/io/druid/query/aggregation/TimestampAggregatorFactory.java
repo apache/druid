@@ -87,7 +87,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("[%s] is not supported during ingestion for rollup", getClass().getSimpleName());
   }

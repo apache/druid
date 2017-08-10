@@ -29,8 +29,8 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.LongSumMetricCombiner;
-import io.druid.query.aggregation.MetricCombiner;
+import io.druid.query.aggregation.LongSumAggregateCombiner;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -122,10 +122,10 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
     // This is likely wrong as well as combine(), see https://github.com/druid-io/druid/pull/2602#issuecomment-321224202
-    return new LongSumMetricCombiner();
+    return new LongSumAggregateCombiner();
   }
 
   @Override

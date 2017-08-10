@@ -92,11 +92,11 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
     // HistogramAggregatorFactory.combine() delegates to HistogramAggregator.combineHistograms() and it doesn't check
-    // for nulls, so this MetricCombiner neither.
-    return new ObjectMetricCombiner<Histogram>()
+    // for nulls, so this AggregateCombiner neither.
+    return new ObjectAggregateCombiner<Histogram>()
     {
       private Histogram combined;
 

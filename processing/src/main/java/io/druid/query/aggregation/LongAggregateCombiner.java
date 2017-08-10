@@ -19,27 +19,17 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.ColumnValueSelector;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.LongColumnSelector;
 
-final class DoubleSumMetricCombiner extends DoubleMetricCombiner
+/**
+ * Specialization of {@link AggregateCombiner} for primitive long aggregations.
+ */
+public abstract class LongAggregateCombiner implements AggregateCombiner, LongColumnSelector
 {
-  private double sum;
-
   @Override
-  public void reset(ColumnValueSelector selector)
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    sum = selector.getDouble();
-  }
-
-  @Override
-  public void combine(ColumnValueSelector selector)
-  {
-    sum += selector.getDouble();
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return sum;
+    // Usually AggregateCombiner has nothing to inspect
   }
 }

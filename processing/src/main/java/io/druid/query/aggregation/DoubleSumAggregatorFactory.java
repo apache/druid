@@ -71,9 +71,9 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    return new DoubleSumMetricCombiner();
+    return new DoubleSumAggregateCombiner();
   }
 
   @Override

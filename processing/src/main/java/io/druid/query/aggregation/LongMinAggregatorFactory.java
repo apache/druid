@@ -103,9 +103,9 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    return new LongMetricCombiner()
+    return new LongAggregateCombiner()
     {
       private long min;
 

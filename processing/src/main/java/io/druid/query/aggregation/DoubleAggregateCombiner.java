@@ -23,13 +23,13 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DoubleColumnSelector;
 
 /**
- * Specialization of {@link MetricCombiner} for primitive double metrics.
+ * Specialization of {@link AggregateCombiner} for primitive double aggregations.
  */
-public abstract class DoubleMetricCombiner implements MetricCombiner, DoubleColumnSelector
+public abstract class DoubleAggregateCombiner implements AggregateCombiner, DoubleColumnSelector
 {
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    // Usually MetricCombiner has nothing to inspect
+    // Usually AggregateCombiner has nothing to inspect
   }
 }

@@ -27,13 +27,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.MetricCombiner;
-import io.druid.query.aggregation.ObjectMetricCombiner;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -116,11 +116,11 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
     // ApproximateHistogramAggregatorFactory.combine() delegates to ApproximateHistogramAggregator.combineHistograms()
-    // and it doesn't check for nulls, so this MetricCombiner neither.
-    return new ObjectMetricCombiner<ApproximateHistogram>()
+    // and it doesn't check for nulls, so this AggregateCombiner neither.
+    return new ObjectAggregateCombiner<ApproximateHistogram>()
     {
       private final ApproximateHistogram combined = new ApproximateHistogram();
 

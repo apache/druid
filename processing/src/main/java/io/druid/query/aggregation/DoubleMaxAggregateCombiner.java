@@ -17,51 +17,29 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.cardinality;
+package io.druid.query.aggregation;
 
-import io.druid.hll.HyperLogLogCollector;
-import io.druid.query.aggregation.ObjectMetricCombiner;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 
-import javax.annotation.Nullable;
-
-public final class HyperLogLogCollectorMetricCombiner extends ObjectMetricCombiner<HyperLogLogCollector>
+final class DoubleMaxAggregateCombiner extends DoubleAggregateCombiner
 {
-  @Nullable
-  private HyperLogLogCollector combined;
+  private double max;
 
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    combined = null;
-    combine(selector);
+    max = selector.getDouble();
   }
 
   @Override
   public void combine(ColumnValueSelector selector)
   {
-    @SuppressWarnings("unchecked")
-    HyperLogLogCollector other = ((ObjectColumnSelector<HyperLogLogCollector>) selector).get();
-    if (other == null) {
-      return;
-    }
-    if (combined == null) {
-      combined = HyperLogLogCollector.makeLatestCollector();
-    }
-    combined.fold(other);
+    max = Math.max(max, selector.getDouble());
   }
 
   @Override
-  public Class<HyperLogLogCollector> classOfObject()
+  public double getDouble()
   {
-    return HyperLogLogCollector.class;
-  }
-
-  @Nullable
-  @Override
-  public HyperLogLogCollector get()
-  {
-    return combined;
+    return max;
   }
 }

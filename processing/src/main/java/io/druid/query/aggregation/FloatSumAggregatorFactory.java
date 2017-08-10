@@ -70,9 +70,9 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public MetricCombiner makeMetricCombiner()
+  public AggregateCombiner makeAggregateCombiner()
   {
-    return new DoubleSumMetricCombiner();
+    return new DoubleSumAggregateCombiner();
   }
 
   @Override

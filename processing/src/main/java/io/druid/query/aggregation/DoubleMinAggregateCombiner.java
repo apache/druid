@@ -19,17 +19,27 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 
-/**
- * Specialization of {@link MetricCombiner} for primitive long metrics.
- */
-public abstract class LongMetricCombiner implements MetricCombiner, LongColumnSelector
+final class DoubleMinAggregateCombiner extends DoubleAggregateCombiner
 {
+  private double min;
+
   @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  public void reset(ColumnValueSelector selector)
   {
-    // Usually MetricCombiner has nothing to inspect
+    min = selector.getDouble();
+  }
+
+  @Override
+  public void combine(ColumnValueSelector selector)
+  {
+    min = Math.min(min, selector.getDouble());
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return min;
   }
 }

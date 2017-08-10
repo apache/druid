@@ -21,25 +21,25 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.ColumnValueSelector;
 
-final class DoubleMaxMetricCombiner extends DoubleMetricCombiner
+final class DoubleSumAggregateCombiner extends DoubleAggregateCombiner
 {
-  private double max;
+  private double sum;
 
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    max = selector.getDouble();
+    sum = selector.getDouble();
   }
 
   @Override
   public void combine(ColumnValueSelector selector)
   {
-    max = Math.max(max, selector.getDouble());
+    sum += selector.getDouble();
   }
 
   @Override
   public double getDouble()
   {
-    return max;
+    return sum;
   }
 }
