@@ -421,6 +421,7 @@ public interface IndexMerger
   class DictionaryMergeIterator implements Iterator<String>
   {
     protected final IntBuffer[] conversions;
+    protected final List<Pair<ByteBuffer, Integer>> directBufferAllocations = Lists.newArrayList();
     protected final PriorityQueue<Pair<Integer, PeekingIterator<String>>> pQueue;
 
     protected int counter;
@@ -446,8 +447,10 @@ public interface IndexMerger
         Indexed<String> indexed = dimValueLookups[i];
         if (useDirect) {
           int allocationSize = indexed.size() * Ints.BYTES;
-          log.info("Allocating dictionary merging direct buffer with size[%d]", allocationSize);
-          conversions[i] = ByteBuffer.allocateDirect(allocationSize).asIntBuffer();
+          log.info("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
+          final ByteBuffer conversionDirectBuffer = ByteBuffer.allocateDirect(allocationSize);
+          conversions[i] = conversionDirectBuffer.asIntBuffer();
+          directBufferAllocations.add(new Pair<>(conversionDirectBuffer, allocationSize));
         } else {
           conversions[i] = IntBuffer.allocate(indexed.size());
         }
@@ -524,6 +527,11 @@ public interface IndexMerger
     public void remove()
     {
       throw new UnsupportedOperationException("remove");
+    }
+
+    public List<Pair<ByteBuffer, Integer>> getDirectBufferAllocations()
+    {
+      return directBufferAllocations;
     }
   }
 }

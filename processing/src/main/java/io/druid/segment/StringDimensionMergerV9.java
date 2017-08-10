@@ -32,6 +32,7 @@ import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
@@ -62,6 +63,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
@@ -93,6 +95,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   protected List<IndexableAdapter> adapters;
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
+  protected List<Pair<ByteBuffer, Integer>> dictionaryMergeBufferAllocations;
 
   public StringDimensionMergerV9(
       String dimensionName,
@@ -179,6 +182,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         }
       }
       cardinality = iterator.counter;
+      dictionaryMergeBufferAllocations = iterator.getDirectBufferAllocations();
     } else if (numMergeIndex == 1) {
       for (String value : dimValueLookup) {
         dictionaryWriter.write(value);
@@ -342,6 +346,12 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         spatialWriter.close();
       }
 
+      if (dictionaryMergeBufferAllocations != null) {
+        for (Pair<ByteBuffer, Integer> bufferAllocation : dictionaryMergeBufferAllocations) {
+          log.info("Freeing dictionary merging direct buffer with size[%,d]", bufferAllocation.rhs);
+          ByteBufferUtils.free(bufferAllocation.lhs);
+        }
+      }
 
       log.info(
           "Completed dim[%s] inverted with cardinality[%,d] in %,d millis.",
