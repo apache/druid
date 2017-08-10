@@ -110,7 +110,11 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use Comparators.naturalNullsFirst() instead of Ordering.natural().nullsFirst()"/>
     </module>
-
+    <module name="Regexp">
+      <property name="format" value="Enums\.getIfPresent\("/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use GuavaUtils.getEnumIfPresent() instead of Enums.getIfPresent()"/>
+    </module>
     <module name="Regexp">
       <property name="format" value="(Byte|Character|Short|Integer|Long|Float|Double)\.TYPE"/>
       <property name="illegalPattern" value="true"/>
