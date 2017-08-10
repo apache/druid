@@ -21,13 +21,13 @@ We recommend 250mb * (processing.numThreads) for the heap.
 [Coordinator nodes](../design/coordinator.html) do not require off-heap memory and the heap is used for loading information about all segments to determine what segments need to be loaded, dropped, moved, or replicated.
 
 ## How much direct memory does Druid use?
-Indexing workers and historical nodes use two kinds of direct memory buffers with configurable size: processing buffers and merge buffers.
+Any Druid node that process queries (brokers, indexing workers, and historical nodes) use two kinds of direct memory buffers with configurable size: processing buffers and merge buffers.
 
 Each processing thread is allocated one processing buffer. Additionally, there is a shared pool of merge buffers (only used for GroupBy V2 queries currently).
 
 Other sources of direct memory usage include:
 - When a column is loaded for reading, a 64KB direct buffer is allocated for decompression.
-- When a set of segments are merged during indexing, a direct buffer is allocated for every String typed column, for every segment in the set to be merged. The size of these buffers are equal to the cardinality of the String column within its segment, times 4 bytes (the buffers store integers). For example, if two segments are being merged, the first segment having a single String column with cardinality 1000, and the second segment having a String column with cardinality 500, the merge step would allocate (1000 + 500) * 4 = 6000 bytes of direct memory. These buffers are used for merging the value dictionaries of the String column across segments.
+- When a set of segments are merged during indexing, a direct buffer is allocated for every String typed column, for every segment in the set to be merged. The size of these buffers are equal to the cardinality of the String column within its segment, times 4 bytes (the buffers store integers). For example, if two segments are being merged, the first segment having a single String column with cardinality 1000, and the second segment having a String column with cardinality 500, the merge step would allocate (1000 + 500) * 4 = 6000 bytes of direct memory. These buffers are used for merging the value dictionaries of the String column across segments. These "dictionary merging buffers" are independent of the "merge buffers" configured by `druid.processing.numMergeBuffers`.
 
 A useful formula for estimating direct memory usage follows:
 
