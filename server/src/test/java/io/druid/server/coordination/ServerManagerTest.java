@@ -137,6 +137,11 @@ public class ServerManagerTest
           {
 
           }
+
+          @Override public List<File> getStorageLocations()
+          {
+            throw new UnsupportedOperationException();
+          }
         }
     );
     serverManager = new ServerManager(

@@ -82,6 +82,12 @@ public class SegmentManagerTest
     {
 
     }
+
+    @Override
+    public List<File> getStorageLocations()
+    {
+      throw new UnsupportedOperationException();
+    }
   };
 
   private static class SegmentForTesting extends AbstractSegment

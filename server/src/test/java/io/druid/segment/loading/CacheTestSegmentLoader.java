@@ -31,6 +31,7 @@ import org.joda.time.Interval;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,8 +39,13 @@ import java.util.Set;
 */
 public class CacheTestSegmentLoader implements SegmentLoader
 {
-
+  private final List<File> locations;
   private final Set<DataSegment> segmentsInTrash = new HashSet<>();
+
+  public CacheTestSegmentLoader(List<File> locations)
+  {
+    this.locations = locations;
+  }
 
   @Override
   public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
@@ -87,13 +93,22 @@ public class CacheTestSegmentLoader implements SegmentLoader
   @Override
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
-    throw new UnsupportedOperationException();
+    File segmentFile = new File(locations.get(segment.getVersion().hashCode() % locations.size()),
+        DataSegmentPusher.getDefaultStorageDir(segment));
+    segmentFile.mkdirs();
+    return segmentFile;
   }
 
   @Override
   public void cleanup(DataSegment segment) throws SegmentLoadingException
   {
     segmentsInTrash.add(segment);
+  }
+
+  @Override
+  public List<File> getStorageLocations()
+  {
+    return this.locations;
   }
 
   public Set<DataSegment> getSegmentsInTrash()

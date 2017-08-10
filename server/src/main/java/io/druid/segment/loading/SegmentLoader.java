@@ -23,6 +23,7 @@ import io.druid.segment.Segment;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
+import java.util.List;
 
 /**
  */
@@ -32,4 +33,5 @@ public interface SegmentLoader
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException;
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
   public void cleanup(DataSegment segment) throws SegmentLoadingException;
+  public List<File> getStorageLocations();
 }

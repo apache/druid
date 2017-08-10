@@ -248,6 +248,16 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     }
   }
 
+  @Override
+  public List<File> getStorageLocations()
+  {
+    List<File> storageLocationFiles = new ArrayList<>();
+    for (StorageLocation location : locations) {
+      storageLocationFiles.add(location.getPath());
+    }
+    return storageLocationFiles;
+  }
+
   public void cleanupCacheFiles(File baseFile, File cacheFile) throws IOException
   {
     if (cacheFile.equals(baseFile)) {
