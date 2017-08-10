@@ -53,6 +53,7 @@ public class GraphiteEmitterConfigTest
         100,
         new SendAllGraphiteEventConverter("prefix", true, true),
         Collections.EMPTY_LIST,
+        Collections.EMPTY_LIST,
         null,
         null
     );

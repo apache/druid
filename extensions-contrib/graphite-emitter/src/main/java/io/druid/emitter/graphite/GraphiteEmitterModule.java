@@ -68,6 +68,18 @@ public class GraphiteEmitterModule implements DruidModule
           }
         }
     );
-    return new GraphiteEmitter(graphiteEmitterConfig, emitters);
+
+    List<Emitter> requestLogEmitters = Lists.transform(
+        graphiteEmitterConfig.getRequestLogEmitters(),
+        new Function<String, Emitter>()
+        {
+          @Override
+          public Emitter apply(String s)
+          {
+            return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
+          }
+        }
+    );
+    return new GraphiteEmitter(graphiteEmitterConfig, emitters, requestLogEmitters);
   }
 }
