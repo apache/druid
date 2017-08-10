@@ -19,6 +19,8 @@
 
 package io.druid.query.groupby.epinephelinae;
 
+import com.google.common.base.Preconditions;
+
 import java.util.function.ToIntFunction;
 
 /**
@@ -31,38 +33,43 @@ public interface IntGrouper extends Grouper<Integer>
     return aggregate(key, hashFunction().apply(key));
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  default AggregateResult aggregate(Integer key)
-  {
-    return aggregate(key.intValue());
-  }
-
   AggregateResult aggregate(int key, int keyHash);
 
   /**
    * {@inheritDoc}
+   *
+   * @deprecated Please use {@link #aggregate(int)} instead.
    */
+  @Deprecated
+  @Override
+  default AggregateResult aggregate(Integer key)
+  {
+    Preconditions.checkNotNull(key);
+    return aggregate(key.intValue());
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @deprecated Please use {@link #aggregate(int, int)} instead.
+   */
+  @Deprecated
   @Override
   default AggregateResult aggregate(Integer key, int keyHash)
   {
+    Preconditions.checkNotNull(key);
     return aggregate(key.intValue(), keyHash);
   }
 
   @Override
-  default IntGrouperHashFunction hashFunction()
-  {
-    return Integer::hashCode;
-  }
+  IntGrouperHashFunction hashFunction();
 
   interface IntGrouperHashFunction extends ToIntFunction<Integer>
   {
     @Override
     default int applyAsInt(Integer value)
     {
-      return apply(value);
+      return apply(value.intValue());
     }
 
     int apply(int value);
