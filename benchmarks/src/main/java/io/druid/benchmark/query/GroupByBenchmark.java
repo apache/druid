@@ -266,6 +266,29 @@ public class GroupByBenchmark
 
       basicQueries.put("filter", queryA);
     }
+
+    { // basic.singleZipf
+      final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
+          Collections.singletonList(basicSchema.getDataInterval())
+      );
+      // Use multiple aggregators to see how the number of aggregators impact to the query performance
+      List<AggregatorFactory> queryAggs = ImmutableList.of(
+          new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"),
+          new LongSumAggregatorFactory("rows", "rows"),
+          new DoubleSumAggregatorFactory("sumFloatNormal", "sumFloatNormal"),
+          new DoubleMinAggregatorFactory("minFloatZipf", "minFloatZipf")
+      );
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dimZipf", null)))
+          .setAggregatorSpecs(queryAggs)
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .build();
+
+      basicQueries.put("singleZipf", queryA);
+    }
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
 
     // simple one column schema, for testing performance difference between querying on numeric values as Strings and
