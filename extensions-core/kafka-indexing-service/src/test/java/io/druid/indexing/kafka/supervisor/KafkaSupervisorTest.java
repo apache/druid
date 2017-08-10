@@ -544,6 +544,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "index_kafka_testDS__some_other_sequenceName",
         new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
         new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
+        null,
         null
     );
 
@@ -554,6 +555,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "sequenceName-0",
         new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
         new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 333L)),
+        null,
         null
     );
 
@@ -564,6 +566,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "index_kafka_testDS__some_other_sequenceName",
         new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 1L)),
         new KafkaPartitions("topic", ImmutableMap.of(0, 333L, 1, 333L, 2, 330L)),
+        null,
         null
     );
 
@@ -574,6 +577,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "index_kafka_testDS_d927edff33c4b3f",
         new KafkaPartitions("topic", ImmutableMap.of(0, 0L)),
         new KafkaPartitions("topic", ImmutableMap.of(0, 10L)),
+        null,
         null
     );
 
