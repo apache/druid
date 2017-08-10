@@ -104,7 +104,7 @@ public class TimeBoundaryQueryRunnerFactory
             return null;
           }
           final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
-          final DateTime timestamp = DateTimes.utc(timestampColumnSelector.get());
+          final DateTime timestamp = DateTimes.utc(timestampColumnSelector.getLong());
           return new Result<>(adapter.getInterval().getStart(), timestamp);
         }
       };

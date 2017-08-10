@@ -39,10 +39,8 @@ import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
-import io.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -69,7 +67,6 @@ public class TaskLockbox
   private final TaskStorage taskStorage;
   private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition lockReleaseCondition = giant.newCondition();
-  protected final long lockTimeoutMillis;
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
@@ -79,21 +76,10 @@ public class TaskLockbox
 
   @Inject
   public TaskLockbox(
-      TaskStorage taskStorage,
-      ServerConfig serverConfig
+      TaskStorage taskStorage
   )
   {
     this.taskStorage = taskStorage;
-    this.lockTimeoutMillis = serverConfig.getMaxIdleTime().getMillis();
-  }
-
-  public TaskLockbox(
-      TaskStorage taskStorage,
-      long lockTimeoutMillis
-  )
-  {
-    this.taskStorage = taskStorage;
-    this.lockTimeoutMillis = lockTimeoutMillis;
   }
 
   /**
@@ -140,7 +126,7 @@ public class TaskLockbox
           continue;
         }
 
-        final TaskLockPosse taskLockPosse = tryAddTaskToLockPosse(
+        final TaskLockPosse taskLockPosse = createOrFindLockPosse(
             task,
             savedTaskLock.getInterval(),
             Optional.of(savedTaskLock.getVersion())
@@ -190,44 +176,52 @@ public class TaskLockbox
   }
 
   /**
-   * Acquires a lock on behalf of a task. Blocks until the lock is acquired. Throws an exception if the lock
-   * cannot be acquired.
+   * Acquires a lock on behalf of a task. Blocks until the lock is acquired.
    *
    * @param task task to acquire lock for
    * @param interval interval to lock
    * @return acquired TaskLock
    *
-   * @throws InterruptedException if the lock cannot be acquired
+   * @throws InterruptedException if the current thread is interrupted
    */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {
-    long timeout = lockTimeoutMillis;
-    giant.lock();
+    giant.lockInterruptibly();
     try {
       Optional<TaskLock> taskLock;
       while (!(taskLock = tryLock(task, interval)).isPresent()) {
-        long startTime = System.currentTimeMillis();
-        lockReleaseCondition.await(timeout, TimeUnit.MILLISECONDS);
-        long timeDelta = System.currentTimeMillis() - startTime;
-        if (timeDelta >= timeout) {
-          log.error(
-              "Task [%s] can not acquire lock for interval [%s] within [%s] ms",
-              task.getId(),
-              interval,
-              lockTimeoutMillis
-          );
-
-          throw new InterruptedException(StringUtils.format(
-              "Task [%s] can not acquire lock for interval [%s] within [%d] ms",
-              task.getId(),
-              interval,
-              lockTimeoutMillis
-          ));
-        } else {
-          timeout -= timeDelta;
-        }
+        lockReleaseCondition.await();
       }
+      return taskLock.get();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
 
+  /**
+   * Acquires a lock on behalf of a task, waiting up to the specified wait time if necessary.
+   *
+   * @param task      task to acquire a lock for
+   * @param interval  interval to lock
+   * @param timeoutMs maximum time to wait
+   *
+   * @return acquired lock
+   *
+   * @throws InterruptedException if the current thread is interrupted
+   */
+  public TaskLock lock(final Task task, final Interval interval, long timeoutMs) throws InterruptedException
+  {
+    long nanos = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+    giant.lockInterruptibly();
+    try {
+      Optional<TaskLock> taskLock;
+      while (!(taskLock = tryLock(task, interval)).isPresent()) {
+        if (nanos <= 0) {
+          return null;
+        }
+        nanos = lockReleaseCondition.awaitNanos(nanos);
+      }
       return taskLock.get();
     }
     finally {
@@ -274,7 +268,7 @@ public class TaskLockbox
       }
       Preconditions.checkArgument(interval.toDurationMillis() > 0, "interval empty");
 
-      final TaskLockPosse posseToUse = tryAddTaskToLockPosse(task, interval, preferredVersion);
+      final TaskLockPosse posseToUse = createOrFindLockPosse(task, interval, preferredVersion);
       if (posseToUse != null) {
         // Add to existing TaskLockPosse, if necessary
         if (posseToUse.getTaskIds().add(task.getId())) {
@@ -310,7 +304,7 @@ public class TaskLockbox
 
   }
 
-  private TaskLockPosse tryAddTaskToLockPosse(
+  private TaskLockPosse createOrFindLockPosse(
       final Task task,
       final Interval interval,
       final Optional<String> preferredVersion

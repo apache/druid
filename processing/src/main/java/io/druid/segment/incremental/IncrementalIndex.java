@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -31,6 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.collections.NonBlockingPool;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -147,7 +147,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
         final ObjectColumnSelector rawColumnSelector = baseSelectorFactory.makeObjectColumnSelector(column);
 
-        if ((Enums.getIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)).isPresent() && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
+        if ((GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)) != null && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
             || !deserializeComplexMetrics) {
           return rawColumnSelector;
         } else {

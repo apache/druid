@@ -336,7 +336,7 @@ public class Filters
   {
     long numMatchedRows = 0;
     for (int i = 0; i < bitmaps.size(); i++) {
-      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.get(i));
+      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.getInt(i));
       numMatchedRows += bitmap.size();
     }
 
@@ -455,7 +455,7 @@ public class Filters
       @Override
       public boolean matches()
       {
-        return predicate.applyLong(longSelector.get());
+        return predicate.applyLong(longSelector.getLong());
       }
 
       @Override

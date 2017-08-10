@@ -19,11 +19,11 @@
 
 package io.druid.query.groupby;
 
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.collections.NonBlockingPool;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -245,7 +245,7 @@ public class GroupByQueryHelper
       final String typeName = aggregatorFactory.getTypeName();
       final ValueType valueType;
       if (typeName != null) {
-        valueType = Enums.getIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)).orNull();
+        valueType = GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName));
       } else {
         valueType = null;
       }

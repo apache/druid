@@ -102,11 +102,11 @@ public class UnioningOffsetTest
     final ArrayList<Offset> offsets = Lists.newArrayList();
     offsets.add(offset);
 
-    for (int i = 0; i < expectedValues.length; ++i) {
+    for (int expectedValue : expectedValues) {
       for (int j = 0; j < offsets.size(); ++j) {
         Offset aClone = offsets.get(j);
         Assert.assertTrue(StringUtils.format("Clone[%d] out of bounds", j), aClone.withinBounds());
-        Assert.assertEquals(StringUtils.format("Clone[%d] not right", j), expectedValues[i], aClone.getOffset());
+        Assert.assertEquals(StringUtils.format("Clone[%d] not right", j), expectedValue, aClone.getOffset());
         aClone.increment();
       }
       offsets.add(offsets.get(0).clone());

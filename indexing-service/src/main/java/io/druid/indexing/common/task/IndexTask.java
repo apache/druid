@@ -212,7 +212,9 @@ public class IndexTask extends AbstractTask
     final DataSchema dataSchema;
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(shardSpecs.getIntervals());
-      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval));
+      final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+      // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
+      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval, lockTimeoutMs));
       version = lock.getVersion();
       dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
           ingestionSchema.getDataSchema()

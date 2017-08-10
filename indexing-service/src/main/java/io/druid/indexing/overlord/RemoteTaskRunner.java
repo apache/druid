@@ -107,7 +107,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -189,7 +188,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
-      ScheduledExecutorService cleanupExec,
       ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
   )
   {
@@ -206,7 +204,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         .build();
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
-    this.cleanupExec = MoreExecutors.listeningDecorator(cleanupExec);
+    this.cleanupExec = MoreExecutors.listeningDecorator(
+        ScheduledExecutors.fixed(1, "RemoteTaskRunner-Scheduled-Cleanup--%d")
+    );
     this.provisioningStrategy = provisioningStrategy;
     this.runPendingTasksExec = Execs.multiThreaded(
         config.getPendingTasksRunnerNumThreads(),
@@ -370,6 +370,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       if (runPendingTasksExec != null) {
         runPendingTasksExec.shutdown();
+      }
+
+      if (cleanupExec != null) {
+        cleanupExec.shutdown();
       }
     }
     catch (Exception e) {

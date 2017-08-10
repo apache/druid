@@ -85,10 +85,10 @@ public class IntersectingOffsetTest
     final LinkedList<Offset> offsets = Lists.newLinkedList();
     offsets.add(offset);
 
-    for (int i = 0; i < expectedValues.length; ++i) {
+    for (int expectedValue : expectedValues) {
       for (Offset aClone : offsets) {
         Assert.assertTrue(aClone.withinBounds());
-        Assert.assertEquals(expectedValues[i], aClone.getOffset());
+        Assert.assertEquals(expectedValue, aClone.getOffset());
         aClone.increment();
       }
       offsets.add(offsets.getFirst().clone());

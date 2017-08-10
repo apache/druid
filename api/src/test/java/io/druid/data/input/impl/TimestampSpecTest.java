@@ -61,8 +61,7 @@ public class TimestampSpecTest
         };
     TimestampSpec spec = new TimestampSpec("TIMEstamp", DATE_FORMAT, null);
 
-    for (int i = 0; i < dates.length; ++i) {
-      String date = dates[i];
+    for (String date : dates) {
       DateTime dateTime = spec.extractTimestamp(ImmutableMap.<String, Object>of("TIMEstamp", date));
       DateTime expectedDateTime = ISODateTimeFormat.dateHourMinuteSecond().parseDateTime(date);
       Assert.assertEquals(expectedDateTime, dateTime);
