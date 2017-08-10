@@ -129,7 +129,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     DruidNodeDiscovery coordDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR);
     DruidNodeDiscovery overlordDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD);
 
-    while (!checkNodes(ImmutableSet.of(node1), (coordDiscovery.getAllNodes()))) {
+    while (!checkNodes(ImmutableSet.of(node1), coordDiscovery.getAllNodes())) {
       Thread.sleep(100);
     }
 

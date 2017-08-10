@@ -179,7 +179,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       this.jsonMapper = jsonMapper;
 
       // This is required to be single threaded from Docs in PathChildrenCache;
-      this.cacheExecutor = Execs.singleThreaded(String.format("NodeTypeWatcher[%s]-[%%d]", nodeType));
+      this.cacheExecutor = Execs.singleThreaded(String.format("NodeTypeWatcher[%s]", nodeType));
       this.cache = new PathChildrenCache(
           curatorFramework,
           ZKPaths.makePath(basePath, nodeType),
