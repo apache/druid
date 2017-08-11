@@ -445,7 +445,9 @@ public interface IndexMerger
         }
         Indexed<String> indexed = dimValueLookups[i];
         if (useDirect) {
-          conversions[i] = ByteBuffer.allocateDirect(indexed.size() * Ints.BYTES).asIntBuffer();
+          int allocationSize = indexed.size() * Ints.BYTES;
+          log.info("Allocating dictionary merging direct buffer with size[%d]", allocationSize);
+          conversions[i] = ByteBuffer.allocateDirect(allocationSize).asIntBuffer();
         } else {
           conversions[i] = IntBuffer.allocate(indexed.size());
         }

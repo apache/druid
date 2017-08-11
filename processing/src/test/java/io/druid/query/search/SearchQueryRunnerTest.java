@@ -815,7 +815,7 @@ public class SearchQueryRunnerTest
   private void checkSearchQuery(Query searchQuery, QueryRunner runner, List<SearchHit> expectedResults)
   {
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(searchQuery, ImmutableMap.of()),
+        runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     List<SearchHit> copy = Lists.newLinkedList(expectedResults);

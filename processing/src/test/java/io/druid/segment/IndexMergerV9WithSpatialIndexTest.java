@@ -33,6 +33,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -579,7 +580,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -633,7 +634,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -722,7 +723,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

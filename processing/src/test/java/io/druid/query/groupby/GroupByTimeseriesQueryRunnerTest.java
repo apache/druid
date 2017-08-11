@@ -91,20 +91,20 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                         toolChest
                     );
 
+                    GroupByQuery newQuery = GroupByQuery
+                        .builder()
+                        .setDataSource(tsQuery.getDataSource())
+                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
+                        .setGranularity(tsQuery.getGranularity())
+                        .setDimFilter(tsQuery.getDimensionsFilter())
+                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
+                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                        .setVirtualColumns(tsQuery.getVirtualColumns())
+                        .setContext(tsQuery.getContext())
+                        .build();
+
                     return Sequences.map(
-                        newRunner.run(
-                            GroupByQuery.builder()
-                                        .setDataSource(tsQuery.getDataSource())
-                                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
-                                        .setGranularity(tsQuery.getGranularity())
-                                        .setDimFilter(tsQuery.getDimensionsFilter())
-                                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
-                                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                                        .setVirtualColumns(tsQuery.getVirtualColumns())
-                                        .setContext(tsQuery.getContext())
-                                        .build(),
-                            responseContext
-                        ),
+                        newRunner.run(queryPlus.withQuery(newQuery), responseContext),
                         new Function<Row, Result<TimeseriesResultValue>>()
                         {
                           @Override
@@ -159,7 +159,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     DateTime expectedLast = DateTimes.of("2011-04-15");
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, CONTEXT),
+        runner.run(QueryPlus.wrap(query), CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Result<TimeseriesResultValue> result = results.iterator().next();

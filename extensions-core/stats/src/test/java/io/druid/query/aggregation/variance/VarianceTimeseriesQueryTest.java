@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -106,7 +107,7 @@ public class VarianceTimeseriesQueryTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, new HashMap<String, Object>()),
+        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     assertExpectedResults(expectedResults, results);

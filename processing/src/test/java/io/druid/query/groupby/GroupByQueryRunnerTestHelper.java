@@ -29,6 +29,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -53,7 +54,7 @@ public class GroupByQueryRunnerTestHelper
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 

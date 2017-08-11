@@ -34,6 +34,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -513,7 +514,7 @@ public class SpatialFilterBonusTest
           factory.getToolchest()
       );
       HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -601,7 +602,7 @@ public class SpatialFilterBonusTest
           factory.getToolchest()
       );
       HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -695,7 +696,7 @@ public class SpatialFilterBonusTest
           factory.getToolchest()
       );
       HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

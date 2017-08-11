@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -141,7 +142,10 @@ public class VarianceTopNQueryTest
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
-    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(query, ImmutableMap.<String, Object>of());
+    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(
+        QueryPlus.wrap(query),
+        ImmutableMap.<String, Object>of()
+    );
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;
   }

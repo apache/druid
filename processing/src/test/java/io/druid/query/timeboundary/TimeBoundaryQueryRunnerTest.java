@@ -29,6 +29,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -177,7 +178,7 @@ public class TimeBoundaryQueryRunnerTest
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        customRunner.run(timeBoundaryQuery, context),
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
 
@@ -203,7 +204,7 @@ public class TimeBoundaryQueryRunnerTest
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        customRunner.run(timeBoundaryQuery, context),
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
 
@@ -220,7 +221,7 @@ public class TimeBoundaryQueryRunnerTest
     Assert.assertFalse(timeBoundaryQuery.hasFilters());
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery, context),
+        runner.run(QueryPlus.wrap(timeBoundaryQuery), context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TimeBoundaryResultValue val = results.iterator().next().getValue();
@@ -242,7 +243,7 @@ public class TimeBoundaryQueryRunnerTest
     Map<String, Object> context = new MapMaker().makeMap();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery, context),
+        runner.run(QueryPlus.wrap(timeBoundaryQuery), context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TimeBoundaryResultValue val = results.iterator().next().getValue();
@@ -264,7 +265,7 @@ public class TimeBoundaryQueryRunnerTest
     Map<String, Object> context = new MapMaker().makeMap();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery, context),
+        runner.run(QueryPlus.wrap(timeBoundaryQuery), context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TimeBoundaryResultValue val = results.iterator().next().getValue();
