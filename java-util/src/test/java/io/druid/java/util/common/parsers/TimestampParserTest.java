@@ -22,10 +22,14 @@ package io.druid.java.util.common.parsers;
 import com.google.common.base.Function;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class TimestampParserTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testStripQuotes() throws Exception
@@ -40,7 +44,31 @@ public class TimestampParserTest
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("1234567890000"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("2009-02-13T23:31:30Z"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30-08:00"), parser.apply("2009-02-13T23:31:30-08:00"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("2009-02-13 23:31:30Z"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30-08:00"), parser.apply("2009-02-13 23:31:30-08:00"));
+    Assert.assertEquals(new DateTime("2009-02-13T00:00:00Z"), parser.apply("2009-02-13"));
+    Assert.assertEquals(new DateTime("2009-02-13T00:00:00Z"), parser.apply("\"2009-02-13\""));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("2009-02-13 23:31:30"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply(1234567890000L));
+  }
+
+  @Test
+  public void testAutoNull() throws Exception
+  {
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
+
+    expectedException.expect(IllegalArgumentException.class);
+    parser.apply(null);
+  }
+
+  @Test
+  public void testAutoInvalid() throws Exception
+  {
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
+
+    expectedException.expect(IllegalArgumentException.class);
+    parser.apply("asdf");
   }
 
   @Test
