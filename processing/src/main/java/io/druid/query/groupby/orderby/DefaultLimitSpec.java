@@ -249,22 +249,7 @@ public class DefaultLimitSpec implements LimitSpec
 
   private Ordering<Row> metricOrdering(final String column, final Comparator comparator)
   {
-    return new Ordering<Row>()
-    {
-      @SuppressWarnings("unchecked")
-      @Override
-      public int compare(Row left, Row right)
-      {
-        if (left.getRaw(column) == null & right.getRaw(column) == null) {
-          return 0;
-        } else if (left.getRaw(column) == null) {
-          return 1;
-        } else if (right.getRaw(column) == null) {
-          return -1;
-        }
-        return comparator.compare(left.getRaw(column), right.getRaw(column));
-      }
-    };
+    return Ordering.from(Comparator.comparing((Row row) -> row.getRaw(column), Comparator.nullsFirst(comparator)));
   }
 
   private Ordering<Row> dimensionOrdering(final String dimension, final StringComparator comparator)
