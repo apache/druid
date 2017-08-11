@@ -255,6 +255,13 @@ public class DefaultLimitSpec implements LimitSpec
       @Override
       public int compare(Row left, Row right)
       {
+        if (left.getRaw(column) == null & right.getRaw(column) == null) {
+          return 0;
+        } else if (left.getRaw(column) == null) {
+          return 1;
+        } else if (right.getRaw(column) == null) {
+          return -1;
+        }
         return comparator.compare(left.getRaw(column), right.getRaw(column));
       }
     };
