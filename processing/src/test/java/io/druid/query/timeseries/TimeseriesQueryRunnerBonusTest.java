@@ -28,6 +28,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -138,7 +139,7 @@ public class TimeseriesQueryRunnerBonusTest
                                   .build();
     HashMap<String, Object> context = new HashMap<String, Object>();
     return Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
   }

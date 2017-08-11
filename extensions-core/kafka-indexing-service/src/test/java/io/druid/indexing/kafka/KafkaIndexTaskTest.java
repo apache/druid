@@ -87,6 +87,7 @@ import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -1728,7 +1729,7 @@ public class KafkaIndexTaskTest
                                   .build();
 
     ArrayList<Result<TimeseriesResultValue>> results = Sequences.toList(
-        task.getQueryRunner(query).run(query, ImmutableMap.<String, Object>of()),
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.<String, Object>of()),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 

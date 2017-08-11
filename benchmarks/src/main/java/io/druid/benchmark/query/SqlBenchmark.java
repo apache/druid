@@ -31,6 +31,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -165,7 +166,7 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryNative(Blackhole blackhole) throws Exception
   {
-    final Sequence<Row> resultSequence = groupByQuery.run(walker, Maps.<String, Object>newHashMap());
+    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, Maps.newHashMap());
     final ArrayList<Row> resultList = Sequences.toList(resultSequence, Lists.<Row>newArrayList());
 
     for (Row row : resultList) {

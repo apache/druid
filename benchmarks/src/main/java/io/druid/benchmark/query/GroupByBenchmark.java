@@ -50,6 +50,7 @@ import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -572,7 +573,7 @@ public class GroupByBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 
@@ -625,7 +626,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
 
     for (Row result : results) {
@@ -649,7 +650,7 @@ public class GroupByBenchmark
     final GroupByQuery spillingQuery = query.withOverriddenContext(
         ImmutableMap.<String, Object>of("bufferGrouperMaxSize", 4000)
     );
-    Sequence<Row> queryResult = theRunner.run(spillingQuery, Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), Maps.newHashMap());
     List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
 
     for (Row result : results) {
@@ -676,7 +677,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
 
     for (Row result : results) {

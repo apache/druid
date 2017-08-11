@@ -29,6 +29,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -248,7 +249,7 @@ public class MultiSegmentSelectQueryTest
   {
     for (int[] expected : expectedOffsets) {
       List<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(query, ImmutableMap.of()),
+          runner.run(QueryPlus.wrap(query), ImmutableMap.of()),
           Lists.<Result<SelectResultValue>>newArrayList()
       );
       Assert.assertEquals(1, results.size());
@@ -295,7 +296,7 @@ public class MultiSegmentSelectQueryTest
   {
     for (int[] expected : expectedOffsets) {
       List<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(query, ImmutableMap.of()),
+          runner.run(QueryPlus.wrap(query), ImmutableMap.of()),
           Lists.<Result<SelectResultValue>>newArrayList()
       );
       Assert.assertEquals(2, results.size());
@@ -340,14 +341,17 @@ public class MultiSegmentSelectQueryTest
     QueryRunner unionQueryRunner = new UnionQueryRunner(runner);
 
     List<Result<SelectResultValue>> results = Sequences.toList(
-        unionQueryRunner.run(query, ImmutableMap.of()),
+        unionQueryRunner.run(QueryPlus.wrap(query), ImmutableMap.of()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
     Map<String, Integer> pagingIdentifiers = results.get(0).getValue().getPagingIdentifiers();
     query = query.withPagingSpec(toNextCursor(PagingSpec.merge(Arrays.asList(pagingIdentifiers)), query, 3));
 
-    Sequences.toList(unionQueryRunner.run(query, ImmutableMap.of()), Lists.<Result<SelectResultValue>>newArrayList());
+    Sequences.toList(
+        unionQueryRunner.run(QueryPlus.wrap(query), ImmutableMap.of()),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
   }
 
   private PagingSpec toNextCursor(Map<String, Integer> merged, SelectQuery query, int threshold)

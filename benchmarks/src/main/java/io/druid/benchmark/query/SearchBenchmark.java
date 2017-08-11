@@ -42,6 +42,7 @@ import io.druid.query.Druids;
 import io.druid.query.Druids.SearchQueryBuilder;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -400,7 +401,7 @@ public class SearchBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 
@@ -465,7 +466,10 @@ public class SearchBenchmark
         )
     );
 
-    Sequence<Result<SearchResultValue>> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<Result<SearchResultValue>> queryResult = theRunner.run(
+        QueryPlus.wrap(query),
+        Maps.<String, Object>newHashMap()
+    );
     List<Result<SearchResultValue>> results = Sequences.toList(
         queryResult,
         Lists.<Result<SearchResultValue>>newArrayList()
