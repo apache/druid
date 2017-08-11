@@ -281,8 +281,8 @@ public class LoadQueuePeon
         failAssign(e);
       }
     } else {
-      log.info(
-              "Server[%s] skipping doNext() because something is currently loading[%s].",
+      log.debug(
+              "Server[%s] skipping processSegmentChangeRequest because something is currently loading[%s].",
               basePath,
               currentlyProcessing.getSegmentIdentifier()
       );
