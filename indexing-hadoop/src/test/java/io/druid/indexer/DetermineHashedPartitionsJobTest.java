@@ -90,6 +90,14 @@ public class DetermineHashedPartitionsJobTest
                 0,
                 6,
                 third
+            },
+            {
+                DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
+                1L,
+                null,
+                0,
+                6,
+                third
             }
         }
     );
@@ -108,6 +116,11 @@ public class DetermineHashedPartitionsJobTest
     this.expectedNumTimeBuckets = expectedNumTimeBuckets;
     this.errorMargin = errorMargin;
     File tmpDir = Files.createTempDir();
+
+    ImmutableList<Interval> intervals = null;
+    if (interval != null) {
+      intervals = ImmutableList.of(new Interval(interval));
+    }
 
     HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
         new DataSchema(
@@ -147,7 +160,7 @@ public class DetermineHashedPartitionsJobTest
             new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.NONE,
-                ImmutableList.of(new Interval(interval))
+                intervals
             ),
             HadoopDruidIndexerConfig.JSON_MAPPER
         ),

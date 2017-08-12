@@ -324,12 +324,9 @@ public class DetermineHashedPartitionsJob implements Jobby
             HyperLogLogCollector.makeCollector(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()))
         );
       }
-      Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(new DateTime(key.get()));
 
-      if (!intervalOptional.isPresent()) {
-        throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
-      }
-      Interval interval = intervalOptional.get();
+      Interval interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
+
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(
