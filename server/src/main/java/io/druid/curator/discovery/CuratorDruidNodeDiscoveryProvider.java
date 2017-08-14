@@ -34,11 +34,10 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.server.initialization.CuratorDiscoveryConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 
 import java.util.ArrayList;
@@ -58,7 +57,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
   private static final Logger log = new Logger(CuratorDruidNodeDiscoveryProvider.class);
 
   private final CuratorFramework curatorFramework;
-  private final CuratorDiscoveryConfig config;
+  private final ZkPathsConfig config;
   private final ObjectMapper jsonMapper;
 
   private ExecutorService listenerExecutor;
@@ -70,7 +69,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
   @Inject
   public CuratorDruidNodeDiscoveryProvider(
       CuratorFramework curatorFramework,
-      CuratorDiscoveryConfig config,
+      ZkPathsConfig config,
       @Json ObjectMapper jsonMapper
   )
   {
@@ -146,7 +145,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     log.info("stopped");
   }
 
-  private static class NodeTypeWatcher implements DruidNodeDiscovery, PathChildrenCacheListener
+  private static class NodeTypeWatcher implements DruidNodeDiscovery
   {
     private static final Logger log = new Logger(NodeTypeWatcher.class);
 
@@ -164,6 +163,8 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     private final ExecutorService listenerExecutor;
 
     private final List<DruidNodeDiscovery.Listener> nodeListeners = new ArrayList();
+
+    private final Object lock = new Object();
 
     NodeTypeWatcher(
         ExecutorService listenerExecutor,
@@ -196,131 +197,159 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     }
 
     @Override
-    public synchronized void registerListener(DruidNodeDiscovery.Listener listener)
+    public void registerListener(DruidNodeDiscovery.Listener listener)
     {
-      for (DiscoveryDruidNode node : nodes.values()) {
-        listenerExecutor.submit(() -> {
-          try {
-            listener.nodeAdded(node);
-          }
-          catch (Exception ex) {
-            log.error(ex, "Exception occured in DiscoveryDruidNode.nodeAdded(node=[%s]) in listener [%s].", node, listener);
-          }
-        });
-      }
-
-      nodeListeners.add(listener);
-    }
-
-    @Override
-    public synchronized void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
-    {
-      try {
-        switch (event.getType()) {
-          case CHILD_ADDED: {
-            final byte[] data;
-            try {
-              data = curatorFramework.getData().decompressed().forPath(event.getData().getPath());
-            }
-            catch (Exception ex) {
-              log.error(ex, "Failed to get data for path [%s]. Ignoring event [%s].", event.getData().getPath(), event.getType());
-              return;
-            }
-
-            DiscoveryDruidNode druidNode = jsonMapper.readValue(
-                data,
-                DiscoveryDruidNode.class
-            );
-
-            if (!nodeType.equals(druidNode.getNodeType())) {
-              log.warn(
-                  "Node[%s:%s] add is discovered by node watcher of nodeType [%s]. Ignored.",
-                  druidNode.getNodeType(),
-                  druidNode,
-                  nodeType
-              );
-              return;
-            }
-
-            log.info("Received event [%s] for Node[%s:%s].", event.getType(), druidNode.getNodeType(), druidNode);
-
-            addNode(druidNode);
-
-            break;
-          }
-          case CHILD_REMOVED: {
-            DiscoveryDruidNode druidNode = jsonMapper.readValue(event.getData().getData(), DiscoveryDruidNode.class);
-
-            if (!nodeType.equals(druidNode.getNodeType())) {
-              log.warn(
-                  "Node[%s:%s] removal is discovered by node watcher of nodeType [%s]. Ignored.",
-                  druidNode.getNodeType(),
-                  druidNode,
-                  nodeType
-              );
-              return;
-            }
-
-            log.info("Node[%s:%s] disappeared.", druidNode.getNodeType(), druidNode);
-
-            removeNode(druidNode);
-
-            break;
-          }
-          default: {
-            log.error("Ignored event type [%s] for nodeType [%s] watcher.", event.getType(), nodeType);
-          }
-        }
-      }
-      catch (Exception ex) {
-        log.error(ex, "unknown error in node watcher for type [%s].", nodeType);
-      }
-    }
-
-    private synchronized void addNode(DiscoveryDruidNode druidNode)
-    {
-      DiscoveryDruidNode prev = nodes.putIfAbsent(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
-      if (prev == null) {
-        for (DruidNodeDiscovery.Listener l : nodeListeners) {
+      synchronized (lock) {
+        for (DiscoveryDruidNode node : nodes.values()) {
           listenerExecutor.submit(() -> {
             try {
-              l.nodeAdded(druidNode);
+              listener.nodeAdded(node);
             }
             catch (Exception ex) {
-              log.error(ex, "Exception occured in DiscoveryDruidNode.nodeAdded(node=[%s]) in listener [%s].", druidNode, l);
+              log.error(
+                  ex,
+                  "Exception occured in DiscoveryDruidNode.nodeAdded(node=[%s]) in listener [%s].",
+                  node,
+                  listener
+              );
             }
           });
         }
-      } else {
-        log.warn("Node[%s] discovered but existed already [%s].", druidNode, prev);
+        nodeListeners.add(listener);
       }
     }
 
-    private synchronized void removeNode(DiscoveryDruidNode druidNode)
+    public void handleChildEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
     {
-      DiscoveryDruidNode prev = nodes.remove(druidNode.getDruidNode().getHostAndPortToUse());
+      synchronized (lock) {
+        try {
+          switch (event.getType()) {
+            case CHILD_ADDED: {
+              final byte[] data;
+              try {
+                data = curatorFramework.getData().decompressed().forPath(event.getData().getPath());
+              }
+              catch (Exception ex) {
+                log.error(
+                    ex,
+                    "Failed to get data for path [%s]. Ignoring event [%s].",
+                    event.getData().getPath(),
+                    event.getType()
+                );
+                return;
+              }
 
-      if (prev == null) {
-        log.warn("Noticed disappearance of unknown druid node [%s:%s].", druidNode.getNodeType(), druidNode);
-        return;
+              DiscoveryDruidNode druidNode = jsonMapper.readValue(
+                  data,
+                  DiscoveryDruidNode.class
+              );
+
+              if (!nodeType.equals(druidNode.getNodeType())) {
+                log.warn(
+                    "Node[%s:%s] add is discovered by node watcher of nodeType [%s]. Ignored.",
+                    druidNode.getNodeType(),
+                    druidNode,
+                    nodeType
+                );
+                return;
+              }
+
+              log.info("Received event [%s] for Node[%s:%s].", event.getType(), druidNode.getNodeType(), druidNode);
+
+              addNode(druidNode);
+
+              break;
+            }
+            case CHILD_REMOVED: {
+              DiscoveryDruidNode druidNode = jsonMapper.readValue(event.getData().getData(), DiscoveryDruidNode.class);
+
+              if (!nodeType.equals(druidNode.getNodeType())) {
+                log.warn(
+                    "Node[%s:%s] removal is discovered by node watcher of nodeType [%s]. Ignored.",
+                    druidNode.getNodeType(),
+                    druidNode,
+                    nodeType
+                );
+                return;
+              }
+
+              log.info("Node[%s:%s] disappeared.", druidNode.getNodeType(), druidNode);
+
+              removeNode(druidNode);
+
+              break;
+            }
+            default: {
+              log.error("Ignored event type [%s] for nodeType [%s] watcher.", event.getType(), nodeType);
+            }
+          }
+        }
+        catch (Exception ex) {
+          log.error(ex, "unknown error in node watcher for type [%s].", nodeType);
+        }
       }
+    }
 
-      for (DruidNodeDiscovery.Listener l : nodeListeners) {
-        listenerExecutor.submit(() -> {
-          try {
-            l.nodeRemoved(druidNode);
+    private void addNode(DiscoveryDruidNode druidNode)
+    {
+      synchronized (lock) {
+        DiscoveryDruidNode prev = nodes.putIfAbsent(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
+        if (prev == null) {
+          for (DruidNodeDiscovery.Listener l : nodeListeners) {
+            listenerExecutor.submit(() -> {
+              try {
+                l.nodeAdded(druidNode);
+              }
+              catch (Exception ex) {
+                log.error(
+                    ex,
+                    "Exception occured in DiscoveryDruidNode.nodeAdded(node=[%s]) in listener [%s].",
+                    druidNode,
+                    l
+                );
+              }
+            });
           }
-          catch (Exception ex) {
-            log.error(ex, "Exception occured in DiscoveryDruidNode.nodeRemoved(node=[%s]) in listener [%s].", druidNode, l);
-          }
-        });
+        } else {
+          log.warn("Node[%s] discovered but existed already [%s].", druidNode, prev);
+        }
+      }
+    }
+
+    private void removeNode(DiscoveryDruidNode druidNode)
+    {
+      synchronized (lock) {
+        DiscoveryDruidNode prev = nodes.remove(druidNode.getDruidNode().getHostAndPortToUse());
+
+        if (prev == null) {
+          log.warn("Noticed disappearance of unknown druid node [%s:%s].", druidNode.getNodeType(), druidNode);
+          return;
+        }
+
+        for (DruidNodeDiscovery.Listener l : nodeListeners) {
+          listenerExecutor.submit(() -> {
+            try {
+              l.nodeRemoved(druidNode);
+            }
+            catch (Exception ex) {
+              log.error(
+                  ex,
+                  "Exception occured in DiscoveryDruidNode.nodeRemoved(node=[%s]) in listener [%s].",
+                  druidNode,
+                  l
+              );
+            }
+          });
+        }
       }
     }
 
     public void start()
     {
       try {
-        cache.getListenable().addListener(this);
+        cache.getListenable().addListener(
+            (client, event) -> handleChildEvent(client, event)
+        );
         cache.start();
       }
       catch (Exception ex) {

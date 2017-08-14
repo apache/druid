@@ -61,7 +61,7 @@ public abstract class ServerRunnable extends GuiceRunnable
    * This is a helper class used by CliXXX classes to announce DiscoveryDruidNode
    * as part of lifecycle Stage.LAST .
    */
-  protected static class SideEffectsProvider implements Provider<SideEffectsProvider.Child>
+  protected static class DiscoverySideEffectsProvider implements Provider<DiscoverySideEffectsProvider.Child>
   {
     public static class Child {}
 
@@ -80,7 +80,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     private final String nodeType;
     private final List<Class<? extends DruidService>> serviceClasses;
 
-    public SideEffectsProvider(String nodeType, List<Class<? extends DruidService>> serviceClasses)
+    public DiscoverySideEffectsProvider(String nodeType, List<Class<? extends DruidService>> serviceClasses)
     {
       this.nodeType = nodeType;
       this.serviceClasses = serviceClasses;

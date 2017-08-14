@@ -101,13 +101,13 @@ public class CliMiddleManager extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
 
-            binder.bind(SideEffectsProvider.Child.class).toProvider(
-                new SideEffectsProvider(
+            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+                new DiscoverySideEffectsProvider(
                     DruidNodeDiscoveryProvider.NODE_TYPE_MM,
                     ImmutableList.of(WorkerNodeService.class)
                 )
             ).in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(SideEffectsProvider.Child.class));
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
 
           @Provides

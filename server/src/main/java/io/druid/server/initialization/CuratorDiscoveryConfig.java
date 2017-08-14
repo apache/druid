@@ -28,14 +28,6 @@ public class CuratorDiscoveryConfig
   @JsonProperty
   private String path = "/druid/discovery";
 
-  @JsonProperty
-  private String internalDiscoveryPath = "/druid/internal-discovery";
-
-  public String getInternalDiscoveryPath()
-  {
-    return internalDiscoveryPath;
-  }
-
   public String getPath()
   {
     return path;

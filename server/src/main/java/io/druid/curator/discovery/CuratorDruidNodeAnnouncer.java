@@ -28,7 +28,7 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.server.initialization.CuratorDiscoveryConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 
 /**
@@ -38,13 +38,13 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
   private static final Logger log = new Logger(CuratorDruidNodeAnnouncer.class);
 
   private final Announcer announcer;
-  private final CuratorDiscoveryConfig config;
+  private final ZkPathsConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public CuratorDruidNodeAnnouncer(
       Announcer announcer,
-      CuratorDiscoveryConfig config,
+      ZkPathsConfig config,
       @Json ObjectMapper jsonMapper
   )
   {
@@ -54,7 +54,7 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
   }
 
   @Override
-  public synchronized void announce(DiscoveryDruidNode discoveryDruidNode)
+  public void announce(DiscoveryDruidNode discoveryDruidNode)
   {
     try {
       log.info("Announcing [%s].", discoveryDruidNode);
@@ -76,7 +76,7 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
   }
 
   @Override
-  public synchronized void unannounce(DiscoveryDruidNode discoveryDruidNode)
+  public void unannounce(DiscoveryDruidNode discoveryDruidNode)
   {
     log.info("Unannouncing [%s].", discoveryDruidNode);
 

@@ -37,8 +37,8 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.CuratorDiscoveryConfig;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,7 +88,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 
     CuratorDruidNodeAnnouncer druidNodeAnnouncer = new CuratorDruidNodeAnnouncer(
         announcer,
-        new CuratorDiscoveryConfig(),
+        new ZkPathsConfig(),
         objectMapper
     );
 
@@ -121,7 +121,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 
     CuratorDruidNodeDiscoveryProvider druidNodeDiscoveryProvider = new CuratorDruidNodeDiscoveryProvider(
         curator,
-        new CuratorDiscoveryConfig(),
+        new ZkPathsConfig(),
         objectMapper
     );
     druidNodeDiscoveryProvider.start();

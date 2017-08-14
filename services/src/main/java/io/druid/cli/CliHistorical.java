@@ -108,13 +108,13 @@ public class CliHistorical extends ServerRunnable
             binder.install(new CacheModule());
             MetricsModule.register(binder, CacheMonitor.class);
 
-            binder.bind(SideEffectsProvider.Child.class).toProvider(
-                new SideEffectsProvider(
+            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+                new DiscoverySideEffectsProvider(
                     DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
                     ImmutableList.of(DataNodeService.class, LookupNodeService.class)
                 )
             ).in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(SideEffectsProvider.Child.class));
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
         },
         new LookupModule()

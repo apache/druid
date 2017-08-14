@@ -185,13 +185,13 @@ public class CliOverlord extends ServerRunnable
               LifecycleModule.register(binder, Server.class);
             }
 
-            binder.bind(SideEffectsProvider.Child.class).annotatedWith(IndexingService.class).toProvider(
-                new SideEffectsProvider(
+            binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(IndexingService.class).toProvider(
+                new DiscoverySideEffectsProvider(
                     DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
                     ImmutableList.of()
                 )
             ).in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(SideEffectsProvider.Child.class, IndexingService.class));
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, IndexingService.class));
           }
 
           private void configureTaskStorage(Binder binder)
