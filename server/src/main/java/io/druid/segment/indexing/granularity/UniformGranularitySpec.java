@@ -97,7 +97,11 @@ public class UniformGranularitySpec implements GranularitySpec
   @Override
   public Optional<Interval> bucketInterval(DateTime dt)
   {
-    return wrappedSpec.bucketInterval(dt);
+    if (wrappedSpec == null) {
+      return Optional.absent();
+    } else {
+      return wrappedSpec.bucketInterval(dt);
+    }
   }
 
   @Override
