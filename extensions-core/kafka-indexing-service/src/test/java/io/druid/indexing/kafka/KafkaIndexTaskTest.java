@@ -245,7 +245,7 @@ public class KafkaIndexTaskTest
         zkServer.getConnectString(),
         null,
         1,
-        ImmutableMap.of("num.partitions", "2", "advertised.host.name", "localhost")
+        ImmutableMap.of("num.partitions", "2")
     );
     kafkaServer.start();
 
