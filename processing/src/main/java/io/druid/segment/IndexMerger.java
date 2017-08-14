@@ -29,11 +29,13 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.inject.ImplementedBy;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.data.Indexed;
@@ -418,7 +420,7 @@ public interface IndexMerger
     }
   }
 
-  class DictionaryMergeIterator implements Iterator<String>
+  class DictionaryMergeIterator implements CloseableIterator<String>
   {
     protected final IntBuffer[] conversions;
     protected final List<Pair<ByteBuffer, Integer>> directBufferAllocations = Lists.newArrayList();
@@ -528,10 +530,14 @@ public interface IndexMerger
     {
       throw new UnsupportedOperationException("remove");
     }
-
-    public List<Pair<ByteBuffer, Integer>> getDirectBufferAllocations()
+    
+    @Override
+    public void close()
     {
-      return directBufferAllocations;
+      for (Pair<ByteBuffer, Integer> bufferAllocation : directBufferAllocations) {
+        log.info("Freeing dictionary merging direct buffer with size[%,d]", bufferAllocation.rhs);
+        ByteBufferUtils.free(bufferAllocation.lhs);
+      }
     }
   }
 }
