@@ -19,23 +19,17 @@
 
 package io.druid.curator.discovery;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.inject.Binder;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.name.Names;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.guice.GuiceInjectors;
-import io.druid.initialization.Initialization;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -57,25 +51,17 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     setupServerAndCurator();
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 5000)
   public void testAnnouncementAndDiscovery() throws Exception
   {
-    Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bind(Key.get(String.class, Names.named("serviceName"))).toInstance("some service");
-                binder.bind(Key.get(Integer.class, Names.named("servicePort"))).toInstance(0);
-                binder.bind(Key.get(Integer.class, Names.named("tlsServicePort"))).toInstance(-1);
-              }
-            }
-        )
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+
+    //additional setup to serde DruidNode
+    objectMapper.setInjectableValues(new InjectableValues.Std()
+                                         .addValue(ServerConfig.class, new ServerConfig())
+                                         .addValue("java.lang.String", "dummy")
+                                         .addValue("java.lang.Integer", 1234)
     );
-    ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
 
     curator.start();
     curator.blockUntilConnected();
