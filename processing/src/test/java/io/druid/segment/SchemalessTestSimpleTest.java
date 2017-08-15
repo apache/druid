@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
@@ -167,7 +168,7 @@ public class SchemalessTestSimpleTest
     );
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
     HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
 
@@ -241,7 +242,7 @@ public class SchemalessTestSimpleTest
 
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
     HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -270,7 +271,7 @@ public class SchemalessTestSimpleTest
 
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
     HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -296,6 +297,6 @@ public class SchemalessTestSimpleTest
 
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
     HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 }

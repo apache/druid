@@ -441,8 +441,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
                 final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(valueBytes)), "row");
 
-                if (!ioConfig.getMinimumMessageTime().isPresent() ||
-                    !ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp())) {
+                final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent() && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
+                final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent() && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
+
+                if (!beforeMinimumMessageTime && !afterMaximumMessageTime) {
 
                   final String sequenceName = sequenceNames.get(record.partition());
                   final AppenderatorDriverAddResult addResult = driver.add(

@@ -249,19 +249,12 @@ public interface DimensionIndexer
 
 
   /**
-   * Return an object used to read values from this indexer's column as Objects.
+   * Return an object used to read values from this indexer's column as Doubles.
    *
-   * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
    * @param currEntry Provides access to the current TimeAndDims object in the Cursor
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  ObjectColumnSelector makeObjectColumnSelector(
-      DimensionSpec spec,
-      IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
-  );
-
   DoubleColumnSelector makeDoubleColumnSelector(
       IncrementalIndexStorageAdapter.EntryHolder currEntry,
       IncrementalIndex.DimensionDesc desc

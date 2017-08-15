@@ -102,7 +102,8 @@ public interface Grouper<KeyType> extends Closeable
    * <p>
    * Once this method is called, writes are no longer safe. After you are done with the iterator returned by this
    * method, you should either call {@link #close()} (if you are done with the Grouper), {@link #reset()} (if you
-   * want to reuse it), or {@link #iterator(boolean)} again if you want another iterator.
+   * want to reuse it), or {@link #iterator(boolean)} again if you want another iterator. This method is not thread-safe
+   * and must not be called by multiple threads concurrently.
    * <p>
    * If "sorted" is true then the iterator will return sorted results. It will use KeyType's natural ordering on
    * deserialized objects, and will use the {@link KeySerde#comparator()} on serialized objects. Woe be unto you

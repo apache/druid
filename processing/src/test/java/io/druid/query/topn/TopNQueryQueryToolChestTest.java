@@ -215,19 +215,21 @@ public class TopNQueryQueryToolChestTest
 
     TopNQuery query1 = builder.threshold(10).context(null).build();
     MockQueryRunner mockRunner = new MockQueryRunner(runner);
-    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(query1, ImmutableMap.<String, Object>of());
+    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
+        QueryPlus.wrap(query1),
+        ImmutableMap.<String, Object>of()
+    );
     Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
     TopNQuery query2 = builder.threshold(10).context(context).build();
 
     new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(query2, ImmutableMap.<String, Object>of());
+        .run(QueryPlus.wrap(query2), ImmutableMap.<String, Object>of());
     Assert.assertEquals(500, mockRunner.query.getThreshold());
 
     TopNQuery query3 = builder.threshold(2000).context(context).build();
     new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(query3, ImmutableMap.<String, Object>of());
+        .run(QueryPlus.wrap(query3), ImmutableMap.<String, Object>of());
     Assert.assertEquals(2000, mockRunner.query.getThreshold());
   }
 
@@ -248,7 +250,7 @@ public class TopNQueryQueryToolChestTest
     )
     {
       this.query = (TopNQuery) queryPlus.getQuery();
-      return query.run(runner, responseContext);
+      return runner.run(queryPlus, responseContext);
     }
   }
 }

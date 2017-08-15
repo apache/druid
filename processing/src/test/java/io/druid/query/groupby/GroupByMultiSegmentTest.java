@@ -335,7 +335,7 @@ public class GroupByMultiSegmentTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
 
     Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(

@@ -118,4 +118,28 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
   {
     return Objects.hash(fieldName, expression, name);
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SimpleFloatAggregatorFactory that = (SimpleFloatAggregatorFactory) o;
+
+    if (!Objects.equals(fieldName, that.fieldName)) {
+      return false;
+    }
+    if (!Objects.equals(expression, that.expression)) {
+      return false;
+    }
+    if (!Objects.equals(name, that.name)) {
+      return false;
+    }
+    return true;
+  }
 }

@@ -133,6 +133,37 @@ public class DruidSchema extends AbstractSchema
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
     this.tables = Maps.newConcurrentMap();
+
+    serverView.registerTimelineCallback(
+        MoreExecutors.sameThreadExecutor(),
+        new TimelineServerView.TimelineCallback()
+        {
+          @Override
+          public ServerView.CallbackAction timelineInitialized()
+          {
+            synchronized (lock) {
+              isServerViewInitialized = true;
+              lock.notifyAll();
+            }
+
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
+          {
+            addSegment(server, segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
+          {
+            removeSegment(segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
   }
 
   @LifecycleStart
@@ -236,37 +267,6 @@ public class DruidSchema extends AbstractSchema
             finally {
               log.info("Metadata refresh stopped.");
             }
-          }
-        }
-    );
-
-    serverView.registerTimelineCallback(
-        MoreExecutors.sameThreadExecutor(),
-        new TimelineServerView.TimelineCallback()
-        {
-          @Override
-          public ServerView.CallbackAction timelineInitialized()
-          {
-            synchronized (lock) {
-              isServerViewInitialized = true;
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
-          {
-            addSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
-          {
-            removeSegment(segment);
-            return ServerView.CallbackAction.CONTINUE;
           }
         }
     );
