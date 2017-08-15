@@ -27,6 +27,7 @@ import com.google.common.io.CharSource;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.search.search.AutoStrategy;
@@ -82,10 +83,10 @@ public class SearchQueryRunnerWithCaseTest
     configs[2].setSearchStrategy(AutoStrategy.NAME);
 
     CharSource input = CharSource.wrap(
-        "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\t1000\t10000.0\t100000\tPREFERRED\ta\u0001preferred\t100.000000\n" +
-        "2011-01-12T00:00:00.000Z\tSPot\tbusiness\t1100\t11000.0\t110000\tpreferred\tb\u0001Preferred\t100.000000\n" +
-        "2011-01-12T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tPREFERRed\te\u0001preferred\t100.000000\n" +
-        "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\ta\u0001preferred\t94.874713"
+        "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\t1000\t10000.0\t10000.0\t100000\tPREFERRED\ta\u0001preferred\t100.000000\n" +
+        "2011-01-12T00:00:00.000Z\tSPot\tbusiness\t1100\t11000.0\t11000.0\t110000\tpreferred\tb\u0001Preferred\t100.000000\n" +
+        "2011-01-12T00:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t12000.0\t120000\tPREFERRed\te\u0001preferred\t100.000000\n" +
+        "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t10000.0\t100000\tpreferred\ta\u0001preferred\t94.874713"
     );
 
     IncrementalIndex index1 = TestIndex.makeRealtimeIndex(input);
@@ -95,28 +96,28 @@ public class SearchQueryRunnerWithCaseTest
     QueryableIndex index4 = TestIndex.persistRealtimeAndLoadMMapped(index2);
 
     final List<QueryRunner<Result<SearchResultValue>>> runners = Lists.newArrayList();
-    for (int i = 0; i < configs.length; i++) {
+    for (SearchQueryConfig config : configs) {
       runners.addAll(Arrays.asList(
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index1",
               new IncrementalIndexSegment(index1, "index1"),
               "index1"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index2",
               new IncrementalIndexSegment(index2, "index2"),
               "index2"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index3",
               new QueryableIndexSegment("index3", index3),
               "index3"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index4",
               new QueryableIndexSegment("index4", index4),
               "index4"
@@ -243,7 +244,7 @@ public class SearchQueryRunnerWithCaseTest
   {
     HashMap<String, List> context = new HashMap<>();
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(searchQuery, context),
+        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
 

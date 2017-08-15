@@ -1148,25 +1148,21 @@ public class TestNG
 
     m_start = System.currentTimeMillis();
 
-    //
-    // Slave mode
-    //
     if (m_slavefileName != null) {
+      //
+      // Slave mode
+      //
       SuiteSlave slave = new SuiteSlave(m_slavefileName, this);
       slave.waitForSuites();
-    }
-
-    //
-    // Regular mode
-    //
-    else if (m_masterfileName == null) {
+    } else if (m_masterfileName == null) {
+      //
+      // Regular mode
+      //
       suiteRunners = runSuitesLocally();
-    }
-
-    //
-    // Master mode
-    //
-    else {
+    } else {
+      //
+      // Master mode
+      //
       SuiteDispatcher dispatcher = new SuiteDispatcher(m_masterfileName);
       suiteRunners = dispatcher.dispatch(
           getConfiguration(),

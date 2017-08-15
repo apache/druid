@@ -76,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -219,7 +220,7 @@ public class Initialization
       throw new ISE("Root extensions directory [%s] is not a directory!?", rootExtensionsDir);
     }
     File[] extensionsToLoad;
-    final List<String> toLoad = config.getLoadList();
+    final LinkedHashSet<String> toLoad = config.getLoadList();
     if (toLoad == null) {
       extensionsToLoad = rootExtensionsDir.listFiles();
     } else {
@@ -306,8 +307,8 @@ public class Initialization
       String[] paths = cp.split(File.pathSeparator);
 
       List<URL> urls = new ArrayList<>();
-      for (int i = 0; i < paths.length; i++) {
-        File f = new File(paths[i]);
+      for (String path : paths) {
+        File f = new File(path);
         if ("*".equals(f.getName())) {
           File parentDir = f.getParentFile();
           if (parentDir.isDirectory()) {
@@ -326,11 +327,12 @@ public class Initialization
             }
           }
         } else {
-          urls.add(new File(paths[i]).toURI().toURL());
+          urls.add(new File(path).toURI().toURL());
         }
       }
       return urls;
-    } catch (IOException ex) {
+    }
+    catch (IOException ex) {
       throw Throwables.propagate(ex);
     }
   }

@@ -85,8 +85,9 @@ public class CustomStatementRewriterTest
                                                                 // -
                                                                 // https://en.wikipedia.org/wiki/List_of_Unicode_characters
       Assert.fail("Expected 'UnableToCreateStatementException'");
-    } catch (UnableToCreateStatementException e) {
-      //
+    }
+    catch (UnableToCreateStatementException e) {
+      // expected
     }
 
   }

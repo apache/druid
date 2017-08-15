@@ -46,7 +46,7 @@ public class ConvertSegmentBackwardsCompatibleTask extends ConvertSegmentTask
         segment,
         indexSpec,
         force == null ? false : force,
-        validate ==null ? false : validate,
+        validate == null ? false : validate,
         null
     );
   }

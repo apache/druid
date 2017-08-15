@@ -231,12 +231,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
         int prevId = -1;
         int pos = 0;
-        for (int i = 0; i < dimensionValues.length; i++) {
+        for (String dimensionValue : dimensionValues) {
           if (multiValueHandling != MultiValueHandling.SORTED_SET) {
-            retVal[pos++] = dimLookup.add(dimensionValues[i]);
+            retVal[pos++] = dimLookup.add(dimensionValue);
             continue;
           }
-          int index = dimLookup.add(dimensionValues[i]);
+          int index = dimLookup.add(dimensionValue);
           if (index != prevId) {
             prevId = retVal[pos++] = index;
           }
@@ -569,50 +569,11 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public ObjectColumnSelector makeObjectColumnSelector(
-      final DimensionSpec spec,
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
-    final ExtractionFn extractionFn = spec.getExtractionFn();
-    final int dimIndex = desc.getIndex();
-
-    class StringIndexerObjectColumnSelector implements ObjectColumnSelector<String>
-    {
-      @Override
-      public Class<String> classOfObject()
-      {
-        return String.class;
-      }
-
-      @Override
-      public String get()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        int[] indices;
-        if (dimIndex < dims.length) {
-          indices = (int[]) dims[dimIndex];
-          if (indices.length > 1) {
-            throw new UnsupportedOperationException(
-                "makeObjectColumnSelector does not support multi-value columns."
-            );
-          }
-        } else {
-          indices = null;
-        }
-
-        if (indices == null || indices.length == 0) {
-          return extractionFn.apply(null);
-        }
-
-        final String strValue = getActualValue(indices[0], false);
-        return extractionFn == null ? strValue : extractionFn.apply(strValue);
-      }
-    }
-
-    return new StringIndexerObjectColumnSelector();
+    return ZeroDoubleColumnSelector.instance();
   }
 
   @Override
@@ -628,8 +589,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     } else {
       if (asList) {
         List<Comparable> rowVals = new ArrayList<>(key.length);
-        for (int i = 0; i < key.length; i++) {
-          String val = getActualValue(key[i], false);
+        for (int id : key) {
+          String val = getActualValue(id, false);
           rowVals.add(Strings.nullToEmpty(val));
         }
         return rowVals;

@@ -23,12 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.search.search.SearchQuerySpec;
-
-import javax.annotation.Nullable;
 
 /**
  */
@@ -48,40 +47,25 @@ public class SearchQueryFilter extends DimensionPredicateFilter
           @Override
           public Predicate<String> makeStringPredicate()
           {
-            return new Predicate<String>()
-            {
-              @Override
-              public boolean apply(@Nullable String input)
-              {
-                return query.accept(input);
-              }
-            };
+            return input -> query.accept(input);
           }
 
           @Override
           public DruidLongPredicate makeLongPredicate()
           {
-            return new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return query.accept(String.valueOf(input));
-              }
-            };
+            return input -> query.accept(String.valueOf(input));
           }
 
           @Override
           public DruidFloatPredicate makeFloatPredicate()
           {
-            return new DruidFloatPredicate()
-            {
-              @Override
-              public boolean applyFloat(float input)
-              {
-                return query.accept(String.valueOf(input));
-              }
-            };
+            return input -> query.accept(String.valueOf(input));
+          }
+
+          @Override
+          public DruidDoublePredicate makeDoublePredicate()
+          {
+            return input -> query.accept(String.valueOf(input));
           }
         },
         extractionFn

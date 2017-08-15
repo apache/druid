@@ -30,7 +30,8 @@ import java.io.IOException;
 public class DimensionTopNMetricSpecTest
 {
   @Test
-  public void testSerdeAlphaNumericDimensionTopNMetricSpec() throws IOException{
+  public void testSerdeAlphaNumericDimensionTopNMetricSpec() throws IOException
+  {
     DimensionTopNMetricSpec expectedMetricSpec = new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC);
     DimensionTopNMetricSpec expectedMetricSpec1 = new DimensionTopNMetricSpec("test", StringComparators.ALPHANUMERIC);
     String jsonSpec = "{\n"
@@ -50,7 +51,8 @@ public class DimensionTopNMetricSpecTest
   }
 
   @Test
-  public void testSerdeLexicographicDimensionTopNMetricSpec() throws IOException{
+  public void testSerdeLexicographicDimensionTopNMetricSpec() throws IOException
+  {
     DimensionTopNMetricSpec expectedMetricSpec = new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC);
     DimensionTopNMetricSpec expectedMetricSpec1 = new DimensionTopNMetricSpec("test", StringComparators.LEXICOGRAPHIC);
     String jsonSpec = "{\n"
@@ -70,7 +72,8 @@ public class DimensionTopNMetricSpecTest
   }
 
   @Test
-  public void testSerdeStrlenDimensionTopNMetricSpec() throws IOException{
+  public void testSerdeStrlenDimensionTopNMetricSpec() throws IOException
+  {
     DimensionTopNMetricSpec expectedMetricSpec = new DimensionTopNMetricSpec(null, StringComparators.STRLEN);
     DimensionTopNMetricSpec expectedMetricSpec1 = new DimensionTopNMetricSpec("test", StringComparators.STRLEN);
     String jsonSpec = "{\n"
@@ -90,7 +93,8 @@ public class DimensionTopNMetricSpecTest
   }
 
   @Test
-  public void testSerdeNumericDimensionTopNMetricSpec() throws IOException{
+  public void testSerdeNumericDimensionTopNMetricSpec() throws IOException
+  {
     DimensionTopNMetricSpec expectedMetricSpec = new DimensionTopNMetricSpec(null, StringComparators.NUMERIC);
     DimensionTopNMetricSpec expectedMetricSpec1 = new DimensionTopNMetricSpec("test", StringComparators.NUMERIC);
     String jsonSpec = "{\n"

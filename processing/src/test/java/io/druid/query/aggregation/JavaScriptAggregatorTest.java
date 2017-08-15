@@ -27,6 +27,7 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -77,6 +78,12 @@ public class JavaScriptAggregatorTest
     {
       return null;
     }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+    {
+      return null;
+    }
   };
 
   static {
@@ -92,7 +99,7 @@ public class JavaScriptAggregatorTest
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
-  private static void aggregate(TestFloatColumnSelector selector1, TestFloatColumnSelector selector2, Aggregator agg)
+  private static void aggregate(TestDoubleColumnSelectorImpl selector1, TestDoubleColumnSelectorImpl selector2, Aggregator agg)
   {
     agg.aggregate();
     selector1.increment();
@@ -111,7 +118,7 @@ public class JavaScriptAggregatorTest
     selector2.increment();
   }
 
-  private static void aggregate(TestFloatColumnSelector selector, Aggregator agg)
+  private static void aggregate(TestDoubleColumnSelectorImpl selector, Aggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -126,8 +133,8 @@ public class JavaScriptAggregatorTest
   @Test
   public void testAggregate()
   {
-    final TestFloatColumnSelector selector1 = new TestFloatColumnSelector(new float[]{42.12f, 9f});
-    final TestFloatColumnSelector selector2 = new TestFloatColumnSelector(new float[]{2f, 3f});
+    final TestDoubleColumnSelectorImpl selector1 = new TestDoubleColumnSelectorImpl(new double[]{42.12d, 9d});
+    final TestDoubleColumnSelectorImpl selector2 = new TestDoubleColumnSelectorImpl(new double[]{2d, 3d});
 
     Map<String, String> script = sumLogATimesBPlusTen;
 
@@ -148,13 +155,13 @@ public class JavaScriptAggregatorTest
     Assert.assertEquals(val, agg.get());
     aggregate(selector1, selector2, agg);
 
-    val += Math.log(42.12f) * 2f;
+    val += Math.log(42.12d) * 2d;
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
 
     aggregate(selector1, selector2, agg);
-    val += Math.log(9f) * 3f;
+    val += Math.log(9d) * 3d;
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
@@ -306,13 +313,13 @@ public class JavaScriptAggregatorTest
 
   public static void main(String... args) throws Exception
   {
-    final JavaScriptAggregatorBenchmark.LoopingFloatColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingFloatColumnSelector(
-        new float[]{42.12f, 9f});
+    final JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector(
+        new double[]{42.12d, 9d});
 
     /* memory usage test
     List<JavaScriptAggregator> aggs = Lists.newLinkedList();
 
-    for(int i = 0; i < 100000; ++i) {
+    for (int i = 0; i < 100000; ++i) {
         JavaScriptAggregator a = new JavaScriptAggregator(
           "billy",
           Lists.asList(selector, new FloatColumnSelector[]{}),
@@ -322,7 +329,7 @@ public class JavaScriptAggregatorTest
         a.aggregate();
         a.aggregate();
         a.aggregate();
-        if(i % 1000 == 0) System.out.println(StringUtils.format("Query object %d", i));
+        if (i % 1000 == 0) System.out.println(StringUtils.format("Query object %d", i));
     }
     */
 

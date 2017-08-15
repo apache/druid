@@ -132,7 +132,8 @@ public class CoordinatorDynamicConfigTest
       );
 
       Assert.fail("deserialization should fail.");
-    } catch (JsonMappingException e) {
+    }
+    catch (JsonMappingException e) {
       Assert.assertTrue(e.getCause() instanceof IAE);
     }
   }

@@ -82,7 +82,7 @@ public class ClientInfoResourceTest
   public void setup()
   {
     VersionedIntervalTimeline<String, ServerSelector> timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
-    DruidServer server = new DruidServer("name", "host",  null, 1234, ServerType.HISTORICAL, "tier", 0);
+    DruidServer server = new DruidServer("name", "host", null, 1234, ServerType.HISTORICAL, "tier", 0);
 
     addSegment(timeline, server, "1960-02-13/1961-02-14", ImmutableList.of("d5"), ImmutableList.of("m5"), "v0");
 
@@ -258,7 +258,7 @@ public class ClientInfoResourceTest
   @Test
   public void testGetDatasourceFullWithOvershadowedSegments2()
   {
-    Map<String, Object> actual= resource.getDatasource(
+    Map<String, Object> actual = resource.getDatasource(
         dataSource,
         "2015-02-09T09:00:00.000Z/2015-02-13T23:00:00.000Z",
         "true"

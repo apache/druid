@@ -20,11 +20,12 @@
 package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerTest;
@@ -43,7 +44,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class VarianceTimeseriesQueryTest
 {
-  @Parameterized.Parameters(name="{0}:descending={1}")
+  @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return TimeseriesQueryRunnerTest.constructorFeeder();
@@ -52,7 +53,7 @@ public class VarianceTimeseriesQueryTest
   private final QueryRunner runner;
   private final boolean descending;
 
-  public VarianceTimeseriesQueryTest(QueryRunner runner, boolean descending)
+  public VarianceTimeseriesQueryTest(QueryRunner runner, boolean descending, List<AggregatorFactory> aggregatorFactories)
   {
     this.runner = runner;
     this.descending = descending;
@@ -106,7 +107,7 @@ public class VarianceTimeseriesQueryTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, new HashMap<String, Object>()),
+        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     assertExpectedResults(expectedResults, results);

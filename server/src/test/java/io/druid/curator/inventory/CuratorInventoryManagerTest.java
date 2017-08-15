@@ -114,14 +114,12 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
 
     final CountDownLatch latch = new CountDownLatch(1);
     curator.getCuratorListenable().addListener(
-        new CuratorListener()
-        {
+        new CuratorListener() {
           @Override
           public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
           {
             if (event.getType() == CuratorEventType.WATCHED
-                && event.getWatchedEvent().getState() == Watcher.Event.KeeperState.Disconnected)
-            {
+                && event.getWatchedEvent().getState() == Watcher.Event.KeeperState.Disconnected) {
               latch.countDown();
             }
           }

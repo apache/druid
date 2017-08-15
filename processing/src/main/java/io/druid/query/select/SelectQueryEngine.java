@@ -41,6 +41,7 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -74,13 +75,15 @@ public class SelectQueryEngine
     )
     {
       ValueType type = capabilities.getType();
-      switch(type) {
+      switch (type) {
         case STRING:
           return new StringSelectColumnSelectorStrategy();
         case LONG:
           return new LongSelectColumnSelectorStrategy();
         case FLOAT:
           return new FloatSelectColumnSelectorStrategy();
+        case DOUBLE:
+          return new DoubleSelectColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -140,7 +143,7 @@ public class SelectQueryEngine
       if (dimSelector == null) {
         resultMap.put(outputName, null);
       } else {
-        resultMap.put(outputName, dimSelector.get());
+        resultMap.put(outputName, dimSelector.getLong());
       }
     }
   }
@@ -155,7 +158,23 @@ public class SelectQueryEngine
       if (dimSelector == null) {
         resultMap.put(outputName, null);
       } else {
-        resultMap.put(outputName, dimSelector.get());
+        resultMap.put(outputName, dimSelector.getFloat());
+      }
+    }
+  }
+  public static class DoubleSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<DoubleColumnSelector>
+  {
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName,
+        DoubleColumnSelector dimSelector,
+        Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.getDouble());
       }
     }
   }
@@ -281,7 +300,7 @@ public class SelectQueryEngine
   )
   {
     final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.get()));
+    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.getLong()));
 
     for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
       selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);

@@ -789,7 +789,8 @@ public class LookupCoordinatorManagerTest
     try {
       manager.updateLookups(TIERED_LOOKUP_MAP_V0, auditInfo);
       Assert.fail();
-    } catch (IAE ex) {
+    }
+    catch (IAE ex) {
     }
   }
 
@@ -995,7 +996,7 @@ public class LookupCoordinatorManagerTest
       {
         return ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(LOOKUP_TIER, ImmutableMap.of(
             "foo", lookup,
-            "bar", new LookupExtractorFactoryMapContainer("v0",ImmutableMap.<String, Object>of())
+            "bar", new LookupExtractorFactoryMapContainer("v0", ImmutableMap.<String, Object>of())
         ));
       }
     };
@@ -1436,9 +1437,11 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        new LookupCoordinatorManagerConfig(){
+        new LookupCoordinatorManagerConfig()
+        {
           @Override
-          public long getPeriod(){
+          public long getPeriod()
+          {
             return 1;
           }
         }

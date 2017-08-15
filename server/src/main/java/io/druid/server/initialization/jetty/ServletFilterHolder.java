@@ -33,7 +33,8 @@ import java.util.Map;
  * Note that some of the druid nodes (router for example) use async servlets and your filter
  * implementation should be able to handle those requests properly.
  */
-public interface ServletFilterHolder {
+public interface ServletFilterHolder
+{
 
   /**
    * Get the Filter object that should be added to the servlet.
@@ -61,7 +62,7 @@ public interface ServletFilterHolder {
    * @return a map containing all the Filter initialization
    * parameters 
    */
-  public Map<String,String> getInitParameters();
+  public Map<String, String> getInitParameters();
 
   /**
    * The path that this Filter should apply to

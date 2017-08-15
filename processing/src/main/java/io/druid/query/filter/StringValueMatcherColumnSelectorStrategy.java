@@ -27,7 +27,7 @@ import io.druid.segment.filter.BooleanValueMatcher;
 
 public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<DimensionSelector>
 {
-  private static final String[] NULL_VALUE = new String[]{ null };
+  private static final String[] NULL_VALUE = new String[]{null};
   private static final ValueGetter NULL_VALUE_GETTER = new ValueGetter()
   {
     @Override

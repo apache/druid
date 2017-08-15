@@ -41,8 +41,6 @@ import java.util.Objects;
  */
 public class LongMaxAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0xA;
-
   private final String name;
   private final String fieldName;
   private final String expression;
@@ -170,7 +168,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
     byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.LONG_MAX_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)

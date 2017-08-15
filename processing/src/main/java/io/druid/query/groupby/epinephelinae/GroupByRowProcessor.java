@@ -155,7 +155,6 @@ public class GroupByRowProcessor
                       return mergeBufferHolder.get();
                     }
                   },
-                  -1,
                   temporaryStorage,
                   spillMapper,
                   aggregatorFactories

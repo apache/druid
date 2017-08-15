@@ -22,34 +22,66 @@ package io.druid.java.util.common.parsers;
 import com.google.common.base.Function;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class TimestampParserTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void testStripQuotes() throws Exception {
+  public void testStripQuotes() throws Exception
+  {
     Assert.assertEquals("hello world", ParserUtils.stripQuotes("\"hello world\""));
     Assert.assertEquals("hello world", ParserUtils.stripQuotes("    \"    hello world   \"    "));
   }
 
   @Test
-  public void testAuto() throws Exception {
+  public void testAuto() throws Exception
+  {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("1234567890000"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("2009-02-13T23:31:30Z"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30-08:00"), parser.apply("2009-02-13T23:31:30-08:00"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("2009-02-13 23:31:30Z"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30-08:00"), parser.apply("2009-02-13 23:31:30-08:00"));
+    Assert.assertEquals(new DateTime("2009-02-13T00:00:00Z"), parser.apply("2009-02-13"));
+    Assert.assertEquals(new DateTime("2009-02-13T00:00:00Z"), parser.apply("\"2009-02-13\""));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply("2009-02-13 23:31:30"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z"), parser.apply(1234567890000L));
   }
 
   @Test
-  public void testRuby() throws Exception {
+  public void testAutoNull() throws Exception
+  {
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
+
+    expectedException.expect(IllegalArgumentException.class);
+    parser.apply(null);
+  }
+
+  @Test
+  public void testAutoInvalid() throws Exception
+  {
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
+
+    expectedException.expect(IllegalArgumentException.class);
+    parser.apply("asdf");
+  }
+
+  @Test
+  public void testRuby() throws Exception
+  {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("ruby");
     Assert.assertEquals(new DateTime("2013-01-16T15:41:47+01:00"), parser.apply("1358347307.435447"));
     Assert.assertEquals(new DateTime("2013-01-16T15:41:47+01:00"), parser.apply(1358347307.435447D));
   }
 
   @Test
-  public void testNano() throws Exception {
+  public void testNano() throws Exception
+  {
     String timeNsStr = "1427504794977098494";
     DateTime expectedDt = new DateTime("2015-3-28T01:06:34.977Z");
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("nano");

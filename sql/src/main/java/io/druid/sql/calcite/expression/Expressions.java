@@ -40,6 +40,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.filtration.BoundRefKey;
 import io.druid.sql.calcite.filtration.Bounds;
 import io.druid.sql.calcite.filtration.Filtration;
@@ -120,33 +121,6 @@ public class Expressions
       .put(SqlStdOperatorTable.AND, "&&")
       .put(SqlStdOperatorTable.OR, "||")
       .build();
-
-  private static final Map<SqlTypeName, ExprType> EXPRESSION_TYPES;
-
-  static {
-    final ImmutableMap.Builder<SqlTypeName, ExprType> builder = ImmutableMap.builder();
-
-    for (SqlTypeName type : SqlTypeName.FRACTIONAL_TYPES) {
-      builder.put(type, ExprType.DOUBLE);
-    }
-
-    for (SqlTypeName type : SqlTypeName.INT_TYPES) {
-      builder.put(type, ExprType.LONG);
-    }
-
-    for (SqlTypeName type : SqlTypeName.STRING_TYPES) {
-      builder.put(type, ExprType.STRING);
-    }
-
-    // Booleans are treated as longs in Druid expressions, using two-value logic (positive = true, nonpositive = false).
-    builder.put(SqlTypeName.BOOLEAN, ExprType.LONG);
-
-    // Timestamps are treated as longs (millis since the epoch) in Druid expressions.
-    builder.put(SqlTypeName.TIMESTAMP, ExprType.LONG);
-    builder.put(SqlTypeName.DATE, ExprType.LONG);
-
-    EXPRESSION_TYPES = builder.build();
-  }
 
   private Expressions()
   {
@@ -277,8 +251,8 @@ public class Expressions
         );
       } else {
         // Handle other casts.
-        final ExprType fromExprType = EXPRESSION_TYPES.get(fromType);
-        final ExprType toExprType = EXPRESSION_TYPES.get(toType);
+        final ExprType fromExprType = exprTypeForValueType(Calcites.getValueTypeForSqlTypeName(fromType));
+        final ExprType toExprType = exprTypeForValueType(Calcites.getValueTypeForSqlTypeName(toType));
 
         if (fromExprType == null || toExprType == null) {
           // We have no runtime type for these SQL types.
@@ -641,6 +615,21 @@ public class Expressions
       );
     } else {
       return null;
+    }
+  }
+
+  public static ExprType exprTypeForValueType(final ValueType valueType)
+  {
+    switch (valueType) {
+      case LONG:
+        return ExprType.LONG;
+      case FLOAT:
+      case DOUBLE:
+        return ExprType.DOUBLE;
+      case STRING:
+        return ExprType.STRING;
+      default:
+        throw new ISE("No ExprType for valueType[%s]", valueType);
     }
   }
 

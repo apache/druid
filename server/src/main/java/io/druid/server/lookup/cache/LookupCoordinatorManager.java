@@ -194,7 +194,7 @@ public class LookupCoordinatorManager
       }
     }
 
-    synchronized(this) {
+    synchronized (this) {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null && !updateSpec.isEmpty()) {
         // To prevent accidentally erasing configs if we haven't updated our cache of the values
@@ -250,7 +250,7 @@ public class LookupCoordinatorManager
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
 
-    synchronized(this) {
+    synchronized (this) {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null) {
         LOG.warn("Requested delete lookup [%s]/[%s]. But no lookups exist!", tier, lookup);
@@ -301,8 +301,9 @@ public class LookupCoordinatorManager
             }
           }
       );
-    } catch (IOException e) {
-      throw Throwables.propagate(e);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -339,7 +340,7 @@ public class LookupCoordinatorManager
   // coordinator becomes leader and drops leadership in quick succession.
   public void start()
   {
-    synchronized(lifecycleLock) {
+    synchronized (lifecycleLock) {
       if (!lifecycleLock.canStart()) {
         throw new ISE("LookupCoordinatorManager can't start.");
       }
@@ -563,20 +564,21 @@ public class LookupCoordinatorManager
         allFuture.get(lookupCoordinatorManagerConfig.getAllHostTimeout().getMillis(), TimeUnit.MILLISECONDS)
                  .stream()
                  .filter(Objects::nonNull)
-                 .forEach(stateBuilder::put)
-        ;
+                 .forEach(stateBuilder::put);
         knownOldState.set(stateBuilder.build());
       }
       catch (InterruptedException ex) {
         allFuture.cancel(true);
         Thread.currentThread().interrupt();
         throw ex;
-      } catch (Exception ex) {
+      }
+      catch (Exception ex) {
         allFuture.cancel(true);
         throw ex;
       }
 
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       LOG.makeAlert(ex, "Failed to finish lookup management loop.").emit();
     }
 
@@ -760,10 +762,9 @@ public class LookupCoordinatorManager
                 response
             );
             return response;
-          } catch (IOException ex) {
-            throw new IOE(
-                ex, "Failed to parse update response from [%s]. response [%s]", url, result
-            );
+          }
+          catch (IOException ex) {
+            throw new IOE(ex, "Failed to parse update response from [%s]. response [%s]", url, result);
           }
         } else {
           final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -808,17 +809,16 @@ public class LookupCoordinatorManager
                 LOOKUPS_STATE_TYPE_REFERENCE
             );
             LOG.debug(
-                "Get on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+                "Get on [%s], Status: [%s] reason: [%s], Response [%s].",
+                url,
+                returnCode.get(),
+                reasonString.get(),
                 response
             );
             return response;
-          } catch(IOException ex) {
-            throw new IOE(
-                ex,
-                "Failed to parser GET lookups response from [%s]. response [%s].",
-                url,
-                result
-            );
+          }
+          catch (IOException ex) {
+            throw new IOE(ex, "Failed to parser GET lookups response from [%s]. response [%s].", url, result);
           }
         } else {
           final ByteArrayOutputStream baos = new ByteArrayOutputStream();

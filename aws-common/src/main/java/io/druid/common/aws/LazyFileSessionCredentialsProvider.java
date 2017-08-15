@@ -27,11 +27,13 @@ public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvide
   private AWSCredentialsConfig config;
   private FileSessionCredentialsProvider provider;
 
-  public LazyFileSessionCredentialsProvider(AWSCredentialsConfig config) {
+  public LazyFileSessionCredentialsProvider(AWSCredentialsConfig config)
+  {
     this.config = config;
   }
 
-  private FileSessionCredentialsProvider getUnderlyingProvider() {
+  private FileSessionCredentialsProvider getUnderlyingProvider()
+  {
     if (provider == null) {
       synchronized (config) {
         if (provider == null) {
@@ -49,7 +51,8 @@ public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvide
   }
 
   @Override
-  public void refresh() {
+  public void refresh()
+  {
     getUnderlyingProvider().refresh();
   }
 }

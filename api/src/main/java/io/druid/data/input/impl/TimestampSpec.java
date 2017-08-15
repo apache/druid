@@ -22,9 +22,7 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-
 import io.druid.java.util.common.parsers.TimestampParser;
-
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -155,7 +153,8 @@ public class TimestampSpec
 
   //simple merge strategy on timestampSpec that checks if all are equal or else
   //returns null. this can be improved in future but is good enough for most use-cases.
-  public static TimestampSpec mergeTimestampSpec(List<TimestampSpec> toMerge) {
+  public static TimestampSpec mergeTimestampSpec(List<TimestampSpec> toMerge)
+  {
     if (toMerge == null || toMerge.size() == 0) {
       return null;
     }

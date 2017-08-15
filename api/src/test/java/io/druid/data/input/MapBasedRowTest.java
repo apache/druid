@@ -32,7 +32,7 @@ public class MapBasedRowTest
   {
     MapBasedRow row = new MapBasedRow(
         new DateTime(),
-        ImmutableMap.<String,Object>builder()
+        ImmutableMap.<String, Object>builder()
           .put("k0", "-1.2")
           .put("k1", "1.23")
           .put("k2", "1.8")

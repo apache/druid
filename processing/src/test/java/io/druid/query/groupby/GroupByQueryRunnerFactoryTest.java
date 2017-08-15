@@ -105,7 +105,8 @@ public class GroupByQueryRunnerFactoryTest
                               )
                           )
                       );
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                       Throwables.propagate(e);
                       return null;
                     }
@@ -116,7 +117,7 @@ public class GroupByQueryRunnerFactoryTest
         }
     );
 
-    Sequence<Row> result = mergedRunner.run(query, Maps.newHashMap());
+    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),

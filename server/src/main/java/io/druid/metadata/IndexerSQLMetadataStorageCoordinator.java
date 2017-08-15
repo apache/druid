@@ -631,10 +631,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("payload", jsonMapper.writeValueAsBytes(segment))
             .execute();
 
-      log.info("Published segment [%s] to DB", segment.getIdentifier());
+      log.info("Published segment [%s] to DB with used flag [%s]", segment.getIdentifier(), used);
     }
     catch (Exception e) {
-      log.error(e, "Exception inserting segment [%s] into DB", segment.getIdentifier());
+      log.error(e, "Exception inserting segment [%s] with used flag [%s] into DB", segment.getIdentifier(), used);
       throw e;
     }
 
@@ -928,10 +928,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           @Override
           public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
           {
+            // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
+            // Some databases can only use an index on one of the columns. An additional condition provides
+            // explicit knowledge that 'start' cannot be greater than 'end'.
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false",
+                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start "
+                        + "and start <= :end and %2$send%2$s <= :end and used = false",
                         dbTables.getSegmentsTable(), connector.getQuoteString()
                     )
                 )

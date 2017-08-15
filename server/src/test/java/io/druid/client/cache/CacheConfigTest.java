@@ -48,10 +48,12 @@ public class CacheConfigTest
   private static final String propertyPrefix = "io.druid.test.cache";
 
   @BeforeClass
-  public static void populateStatics(){
+  public static void populateStatics()
+  {
     injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.<com.google.inject.Module>of(new CacheConfigTestModule()));
     configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
   }
+
   private static class CacheConfigTestModule implements DruidModule
   {
 
@@ -64,13 +66,15 @@ public class CacheConfigTest
     @Override
     public void configure(Binder binder)
     {
-      JsonConfigProvider.bind(binder,propertyPrefix,CacheConfig.class);
+      JsonConfigProvider.bind(binder, propertyPrefix, CacheConfig.class);
     }
   }
+
   private Properties properties = new Properties();
 
   @Before
-  public void setupTest(){
+  public void setupTest()
+  {
     properties.clear();
     configProvider = JsonConfigProvider.of(propertyPrefix, CacheConfig.class);
   }

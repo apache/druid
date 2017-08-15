@@ -74,6 +74,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -191,8 +192,7 @@ public class HadoopDruidIndexerConfig
   @SuppressWarnings("unchecked")
   public static HadoopDruidIndexerConfig fromDistributedFileSystem(String path)
   {
-    try
-    {
+    try {
       Path pt = new Path(path);
       FileSystem fs = pt.getFileSystem(new Configuration());
       Reader reader = new InputStreamReader(fs.open(pt), StandardCharsets.UTF_8);
@@ -259,7 +259,13 @@ public class HadoopDruidIndexerConfig
 
     }
     this.rollupGran = spec.getDataSchema().getGranularitySpec().getQueryGranularity();
-    this.allowedHadoopPrefix = spec.getTuningConfig().getAllowedHadoopPrefix();
+
+    // User-specified list plus our additional bonus list.
+    this.allowedHadoopPrefix = new ArrayList<>();
+    this.allowedHadoopPrefix.add("druid.storage");
+    this.allowedHadoopPrefix.add("druid.javascript");
+    this.allowedHadoopPrefix.addAll(DATA_SEGMENT_PUSHER.getAllowedPropertyPrefixesForHadoop());
+    this.allowedHadoopPrefix.addAll(spec.getTuningConfig().getUserAllowedHadoopPrefix());
   }
 
   @JsonProperty(value = "spec")

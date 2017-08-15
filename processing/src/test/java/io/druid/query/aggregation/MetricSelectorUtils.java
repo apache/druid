@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 
@@ -37,7 +38,25 @@ public class MetricSelectorUtils
       @Override
       public Float get()
       {
-        return selector.get();
+        return selector.getFloat();
+      }
+    };
+  }
+
+  public static ObjectColumnSelector<Double> wrap(final DoubleColumnSelector selector)
+  {
+    return new ObjectColumnSelector<Double>()
+    {
+      @Override
+      public Class<Double> classOfObject()
+      {
+        return Double.class;
+      }
+
+      @Override
+      public Double get()
+      {
+        return selector.getDouble();
       }
     };
   }

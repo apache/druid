@@ -22,8 +22,8 @@ package io.druid.query.aggregation.variance;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -51,7 +51,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class VarianceTopNQueryTest
 {
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners());
@@ -142,7 +142,10 @@ public class VarianceTopNQueryTest
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
-    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(query, ImmutableMap.<String, Object>of());
+    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(
+        QueryPlus.wrap(query),
+        ImmutableMap.<String, Object>of()
+    );
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;
   }

@@ -71,7 +71,7 @@ public class InputRowSerdeTest
   {
     // Prepare the mocks & set close() call count expectation to 1
     final Aggregator mockedAggregator = EasyMock.createMock(DoubleSumAggregator.class);
-    EasyMock.expect(mockedAggregator.getFloat()).andReturn(0f).times(1);
+    EasyMock.expect(mockedAggregator.getDouble()).andReturn(0d).times(1);
     mockedAggregator.aggregate();
     EasyMock.expectLastCall().times(1);
     mockedAggregator.close();

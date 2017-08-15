@@ -177,8 +177,8 @@ public class RemoteTestNG extends TestNG
 
         int testCount = 0;
 
-        for (int i = 0; i < suites.size(); i++) {
-          testCount += (suites.get(i)).getTests().size();
+        for (XmlSuite suite : suites) {
+          testCount += suite.getTests().size();
         }
 
         GenericMessage gm = new GenericMessage(MessageHelper.GENERIC_SUITE_COUNT);

@@ -53,7 +53,8 @@ public class GuiceInjectorsTest
     Assert.assertEquals("Expected String", customEmitter.getOtherValue());
   }
 
-  private static class Emitter {
+  private static class Emitter
+  {
 
     @JacksonInject
     private String value;
@@ -64,13 +65,15 @@ public class GuiceInjectorsTest
     }
   }
 
-  private static class CustomEmitterFactory implements Provider<CustomEmitter> {
+  private static class CustomEmitterFactory implements Provider<CustomEmitter>
+  {
 
     private Emitter emitter;
     private Injector injector;
 
     @Inject
-    public void configure(Injector injector) {
+    public void configure(Injector injector)
+    {
       this.injector = injector;
       emitter = injector.getInstance(Emitter.class);
     }
@@ -90,7 +93,8 @@ public class GuiceInjectorsTest
 
     private Emitter emitter;
 
-    public CustomEmitter(Emitter emitter){
+    public CustomEmitter(Emitter emitter)
+    {
       this.emitter = emitter;
     }
   }

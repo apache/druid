@@ -302,8 +302,7 @@ public class OrcIndexGeneratorJobTest
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
         QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
 
-        for(Rowboat row: adapter.getRows())
-        {
+        for (Rowboat row: adapter.getRows()) {
           Object[] metrics = row.getMetrics();
 
           rowCount++;

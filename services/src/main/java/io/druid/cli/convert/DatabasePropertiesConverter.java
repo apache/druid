@@ -58,8 +58,7 @@ public class DatabasePropertiesConverter implements PropertyConverter
 
       if (tablePrefix == null) {
         tablePrefix = "druid";
-      }
-      else {
+      } else {
         tablePrefix = tablePrefix.split("_")[0];
       }
 

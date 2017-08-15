@@ -286,15 +286,13 @@ public class SchemalessIndexTest
         mergedFile.deleteOnExit();
 
         List<QueryableIndex> indexesToMerge = Lists.newArrayList();
-        for (int i = 0; i < indexes.length; i++) {
-          indexesToMerge.add(rowPersistedIndexes.get(indexes[i]));
+        for (int index : indexes) {
+          indexesToMerge.add(rowPersistedIndexes.get(index));
         }
 
-        QueryableIndex index = INDEX_IO.loadIndex(
+        return INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, indexSpec)
         );
-
-        return index;
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
@@ -389,7 +387,7 @@ public class SchemalessIndexTest
     }
   }
 
-  private static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
+  public static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
   {
     URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading resource[%s]", resource);

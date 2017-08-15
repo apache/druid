@@ -30,6 +30,9 @@ import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
+import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -172,7 +175,7 @@ public class TaskSerdeTest
     final IndexTask task = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -184,11 +187,10 @@ public class TaskSerdeTest
                 ),
                 jsonMapper
             ),
-            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTask.IndexTuningConfig(10000, 10, null, 9999, null, indexSpec, 3, true, true, false, null, null)
+            new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
+            new IndexTuningConfig(10000, 10, null, 9999, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        jsonMapper
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -235,7 +237,7 @@ public class TaskSerdeTest
     final IndexTask task = new IndexTask(
         null,
         new TaskResource("rofl", 2),
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -247,11 +249,10 @@ public class TaskSerdeTest
                 ),
                 jsonMapper
             ),
-            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
+            new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        jsonMapper
+        null
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {

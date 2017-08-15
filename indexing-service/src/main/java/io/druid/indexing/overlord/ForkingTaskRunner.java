@@ -238,7 +238,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         int tlsChildPort = -1;
                         int childChatHandlerPort = -1;
 
-                        if(serverConfig.isPlaintext()) {
+                        if (serverConfig.isPlaintext()) {
                           if (config.isSeparateIngestionEndpoint()) {
                             Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
                             childPort = portPair.lhs;
@@ -248,7 +248,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           }
                         }
 
-                        if(serverConfig.isTls()) {
+                        if (serverConfig.isTls()) {
                           tlsChildPort = tlsPortFinder.findUnusedPort();
                         }
 
@@ -500,10 +500,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
                             }
 
-                            if(serverConfig.isPlaintext()) {
+                            if (serverConfig.isPlaintext()) {
                               portFinder.markPortUnused(childPort);
                             }
-                            if(serverConfig.isTls()) {
+                            if (serverConfig.isTls()) {
                               tlsPortFinder.markPortUnused(tlsChildPort);
                             }
                             if (childChatHandlerPort > 0) {

@@ -34,7 +34,8 @@ import org.junit.Test;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class GranularityTest {
+public class GranularityTest
+{
 
     final Granularity SECOND = Granularities.SECOND;
     final Granularity MINUTE = Granularities.MINUTE;
@@ -47,7 +48,8 @@ public class GranularityTest {
     final Granularity YEAR = Granularities.YEAR;
 
     @Test
-    public void testHiveFormat() {
+    public void testHiveFormat()
+    {
         PathDate[] secondChecks = {
                 new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "dt=2011-03-15-20-50-43/Test0"),
                 new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "/dt=2011-03-15-20-50-43/Test0"),
@@ -123,7 +125,8 @@ public class GranularityTest {
     }
 
     @Test
-    public void testFifteenMinuteToDate() {
+    public void testFifteenMinuteToDate()
+    {
 
         PathDate[] minuteChecks = {
                 new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
@@ -309,7 +312,7 @@ public class GranularityTest {
                     granularity.toDate(pd.path, formatter)
                 );
 
-                if(formatter.equals(Granularity.Formatter.DEFAULT)) {
+                if (formatter.equals(Granularity.Formatter.DEFAULT)) {
                     Assert.assertEquals(
                         StringUtils.format(
                             "[%s] Expected toDate(%s) to return the same as toDate(%s, DEFAULT)",
@@ -321,7 +324,7 @@ public class GranularityTest {
                     );
                 }
 
-                if(pd.date != null) {
+                if (pd.date != null) {
                     // check if formatter is readable by toDate
                     Assert.assertEquals(
                         StringUtils.format(
@@ -353,7 +356,8 @@ public class GranularityTest {
                         formatter,
                         pd.exception,
                         pd.path
-                    ), flag
+                    ),
+                    flag
                 );
             }
         }
@@ -364,11 +368,11 @@ public class GranularityTest {
     {
         DateTime dt = new DateTime("2011-02-03T04:05:06.100");
 
-        Assert.assertEquals(new Interval("2011-01-01/2012-01-01"),                   YEAR.bucket(dt));
-        Assert.assertEquals(new Interval("2011-02-01/2011-03-01"),                   MONTH.bucket(dt));
-        Assert.assertEquals(new Interval("2011-01-31/2011-02-07"),                   WEEK.bucket(dt));
-        Assert.assertEquals(new Interval("2011-02-03/2011-02-04"),                   DAY.bucket(dt));
-        Assert.assertEquals(new Interval("2011-02-03T04/2011-02-03T05"),             HOUR.bucket(dt));
+        Assert.assertEquals(new Interval("2011-01-01/2012-01-01"), YEAR.bucket(dt));
+        Assert.assertEquals(new Interval("2011-02-01/2011-03-01"), MONTH.bucket(dt));
+        Assert.assertEquals(new Interval("2011-01-31/2011-02-07"), WEEK.bucket(dt));
+        Assert.assertEquals(new Interval("2011-02-03/2011-02-04"), DAY.bucket(dt));
+        Assert.assertEquals(new Interval("2011-02-03T04/2011-02-03T05"), HOUR.bucket(dt));
         Assert.assertEquals(new Interval("2011-02-03T04:05:00/2011-02-03T04:06:00"), MINUTE.bucket(dt));
         Assert.assertEquals(new Interval("2011-02-03T04:05:06/2011-02-03T04:05:07"), SECOND.bucket(dt));
 

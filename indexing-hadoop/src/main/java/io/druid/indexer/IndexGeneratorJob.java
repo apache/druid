@@ -436,6 +436,12 @@ public class IndexGeneratorJob implements Jobby
         }
 
         @Override
+        public double getDoubleMetric(String metric)
+        {
+          return row.getDoubleMetric(metric);
+        }
+
+        @Override
         public int compareTo(Row o)
         {
           return row.compareTo(o);
@@ -706,7 +712,7 @@ public class IndexGeneratorJob implements Jobby
         // ShardSpec to be published.
         final ShardSpec shardSpecForPublishing;
         if (config.isForceExtendableShardSpecs()) {
-          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(),config.getShardSpecCount(bucket));
+          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(), config.getShardSpecCount(bucket));
         } else {
           shardSpecForPublishing = shardSpecForPartitioning;
         }

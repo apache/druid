@@ -61,7 +61,7 @@ public class TimeSeriesUnionQueryRunnerTest
     this.descending = descending;
   }
 
-  @Parameterized.Parameters(name="{0}:descending={1}")
+  @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(
@@ -122,7 +122,7 @@ public class TimeSeriesUnionQueryRunnerTest
     );
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -228,7 +228,7 @@ public class TimeSeriesUnionQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        mergingrunner.run(query, Maps.<String, Object>newHashMap()),
+        mergingrunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 

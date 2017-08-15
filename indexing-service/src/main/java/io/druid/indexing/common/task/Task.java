@@ -27,6 +27,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -166,6 +167,15 @@ public interface Task
 
   public Map<String, Object> getContext();
 
-  public Object getContextValue(String key);
+  @Nullable
+  default <ContextValueType> ContextValueType getContextValue(String key)
+  {
+    return getContext() == null ? null : (ContextValueType) getContext().get(key);
+  }
 
+  default <ContextValueType> ContextValueType getContextValue(String key, ContextValueType defaultValue)
+  {
+    final ContextValueType value = getContextValue(key);
+    return value == null ? defaultValue : value;
+  }
 }

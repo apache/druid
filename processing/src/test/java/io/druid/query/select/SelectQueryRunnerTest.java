@@ -33,6 +33,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -148,7 +149,8 @@ public class SelectQueryRunnerTest
     this.descending = descending;
   }
 
-  private Druids.SelectQueryBuilder newTestQuery() {
+  private Druids.SelectQueryBuilder newTestQuery()
+  {
     return Druids.newSelectQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                  .dimensionSpecs(DefaultDimensionSpec.toSpec(Arrays.<String>asList()))
@@ -168,15 +170,34 @@ public class SelectQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
-        Lists.newArrayList("market", "quality", "qualityLong", "qualityFloat", "qualityNumericString", "placement", "placementish", "partial_null_column", "null_column"),
-        Lists.newArrayList("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
+        Lists.newArrayList(
+            "market",
+            "quality",
+            "qualityLong",
+            "qualityFloat",
+            "qualityDouble",
+            "qualityNumericString",
+            "placement",
+            "placementish",
+            "partial_null_column",
+            "null_column"
+        ),
+        Lists.newArrayList(
+            "index",
+            "quality_uniques",
+            "indexMin",
+            "indexMaxPlusTen",
+            "indexFloat",
+            "indexMaxFloat",
+            "indexMinFloat"
+        ),
         offset.startOffset(),
         offset.threshold()
     );
@@ -193,7 +214,7 @@ public class SelectQueryRunnerTest
     SelectQuery query = newTestQuery().intervals(I_0112_0114).build();
     for (int offset : expected) {
       List<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(query, ImmutableMap.of()),
+          runner.run(QueryPlus.wrap(query), ImmutableMap.of()),
           Lists.<Result<SelectResultValue>>newArrayList()
       );
 
@@ -210,7 +231,7 @@ public class SelectQueryRunnerTest
     query = newTestQuery().intervals(I_0112_0114).build();
     for (int offset : expected) {
       List<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(query, ImmutableMap.of()),
+          runner.run(QueryPlus.wrap(query), ImmutableMap.of()),
           Lists.<Result<SelectResultValue>>newArrayList()
       );
 
@@ -255,7 +276,7 @@ public class SelectQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -265,7 +286,7 @@ public class SelectQueryRunnerTest
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
                 Sets.newHashSet("mar", "qual", "place"),
-                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat", "indexFloat", "indexMaxFloat"),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -311,7 +332,7 @@ public class SelectQueryRunnerTest
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
                 Sets.newHashSet("mar", "qual", "place"),
-                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat", "indexFloat", "indexMaxFloat"),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -365,7 +386,7 @@ public class SelectQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -404,7 +425,7 @@ public class SelectQueryRunnerTest
         .build();
 
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, Maps.newHashMap()),
+        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -442,7 +463,7 @@ public class SelectQueryRunnerTest
 
       HashMap<String, Object> context = new HashMap<String, Object>();
       Iterable<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(query, context),
+          runner.run(QueryPlus.wrap(query), context),
           Lists.<Result<SelectResultValue>>newArrayList()
       );
 
@@ -516,7 +537,7 @@ public class SelectQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -548,10 +569,11 @@ public class SelectQueryRunnerTest
   }
 
   @Test
-  public void testSelectWithFilterLookupExtractionFn () {
+  public void testSelectWithFilterLookupExtractionFn()
+  {
 
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("total_market","replaced");
+    extractionMap.put("total_market", "replaced");
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
     SelectQuery query = newTestQuery()
@@ -563,12 +585,13 @@ public class SelectQueryRunnerTest
         .build();
 
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, Maps.newHashMap()),
+        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
     Iterable<Result<SelectResultValue>> resultsOptimize = Sequences.toList(
-        toolChest.postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner))).
-                run(query, Maps.<String, Object>newHashMap()), Lists.<Result<SelectResultValue>>newArrayList()
+        toolChest
+            .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
+            .run(QueryPlus.wrap(query), Maps.newHashMap()), Lists.<Result<SelectResultValue>>newArrayList()
     );
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -620,7 +643,7 @@ public class SelectQueryRunnerTest
         .build();
 
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, Maps.newHashMap()),
+        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -629,8 +652,27 @@ public class SelectQueryRunnerTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.<String, Integer>of(),
-                Sets.newHashSet("market", "quality", "qualityLong", "qualityFloat", "qualityNumericString", "placement", "placementish", "partial_null_column", "null_column"),
-                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
+                Sets.newHashSet(
+                    "market",
+                    "quality",
+                    "qualityLong",
+                    "qualityFloat",
+                    "qualityDouble",
+                    "qualityNumericString",
+                    "placement",
+                    "placementish",
+                    "partial_null_column",
+                    "null_column"
+                ),
+                Sets.newHashSet(
+                    "index",
+                    "quality_uniques",
+                    "indexMin",
+                    "indexMaxPlusTen",
+                    "indexMinFloat",
+                    "indexFloat",
+                    "indexMaxFloat"
+                ),
                 Lists.<EventHolder>newArrayList()
             )
         )
@@ -649,7 +691,7 @@ public class SelectQueryRunnerTest
         .build();
 
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, Maps.newHashMap()),
+        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -689,7 +731,7 @@ public class SelectQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -807,7 +849,7 @@ public class SelectQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -871,7 +913,7 @@ public class SelectQueryRunnerTest
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
                             .put("longTime", "super-1294876800000")
-                            .put("floatIndex", "super-1564.61767578125")
+                            .put("floatIndex", "super-1564.617729")
                             .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
                             .put(Column.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
@@ -882,7 +924,7 @@ public class SelectQueryRunnerTest
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
                             .put("longTime", "super-1294876800000")
-                            .put("floatIndex", "super-826.0601806640625")
+                            .put("floatIndex", "super-826.060182")
                             .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
                             .put(Column.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
@@ -893,7 +935,7 @@ public class SelectQueryRunnerTest
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
                             .put("longTime", "super-1294876800000")
-                            .put("floatIndex", "super-1689.0128173828125")
+                            .put("floatIndex", "super-1689.012875")
                             .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
                             .put(Column.TIME_COLUMN_NAME, 1294876800000L)
                             .build()

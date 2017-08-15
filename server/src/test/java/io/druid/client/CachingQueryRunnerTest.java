@@ -300,7 +300,7 @@ public class CachingQueryRunnerTest
     );
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Sequence res = runner.run(query, context);
+    Sequence res = runner.run(QueryPlus.wrap(query), context);
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
@@ -386,7 +386,7 @@ public class CachingQueryRunnerTest
 
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    List<Result> results = Sequences.toList(runner.run(query, context), new ArrayList());
+    List<Result> results = Sequences.toList(runner.run(QueryPlus.wrap(query), context), new ArrayList());
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 

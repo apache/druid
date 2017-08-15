@@ -59,7 +59,10 @@ public class LoadingCacheTest
 
   private final LoadingCache loadingCache;
 
-  public LoadingCacheTest(LoadingCache loadingCache) {this.loadingCache = loadingCache;}
+  public LoadingCacheTest(LoadingCache loadingCache)
+  {
+    this.loadingCache = loadingCache;
+  }
 
   @Before
   public void setUp() throws InterruptedException

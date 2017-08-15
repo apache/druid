@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -57,7 +58,7 @@ public class TopNUnionQueryTest
     this.runner = runner;
   }
 
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(
@@ -111,7 +112,7 @@ public class TopNUnionQueryTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    QueryRunnerTestHelper.commonDoubleAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -179,8 +180,8 @@ public class TopNUnionQueryTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
 

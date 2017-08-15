@@ -33,6 +33,7 @@ import io.druid.query.Druids;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -137,7 +138,7 @@ public class DataSourceMetadataQueryTest
     Map<String, Object> context = new MapMaker().makeMap();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<DataSourceMetadataResultValue>> results = Sequences.toList(
-        runner.run(dataSourceMetadataQuery, context),
+        runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context),
         Lists.<Result<DataSourceMetadataResultValue>>newArrayList()
     );
     DataSourceMetadataResultValue val = results.iterator().next().getValue();
@@ -220,7 +221,7 @@ public class DataSourceMetadataQueryTest
     );
 
     for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(expected.get(i).getInterval(),segments.get(i).getInterval());
+      Assert.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
     }
   }
 

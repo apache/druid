@@ -60,7 +60,7 @@ public class TimestampAggregationSelectTest
 
   private Timestamp[] values = new Timestamp[10];
 
-  @Parameterized.Parameters(name="{index}: Test for {0}")
+  @Parameterized.Parameters(name = "{index}: Test for {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(

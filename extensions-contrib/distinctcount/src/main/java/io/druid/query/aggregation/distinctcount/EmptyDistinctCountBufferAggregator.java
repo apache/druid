@@ -70,6 +70,12 @@ public final class EmptyDistinctCountBufferAggregator implements BufferAggregato
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return 0;
+  }
+
+  @Override
   public void close()
   {
   }

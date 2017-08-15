@@ -215,8 +215,8 @@ public class ExpressionBenchmark
     @Override
     public void aggregate(final ByteBuffer buf, final int position)
     {
-      final float x = xSelector.get();
-      final double n = x > 0 ? x + 1 : ySelector.get() + 1;
+      final float x = xSelector.getFloat();
+      final double n = x > 0 ? x + 1 : ySelector.getFloat() + 1;
       buf.putDouble(0, buf.getDouble(position) + n);
     }
 
@@ -238,6 +238,11 @@ public class ExpressionBenchmark
       throw new UnsupportedOperationException();
     }
 
+    @Override
+    public double getDouble(ByteBuffer buf, int position)
+    {
+      throw new UnsupportedOperationException();
+    }
     @Override
     public void close()
     {

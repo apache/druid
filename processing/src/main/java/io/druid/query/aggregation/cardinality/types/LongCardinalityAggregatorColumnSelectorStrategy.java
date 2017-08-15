@@ -30,12 +30,12 @@ public class LongCardinalityAggregatorColumnSelectorStrategy
   @Override
   public void hashRow(LongColumnSelector dimSelector, Hasher hasher)
   {
-    hasher.putLong(dimSelector.get());
+    hasher.putLong(dimSelector.getLong());
   }
 
   @Override
   public void hashValues(LongColumnSelector dimSelector, HyperLogLogCollector collector)
   {
-    collector.add(CardinalityAggregator.hashFn.hashLong(dimSelector.get()).asBytes());
+    collector.add(CardinalityAggregator.hashFn.hashLong(dimSelector.getLong()).asBytes());
   }
 }
