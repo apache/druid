@@ -249,25 +249,12 @@ public class DefaultLimitSpec implements LimitSpec
 
   private Ordering<Row> metricOrdering(final String column, final Comparator comparator)
   {
-    return Ordering.from(Comparator.comparing((Row row) -> row.getRaw(column), Comparator.nullsFirst(comparator)));
+    return Ordering.from(Comparator.comparing((Row row) -> row.getRaw(column), Comparator.nullsLast(comparator)));
   }
 
   private Ordering<Row> dimensionOrdering(final String dimension, final StringComparator comparator)
   {
-    return Ordering.from(comparator)
-                   .nullsFirst()
-                   .onResultOf(
-                       new Function<Row, String>()
-                       {
-                         @Override
-                         public String apply(Row input)
-                         {
-                           // Multi-value dimensions have all been flattened at this point;
-                           final List<String> dimList = input.getDimension(dimension);
-                           return dimList.isEmpty() ? null : dimList.get(0);
-                         }
-                       }
-                   );
+    return Ordering.from(Comparator.comparing((Row row) -> row.getDimension(dimension).isEmpty() ? null : row.getDimension(dimension).get(0), Comparator.nullsFirst(comparator)));
   }
 
   @Override
