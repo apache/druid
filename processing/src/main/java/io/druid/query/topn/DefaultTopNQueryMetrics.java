@@ -72,6 +72,7 @@ public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> impl
   @Override
   public void granularity(TopNQuery query)
   {
+    // Don't emit by default
   }
 
   @Override

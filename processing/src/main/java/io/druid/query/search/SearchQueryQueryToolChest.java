@@ -129,7 +129,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   @Override
   public SearchQueryMetrics makeMetrics(SearchQuery query)
   {
-    SearchQueryMetrics metrics = queryMetricsFactory.makeMetrics();
+    SearchQueryMetrics metrics = queryMetricsFactory.makeMetrics(query);
     metrics.query(query);
     return metrics;
   }

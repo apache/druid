@@ -56,5 +56,6 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
   @Override
   public void granularity(TimeseriesQuery query)
   {
+    // Don't emit by default
   }
 }

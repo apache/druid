@@ -19,25 +19,220 @@
 
 package io.druid.query.search.search;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.query.DefaultQueryMetrics;
+import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.query.BitmapResultFactory;
+import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
+import io.druid.query.filter.Filter;
+import org.joda.time.Interval;
 
-public class DefaultSearchQueryMetrics extends DefaultQueryMetrics<SearchQuery> implements SearchQueryMetrics
+import java.util.List;
+
+public class DefaultSearchQueryMetrics implements SearchQueryMetrics
 {
-  public DefaultSearchQueryMetrics(ObjectMapper jsonMapper)
+  private QueryMetrics<Query<?>> queryMetrics;
+
+  public DefaultSearchQueryMetrics(QueryMetrics<Query<?>> queryMetrics)
   {
-    super(jsonMapper);
+    this.queryMetrics = queryMetrics;
   }
 
   @Override
-  public void query (SearchQuery query)
+  public void query(SearchQuery query)
   {
-    super.query(query);
+    dataSource(query);
+    queryType(query);
+    interval(query);
+    hasFilters(query);
+    duration(query);
+    queryId(query);
     granularity(query);
+  }
+
+  @Override
+  public void dataSource(SearchQuery query)
+  {
+    queryMetrics.dataSource(query);
+  }
+
+  @Override
+  public void queryType(SearchQuery query)
+  {
+    queryMetrics.queryType(query);
+  }
+
+  @Override
+  public void interval(SearchQuery query)
+  {
+    queryMetrics.interval(query);
+  }
+
+  @Override
+  public void hasFilters(SearchQuery query)
+  {
+    queryMetrics.hasFilters(query);
+  }
+
+  @Override
+  public void duration(SearchQuery query)
+  {
+    queryMetrics.duration(query);
+  }
+
+  @Override
+  public void queryId(SearchQuery query)
+  {
+    queryMetrics.queryId(query);
+  }
+
+  @Override
+  public void context(SearchQuery query)
+  {
+    queryMetrics.context(query);
+  }
+
+  @Override
+  public void server(String host)
+  {
+    queryMetrics.server(host);
+  }
+
+  @Override
+  public void remoteAddress(String remoteAddress)
+  {
+    queryMetrics.remoteAddress(remoteAddress);
+  }
+
+  @Override
+  public void status(String status)
+  {
+    queryMetrics.status(status);
+  }
+
+  @Override
+  public void success(boolean success)
+  {
+    queryMetrics.success(success);
+  }
+
+  @Override
+  public void segment(String segmentIdentifier)
+  {
+    queryMetrics.segment(segmentIdentifier);
+  }
+
+  @Override
+  public void chunkInterval(Interval interval)
+  {
+    queryMetrics.chunkInterval(interval);
+  }
+
+  @Override
+  public void preFilters(List<Filter> preFilters)
+  {
+    queryMetrics.preFilters(preFilters);
+  }
+
+  @Override
+  public void postFilters(List<Filter> postFilters)
+  {
+    queryMetrics.postFilters(postFilters);
+  }
+
+  @Override
+  public BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory)
+  {
+    return queryMetrics.makeBitmapResultFactory(factory);
+  }
+
+  @Override
+  public QueryMetrics reportQueryTime(long timeNs)
+  {
+    return queryMetrics.reportQueryTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportQueryBytes(long byteCount)
+  {
+    return queryMetrics.reportQueryBytes(byteCount);
+  }
+
+  @Override
+  public QueryMetrics reportWaitTime(long timeNs)
+  {
+    return queryMetrics.reportWaitTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentTime(long timeNs)
+  {
+    return queryMetrics.reportSegmentTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentAndCacheTime(long timeNs)
+  {
+    return queryMetrics.reportSegmentAndCacheTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportIntervalChunkTime(long timeNs)
+  {
+    return queryMetrics.reportIntervalChunkTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportCpuTime(long timeNs)
+  {
+    return queryMetrics.reportCpuTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportNodeTimeToFirstByte(long timeNs)
+  {
+    return queryMetrics.reportNodeTimeToFirstByte(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportNodeTime(long timeNs)
+  {
+    return queryMetrics.reportNodeTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportNodeBytes(long byteCount)
+  {
+    return queryMetrics.reportNodeBytes(byteCount);
+  }
+
+  @Override
+  public QueryMetrics reportBitmapConstructionTime(long timeNs)
+  {
+    return queryMetrics.reportBitmapConstructionTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentRows(long numRows)
+  {
+    return queryMetrics.reportSegmentRows(numRows);
+  }
+
+  @Override
+  public QueryMetrics reportPreFilteredRows(long numRows)
+  {
+    return queryMetrics.reportPreFilteredRows(numRows);
+  }
+
+  @Override
+  public void emit(ServiceEmitter emitter)
+  {
+    queryMetrics.emit(emitter);
   }
 
   @Override
   public void granularity(SearchQuery query)
   {
+    // Don't emit by default
   }
 }

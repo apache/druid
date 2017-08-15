@@ -19,34 +19,32 @@
 
 package io.druid.query.search.search;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import io.druid.guice.annotations.Json;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 
 public class DefaultSearchQueryMetricsFactory implements SearchQueryMetricsFactory
 {
-  private final ObjectMapper jsonMapper;
   private static final SearchQueryMetricsFactory INSTANCE =
-      new DefaultSearchQueryMetricsFactory(new DefaultObjectMapper());
+      new DefaultSearchQueryMetricsFactory(DefaultGenericQueryMetricsFactory.instance());
+  private final GenericQueryMetricsFactory genericQueryMetricsFactory;
 
-  //Used only for testng.
+  @Inject
+  public DefaultSearchQueryMetricsFactory(GenericQueryMetricsFactory genericQueryMetricsFactory)
+  {
+    this.genericQueryMetricsFactory = genericQueryMetricsFactory;
+  }
+
   @VisibleForTesting
   public static SearchQueryMetricsFactory instance()
   {
     return INSTANCE;
   }
 
-  @Inject
-  public DefaultSearchQueryMetricsFactory(@Json ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
-
   @Override
-  public SearchQueryMetrics makeMetrics()
+  public SearchQueryMetrics makeMetrics(SearchQuery query)
   {
-    return new DefaultSearchQueryMetrics(jsonMapper);
+    return new DefaultSearchQueryMetrics(genericQueryMetricsFactory.makeMetrics(query));
   }
 }

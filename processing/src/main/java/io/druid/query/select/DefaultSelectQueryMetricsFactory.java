@@ -19,34 +19,33 @@
 
 package io.druid.query.select;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import io.druid.guice.annotations.Json;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 
 public class DefaultSelectQueryMetricsFactory implements SelectQueryMetricsFactory
 {
-  private final ObjectMapper jsonMapper;
   private static final SelectQueryMetricsFactory INSTANCE =
-      new DefaultSelectQueryMetricsFactory(new DefaultObjectMapper());
+      new DefaultSelectQueryMetricsFactory(DefaultGenericQueryMetricsFactory.instance());
 
-  //Used only for testng.
+  private final GenericQueryMetricsFactory genericQueryMetricsFactory;
+
+  @Inject
+  public DefaultSelectQueryMetricsFactory(GenericQueryMetricsFactory genericQueryMetricsFactory)
+  {
+    this.genericQueryMetricsFactory = genericQueryMetricsFactory;
+  }
+
   @VisibleForTesting
   public static SelectQueryMetricsFactory instance()
   {
     return INSTANCE;
   }
 
-  @Inject
-  public DefaultSelectQueryMetricsFactory(@Json ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
-
   @Override
-  public SelectQueryMetrics makeMetrics()
+  public SelectQueryMetrics makeMetrics(SelectQuery query)
   {
-    return new DefaultSelectQueryMetrics(jsonMapper);
+    return new DefaultSelectQueryMetrics(genericQueryMetricsFactory.makeMetrics(query));
   }
 }

@@ -45,7 +45,6 @@ public class DefaultSelectQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultSelectQueryMetrics queryMetrics = new DefaultSelectQueryMetrics(TestHelper.getJsonMapper());
     SelectQuery query = Druids
         .newSelectQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -54,6 +53,9 @@ public class DefaultSelectQueryMetricsTest
         .descending(true)
         .pagingSpec(PagingSpec.newSpec(1))
         .build();
+
+    SelectQueryMetrics queryMetrics = DefaultSelectQueryMetricsFactory.instance().makeMetrics(query);
+
     queryMetrics.query(query);
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
@@ -83,7 +85,16 @@ public class DefaultSelectQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultSelectQueryMetrics queryMetrics = new DefaultSelectQueryMetrics(TestHelper.getJsonMapper());
+    SelectQuery query = Druids
+        .newSelectQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.dayGran)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .descending(true)
+        .pagingSpec(PagingSpec.newSpec(1))
+        .build();
+
+    SelectQueryMetrics queryMetrics = DefaultSelectQueryMetricsFactory.instance().makeMetrics(query);
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

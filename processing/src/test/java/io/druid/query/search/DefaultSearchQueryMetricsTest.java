@@ -29,8 +29,9 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.search.search.DefaultSearchQueryMetrics;
+import io.druid.query.search.search.DefaultSearchQueryMetricsFactory;
 import io.druid.query.search.search.SearchQuery;
-import io.druid.segment.TestHelper;
+import io.druid.query.search.search.SearchQueryMetrics;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +51,6 @@ public class DefaultSearchQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultSearchQueryMetrics queryMetrics = new DefaultSearchQueryMetrics(TestHelper.getJsonMapper());
     SearchQuery query = Druids
         .newSearchQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -62,6 +62,9 @@ public class DefaultSearchQueryMetricsTest
             null
         ))
         .build();
+
+    SearchQueryMetrics queryMetrics = DefaultSearchQueryMetricsFactory.instance().makeMetrics(query);
+
     queryMetrics.query(query);
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
@@ -89,9 +92,16 @@ public class DefaultSearchQueryMetricsTest
   @Test
   public void testDefaultSearchQueryMetricsMetricNamesAndUnits()
   {
+    SearchQuery query = Druids
+        .newSearchQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.dayGran)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .build();
+
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultSearchQueryMetrics queryMetrics = new DefaultSearchQueryMetrics(TestHelper.getJsonMapper());
+    SearchQueryMetrics queryMetrics = DefaultSearchQueryMetricsFactory.instance().makeMetrics(query);
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

@@ -32,5 +32,5 @@ package io.druid.query.select;
  */
 public interface SelectQueryMetricsFactory
 {
-  SelectQueryMetrics makeMetrics();
+  SelectQueryMetrics makeMetrics(SelectQuery selectQuery);
 }

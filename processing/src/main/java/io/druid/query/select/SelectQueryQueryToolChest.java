@@ -88,7 +88,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       Supplier<SelectQueryConfig> configSupplier
   )
   {
-    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, new DefaultSelectQueryMetricsFactory(jsonMapper));
+    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, DefaultSelectQueryMetricsFactory.instance());
   }
 
   @Inject
@@ -138,7 +138,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public SelectQueryMetrics makeMetrics(SelectQuery query)
   {
-    SelectQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
+    SelectQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics(query);
     queryMetrics.query(query);
     return queryMetrics;
   }

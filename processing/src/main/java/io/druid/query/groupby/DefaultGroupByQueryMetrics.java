@@ -63,5 +63,6 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   @Override
   public void granularity(GroupByQuery query)
   {
+    //Don't emit by default
   }
 }
