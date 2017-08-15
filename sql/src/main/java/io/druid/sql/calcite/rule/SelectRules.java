@@ -21,9 +21,7 @@ package io.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
-import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.segment.VirtualColumn;
-import io.druid.segment.column.Column;
 import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.planner.Calcites;
@@ -76,7 +74,7 @@ public class SelectRules
       final Project project = call.rel(0);
       final DruidRel druidRel = call.rel(1);
 
-      // Only push in projections that can be used by the Select query.
+      // Only push in projections that can be used by the Scan query.
       // Leave anything more complicated to DruidAggregateProjectRule for possible handling in a GroupBy query.
 
       final RowSignature sourceRowSignature = druidRel.getSourceRowSignature();
@@ -152,10 +150,8 @@ public class SelectRules
         return;
       }
 
-      // Only push in sorts that can be used by the Select query.
-      final List<OrderByColumnSpec> orderBys = limitSpec.getColumns();
-      if (orderBys.isEmpty() ||
-          (orderBys.size() == 1 && orderBys.get(0).getDimension().equals(Column.TIME_COLUMN_NAME))) {
+      // Scan query can handle limiting but not sorting, so avoid applying this rule if there is a sort.
+      if (limitSpec.getColumns().isEmpty()) {
         call.transformTo(
             druidRel.withQueryBuilder(
                 druidRel.getQueryBuilder().withLimitSpec(limitSpec)

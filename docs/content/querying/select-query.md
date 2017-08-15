@@ -2,6 +2,7 @@
 layout: doc_page
 ---
 # Select Queries
+
 Select queries return raw Druid rows and support pagination.
 
 ```json
@@ -18,6 +19,12 @@ Select queries return raw Druid rows and support pagination.
    "pagingSpec":{"pagingIdentifiers": {}, "threshold":5}
  }
 ```
+
+<div class="note info">
+Consider using the [Scan query](scan-query.html) instead of the Select query if you don't need the strict time-ascending
+or time-descending ordering offered by the Select query. The Scan query offers "looser" ordering than Select, but is
+significantly more efficient in terms of both processing time and memory requirements.
+</div>
 
 There are several main parts to a select query:
 

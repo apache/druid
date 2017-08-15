@@ -74,6 +74,7 @@ import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
+import io.druid.query.scan.ScanQuery;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -134,14 +135,6 @@ public class CalciteQueryTest
     public boolean isUseApproximateCountDistinct()
     {
       return false;
-    }
-  };
-  private static final PlannerConfig PLANNER_CONFIG_SELECT_PAGING = new PlannerConfig()
-  {
-    @Override
-    public int getSelectThreshold()
-    {
-      return 2;
     }
   };
   private static final PlannerConfig PLANNER_CONFIG_FALLBACK = new PlannerConfig()
@@ -353,31 +346,14 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM druid.foo",
-        ImmutableList.of(
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .pagingSpec(FIRST_PAGING_SPEC)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .pagingSpec(
-                      new PagingSpec(
-                          ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 5),
-                          1000,
-                          true
-                      )
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+        ImmutableList.<Query>of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
             new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
@@ -418,7 +394,7 @@ public class CalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
-                "DruidQueryRel(query=[{\"queryType\":\"select\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dummy\",\"outputName\":\"dummy\",\"outputType\":\"STRING\"}],\"metrics\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"virtualColumns\":[],\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":0,\"fromNext\":true},\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807}}])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}])\n"
             }
         )
     );
@@ -430,15 +406,14 @@ public class CalciteQueryTest
     testQuery(
         "SELECT * FROM druid.foo LIMIT 2",
         ImmutableList.of(
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .pagingSpec(FIRST_PAGING_SPEC)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
+                .limit(2)
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
             new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0, HLLCV1.class.getName()},
@@ -448,25 +423,26 @@ public class CalciteQueryTest
   }
 
   @Test
-  public void testSelectStarWithLimitDescending() throws Exception
+  public void testSelectWithProjection() throws Exception
   {
     testQuery(
-        "SELECT * FROM druid.foo ORDER BY __time DESC LIMIT 2",
+        "SELECT SUBSTRING(dim2, 1, 1) FROM druid.foo LIMIT 2",
         ImmutableList.of(
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .descending(true)
-                  .pagingSpec(FIRST_PAGING_SPEC)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(
+                    EXPRESSION_VIRTUAL_COLUMN("v0", "substring(\"dim2\", 0, 1)", ValueType.STRING)
+                )
+                .columns("v0")
+                .limit(2)
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, HLLCV1.class.getName()}
+            new Object[]{"a"},
+            new Object[]{""}
         )
     );
   }
@@ -477,16 +453,14 @@ public class CalciteQueryTest
     testQuery(
         "SELECT dim2 x, dim2 y FROM druid.foo LIMIT 2",
         ImmutableList.of(
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .descending(false)
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("dim2"))
-                  .pagingSpec(FIRST_PAGING_SPEC)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .columns("dim2")
+                .limit(2)
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
             new Object[]{"a", "a"},
@@ -496,6 +470,7 @@ public class CalciteQueryTest
   }
 
   @Test
+  @Ignore // Scan query doesn't support descending order
   public void testSelectSingleColumnWithLimitDescending() throws Exception
   {
     testQuery(
@@ -568,57 +543,22 @@ public class CalciteQueryTest
         + "  druid.foo x INNER JOIN druid.foo y ON x.dim1 = y.dim2\n"
         + "WHERE\n"
         + "  x.dim1 <> ''",
-        ImmutableList.of(
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .pagingSpec(FIRST_PAGING_SPEC)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .pagingSpec(
-                      new PagingSpec(
-                          ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 5),
-                          1000,
-                          true
-                      )
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(NOT(SELECTOR("dim1", "", null)))
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .pagingSpec(FIRST_PAGING_SPEC)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(NOT(SELECTOR("dim1", "", null)))
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .pagingSpec(
-                      new PagingSpec(
-                          ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 4),
-                          1000,
-                          true
-                      )
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+        ImmutableList.<Query>of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build(),
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .filters(NOT(SELECTOR("dim1", "", null)))
+                .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
             new Object[]{"abc", "def", "abc"}
@@ -642,8 +582,8 @@ public class CalciteQueryTest
             new Object[]{
                 "BindableProject(dim1=[$9], dim10=[$2], dim2=[$3])\n"
                 + "  BindableJoin(condition=[=($9, $3)], joinType=[inner])\n"
-                + "    DruidQueryRel(query=[{\"queryType\":\"select\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dummy\",\"outputName\":\"dummy\",\"outputType\":\"STRING\"}],\"metrics\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"virtualColumns\":[],\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":0,\"fromNext\":true},\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807}}])\n"
-                + "    DruidQueryRel(query=[{\"queryType\":\"select\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"\",\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dummy\",\"outputName\":\"dummy\",\"outputType\":\"STRING\"}],\"metrics\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"virtualColumns\":[],\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":0,\"fromNext\":true},\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807}}])\n"
+                + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}])\n"
+                + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"\",\"extractionFn\":null}},\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}])\n"
             }
         )
     );
@@ -1212,7 +1152,8 @@ public class CalciteQueryTest
     // It's also here so when we do support these features, we can have "real" tests for these queries.
 
     final List<String> queries = ImmutableList.of(
-        "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT query with order by
+        "SELECT * FROM druid.foo ORDER BY __time DESC", // SELECT with ORDER BY time
+        "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT with ORDER BY non-time
         "SELECT TRIM(dim1) FROM druid.foo", // TRIM function
         "SELECT COUNT(*) FROM druid.foo x, druid.foo y", // Self-join
         "SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5" // DISTINCT with OFFSET
@@ -1265,116 +1206,20 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM druid.foo WHERE dim1 > 'd' OR dim2 = 'a'",
-        ImmutableList.of(
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .pagingSpec(FIRST_PAGING_SPEC)
-                  .filters(
-                      OR(
-                          BOUND("dim1", "d", null, true, false, null, StringComparators.LEXICOGRAPHIC),
-                          SELECTOR("dim2", "a", null)
-                      )
-                  )
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .pagingSpec(
-                      new PagingSpec(
-                          ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 2),
-                          1000,
-                          true
-                      )
-                  )
-                  .filters(
-                      OR(
-                          BOUND("dim1", "d", null, true, false, null, StringComparators.LEXICOGRAPHIC),
-                          SELECTOR("dim2", "a", null)
-                      )
-                  )
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0f, 4d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0f, 5d, HLLCV1.class.getName()}
-        )
-    );
-  }
-
-  @Test
-  public void testSelectStarWithDimFilterAndPaging() throws Exception
-  {
-    testQuery(
-        PLANNER_CONFIG_SELECT_PAGING,
-        "SELECT * FROM druid.foo WHERE dim1 > 'd' OR dim2 = 'a'",
-        ImmutableList.of(
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .pagingSpec(new PagingSpec(null, 2, true))
-                  .filters(
-                      OR(
-                          BOUND("dim1", "d", null, true, false, null, StringComparators.LEXICOGRAPHIC),
-                          SELECTOR("dim2", "a", null)
-                      )
-                  )
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .pagingSpec(
-                      new PagingSpec(
-                          ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 1),
-                          2,
-                          true
-                      )
-                  )
-                  .filters(
-                      OR(
-                          BOUND("dim1", "d", null, true, false, null, StringComparators.LEXICOGRAPHIC),
-                          SELECTOR("dim2", "a", null)
-                      )
-                  )
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .pagingSpec(
-                      new PagingSpec(
-                          ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 2),
-                          2,
-                          true
-                      )
-                  )
-                  .filters(
-                      OR(
-                          BOUND("dim1", "d", null, true, false, null, StringComparators.LEXICOGRAPHIC),
-                          SELECTOR("dim2", "a", null)
-                      )
-                  )
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+        ImmutableList.<Query>of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .filters(
+                    OR(
+                        BOUND("dim1", "d", null, true, false, null, StringComparators.LEXICOGRAPHIC),
+                        SELECTOR("dim2", "a", null)
+                    )
+                )
+                .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
             new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0d, HLLCV1.class.getName()},
@@ -5337,42 +5182,14 @@ public class CalciteQueryTest
                         .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .dimensionSpecs(DIMS(
-                      new DefaultDimensionSpec("dim1", "d1"),
-                      new DefaultDimensionSpec("dim2", "d2")
-                  ))
-                  .metrics(ImmutableList.of("cnt"))
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(AND(SELECTOR("dim1", "def", null), SELECTOR("dim2", "abc", null)))
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2"))
-                  .pagingSpec(FIRST_PAGING_SPEC)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newSelectQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .dimensionSpecs(DIMS(
-                      new DefaultDimensionSpec("dim1", "d1"),
-                      new DefaultDimensionSpec("dim2", "d2")
-                  ))
-                  .metrics(ImmutableList.of("cnt"))
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(AND(SELECTOR("dim1", "def", null), SELECTOR("dim2", "abc", null)))
-                  .dimensions(ImmutableList.of("dummy"))
-                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2"))
-                  .pagingSpec(
-                      new PagingSpec(
-                          ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 0),
-                          1000,
-                          true
-                      )
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .filters(AND(SELECTOR("dim1", "def", null), SELECTOR("dim2", "abc", null)))
+                .columns("__time", "cnt", "dim1", "dim2")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
         ImmutableList.of(
             new Object[]{T("2001-01-02"), 1L, "def", "abc"}
@@ -5691,5 +5508,10 @@ public class CalciteQueryTest
   private static ExpressionPostAggregator EXPRESSION_POST_AGG(final String name, final String expression)
   {
     return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
+  }
+
+  private static ScanQuery.ScanQueryBuilder newScanQueryBuilder()
+  {
+    return new ScanQuery.ScanQueryBuilder().legacy(false);
   }
 }

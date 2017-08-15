@@ -253,7 +253,7 @@ converted to zeroes).
 
 ## Query execution
 
-Queries without aggregations will use Druid's [Select](select-query.html) native query type.
+Queries without aggregations will use Druid's [Scan](scan-query.html) native query type.
 
 Aggregation queries (using GROUP BY, DISTINCT, or any aggregation functions) will use one of Druid's three native
 aggregation query types. Two (Timeseries and TopN) are specialized for specific types of aggregations, whereas the other
