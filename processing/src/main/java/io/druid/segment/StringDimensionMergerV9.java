@@ -295,6 +295,9 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     try (
         Closeable toCloseEncodedValueWriter = encodedValueWriter;
         Closeable toCloseBitmapWriter = bitmapWriter;
+        // We need to free the ByteBuffers allocated by the dictionary merge iterator here,
+        // these buffers are used by dictIdSeeker in mergeBitmaps() below. The iterator is created and only used
+        // in writeMergedValueMetadata(), but the buffers are still used until after mergeBitmaps().
         Closeable toCloseDictionaryMergeIterator = dictionaryMergeIterator;
         Closeable dimValsMappedUnmapper = new Closeable()
     {
