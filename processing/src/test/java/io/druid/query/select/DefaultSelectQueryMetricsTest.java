@@ -25,7 +25,6 @@ import io.druid.query.DefaultQueryMetricsTest;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
