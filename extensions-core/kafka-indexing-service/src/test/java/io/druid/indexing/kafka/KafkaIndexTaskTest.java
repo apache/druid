@@ -53,6 +53,9 @@ import io.druid.data.input.impl.JSONPathFieldSpec;
 import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -117,7 +120,9 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -1638,10 +1643,10 @@ public class KafkaIndexTaskTest
         MapCache.create(1024),
         new CacheConfig(),
         testUtils.getTestIndexMergerV9(),
-        null,
-        null,
-        null,
-        null
+        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
+        EasyMock.createNiceMock(DruidNode.class),
+        new LookupNodeService("tier"),
+        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0)
     );
   }
 
