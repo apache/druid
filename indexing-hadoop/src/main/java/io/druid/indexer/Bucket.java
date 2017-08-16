@@ -54,8 +54,8 @@ public class Bucket
     buf.putInt(shardNum);
     buf.putLong(time.getMillis());
     buf.putInt(partitionNum);
-    for (int i = 0; i < parts.length; i++) {
-      buf.put(parts[i]);
+    for (byte[] part : parts) {
+      buf.put(part);
     }
 
     return buf.array();
@@ -108,8 +108,8 @@ public class Bucket
   private static int sizes(byte[]... parts)
   {
     int size = 0;
-    for (int i = 0; i < parts.length; i++) {
-      size += parts[i].length;
+    for (byte[] part : parts) {
+      size += part.length;
     }
     return size;
   }

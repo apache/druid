@@ -45,6 +45,9 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -60,6 +63,9 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
+import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
+import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.common.task.KillTask;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
@@ -104,6 +110,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
@@ -514,7 +521,7 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage, 300);
+    taskLockbox = new TaskLockbox(taskStorage);
     tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
         SupervisorManager.class)));
     File tmpDir = temporaryFolder.newFolder();
@@ -597,7 +604,11 @@ public class TaskLifecycleTest
         INDEX_IO,
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
-        INDEX_MERGER_V9
+        INDEX_MERGER_V9,
+        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
+        EasyMock.createNiceMock(DruidNode.class),
+        new LookupNodeService("tier"),
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
     );
   }
 
@@ -642,7 +653,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -654,8 +665,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
+            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
         null
     );
@@ -699,7 +710,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -711,8 +722,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
+            new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
         null
     );
@@ -1063,7 +1074,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -1075,8 +1086,8 @@ public class TaskLifecycleTest
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null)
+            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null)
         ),
         null
     );

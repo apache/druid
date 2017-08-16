@@ -143,7 +143,7 @@ public class SelectQueryEngine
       if (dimSelector == null) {
         resultMap.put(outputName, null);
       } else {
-        resultMap.put(outputName, dimSelector.get());
+        resultMap.put(outputName, dimSelector.getLong());
       }
     }
   }
@@ -158,7 +158,7 @@ public class SelectQueryEngine
       if (dimSelector == null) {
         resultMap.put(outputName, null);
       } else {
-        resultMap.put(outputName, dimSelector.get());
+        resultMap.put(outputName, dimSelector.getFloat());
       }
     }
   }
@@ -174,7 +174,7 @@ public class SelectQueryEngine
       if (dimSelector == null) {
         resultMap.put(outputName, null);
       } else {
-        resultMap.put(outputName, dimSelector.get());
+        resultMap.put(outputName, dimSelector.getDouble());
       }
     }
   }
@@ -300,7 +300,7 @@ public class SelectQueryEngine
   )
   {
     final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.get()));
+    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.getLong()));
 
     for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
       selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);

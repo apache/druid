@@ -53,6 +53,9 @@ import io.druid.data.input.impl.JSONPathFieldSpec;
 import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -87,6 +90,7 @@ import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -116,7 +120,9 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.security.AuthConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.test.TestingCluster;
@@ -316,6 +322,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -358,6 +365,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -414,6 +422,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             new DateTime("2010"),
+            null,
             false
         ),
         null,
@@ -457,6 +466,64 @@ public class KafkaIndexTaskTest
   }
 
   @Test(timeout = 60_000L)
+  public void testRunWithMaximumMessageTime() throws Exception
+  {
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
+            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            null,
+            new DateTime("2010"),
+            false
+        ),
+        null,
+        null
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for the task to start reading
+    while (task.getStatus() != KafkaIndexTask.Status.READING) {
+      Thread.sleep(10);
+    }
+
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : records) {
+        kafkaProducer.send(record).get();
+      }
+    }
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(3, task.getFireDepartmentMetrics().processed());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(2, task.getFireDepartmentMetrics().thrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
+    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("a"), readSegmentDim1(desc1));
+    Assert.assertEquals(ImmutableList.of("b"), readSegmentDim1(desc2));
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentDim1(desc3));
+  }
+
+  @Test(timeout = 60_000L)
   public void testRunOnNothing() throws Exception
   {
     // Insert data
@@ -475,6 +542,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -517,6 +585,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -571,6 +640,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -623,6 +693,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -657,6 +728,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -671,6 +743,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -727,6 +800,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -741,6 +815,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -798,6 +873,7 @@ public class KafkaIndexTaskTest
             false,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -812,6 +888,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             false,
             false,
+            null,
             null,
             false
         ),
@@ -874,6 +951,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -933,6 +1011,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -947,6 +1026,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -1005,6 +1085,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -1040,6 +1121,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -1093,6 +1175,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -1178,6 +1261,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             true,
+            null,
             null,
             false
         ),
@@ -1267,6 +1351,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
+            null,
             false
         ),
         null,
@@ -1305,6 +1390,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null,
             false
         ),
@@ -1481,7 +1567,7 @@ public class KafkaIndexTaskTest
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector
     );
-    taskLockbox = new TaskLockbox(taskStorage, 3000);
+    taskLockbox = new TaskLockbox(taskStorage);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         metadataStorageCoordinator,
@@ -1559,7 +1645,11 @@ public class KafkaIndexTaskTest
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
         new CacheConfig(),
-        testUtils.getTestIndexMergerV9()
+        testUtils.getTestIndexMergerV9(),
+        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
+        EasyMock.createNiceMock(DruidNode.class),
+        new LookupNodeService("tier"),
+        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0)
     );
   }
 
@@ -1651,7 +1741,7 @@ public class KafkaIndexTaskTest
                                   .build();
 
     ArrayList<Result<TimeseriesResultValue>> results = Sequences.toList(
-        task.getQueryRunner(query).run(query, ImmutableMap.<String, Object>of()),
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.<String, Object>of()),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 

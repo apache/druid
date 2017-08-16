@@ -23,15 +23,14 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.metamx.http.client.HttpClient;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import io.druid.timeline.DataSegment;
-import org.apache.curator.framework.CuratorFramework;
 
 import javax.validation.constraints.NotNull;
 
@@ -60,11 +59,7 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
 
   @JacksonInject
   @NotNull
-  private ZkPathsConfig zkPaths = null;
-
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
+  private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = null;
 
   @JacksonInject
   @NotNull
@@ -77,7 +72,7 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
         jsonMapper,
         smileMapper,
         httpClient,
-        new DruidServerDiscovery(curator, zkPaths.getAnnouncementsPath(), jsonMapper),
+        druidNodeDiscoveryProvider,
         Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue(),
         config,
         authenticatorHttpClientWrapper

@@ -56,7 +56,8 @@ Globally cached lookups can be specified as part of the [cluster wide config for
        },
        "table": "lookupTable",
        "keyColumn": "mykeyColumn",
-       "valueColumn": "MyValueColumn",
+       "valueColumn": "myValueColumn",
+       "filter" : "myFilterSQL (Where clause statement  e.g LOOKUPTYPE=1)",
        "tsColumn": "timeColumn"
     },
     "firstCacheTimeout": 120000,
@@ -94,9 +95,10 @@ In a simple case where only one [tier](../../querying/lookups.html#dynamic-confi
            "user": "druid",
            "password": "diurd"
          },
-         "table": "lookupTable",
-         "keyColumn": "country_id",
-         "valueColumn": "country_name",
+         "table": "lookupValues",
+         "keyColumn": "value_id",
+         "valueColumn": "value_text",
+         "filter": "value_type='country'",
          "tsColumn": "timeColumn"
       },
       "firstCacheTimeout": 120000,
@@ -319,6 +321,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`table`|The table which contains the key value pairs|Yes||
 |`keyColumn`|The column in `table` which contains the keys|Yes||
 |`valueColumn`|The column in `table` which contains the values|Yes||
+|`filter`|The filter to use when selecting lookups, this is used to create a where clause on lookup population|No|No Filter|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
 

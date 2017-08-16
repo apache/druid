@@ -30,6 +30,7 @@ import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
@@ -300,7 +301,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
         // The recoverable logic is always true for IOException, so we want to only pass IOException if it is recoverable
         throw new IOE(e, "Could not fetch last modified timestamp from URI [%s]", uri);
       } else {
-        throw Throwables.propagate(e);
+        throw new RE(e, "Error fetching last modified timestamp from URI [%s]", uri);
       }
     }
   }

@@ -311,8 +311,8 @@ public class Initialization
       String[] paths = cp.split(File.pathSeparator);
 
       List<URL> urls = new ArrayList<>();
-      for (int i = 0; i < paths.length; i++) {
-        File f = new File(paths[i]);
+      for (String path : paths) {
+        File f = new File(path);
         if ("*".equals(f.getName())) {
           File parentDir = f.getParentFile();
           if (parentDir.isDirectory()) {
@@ -331,7 +331,7 @@ public class Initialization
             }
           }
         } else {
-          urls.add(new File(paths[i]).toURI().toURL());
+          urls.add(new File(path).toURI().toURL());
         }
       }
       return urls;

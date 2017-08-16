@@ -44,6 +44,7 @@ import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -267,7 +268,7 @@ public class TopNQueryRunnerTest
         chest.mergeResults(runner),
         chest
     );
-    return mergeRunner.run(query, context);
+    return mergeRunner.run(QueryPlus.wrap(query), context);
   }
 
   @Test
@@ -4048,7 +4049,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()));
   }
 
   @Test
@@ -4087,7 +4088,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()));
   }
 
 
@@ -4210,7 +4211,7 @@ public class TopNQueryRunnerTest
         chest.mergeResults(chest.preMergeQueryDecoration(runner)),
         chest
     );
-    return Runner.run(query, context);
+    return Runner.run(QueryPlus.wrap(query), context);
   }
 
   @Test

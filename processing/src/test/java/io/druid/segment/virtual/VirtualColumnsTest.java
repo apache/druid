@@ -32,6 +32,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.DoubleColumnSelector;
@@ -83,8 +84,8 @@ public class VirtualColumnsTest
     Assert.assertEquals(1L, objectSelector.get());
     Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
     Assert.assertEquals("0.5", extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
-    Assert.assertEquals(1.0f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(1L, longSelector.get());
+    Assert.assertEquals(1.0f, floatSelector.getFloat(), 0.0f);
+    Assert.assertEquals(1L, longSelector.getLong());
   }
 
   @Test
@@ -101,8 +102,8 @@ public class VirtualColumnsTest
 
     Assert.assertEquals(5L, objectSelector.get());
     Assert.assertEquals("5", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals(5.0f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(5L, longSelector.get());
+    Assert.assertEquals(5.0f, floatSelector.getFloat(), 0.0f);
+    Assert.assertEquals(5L, longSelector.getLong());
   }
 
   @Test
@@ -119,8 +120,8 @@ public class VirtualColumnsTest
 
     Assert.assertEquals(-1L, objectSelector.get());
     Assert.assertEquals("-1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals(-1.0f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(-1L, longSelector.get());
+    Assert.assertEquals(-1.0f, floatSelector.getFloat(), 0.0f);
+    Assert.assertEquals(-1L, longSelector.getLong());
   }
 
   @Test
@@ -298,7 +299,7 @@ public class VirtualColumnsTest
         @Override
         public Object get()
         {
-          return selector.get();
+          return selector.getLong();
         }
       };
     }
@@ -325,7 +326,7 @@ public class VirtualColumnsTest
         @Override
         public String lookupName(int id)
         {
-          final String stringValue = String.valueOf(selector.get());
+          final String stringValue = String.valueOf(selector.getLong());
           return extractionFn == null ? stringValue : extractionFn.apply(stringValue);
         }
 
@@ -374,13 +375,13 @@ public class VirtualColumnsTest
     @Override
     public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
     {
-      final LongColumnSelector selector = makeLongColumnSelector(columnName, factory);
+      final ColumnValueSelector selector = makeLongColumnSelector(columnName, factory);
       return new TestFloatColumnSelector()
       {
         @Override
-        public float get()
+        public float getFloat()
         {
-          return selector.get();
+          return selector.getFloat();
         }
       };
     }
@@ -394,7 +395,7 @@ public class VirtualColumnsTest
       return new TestLongColumnSelector()
       {
         @Override
-        public long get()
+        public long getLong()
         {
           return theLong;
         }
@@ -402,17 +403,15 @@ public class VirtualColumnsTest
     }
 
     @Override
-    public DoubleColumnSelector makeDoubleColumnSelector(
-        String columnName, ColumnSelectorFactory factory
-    )
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory)
     {
-      final LongColumnSelector selector = makeLongColumnSelector(columnName, factory);
+      final ColumnValueSelector selector = makeLongColumnSelector(columnName, factory);
       return new TestDoubleColumnSelector() {
 
         @Override
-        public double get()
+        public double getDouble()
         {
-          return selector.get();
+          return selector.getDouble();
         }
       };
     }

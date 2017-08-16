@@ -141,12 +141,14 @@ public class KafkaSupervisor implements Supervisor
 
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
     final Optional<DateTime> minimumMessageTime;
+    final Optional<DateTime> maximumMessageTime;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
-    public TaskGroup(ImmutableMap<Integer, Long> partitionOffsets, Optional<DateTime> minimumMessageTime)
+    public TaskGroup(ImmutableMap<Integer, Long> partitionOffsets, Optional<DateTime> minimumMessageTime, Optional<DateTime> maximumMessageTime)
     {
       this.partitionOffsets = partitionOffsets;
       this.minimumMessageTime = minimumMessageTime;
+      this.maximumMessageTime = maximumMessageTime;
     }
 
     Set<String> taskIds()
@@ -707,7 +709,9 @@ public class KafkaSupervisor implements Supervisor
     String partitionOffsetStr = sb.toString().substring(1);
 
     Optional<DateTime> minimumMessageTime = taskGroups.get(groupId).minimumMessageTime;
+    Optional<DateTime> maximumMessageTime = taskGroups.get(groupId).maximumMessageTime;
     String minMsgTimeStr = (minimumMessageTime.isPresent() ? String.valueOf(minimumMessageTime.get().getMillis()) : "");
+    String maxMsgTimeStr = (maximumMessageTime.isPresent() ? String.valueOf(maximumMessageTime.get().getMillis()) : "");
 
     String dataSchema, tuningConfig;
     try {
@@ -718,7 +722,7 @@ public class KafkaSupervisor implements Supervisor
       throw Throwables.propagate(e);
     }
 
-    String hashCode = DigestUtils.sha1Hex(dataSchema + tuningConfig + partitionOffsetStr + minMsgTimeStr)
+    String hashCode = DigestUtils.sha1Hex(dataSchema + tuningConfig + partitionOffsetStr + minMsgTimeStr + maxMsgTimeStr)
                                  .substring(0, 15);
 
     return Joiner.on("_").join("index_kafka", dataSource, hashCode);
@@ -900,7 +904,9 @@ public class KafkaSupervisor implements Supervisor
                                     kafkaTask.getIOConfig()
                                              .getStartPartitions()
                                              .getPartitionOffsetMap()
-                                ), kafkaTask.getIOConfig().getMinimumMessageTime()
+                                ),
+                                kafkaTask.getIOConfig().getMinimumMessageTime(),
+                                kafkaTask.getIOConfig().getMaximumMessageTime()
                             )
                         ) == null) {
                           log.debug("Created new task group [%d]", taskGroupId);
@@ -962,9 +968,9 @@ public class KafkaSupervisor implements Supervisor
 
     log.info("Creating new pending completion task group for discovered task [%s]", taskId);
 
-    // reading the minimumMessageTime from the publishing task and setting it here is not necessary as this task cannot
+    // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
     // change to a state where it will read any more events
-    TaskGroup newTaskGroup = new TaskGroup(ImmutableMap.copyOf(startingPartitions), Optional.<DateTime>absent());
+    TaskGroup newTaskGroup = new TaskGroup(ImmutableMap.copyOf(startingPartitions), Optional.<DateTime>absent(), Optional.<DateTime>absent());
 
     newTaskGroup.tasks.put(taskId, new TaskData());
     newTaskGroup.completionTimeout = DateTime.now().plus(ioConfig.getCompletionTimeout());
@@ -1311,7 +1317,7 @@ public class KafkaSupervisor implements Supervisor
 
       // Iterate the list of known tasks in this group and:
       //   1) Kill any tasks which are not "current" (have the partitions, starting offsets, and minimumMessageTime
-      //      (if applicable) in [taskGroups])
+      //      & maximumMessageTime (if applicable) in [taskGroups])
       //   2) Remove any tasks that have failed from the list
       //   3) If any task completed successfully, stop all the tasks in this group and move to the next group
 
@@ -1363,7 +1369,11 @@ public class KafkaSupervisor implements Supervisor
             DateTime.now().minus(ioConfig.getLateMessageRejectionPeriod().get())
         ) : Optional.<DateTime>absent());
 
-        taskGroups.put(groupId, new TaskGroup(generateStartingOffsetsForPartitionGroup(groupId), minimumMessageTime));
+        Optional<DateTime> maximumMessageTime = (ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? Optional.of(
+            DateTime.now().plus(ioConfig.getEarlyMessageRejectionPeriod().get())
+        ) : Optional.<DateTime>absent());
+
+        taskGroups.put(groupId, new TaskGroup(generateStartingOffsetsForPartitionGroup(groupId), minimumMessageTime, maximumMessageTime));
       }
     }
 
@@ -1402,6 +1412,7 @@ public class KafkaSupervisor implements Supervisor
 
     Map<String, String> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
     DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
+    DateTime maximumMessageTime = taskGroups.get(groupId).maximumMessageTime.orNull();
 
     KafkaIOConfig kafkaIOConfig = new KafkaIOConfig(
         sequenceName,
@@ -1411,6 +1422,7 @@ public class KafkaSupervisor implements Supervisor
         true,
         false,
         minimumMessageTime,
+        maximumMessageTime,
         ioConfig.isSkipOffsetGaps()
     );
 
@@ -1537,7 +1549,7 @@ public class KafkaSupervisor implements Supervisor
   /**
    * Compares the sequence name from the task with one generated for the task's group ID and returns false if they do
    * not match. The sequence name is generated from a hash of the dataSchema, tuningConfig, starting offsets, and the
-   * minimumMessageTime if set.
+   * minimumMessageTime or maximumMessageTime if set.
    */
   private boolean isTaskCurrent(int taskGroupId, String taskId)
   {

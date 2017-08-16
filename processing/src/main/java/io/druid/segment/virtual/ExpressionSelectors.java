@@ -55,7 +55,7 @@ public class ExpressionSelectors
     class ExpressionLongColumnSelector implements LongColumnSelector
     {
       @Override
-      public long get()
+      public long getLong()
       {
         final ExprEval exprEval = baseSelector.get();
         return exprEval.isNull() ? nullValue : exprEval.asLong();
@@ -80,7 +80,7 @@ public class ExpressionSelectors
     class ExpressionFloatColumnSelector implements FloatColumnSelector
     {
       @Override
-      public float get()
+      public float getFloat()
       {
         final ExprEval exprEval = baseSelector.get();
         return exprEval.isNull() ? nullValue : (float) exprEval.asDouble();
@@ -105,10 +105,10 @@ public class ExpressionSelectors
     class ExpressionDoubleColumnSelector implements DoubleColumnSelector
     {
       @Override
-      public double get()
+      public double getDouble()
       {
-        final Double number = baseSelector.get().asDouble();
-        return number != null ? number.doubleValue() : nullValue;
+        final ExprEval exprEval = baseSelector.get();
+        return exprEval.isNull() ? nullValue : exprEval.asDouble();
       }
 
       @Override

@@ -195,7 +195,7 @@ public class MultiSegmentScanQueryTest
         factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(
             factory.createRunner(segment0),
             factory.createRunner(segment1)
-        )).run(query, new HashMap<String, Object>()),
+        )).run(QueryPlus.wrap(query), new HashMap<String, Object>()),
         Lists.<ScanResultValue>newArrayList()
     );
     int totalCount = 0;
@@ -232,7 +232,7 @@ public class MultiSegmentScanQueryTest
     );
     ScanQuery query = newBuilder().build();
     List<ScanResultValue> results = Sequences.toList(
-        runner.run(query, new HashMap<String, Object>()),
+        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
         Lists.<ScanResultValue>newArrayList()
     );
     int totalCount = 0;

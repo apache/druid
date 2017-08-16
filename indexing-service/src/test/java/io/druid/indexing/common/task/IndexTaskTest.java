@@ -950,7 +950,7 @@ public class IndexTaskTest
             throw new UnsupportedOperationException();
           }
         }, null, null, null, null, null, null, null, null, null, null, jsonMapper, temporaryFolder.newFolder(),
-            indexIO, null, null, indexMergerV9
+            indexIO, null, null, indexMergerV9, null, null, null, null
         )
     );
 

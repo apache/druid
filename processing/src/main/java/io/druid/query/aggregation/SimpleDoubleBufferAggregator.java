@@ -53,7 +53,7 @@ public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
   @Override
   public final void aggregate(ByteBuffer buf, int position)
   {
-    aggregate(buf, position, selector.get());
+    aggregate(buf, position, selector.getDouble());
   }
 
   @Override

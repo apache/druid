@@ -22,8 +22,10 @@ package io.druid.emitter.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class KafkaEmitterConfig
@@ -46,14 +48,14 @@ public class KafkaEmitterConfig
       @JsonProperty("metric.topic") String metricTopic,
       @JsonProperty("alert.topic") String alertTopic,
       @JsonProperty("clusterName") String clusterName,
-      @JsonProperty("producer.config") Map<String, String> kafkaProducerConfig
+      @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig
   )
   {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
     this.metricTopic = Preconditions.checkNotNull(metricTopic, "metric.topic can not be null");
     this.alertTopic = Preconditions.checkNotNull(alertTopic, "alert.topic can not be null");
     this.clusterName = clusterName;
-    this.kafkaProducerConfig = kafkaProducerConfig;
+    this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
   }
 
   @JsonProperty
@@ -110,9 +112,7 @@ public class KafkaEmitterConfig
     if (getClusterName() != null ? !getClusterName().equals(that.getClusterName()) : that.getClusterName() != null) {
       return false;
     }
-    return getKafkaProducerConfig() != null
-           ? getKafkaProducerConfig().equals(that.getKafkaProducerConfig())
-           : that.getKafkaProducerConfig() == null;
+    return getKafkaProducerConfig().equals(that.getKafkaProducerConfig());
   }
 
   @Override
@@ -122,7 +122,7 @@ public class KafkaEmitterConfig
     result = 31 * result + getMetricTopic().hashCode();
     result = 31 * result + getAlertTopic().hashCode();
     result = 31 * result + (getClusterName() != null ? getClusterName().hashCode() : 0);
-    result = 31 * result + (getKafkaProducerConfig() != null ? getKafkaProducerConfig().hashCode() : 0);
+    result = 31 * result + getKafkaProducerConfig().hashCode();
     return result;
   }
 

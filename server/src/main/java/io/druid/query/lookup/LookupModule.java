@@ -32,12 +32,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Provides;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.guice.ExpressionModule;
+import io.druid.discovery.LookupNodeService;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
@@ -102,6 +105,13 @@ public class LookupModule implements DruidModule
         ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY,
         2 // 1 for "normal" operation and 1 for "emergency" or other
     );
+  }
+
+  @Provides
+  @LazySingleton
+  public LookupNodeService getLookupNodeService(LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig)
+  {
+    return new LookupNodeService(lookupListeningAnnouncerConfig.getLookupTier());
   }
 }
 

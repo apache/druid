@@ -106,7 +106,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     class IndexerLongColumnSelector implements LongColumnSelector
     {
       @Override
-      public long get()
+      public long getLong()
       {
         final Object[] dims = currEntry.getKey().getDims();
 
@@ -138,7 +138,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     class IndexerFloatColumnSelector implements FloatColumnSelector
     {
       @Override
-      public float get()
+      public float getFloat()
       {
         final Object[] dims = currEntry.getKey().getDims();
 
@@ -160,38 +160,6 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public ObjectColumnSelector makeObjectColumnSelector(
-      final DimensionSpec spec,
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerObjectColumnSelector implements ObjectColumnSelector
-    {
-      @Override
-      public Class classOfObject()
-      {
-        return Float.class;
-      }
-
-      @Override
-      public Object get()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return DimensionHandlerUtils.ZERO_FLOAT;
-        }
-
-        return dims[dimIndex];
-      }
-    }
-
-    return new IndexerObjectColumnSelector();
-  }
-
-  @Override
   public DoubleColumnSelector makeDoubleColumnSelector(
       IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
@@ -200,7 +168,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     class IndexerDoubleColumnSelector implements DoubleColumnSelector
     {
       @Override
-      public double get()
+      public double getDouble()
       {
         final Object[] dims = currEntry.getKey().getDims();
 

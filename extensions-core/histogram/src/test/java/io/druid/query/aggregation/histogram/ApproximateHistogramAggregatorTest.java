@@ -52,6 +52,7 @@ public class ApproximateHistogramAggregatorTest
     int position = 0;
 
     agg.init(buf, position);
+    //noinspection ForLoopReplaceableByForEach
     for (int i = 0; i < values.length; i++) {
       aggregateBuffer(selector, agg, buf, position);
     }

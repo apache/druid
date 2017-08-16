@@ -36,6 +36,7 @@ import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -261,7 +262,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQuery()
   {
     List<SegmentAnalysis> results = Sequences.toList(
-        runner1.run(testQuery, Maps.newHashMap()),
+        runner1.run(QueryPlus.wrap(testQuery), Maps.newHashMap()),
         Lists.<SegmentAnalysis>newArrayList()
     );
 
@@ -320,18 +321,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.ROLLUP)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.ROLLUP)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -389,18 +389,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -458,18 +457,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "quality_uniques")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "quality_uniques")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -580,7 +578,7 @@ public class SegmentMetadataQueryTest
 
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(query, Maps.newHashMap()),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -628,18 +626,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .analysisTypes()
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                  .analysisTypes()
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -691,18 +688,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -750,18 +746,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.TIMESTAMPSPEC)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.TIMESTAMPSPEC)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -809,18 +804,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.QUERYGRANULARITY)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.QUERYGRANULARITY)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -858,7 +852,7 @@ public class SegmentMetadataQueryTest
     TestHelper.assertExpectedObjects(
         ImmutableList.of(bySegmentResult, bySegmentResult),
         myRunner.run(
-            testQuery.withOverriddenContext(ImmutableMap.<String, Object>of("bySegment", true)),
+            QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.<String, Object>of("bySegment", true))),
             Maps.newHashMap()
         ),
         "failed SegmentMetadata bySegment query"

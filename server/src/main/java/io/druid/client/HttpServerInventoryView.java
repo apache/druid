@@ -40,6 +40,10 @@ import com.metamx.http.client.io.AppendableByteArrayInputStream;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import io.druid.concurrent.LifecycleLock;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeDiscovery;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
@@ -84,7 +88,7 @@ import java.util.concurrent.TimeUnit;
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
   private final EmittingLogger log = new EmittingLogger(HttpServerInventoryView.class);
-  private final DruidServerDiscovery serverDiscovery;
+  private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
@@ -106,8 +110,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   // to this queue again for next update.
   private final BlockingQueue<String> queue = new LinkedBlockingDeque<>();
 
-
-
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
   private final HttpServerInventoryViewConfig config;
@@ -117,7 +119,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       final @Json ObjectMapper jsonMapper,
       final @Smile ObjectMapper smileMapper,
       final @Global HttpClient httpClient,
-      final DruidServerDiscovery serverDiscovery,
+      final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
       final HttpServerInventoryViewConfig config,
       final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
@@ -125,7 +127,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   {
     this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
     this.smileMapper = smileMapper;
-    this.serverDiscovery = serverDiscovery;
+    this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     this.defaultFilter = defaultFilter;
     this.finalPredicate = defaultFilter;
     this.config = config;
@@ -180,36 +182,38 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             }
         );
 
-        serverDiscovery.registerListener(
-            new DruidServerDiscovery.Listener()
+        DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY);
+        druidNodeDiscovery.registerListener(
+            new DruidNodeDiscovery.Listener()
             {
+
               @Override
-              public void serverAdded(DruidServer server)
+              public void nodeAdded(DiscoveryDruidNode node)
               {
-                serverAddedOrUpdated(server);
+                serverAddedOrUpdated(toDruidServer(node));
               }
 
               @Override
-              public DruidServer serverUpdated(DruidServer oldServer, DruidServer newServer)
+              public void nodeRemoved(DiscoveryDruidNode node)
               {
-                return serverAddedOrUpdated(newServer);
+                serverRemoved(toDruidServer(node));
               }
 
-              @Override
-              public void serverRemoved(DruidServer server)
+              private DruidServer toDruidServer(DiscoveryDruidNode node)
               {
-                HttpServerInventoryView.this.serverRemoved(server);
-                runServerCallbacks(server);
-              }
 
-              @Override
-              public void initialized()
-              {
-                serverInventoryInitialized();
+                return new DruidServer(
+                    node.getDruidNode().getHostAndPortToUse(),
+                    node.getDruidNode().getHostAndPort(),
+                    node.getDruidNode().getHostAndTlsPort(),
+                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getMaxSize(),
+                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getType(),
+                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getTier(),
+                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getPriority()
+                );
               }
             }
         );
-        serverDiscovery.start();
 
         log.info("Started HttpServerInventoryView.");
         lifecycleLock.started();
@@ -229,8 +233,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
 
       log.info("Stopping HttpServerInventoryView.");
-
-      serverDiscovery.stop();
 
       if (executor != null) {
         executor.shutdownNow();
@@ -373,11 +375,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private void serverRemoved(DruidServer server)
   {
     servers.remove(server.getName());
-  }
-
-  public DruidServer serverUpdated(DruidServer oldServer, DruidServer newServer)
-  {
-    return serverAddedOrUpdated(newServer);
   }
 
   @Override
