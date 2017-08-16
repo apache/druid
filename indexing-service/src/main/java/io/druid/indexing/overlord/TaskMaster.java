@@ -24,7 +24,9 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.indexing.IndexingService;
 import io.druid.curator.discovery.ServiceAnnouncer;
+import io.druid.discovery.DruidLeaderSelector;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -38,15 +40,8 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
-import io.druid.server.initialization.IndexerZkConfig;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.leader.LeaderSelector;
-import org.apache.curator.framework.recipes.leader.LeaderSelectorListener;
-import org.apache.curator.framework.recipes.leader.Participant;
-import org.apache.curator.framework.state.ConnectionState;
 
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -54,15 +49,13 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class TaskMaster
 {
-  private final LeaderSelector leaderSelector;
+  private final DruidLeaderSelector overlordLeaderSelector;
   private final ReentrantLock giant = new ReentrantLock(true);
-  private final Condition mayBeStopped = giant.newCondition();
   private final TaskActionClientFactory taskActionClientFactory;
   private final SupervisorManager supervisorManager;
 
   private final AtomicReference<Lifecycle> leaderLifecycleRef = new AtomicReference<>(null);
 
-  private volatile boolean leading = false;
   private volatile TaskRunner taskRunner;
   private volatile TaskQueue taskQueue;
 
@@ -75,38 +68,35 @@ public class TaskMaster
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
       @Self final DruidNode selfNode,
-      final IndexerZkConfig zkPaths,
       final TaskRunnerFactory runnerFactory,
-      final CuratorFramework curator,
       final ServiceAnnouncer serviceAnnouncer,
       final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
-      final OverlordHelperManager overlordHelperManager
-  )
+      final OverlordHelperManager overlordHelperManager,
+      @IndexingService final DruidLeaderSelector overlordLeaderSelector
+      )
   {
     this.supervisorManager = supervisorManager;
     this.taskActionClientFactory = taskActionClientFactory;
 
+    this.overlordLeaderSelector = overlordLeaderSelector;
+
     final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
                            selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
 
-    this.leaderSelector = new LeaderSelector(
-        curator,
-        zkPaths.getLeaderLatchPath(),
-        new LeaderSelectorListener()
+    this.overlordLeaderSelector.registerListener(
+        new DruidLeaderSelector.Listener()
         {
           @Override
-          public void takeLeadership(CuratorFramework client) throws Exception
+          public void becomeLeader()
           {
             giant.lock();
 
-            try {
-              // Make sure the previous leadership cycle is really, really over.
-              stopLeading();
+            // I AM THE MASTER OF THE UNIVERSE.
+            log.info("By the power of Grayskull, I have the power!");
 
-              // I AM THE MASTER OF THE UNIVERSE.
-              log.info("By the power of Grayskull, I have the power!");
+            try {
               taskLockbox.syncFromStorage();
               taskRunner = runnerFactory.build();
               taskQueue = new TaskQueue(
@@ -146,24 +136,10 @@ public class TaskMaster
                     }
                   }
               );
-              try {
-                leaderLifecycle.start();
-                leading = true;
-                while (leading && !Thread.currentThread().isInterrupted()) {
-                  mayBeStopped.await();
-                }
-              }
-              catch (InterruptedException e) {
-                log.debug("Interrupted while waiting");
-                // Suppress so we can bow out gracefully
-              }
-              finally {
-                log.info("Bowing out!");
-                stopLeading();
-              }
+
+              leaderLifecycle.start();
             }
             catch (Exception e) {
-              log.makeAlert(e, "Failed to lead").emit();
               throw Throwables.propagate(e);
             }
             finally {
@@ -172,18 +148,21 @@ public class TaskMaster
           }
 
           @Override
-          public void stateChanged(CuratorFramework client, ConnectionState newState)
+          public void stopBeingLeader()
           {
-            if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
-              // disconnected from zk. assume leadership is gone
-              stopLeading();
+            giant.lock();
+            try {
+              final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
+              if (leaderLifecycle != null) {
+                leaderLifecycle.stop();
+              }
+            }
+            finally {
+              giant.unlock();
             }
           }
         }
     );
-
-    leaderSelector.setId(node.getHostAndPortToUse());
-    leaderSelector.autoRequeue();
   }
 
   /**
@@ -195,7 +174,7 @@ public class TaskMaster
     giant.lock();
 
     try {
-      leaderSelector.start();
+      overlordLeaderSelector.start();
     }
     finally {
       giant.unlock();
@@ -212,30 +191,7 @@ public class TaskMaster
     giant.lock();
 
     try {
-      leaderSelector.close();
-      stopLeading();
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  /**
-   * Relinquish leadership. May be called multiple times, even when not currently the leader.
-   */
-  private void stopLeading()
-  {
-    giant.lock();
-
-    try {
-      if (leading) {
-        leading = false;
-        mayBeStopped.signalAll();
-        final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
-        if (leaderLifecycle != null) {
-          leaderLifecycle.stop();
-        }
-      }
+      overlordLeaderSelector.stop();
     }
     finally {
       giant.unlock();
@@ -244,27 +200,17 @@ public class TaskMaster
 
   public boolean isLeader()
   {
-    return leading;
+    return overlordLeaderSelector.isLeader();
   }
 
   public String getCurrentLeader()
   {
-    try {
-      final Participant leader = leaderSelector.getLeader();
-      if (leader != null && leader.isLeader()) {
-        return leader.getId();
-      } else {
-        return null;
-      }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    return overlordLeaderSelector.getCurrentLeader();
   }
 
   public Optional<TaskRunner> getTaskRunner()
   {
-    if (leading) {
+    if (overlordLeaderSelector.isLeader()) {
       return Optional.of(taskRunner);
     } else {
       return Optional.absent();
@@ -273,7 +219,7 @@ public class TaskMaster
 
   public Optional<TaskQueue> getTaskQueue()
   {
-    if (leading) {
+    if (overlordLeaderSelector.isLeader()) {
       return Optional.of(taskQueue);
     } else {
       return Optional.absent();
@@ -282,7 +228,7 @@ public class TaskMaster
 
   public Optional<TaskActionClient> getTaskActionClient(Task task)
   {
-    if (leading) {
+    if (overlordLeaderSelector.isLeader()) {
       return Optional.of(taskActionClientFactory.create(task));
     } else {
       return Optional.absent();
@@ -291,7 +237,7 @@ public class TaskMaster
 
   public Optional<ScalingStats> getScalingStats()
   {
-    if (leading) {
+    if (overlordLeaderSelector.isLeader()) {
       return taskRunner.getScalingStats();
     } else {
       return Optional.absent();
@@ -300,7 +246,7 @@ public class TaskMaster
 
   public Optional<SupervisorManager> getSupervisorManager()
   {
-    if (leading) {
+    if (overlordLeaderSelector.isLeader()) {
       return Optional.of(supervisorManager);
     } else {
       return Optional.absent();

@@ -31,6 +31,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.concurrent.Execs;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
+import io.druid.discovery.DruidLeaderSelector;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -167,7 +168,6 @@ public class OverlordTest
         taskStorage,
         taskActionClientFactory,
         druidNode,
-        indexerZkConfig,
         new TaskRunnerFactory<MockTaskRunner>()
         {
           @Override
@@ -176,7 +176,6 @@ public class OverlordTest
             return new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
           }
         },
-        curator,
         new NoopServiceAnnouncer()
         {
           @Override
@@ -188,7 +187,8 @@ public class OverlordTest
         new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
         supervisorManager,
-        EasyMock.createNiceMock(OverlordHelperManager.class)
+        EasyMock.createNiceMock(OverlordHelperManager.class),
+        new TestDruidLeaderSelector()
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
@@ -424,6 +424,50 @@ public class OverlordTest
     public void start()
     {
       //Do nothing
+    }
+  }
+
+  private static class TestDruidLeaderSelector implements DruidLeaderSelector
+  {
+    private volatile Listener listener;
+    private volatile String leader;
+
+    @Override
+    public String getCurrentLeader()
+    {
+      return leader;
+    }
+
+    @Override
+    public boolean isLeader()
+    {
+      return leader != null;
+    }
+
+    @Override
+    public int localTerm()
+    {
+      return 0;
+    }
+
+    @Override
+    public void registerListener(Listener listener)
+    {
+      this.listener = listener;
+    }
+
+    @Override
+    public void start()
+    {
+      leader = "what:1234";
+      listener.becomeLeader();
+    }
+
+    @Override
+    public void stop()
+    {
+      leader = null;
+      listener.stopBeingLeader();
     }
   }
 }
