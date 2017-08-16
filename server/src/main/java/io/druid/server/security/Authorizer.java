@@ -58,10 +58,18 @@ public interface Authorizer
    */
   String getNamespace();
 
+  /**
+   * Authorizers are registered with an AuthorizerMapper. The AuthorizerMapper is lifecycle managed and will
+   * call start() on each of its registered Authorizers in the AuthorizerMapper's start() method.
+   */
   default void start()
   {
   }
 
+  /**
+   * Authorizers are registered with an AuthorizerMapper. The AuthorizerMapper is lifecycle managed and will
+   * call stop() on each of its registered Authorizers in the AuthorizerMapper's stop() method.
+   */
   default void stop()
   {
   }

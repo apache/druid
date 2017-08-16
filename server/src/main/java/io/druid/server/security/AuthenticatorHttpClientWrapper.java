@@ -21,10 +21,9 @@ package io.druid.server.security;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import com.metamx.http.client.HttpClient;
-import io.druid.java.util.common.ISE;
-
-import java.util.List;
 
 /**
  * Singleton utility object that creates escalated HttpClients using a configuration-specified Authenticator's
@@ -52,20 +51,11 @@ public class AuthenticatorHttpClientWrapper
           "Auth is enabled but no authenticators have been configured."
       );
 
-      List<Authenticator> authenticators = AuthenticationUtils.getAuthenticatorChainFromConfig(
-          authConfig.getAuthenticatorChain(),
-          injector
-      );
       String internalAuthenticatorName = authConfig.getInternalAuthenticator();
-      for (Authenticator authenticator : authenticators) {
-        if (authenticator.getTypeName().equals(internalAuthenticatorName)) {
-          internalAuthenticator = authenticator;
-          break;
-        }
-      }
-      if (internalAuthenticator == null) {
-        throw new ISE("Could not locate internal authenticator with type name: %s", internalAuthenticatorName);
-      }
+      internalAuthenticator = injector.getInstance(Key.get(
+          Authenticator.class,
+          Names.named(internalAuthenticatorName)
+      ));
     }
   }
 

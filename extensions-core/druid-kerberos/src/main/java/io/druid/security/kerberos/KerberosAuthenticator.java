@@ -106,12 +106,6 @@ public class KerberosAuthenticator implements Authenticator
   }
 
   @Override
-  public String getTypeName()
-  {
-    return "kerberos";
-  }
-
-  @Override
   public String getNamespace()
   {
     return authConfig.getNamespace();

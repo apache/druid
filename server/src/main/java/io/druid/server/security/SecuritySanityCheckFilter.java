@@ -40,19 +40,30 @@ public class SecuritySanityCheckFilter implements Filter
 {
   private static final Logger log = new Logger(SecuritySanityCheckFilter.class);
 
-  private final ObjectMapper jsonMapper;
+  private final String unauthorizedMessage;
 
   public SecuritySanityCheckFilter(
       ObjectMapper jsonMapper
   )
   {
-    this.jsonMapper = jsonMapper;
+    try {
+      QueryInterruptedException unauthorizedError = new QueryInterruptedException(
+          QueryInterruptedException.UNAUTHORIZED,
+          null,
+          null,
+          DruidNode.getDefaultHost()
+      );
+      unauthorizedError.setStackTrace(new StackTraceElement[0]);
+      this.unauthorizedMessage = jsonMapper.writeValueAsString(unauthorizedError);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException
   {
-
   }
 
   @Override
@@ -61,20 +72,13 @@ public class SecuritySanityCheckFilter implements Filter
   ) throws IOException, ServletException
   {
     HttpServletResponse httpResponse = (HttpServletResponse) response;
-    QueryInterruptedException unauthorizedError = new QueryInterruptedException(
-        QueryInterruptedException.UNAUTHORIZED,
-        null,
-        null,
-        DruidNode.getDefaultHost()
-    );
-    unauthorizedError.setStackTrace(new StackTraceElement[0]);
     OutputStream out = httpResponse.getOutputStream();
 
     // make sure the original request isn't trying to fake the auth token checks
     Boolean authInfoChecked = (Boolean) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED);
     String authToken = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
     if (authInfoChecked != null || authToken != null) {
-      sendJsonError(httpResponse, Response.SC_FORBIDDEN, jsonMapper.writeValueAsString(unauthorizedError), out);
+      sendJsonError(httpResponse, Response.SC_FORBIDDEN, unauthorizedMessage, out);
       out.close();
       return;
     }

@@ -59,12 +59,6 @@ public class NoopAuthenticator implements Authenticator
   }
 
   @Override
-  public String getTypeName()
-  {
-    return "noop";
-  }
-
-  @Override
   public String getNamespace()
   {
     return "noop";
