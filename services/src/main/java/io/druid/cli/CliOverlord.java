@@ -32,7 +32,9 @@ import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
+import io.druid.client.indexing.IndexingService;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.IndexingServiceTaskLogsModule;
@@ -182,6 +184,14 @@ public class CliOverlord extends ServerRunnable
             if (standalone) {
               LifecycleModule.register(binder, Server.class);
             }
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(IndexingService.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, IndexingService.class));
           }
 
           private void configureTaskStorage(Binder binder)

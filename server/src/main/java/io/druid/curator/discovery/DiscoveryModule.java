@@ -30,12 +30,14 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.KeyHolder;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.PolyBind;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.CuratorDiscoveryConfig;
@@ -73,6 +75,9 @@ import java.util.concurrent.ThreadFactory;
 public class DiscoveryModule implements Module
 {
   private static final String NAME = "DiscoveryModule:internal";
+
+  private static final String INTERNAL_DISCOVERY_PROP = "druid.discovery.type";
+  private static final String CURATOR_KEY = "curator";
 
   /**
    * Requests that the un-annotated DruidNode instance be injected and published as part of the lifecycle.
@@ -146,6 +151,25 @@ public class DiscoveryModule implements Module
     binder.bind(ServiceAnnouncer.class)
           .to(Key.get(CuratorServiceAnnouncer.class, Names.named(NAME)))
           .in(LazySingleton.class);
+
+    // internal discovery bindings.
+    PolyBind.createChoiceWithDefault(
+        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeAnnouncer.class), CURATOR_KEY
+    );
+
+    PolyBind.createChoiceWithDefault(
+        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeDiscoveryProvider.class), CURATOR_KEY
+    );
+
+    PolyBind.optionBinder(binder, Key.get(DruidNodeDiscoveryProvider.class))
+            .addBinding(CURATOR_KEY)
+            .to(CuratorDruidNodeDiscoveryProvider.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(DruidNodeAnnouncer.class))
+            .addBinding(CURATOR_KEY)
+            .to(CuratorDruidNodeAnnouncer.class)
+            .in(LazySingleton.class);
   }
 
   @Provides

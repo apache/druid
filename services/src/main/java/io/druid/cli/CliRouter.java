@@ -21,6 +21,7 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
@@ -29,6 +30,7 @@ import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -109,6 +111,14 @@ public class CliRouter extends ServerRunnable
             LifecycleModule.register(binder, RouterResource.class);
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
 
           @Provides

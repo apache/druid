@@ -90,6 +90,11 @@ public class ZkPathsConfig
     return (null == connectorPath) ? defaultPath("connector") : connectorPath;
   }
 
+  public String getInternalDiscoveryPath()
+  {
+    return defaultPath("internal-discovery");
+  }
+
   public String defaultPath(final String subPath)
   {
     return ZKPaths.makePath(getBase(), subPath);
