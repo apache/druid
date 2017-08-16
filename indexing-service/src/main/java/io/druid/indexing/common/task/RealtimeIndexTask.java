@@ -33,6 +33,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -80,6 +81,8 @@ import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
 {
+  public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
+
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
   private final static Random random = new Random();
 
@@ -326,12 +329,15 @@ public class RealtimeIndexTask extends AbstractTask
     Supplier<Committer> committerSupplier = null;
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
+    LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
+                                          toolbox.getLookupNodeService() :
+                                          new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
     DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
         toolbox.getDruidNode(),
         DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
-            toolbox.getLookupNodeService().getName(), toolbox.getLookupNodeService()
+            lookupNodeService.getName(), lookupNodeService
         )
     );
 
