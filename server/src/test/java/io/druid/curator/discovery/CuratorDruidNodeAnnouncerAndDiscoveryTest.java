@@ -159,11 +159,11 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
         }
     );
 
-    while (!ImmutableSet.of(node1).equals(coordNodes)) {
+    while (!checkNodes(ImmutableSet.of(node1), coordNodes)) {
       Thread.sleep(100);
     }
 
-    while (!ImmutableSet.of(node3).equals(overlordNodes)) {
+    while (!checkNodes(ImmutableSet.of(node3), overlordNodes)) {
       Thread.sleep(100);
     }
 
@@ -178,11 +178,11 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    while (!ImmutableSet.of(node1, node2).equals(coordNodes)) {
+    while (!checkNodes(ImmutableSet.of(node1, node2), coordNodes)) {
       Thread.sleep(100);
     }
 
-    while (!ImmutableSet.of(node3, node4).equals(overlordNodes)) {
+    while (!checkNodes(ImmutableSet.of(node3, node4), overlordNodes)) {
       Thread.sleep(100);
     }
 
@@ -199,11 +199,11 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    while (!ImmutableSet.of().equals(coordNodes)) {
+    while (!coordNodes.isEmpty()) {
       Thread.sleep(100);
     }
 
-    while (!ImmutableSet.of().equals(overlordNodes)) {
+    while (!overlordNodes.isEmpty()) {
       Thread.sleep(100);
     }
 

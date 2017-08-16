@@ -109,9 +109,8 @@ public class DataNodeService extends DruidService
     return "DataNodeService{" +
            "tier='" + tier + '\'' +
            ", maxSize=" + maxSize +
-           ", type='" + type + '\'' +
+           ", type=" + type +
            ", priority=" + priority +
-           ", " + super.toString() +
            '}';
   }
 }

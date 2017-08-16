@@ -57,7 +57,7 @@ public abstract class DruidNodeDiscoveryProvider
       NODE_TYPE_MM
   );
 
-  public static final Map<String, Set<String>> SERVICE_TO_NODE_TYPES = ImmutableMap.of(
+  private static final Map<String, Set<String>> SERVICE_TO_NODE_TYPES = ImmutableMap.of(
       LookupNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_BROKER, NODE_TYPE_HISTORICAL, NODE_TYPE_PEON),
       DataNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_HISTORICAL, NODE_TYPE_PEON),
       WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_MM)
@@ -98,7 +98,7 @@ public abstract class DruidNodeDiscoveryProvider
     private final String service;
     private final Map<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
 
-    private final List<Listener> listeners = new ArrayList();
+    private final List<Listener> listeners = new ArrayList<>();
 
     ServiceListener(String service)
     {
