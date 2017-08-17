@@ -57,8 +57,8 @@ public interface AggregateCombiner extends ColumnValueSelector
    * object returned from {@link io.druid.segment.ObjectColumnSelector#get()} must not be modified, and must not become
    * a subject for modification during subsequent combine() calls.
    *
-   * Since the state of AggregateCombiner is underfined before {@link #reset} is ever called on it, the effects of calling
-   * combine() on an AggregateCombiner instance are also underfined in this case.
+   * Since the state of AggregateCombiner is undefined before {@link #reset} is ever called on it, the effects of calling
+   * combine() on an AggregateCombiner instance are also undefined in this case.
    *
    * @see AggregatorFactory#combine
    */
