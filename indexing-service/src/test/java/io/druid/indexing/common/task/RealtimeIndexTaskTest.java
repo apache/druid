@@ -46,6 +46,9 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -104,7 +107,9 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
+import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
@@ -1048,7 +1053,11 @@ public class RealtimeIndexTaskTest
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
         new CacheConfig(),
-        testUtils.getTestIndexMergerV9()
+        testUtils.getTestIndexMergerV9(),
+        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
+        EasyMock.createNiceMock(DruidNode.class),
+        new LookupNodeService("tier"),
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
     );
 
     return toolboxFactory.build(task);

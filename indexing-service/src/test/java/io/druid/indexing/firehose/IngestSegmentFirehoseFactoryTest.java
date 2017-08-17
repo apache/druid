@@ -292,7 +292,11 @@ public class IngestSegmentFirehoseFactoryTest
         INDEX_IO,
         null,
         null,
-        INDEX_MERGER_V9
+        INDEX_MERGER_V9,
+        null,
+        null,
+        null,
+        null
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(

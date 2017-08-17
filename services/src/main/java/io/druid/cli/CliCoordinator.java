@@ -21,16 +21,19 @@ package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
+import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ConditionalMultibind;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
@@ -58,6 +61,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
+import io.druid.server.http.ClusterResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
@@ -182,6 +186,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, MetadataResource.class);
             Jerseys.addResource(binder, IntervalsResource.class);
             Jerseys.addResource(binder, LookupCoordinatorResource.class);
+            Jerseys.addResource(binder, ClusterResource.class);
 
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DatasourcesResource.class);
@@ -204,6 +209,14 @@ public class CliCoordinator extends ServerRunnable
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentKiller.class
             );
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(Coordinator.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, Coordinator.class));
           }
 
           @Provides
