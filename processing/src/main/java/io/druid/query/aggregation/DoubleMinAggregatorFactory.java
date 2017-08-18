@@ -28,7 +28,6 @@ import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -62,12 +61,6 @@ public class DoubleMinAggregatorFactory extends SimpleDoubleAggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new DoubleMinBufferAggregator(getDoubleColumnSelector(metricFactory, Double.POSITIVE_INFINITY));
-  }
-
-  @Override
-  public Comparator getComparator()
-  {
-    return DoubleMinAggregator.COMPARATOR;
   }
 
   @Override
