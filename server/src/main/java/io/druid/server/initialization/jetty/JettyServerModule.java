@@ -227,6 +227,7 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     server.setConnectors(connectors);
+    server.setStopTimeout(config.getGracefulShutdownTimeout().getMillis());
 
     return server;
   }
