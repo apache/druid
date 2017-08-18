@@ -167,6 +167,8 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private final Object lock = new Object();
 
+    private boolean cacheInitialized;
+
     NodeTypeWatcher(
         ExecutorService listenerExecutor,
         CuratorFramework curatorFramework,
@@ -198,7 +200,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     }
 
     @Override
-    public void registerListener(DruidNodeDiscovery.Listener listener)
+    public void registerListener(Listener listener)
     {
       synchronized (lock) {
         for (DiscoveryDruidNode node : nodes.values()) {
@@ -209,6 +211,16 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               "Exception occured in nodeAdded(node=[%s]) in listener [%s].", node, listener
           );
         }
+
+        if (cacheInitialized) {
+          safeSchedule(
+              () -> {
+                listener.initialized();
+              },
+              "Exception occured in initialized() in listener [%s].", listener
+          );
+        }
+
         nodeListeners.add(listener);
       }
     }
@@ -273,6 +285,27 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
               break;
             }
+            case INITIALIZED: {
+              if (cacheInitialized) {
+                log.warn("cache is already initialized. ignoring [%s] event, nodeType [%s].", event.getType(), nodeType);
+                return;
+              }
+
+              log.info("Received INITIALIZED in node watcher for type [%s].", nodeType);
+
+              cacheInitialized = true;
+
+              for (Listener l : nodeListeners) {
+                safeSchedule(
+                    () -> {
+                      l.initialized();
+                    },
+                    "Exception occured in initialized() in listener [%s].", l
+                );
+              }
+
+              break;
+            }
             default: {
               log.error("Ignored event type [%s] for nodeType [%s] watcher.", event.getType(), nodeType);
             }
@@ -286,7 +319,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private void safeSchedule(
         Runnable runnable,
-        String errMsgFormat, Object ... args
+        String errMsgFormat, Object... args
     )
     {
       listenerExecutor.submit(() -> {
@@ -341,7 +374,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         cache.getListenable().addListener(
             (client, event) -> handleChildEvent(client, event)
         );
-        cache.start();
+        cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
       }
       catch (Exception ex) {
         throw Throwables.propagate(ex);

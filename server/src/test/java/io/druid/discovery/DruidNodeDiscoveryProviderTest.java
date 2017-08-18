@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
@@ -43,6 +44,7 @@ public class DruidNodeDiscoveryProviderTest
 
     DruidNodeDiscovery dataNodeDiscovery = provider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY);
     Set<DiscoveryDruidNode> dataNodes = new HashSet<>();
+    AtomicBoolean dataNodeListenerInitialized = new AtomicBoolean(false);
     dataNodeDiscovery.registerListener(
         new DruidNodeDiscovery.Listener()
         {
@@ -57,11 +59,19 @@ public class DruidNodeDiscoveryProviderTest
           {
             dataNodes.remove(node);
           }
+
+          @Override
+          public void initialized()
+          {
+            dataNodeListenerInitialized.set(true);
+          }
         }
     );
+    Assert.assertTrue(dataNodeListenerInitialized.get());
 
     DruidNodeDiscovery lookupNodeDiscovery = provider.getForService(LookupNodeService.DISCOVERY_SERVICE_KEY);
     Set<DiscoveryDruidNode> lookupNodes = new HashSet<>();
+    AtomicBoolean lookupNodeListenerInitialized = new AtomicBoolean(false);
     lookupNodeDiscovery.registerListener(
         new DruidNodeDiscovery.Listener()
         {
@@ -76,8 +86,15 @@ public class DruidNodeDiscoveryProviderTest
           {
             lookupNodes.remove(node);
           }
+
+          @Override
+          public void initialized()
+          {
+            lookupNodeListenerInitialized.set(true);
+          }
         }
     );
+    Assert.assertTrue(dataNodeListenerInitialized.get());
 
     Assert.assertTrue(dataNodes.isEmpty());
     Assert.assertTrue(dataNodes.isEmpty());
@@ -197,6 +214,7 @@ public class DruidNodeDiscoveryProviderTest
         public void registerListener(Listener listener)
         {
           TestDruidNodeDiscoveryProvider.this.listeners.add(listener);
+          listener.initialized();
         }
       };
     }

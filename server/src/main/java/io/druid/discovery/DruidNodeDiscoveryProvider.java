@@ -79,11 +79,11 @@ public abstract class DruidNodeDiscoveryProvider
 
     if (serviceDiscovery == null) {
       Set<String> nodeTypesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(serviceName);
-      if (nodeTypesToWatch == null) {
+      if (nodeTypesToWatch == null || nodeTypesToWatch.isEmpty()) {
         throw new IAE("Unknown service [%s].", serviceName);
       }
 
-      serviceDiscovery = new ServiceDruidNodeDiscovery(serviceName);
+      serviceDiscovery = new ServiceDruidNodeDiscovery(serviceName, nodeTypesToWatch.size());
       DruidNodeDiscovery.Listener nodeListener = serviceDiscovery.serviceNodeListener();
       for (String nodeType : nodeTypesToWatch) {
         getForNodeType(nodeType).registerListener(nodeListener);
@@ -103,9 +103,12 @@ public abstract class DruidNodeDiscoveryProvider
 
     private final Object lock = new Object();
 
-    ServiceDruidNodeDiscovery(String service)
+    private int cacheInitializationMark;
+
+    ServiceDruidNodeDiscovery(String service, int cacheInitializationMark)
     {
       this.service = service;
+      this.cacheInitializationMark = cacheInitializationMark;
     }
 
     @Override
@@ -121,6 +124,11 @@ public abstract class DruidNodeDiscoveryProvider
         for (DiscoveryDruidNode node : nodes.values()) {
           listener.nodeAdded(node);
         }
+
+        if (cacheInitializationMark == 0) {
+          listener.initialized();
+        }
+
         listeners.add(listener);
       }
     }
@@ -163,6 +171,25 @@ public abstract class DruidNodeDiscoveryProvider
             }
           } else {
             log.warn("Node[%s] disappeared but was unknown for service listener [%s].", node, service);
+          }
+        }
+      }
+
+      @Override
+      public void initialized()
+      {
+        synchronized (lock) {
+          if (cacheInitializationMark == 0) {
+            log.warn("cacheInitializationMark already reached 0. ignoring event in listener[%s].", service);
+            return;
+          }
+
+          cacheInitializationMark--;
+
+          if (cacheInitializationMark == 0) {
+            for (DruidNodeDiscovery.Listener l : listeners) {
+              l.initialized();
+            }
           }
         }
       }
