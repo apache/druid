@@ -51,6 +51,10 @@ public class ServerConfig
   @JsonProperty
   private boolean tls = false;
 
+  @JsonProperty
+  @NotNull
+  private Period gracefulShutdownTimeout = new Period("PT5s");
+
   public int getNumThreads()
   {
     return numThreads;
@@ -81,6 +85,11 @@ public class ServerConfig
     return tls;
   }
 
+  public Period getGracefulShutdownTimeout()
+  {
+    return gracefulShutdownTimeout;
+  }
+
   @Override
   public String toString()
   {
@@ -91,6 +100,7 @@ public class ServerConfig
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
            ", plaintext=" + plaintext +
            ", tls=" + tls +
+           ", gracefulStopTimeout=" + gracefulShutdownTimeout +
            '}';
   }
 }
