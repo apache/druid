@@ -202,19 +202,12 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     {
       synchronized (lock) {
         for (DiscoveryDruidNode node : nodes.values()) {
-          listenerExecutor.submit(() -> {
-            try {
-              listener.nodeAdded(node);
-            }
-            catch (Exception ex) {
-              log.error(
-                  ex,
-                  "Exception occured in DiscoveryDruidNode.nodeAdded(node=[%s]) in listener [%s].",
-                  node,
-                  listener
-              );
-            }
-          });
+          safeSchedule(
+              () -> {
+                listener.nodeAdded(node);
+              },
+              "Exception occured in nodeAdded(node=[%s]) in listener [%s].", node, listener
+          );
         }
         nodeListeners.add(listener);
       }
@@ -291,57 +284,54 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       }
     }
 
+    private void safeSchedule(
+        Runnable runnable,
+        String errMsgFormat, Object ... args
+    )
+    {
+      listenerExecutor.submit(() -> {
+        try {
+          runnable.run();
+        }
+        catch (Exception ex) {
+          log.error(errMsgFormat, args);
+        }
+      });
+    }
+
     private void addNode(DiscoveryDruidNode druidNode)
     {
-      synchronized (lock) {
-        DiscoveryDruidNode prev = nodes.putIfAbsent(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
-        if (prev == null) {
-          for (DruidNodeDiscovery.Listener l : nodeListeners) {
-            listenerExecutor.submit(() -> {
-              try {
+      DiscoveryDruidNode prev = nodes.putIfAbsent(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
+      if (prev == null) {
+        for (Listener l : nodeListeners) {
+          safeSchedule(
+              () -> {
                 l.nodeAdded(druidNode);
-              }
-              catch (Exception ex) {
-                log.error(
-                    ex,
-                    "Exception occured in DiscoveryDruidNode.nodeAdded(node=[%s]) in listener [%s].",
-                    druidNode,
-                    l
-                );
-              }
-            });
-          }
-        } else {
-          log.warn("Node[%s] discovered but existed already [%s].", druidNode, prev);
+              },
+              "Exception occured in nodeAdded(node=[%s]) in listener [%s].", druidNode, l
+          );
         }
+      } else {
+        log.warn("Node[%s] discovered but existed already [%s].", druidNode, prev);
       }
     }
 
     private void removeNode(DiscoveryDruidNode druidNode)
     {
-      synchronized (lock) {
-        DiscoveryDruidNode prev = nodes.remove(druidNode.getDruidNode().getHostAndPortToUse());
+      DiscoveryDruidNode prev = nodes.remove(druidNode.getDruidNode().getHostAndPortToUse());
 
-        if (prev == null) {
-          log.warn("Noticed disappearance of unknown druid node [%s:%s].", druidNode.getNodeType(), druidNode);
-          return;
-        }
+      if (prev == null) {
+        log.warn("Noticed disappearance of unknown druid node [%s:%s].", druidNode.getNodeType(), druidNode);
+        return;
+      }
 
-        for (DruidNodeDiscovery.Listener l : nodeListeners) {
-          listenerExecutor.submit(() -> {
-            try {
+      for (Listener l : nodeListeners) {
+        safeSchedule(
+            () -> {
               l.nodeRemoved(druidNode);
-            }
-            catch (Exception ex) {
-              log.error(
-                  ex,
-                  "Exception occured in DiscoveryDruidNode.nodeRemoved(node=[%s]) in listener [%s].",
-                  druidNode,
-                  l
-              );
-            }
-          });
-        }
+            },
+            "Exception occured in nodeRemoved(node=[%s]) in listener [%s].", druidNode, l
+        );
       }
     }
 
