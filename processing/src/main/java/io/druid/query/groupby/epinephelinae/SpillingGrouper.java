@@ -134,7 +134,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   {
     final AggregateResult result = grouper.aggregate(key, keyHash);
 
-    if (result.isOk() || temporaryStorage.maxSize() <= 0 || !spillingAllowed) {
+    if (result.isOk() || !spillingAllowed || temporaryStorage.maxSize() <= 0) {
       return result;
     } else {
       // Warning: this can potentially block up a processing thread for a while.

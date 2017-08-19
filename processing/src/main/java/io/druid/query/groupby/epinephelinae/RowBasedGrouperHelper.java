@@ -34,6 +34,7 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import io.druid.collections.ResourceHolder;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
@@ -104,6 +105,7 @@ public class RowBasedGrouperHelper
         rawInputRowSignature,
         config,
         bufferSupplier,
+        null,
         SINGLE_THREAD_CONCURRENCY_HINT,
         temporaryStorage,
         spillMapper,
@@ -126,6 +128,7 @@ public class RowBasedGrouperHelper
       final Map<String, ValueType> rawInputRowSignature,
       final GroupByQueryConfig config,
       final Supplier<ByteBuffer> bufferSupplier,
+      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
@@ -191,6 +194,7 @@ public class RowBasedGrouperHelper
     } else {
       grouper = new ConcurrentGrouper<>(
           bufferSupplier,
+          combineBufferSupplier,
           keySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,
@@ -205,7 +209,8 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt
+          queryTimeoutAt,
+          config.isForceSingleThreadedCombine()
       );
     }
 
@@ -997,14 +1002,16 @@ public class RowBasedGrouperHelper
     public Grouper.BufferComparator bufferComparator()
     {
       if (sortableIds == null) {
-        Map<String, Integer> sortedMap = Maps.newTreeMap();
-        for (int id = 0; id < dictionary.size(); id++) {
-          sortedMap.put(dictionary.get(id), id);
+        final int dictionarySize = dictionary.size();
+        final Pair<String, Integer>[] dictAndIds = new Pair[dictionarySize];
+        for (int id = 0; id < dictionarySize; id++) {
+          dictAndIds[id] = new Pair<>(dictionary.get(id), id);
         }
-        sortableIds = new int[dictionary.size()];
-        int index = 0;
-        for (final Integer id : sortedMap.values()) {
-          sortableIds[id] = index++;
+        Arrays.sort(dictAndIds, Comparator.comparing(pair -> pair.lhs));
+
+        sortableIds = new int[dictionarySize];
+        for (int i = 0; i < dictionarySize; i++) {
+          sortableIds[dictAndIds[i].rhs] = i;
         }
       }
 

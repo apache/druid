@@ -336,6 +336,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryWatcher,
         queryRunners,
         processingConfig.getNumThreads(),
+        bufferPool,
         mergeBufferPool,
         spillMapper,
         processingConfig.getTmpDir()

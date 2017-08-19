@@ -26,13 +26,28 @@ import com.google.common.base.Suppliers;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,6 +55,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,6 +72,9 @@ import java.util.stream.Collectors;
  */
 public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 {
+  private static final Logger LOG = new Logger(ConcurrentGrouper.class);
+  private static final int MINIMUM_COMBINE_DEGREE = 2;
+
   private final List<SpillingGrouper<KeyType>> groupers;
   private final ThreadLocal<SpillingGrouper<KeyType>> threadLocalGrouper;
   private final AtomicInteger threadNumber = new AtomicInteger();
@@ -63,6 +82,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private volatile boolean closed = false;
 
   private final Supplier<ByteBuffer> bufferSupplier;
+  private final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier;
   private final ColumnSelectorFactory columnSelectorFactory;
   private final AggregatorFactory[] aggregatorFactories;
   private final int bufferGrouperMaxSize;
@@ -79,11 +99,13 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final int priority;
   private final boolean hasQueryTimeout;
   private final long queryTimeoutAt;
+  private final boolean forceSingleThreadedCombine;
 
   private volatile boolean initialized = false;
 
   public ConcurrentGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
+      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
@@ -98,7 +120,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final ListeningExecutorService grouperSorter,
       final int priority,
       final boolean hasQueryTimeout,
-      final long queryTimeoutAt
+      final long queryTimeoutAt,
+      final boolean forceSingleThreadedCombine
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -114,6 +137,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     };
 
     this.bufferSupplier = bufferSupplier;
+    this.combineBufferSupplier = combineBufferSupplier;
     this.columnSelectorFactory = columnSelectorFactory;
     this.aggregatorFactories = aggregatorFactories;
     this.bufferGrouperMaxSize = bufferGrouperMaxSize;
@@ -130,6 +154,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     this.priority = priority;
     this.hasQueryTimeout = hasQueryTimeout;
     this.queryTimeoutAt = queryTimeoutAt;
+    this.forceSingleThreadedCombine = forceSingleThreadedCombine;
   }
 
   @Override
@@ -142,11 +167,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
           final int sliceSize = (buffer.capacity() / concurrencyHint);
 
           for (int i = 0; i < concurrencyHint; i++) {
-            final ByteBuffer slice = buffer.duplicate();
-            slice.position(sliceSize * i);
-            slice.limit(slice.position() + sliceSize);
+            final ByteBuffer slice = getSlice(buffer, sliceSize, i);
             final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
-                Suppliers.ofInstance(slice.slice()),
+                Suppliers.ofInstance(slice),
                 keySerdeFactory,
                 columnSelectorFactory,
                 aggregatorFactories,
@@ -221,9 +244,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
 
     for (Grouper<KeyType> grouper : groupers) {
-      synchronized (grouper) {
-        grouper.reset();
-      }
+      grouper.reset();
     }
   }
 
@@ -238,13 +259,21 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       throw new ISE("Grouper is closed");
     }
 
-    return Groupers.mergeIterators(
-        sorted && isParallelSortAvailable() ? parallelSortAndGetGroupersIterator() : getGroupersIterator(sorted),
-        sorted ? keyObjComparator : null
-    );
+    final List<Iterator<Entry<KeyType>>> sortedIterators = sorted && isParallelizable() ?
+                                                           parallelSortAndGetGroupersIterator() :
+                                                           getGroupersIterator(sorted);
+
+    if (!forceSingleThreadedCombine && sorted && spilling && isParallelizable()) {
+      // Parallel combine is used only when data are spilled. This is because ConcurrentGrouper uses two different modes
+      // depending on data are spilled or not. If data is not spilled, all inputs are completely aggregated and no more
+      // aggregation is required.
+      return parallelCombine(sortedIterators);
+    } else {
+      return Groupers.mergeIterators(sortedIterators, sorted ? keyObjComparator : null);
+    }
   }
 
-  private boolean isParallelSortAvailable()
+  private boolean isParallelizable()
   {
     return concurrencyHint > 1;
   }
@@ -292,19 +321,381 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                    .collect(Collectors.toList());
   }
 
+  /**
+   * Build a combining tree for the input iterators which combine input entries asynchronously.  This method is called
+   * when data are spilled and thus streaming combine is preferred to avoid too many disk accesses.
+   *
+   * @param sortedIterators sorted iterators
+   *
+   * @return an iterator of the root grouper of the combining tree
+   */
+  private Iterator<Entry<KeyType>> parallelCombine(List<Iterator<Entry<KeyType>>> sortedIterators)
+  {
+    // CombineBuffer is initialized when this method is called
+    final ResourceHolder<ByteBuffer> combineBufferHolder = combineBufferSupplier.get();
+    final ByteBuffer combineBuffer = combineBufferHolder.get();
+    final AggregatorFactory[] combiningFactories = new AggregatorFactory[aggregatorFactories.length];
+    for (int i = 0; i < aggregatorFactories.length; i++) {
+      combiningFactories[i] = aggregatorFactories[i].getCombiningFactory();
+    }
+    final int minimumRequiredBufferCapacity = StreamingMergeSortedGrouper.requiredBufferCapacity(
+        keySerdeFactory.factorize(),
+        combiningFactories
+    );
+    final Pair<Integer, Integer> degreeAndBufferNum = findCombineDegreeAndNumBuffers(
+        combineBuffer,
+        minimumRequiredBufferCapacity,
+        concurrencyHint,
+        sortedIterators.size()
+    );
+
+    if (degreeAndBufferNum == null) {
+      throw new ISE("Cannot find a proper combine degree");
+    }
+
+    final int combineDegree = degreeAndBufferNum.lhs;
+    final int bufferNum = degreeAndBufferNum.rhs;
+    final int sliceSize = combineBuffer.capacity() / bufferNum;
+
+    final List<ByteBuffer> slices = new ArrayList<>(bufferNum);
+    for (int i = 0; i < bufferNum; i++) {
+      slices.add(getSlice(combineBuffer, sliceSize, i));
+    }
+
+    final Supplier<ByteBuffer> bufferSupplier = new Supplier<ByteBuffer>()
+    {
+      private int i = 0;
+
+      @Override
+      public ByteBuffer get()
+      {
+        if (i < slices.size()) {
+          return slices.get(i++);
+        } else {
+          throw new ISE("Requested number of buffer slices exceeds the planned one");
+        }
+      }
+    };
+
+    final List<Future> combineFutures = new ArrayList<>(bufferNum);
+    final Iterator<Entry<KeyType>> combinedIterator = buildCombineTree(
+        sortedIterators,
+        bufferSupplier,
+        combiningFactories,
+        combineDegree,
+        combineFutures
+    );
+
+    return new Iterator<Entry<KeyType>>()
+    {
+      private boolean closed;
+
+      @Override
+      public boolean hasNext()
+      {
+        if (!combinedIterator.hasNext()) {
+          if (!closed) {
+            combineBufferHolder.close();
+            closed = true;
+
+            for (Future future : combineFutures) {
+              try {
+                // futures should be done before reaching here and throw exceptions if they failed
+                future.get();
+              }
+              catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+              }
+            }
+          }
+          return false;
+        }
+        return true;
+      }
+
+      @Override
+      public Entry<KeyType> next()
+      {
+        return combinedIterator.next();
+      }
+    };
+  }
+
+  /**
+   * Find a minimum size of the buffer slice and corresponding combining degree and number of slices.  Note that each
+   * node in the combining tree is executed by different threads.  This method assumes that higher degree of parallelism
+   * can exploit better performance and find such a shape of the combining tree.
+   *
+   * @param combineBuffer                 entire buffer used for combining tree
+   * @param requiredMinimumBufferCapacity minimum buffer capacity for {@link StreamingMergeSortedGrouper}
+   * @param concurrencyHint               available degree of parallelism
+   * @param maxDegree                     maximum degree
+   *
+   * @return a pair of degree and number of buffers if found. Otherwise null.
+   */
+  @Nullable
+  private static Pair<Integer, Integer> findCombineDegreeAndNumBuffers(
+      ByteBuffer combineBuffer,
+      int requiredMinimumBufferCapacity,
+      int concurrencyHint,
+      int maxDegree
+  )
+  {
+    for (int degree = MINIMUM_COMBINE_DEGREE; degree <= maxDegree; degree++) {
+      // the number of available combine nodes is concurrencyHint because it's the max concurrency and we don't want to
+      // parallelize behind that.
+      final int requiredBufferNum = computeRequiredBufferNum(concurrencyHint, degree);
+      final int expectedSliceSize = combineBuffer.capacity() / requiredBufferNum;
+      if (expectedSliceSize > requiredMinimumBufferCapacity) {
+        return Pair.of(degree, requiredBufferNum);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Recursively compute number of required buffers in a top-down manner.
+   *
+   * @param totalNumNodes total number of descendent nodes
+   * @param degree        degree
+   *
+   * @return minimum number of buffers required for combining tree
+   */
+  private static int computeRequiredBufferNum(int totalNumNodes, int degree)
+  {
+    if (totalNumNodes > degree) {
+      final int numNodesPerChild = (totalNumNodes + degree - 1) / degree; // ceiling
+      int sum = 1; // count for the current node
+      for (int i = 0; i < degree; i++) {
+        // further compute for child nodes
+        sum += computeRequiredBufferNum(Math.min(numNodesPerChild, totalNumNodes - i * numNodesPerChild), degree);
+      }
+
+      return sum;
+    } else {
+      return 1;
+    }
+  }
+
+  /**
+   * Recursively build a combining tree in a top-down manner.
+   *
+   * @param sortedIterators    sorted iterators
+   * @param bufferSupplier     combining buffer supplier
+   * @param combiningFactories array of combining aggregator factories
+   * @param combineDegree      combining degree
+   *
+   * @return an iterator of the root of the combining tree
+   */
+  private Iterator<Entry<KeyType>> buildCombineTree(
+      List<Iterator<Entry<KeyType>>> sortedIterators,
+      Supplier<ByteBuffer> bufferSupplier,
+      AggregatorFactory[] combiningFactories,
+      int combineDegree,
+      List<Future> combineFutures
+  )
+  {
+    final int numIterators = sortedIterators.size();
+    if (numIterators > combineDegree) {
+      final int iteratorsPerChild = (numIterators + combineDegree - 1) / combineDegree; // ceiling
+      final List<Iterator<Entry<KeyType>>> childIterators = new ArrayList<>();
+      for (int i = 0; i < combineDegree; i++) {
+        childIterators.add(
+            buildCombineTree(
+                sortedIterators.subList(i * iteratorsPerChild, Math.min(numIterators, (i + 1) * iteratorsPerChild)),
+                bufferSupplier,
+                combiningFactories,
+                combineDegree,
+                combineFutures
+            )
+        );
+      }
+      return runCombiner(childIterators, bufferSupplier.get(), combiningFactories, combineFutures).iterator();
+    } else {
+      return runCombiner(sortedIterators, bufferSupplier.get(), combiningFactories, combineFutures).iterator();
+    }
+  }
+
+  private static ByteBuffer getSlice(ByteBuffer buffer, int sliceSize, int i)
+  {
+    final ByteBuffer slice = buffer.duplicate();
+    slice.position(sliceSize * i);
+    slice.limit(slice.position() + sliceSize);
+    return slice.slice();
+  }
+
+  private StreamingMergeSortedGrouper<KeyType> runCombiner(
+      List<Iterator<Entry<KeyType>>> iterators,
+      ByteBuffer combineBuffer,
+      AggregatorFactory[] combiningFactories,
+      List<Future> combineFutures
+  )
+  {
+    final Iterator<Entry<KeyType>> mergedIterator = Groupers.mergeIterators(iterators, keyObjComparator);
+    final SettableColumnSelectorFactory settableColumnSelectorFactory =
+        new SettableColumnSelectorFactory(aggregatorFactories);
+    final StreamingMergeSortedGrouper<KeyType> grouper = new StreamingMergeSortedGrouper<>(
+        Suppliers.ofInstance(combineBuffer),
+        keySerdeFactory.factorize(),
+        settableColumnSelectorFactory,
+        combiningFactories
+    );
+    grouper.init();
+
+    ListenableFuture future = grouperSorter.submit(() -> {
+      while (mergedIterator.hasNext()) {
+        final Entry<KeyType> next = mergedIterator.next();
+
+        settableColumnSelectorFactory.set(next.values);
+        final AggregateResult result = grouper.aggregate(next.key);
+        if (!result.isOk()) {
+          throw new ResourceLimitExceededException(result.getReason());
+        }
+        settableColumnSelectorFactory.set(null);
+      }
+
+      grouper.finish();
+    });
+
+    combineFutures.add(future);
+
+    return grouper;
+  }
+
   @Override
   public void close()
   {
     closed = true;
     for (Grouper<KeyType> grouper : groupers) {
-      synchronized (grouper) {
-        grouper.close();
-      }
+      grouper.close();
     }
   }
 
   private int grouperNumberForKeyHash(int keyHash)
   {
     return keyHash % groupers.size();
+  }
+
+  private static class SettableColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    private static final int UNKNOWN_COLUMN_INDEX = -1;
+    private final Object2IntMap<String> columnIndexMap;
+
+    private Object[] values;
+
+    SettableColumnSelectorFactory(AggregatorFactory[] aggregatorFactories)
+    {
+      columnIndexMap = new Object2IntArrayMap<>(aggregatorFactories.length);
+      columnIndexMap.defaultReturnValue(UNKNOWN_COLUMN_INDEX);
+      for (int i = 0; i < aggregatorFactories.length; i++) {
+        columnIndexMap.put(aggregatorFactories[i].getName(), i);
+      }
+    }
+
+    public void set(Object[] values)
+    {
+      this.values = values;
+    }
+
+    private int checkAndGetColumnIndex(String columnName)
+    {
+      final int columnIndex = columnIndexMap.getInt(columnName);
+      Preconditions.checkState(
+          columnIndex != UNKNOWN_COLUMN_INDEX,
+          "Cannot find a proper column index for column[%s]",
+          columnName
+      );
+      return columnIndex;
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FloatColumnSelector makeFloatColumnSelector(String columnName)
+    {
+      return new FloatColumnSelector()
+      {
+        @Override
+        public float getFloat()
+        {
+          return ((Number) values[checkAndGetColumnIndex(columnName)]).floatValue();
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          // do nothing
+        }
+      };
+    }
+
+    @Override
+    public LongColumnSelector makeLongColumnSelector(String columnName)
+    {
+      return new LongColumnSelector()
+      {
+        @Override
+        public long getLong()
+        {
+          return ((Number) values[checkAndGetColumnIndex(columnName)]).longValue();
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          // do nothing
+        }
+      };
+    }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+    {
+      return new DoubleColumnSelector()
+      {
+        @Override
+        public double getDouble()
+        {
+          return ((Number) values[checkAndGetColumnIndex(columnName)]).doubleValue();
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          // do nothing
+        }
+      };
+    }
+
+    @Nullable
+    @Override
+    public ObjectColumnSelector makeObjectColumnSelector(String columnName)
+    {
+      return new ObjectColumnSelector()
+      {
+        @Override
+        public Class classOfObject()
+        {
+          return Object.class;
+        }
+
+        @Override
+        public Object get()
+        {
+          return values[checkAndGetColumnIndex(columnName)];
+        }
+      };
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String column)
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }
