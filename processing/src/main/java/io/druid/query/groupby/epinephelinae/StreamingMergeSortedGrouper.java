@@ -34,8 +34,8 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.TimeoutException;
 
 /**
- * A streaming grouper which can aggregate sorted inputs.  This grouper can aggregate while its iterator is consumed.
- * Also, the aggregation thread and iterating thread can be different.
+ * A streaming grouper which can aggregate sorted inputs.  This grouper can aggregate while its iterator is being
+ * consumed.  Also, the aggregation thread and iterating thread can be different.
  *
  * This grouper is backed by a circular array off-heap buffer.  Reading iterator is able to read from an array slot only
  * if the write for that slot is finished.
