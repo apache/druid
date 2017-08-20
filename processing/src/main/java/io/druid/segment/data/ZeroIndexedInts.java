@@ -57,12 +57,6 @@ public class ZeroIndexedInts implements IndexedInts
   }
 
   @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill");
-  }
-
-  @Override
   public IntIterator iterator()
   {
     return IntIterators.singleton(0);

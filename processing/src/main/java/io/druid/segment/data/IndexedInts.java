@@ -34,5 +34,4 @@ public interface IndexedInts extends IntIterable, Closeable, HotLoopCallee
   int size();
   @CalledFromHotLoop
   int get(int index);
-  void fill(int index, int[] toFill);
 }

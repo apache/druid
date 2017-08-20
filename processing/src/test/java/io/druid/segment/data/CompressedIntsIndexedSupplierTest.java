@@ -163,48 +163,12 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
   }
 
   @Test
-  public void testBulkFill() throws Exception
-  {
-    setupSimple(5);
-
-    tryFill(0, 15);
-    tryFill(3, 6);
-    tryFill(7, 7);
-    tryFill(7, 9);
-  }
-
-  @Test(expected = IndexOutOfBoundsException.class)
-  public void testBulkFillTooMuch() throws Exception
-  {
-    setupSimple(5);
-    tryFill(7, 10);
-  }
-
-  @Test
   public void testSanityWithSerde() throws Exception
   {
     setupSimpleWithSerde(5);
 
     Assert.assertEquals(4, supplier.getBaseIntBuffers().size());
     assertIndexMatchesVals();
-  }
-
-  @Test
-  public void testBulkFillWithSerde() throws Exception
-  {
-    setupSimpleWithSerde(5);
-
-    tryFill(0, 15);
-    tryFill(3, 6);
-    tryFill(7, 7);
-    tryFill(7, 9);
-  }
-
-  @Test(expected = IndexOutOfBoundsException.class)
-  public void testBulkFillTooMuchWithSerde() throws Exception
-  {
-    setupSimpleWithSerde(5);
-    tryFill(7, 10);
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
@@ -308,16 +272,6 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
 
     if (failureHappened.get()) {
       Assert.fail("Failure happened.  Reason: " + reason.get());
-    }
-  }
-
-  private void tryFill(final int startIndex, final int size)
-  {
-    int[] filled = new int[size];
-    indexed.fill(startIndex, filled);
-
-    for (int i = startIndex; i < filled.length; i++) {
-      Assert.assertEquals(vals[i + startIndex], filled[i]);
     }
   }
 
