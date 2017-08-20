@@ -40,6 +40,11 @@ public abstract class Offset implements ReadableOffset, Cloneable
   @CalledFromHotLoop
   public abstract boolean withinBounds();
 
+  /**
+   * Resets the Offset to the position it was created or cloned with.
+   */
+  public abstract void reset();
+
   @Override
   public Offset clone()
   {

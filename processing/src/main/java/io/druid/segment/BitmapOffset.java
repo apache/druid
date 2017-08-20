@@ -23,8 +23,6 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
-import io.druid.collections.bitmap.WrappedRoaringBitmap;
-import io.druid.extendedset.intset.EmptyIntIterator;
 import io.druid.java.util.common.RE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Offset;
@@ -123,10 +121,11 @@ public class BitmapOffset extends Offset
     }
   }
 
-  final IntIterator itr;
-  final String fullness;
-
-  int val;
+  private final String fullness;
+  private IntIterator iterator;
+  private final IntIterator iteratorForReset;
+  private final int valueForReset;
+  private int value;
 
   public static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
   {
@@ -144,20 +143,18 @@ public class BitmapOffset extends Offset
 
   public static BitmapOffset of(ImmutableBitmap bitmapIndex, boolean descending, long numRows)
   {
-    if (bitmapIndex instanceof WrappedImmutableRoaringBitmap ||
-        bitmapIndex instanceof WrappedRoaringBitmap ||
-        descending) {
-      return new RoaringBitmapOffset(bitmapIndex, descending, numRows);
-    } else {
-      return new BitmapOffset(bitmapIndex, descending, numRows);
-    }
+    return new BitmapOffset(bitmapIndex, descending, numRows);
   }
 
   private BitmapOffset(ImmutableBitmap bitmapIndex, boolean descending, long numRows)
   {
-    this.itr = newIterator(bitmapIndex, descending);
     this.fullness = factorizeFullness(bitmapIndex.size(), numRows);
+    this.iterator = newIterator(bitmapIndex, descending);
     increment();
+    // It's important to set iteratorForReset and valueForReset after calling increment(), because only after that the
+    // iterator and the value are in proper initial state.
+    this.iteratorForReset = iterator.clone();
+    this.valueForReset = value;
   }
 
   private IntIterator newIterator(ImmutableBitmap bitmapIndex, boolean descending)
@@ -169,65 +166,57 @@ public class BitmapOffset extends Offset
     }
   }
 
-  private BitmapOffset(String fullness, IntIterator itr, int val)
+  /**
+   * Constructor for {@link #clone()}.
+   */
+  private BitmapOffset(String fullness, IntIterator iterator, int value)
   {
     this.fullness = fullness;
-    this.itr = itr;
-    this.val = val;
+    this.iterator = iterator;
+    this.iteratorForReset = iterator.clone();
+    this.valueForReset = value;
+    this.value = value;
   }
 
   @Override
   public void increment()
   {
-    if (itr.hasNext()) {
-      val = itr.next();
+    if (iterator.hasNext()) {
+      value = iterator.next();
     } else {
-      val = INVALID_VALUE;
+      value = INVALID_VALUE;
     }
   }
 
   @Override
   public boolean withinBounds()
   {
-    return val > INVALID_VALUE;
+    return value > INVALID_VALUE;
+  }
+
+  @Override
+  public void reset()
+  {
+    iterator = iteratorForReset.clone();
+    value = valueForReset;
   }
 
   @Override
   public Offset clone()
   {
-    return new BitmapOffset(fullness, itr.clone(), val);
+    return new BitmapOffset(fullness, iterator.clone(), value);
   }
 
   @Override
   public int getOffset()
   {
-    return val;
+    return value;
   }
 
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    inspector.visit("itr", itr);
+    inspector.visit("iterator", iterator);
     inspector.visit("fullness", fullness);
-  }
-
-  public static class RoaringBitmapOffset extends BitmapOffset
-  {
-
-    public RoaringBitmapOffset(ImmutableBitmap bitmapIndex, boolean descending, long numRows)
-    {
-      super(bitmapIndex, descending, numRows);
-    }
-
-    RoaringBitmapOffset(String fullness, IntIterator itr, int val)
-    {
-      super(fullness, itr, val);
-    }
-
-    @Override
-    public Offset clone()
-    {
-      return new RoaringBitmapOffset(fullness, itr.hasNext() ? itr.clone() : EmptyIntIterator.instance(), val);
-    }
   }
 }
