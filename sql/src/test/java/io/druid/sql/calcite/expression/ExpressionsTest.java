@@ -21,6 +21,7 @@ package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.ExprEval;
@@ -75,7 +76,7 @@ public class ExpressionsTest
       .add("dstr", ValueType.STRING)
       .build();
   private final Map<String, Object> bindings = ImmutableMap.<String, Object>builder()
-      .put("t", new DateTime("2000-02-03T04:05:06").getMillis())
+      .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
       .put("a", 10)
       .put("b", 20)
       .put("x", 2.5)
@@ -155,11 +156,11 @@ public class ExpressionsTest
     testExpression(
         rexBuilder.makeCall(
             new TimeFloorOperatorConversion().calciteOperator(),
-            timestampLiteral(new DateTime("2000-02-03T04:05:06Z")),
+            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             rexBuilder.makeLiteral("PT1H")
         ),
         DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H','','UTC')"),
-        new DateTime("2000-02-03T04:00:00").getMillis()
+        DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
     testExpression(
@@ -183,7 +184,7 @@ public class ExpressionsTest
             ),
             "timestamp_floor(\"t\",'P1D','','America/Los_Angeles')"
         ),
-        new DateTime("2000-02-02T08:00:00").getMillis()
+        DateTimes.of("2000-02-02T08:00:00").getMillis()
     );
   }
 
@@ -205,7 +206,7 @@ public class ExpressionsTest
             ),
             "timestamp_floor(\"t\",'P1Y','','UTC')"
         ),
-        new DateTime("2000").getMillis()
+        DateTimes.of("2000").getMillis()
     );
   }
 
@@ -221,7 +222,7 @@ public class ExpressionsTest
             rexBuilder.makeFlag(TimeUnitRange.YEAR)
         ),
         DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1Y','','UTC')"),
-        new DateTime("2001").getMillis()
+        DateTimes.of("2001").getMillis()
     );
   }
 
@@ -236,7 +237,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral(-3, typeFactory.createSqlType(SqlTypeName.INTEGER), true)
         ),
         DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3)"),
-        new DateTime("2000-02-02T22:05:06").getMillis()
+        DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
   }
 
@@ -292,7 +293,7 @@ public class ExpressionsTest
             null,
             "(\"t\" + 90060000)"
         ),
-        new DateTime("2000-02-03T04:05:06").plus(period).getMillis()
+        DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
   }
 
@@ -314,7 +315,7 @@ public class ExpressionsTest
             null,
             "timestamp_shift(\"t\",concat('P', 13, 'M'),1)"
         ),
-        new DateTime("2000-02-03T04:05:06").plus(period).getMillis()
+        DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
   }
 
@@ -339,7 +340,7 @@ public class ExpressionsTest
             null,
             "(\"t\" - 90060000)"
         ),
-        new DateTime("2000-02-03T04:05:06").minus(period).getMillis()
+        DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
   }
 
@@ -364,7 +365,7 @@ public class ExpressionsTest
             null,
             "timestamp_shift(\"t\",concat('P', 13, 'M'),-1)"
         ),
-        new DateTime("2000-02-03T04:05:06").minus(period).getMillis()
+        DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
   }
 
@@ -378,7 +379,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
         DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss')"),
-        new DateTime("2000-02-03T04:05:06").getMillis()
+        DateTimes.of("2000-02-03T04:05:06").getMillis()
     );
 
     testExpression(
@@ -389,7 +390,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("America/Los_Angeles")
         ),
         DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
-        new DateTime("2000-02-03T04:05:06-08:00").getMillis()
+        DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()
     );
   }
 
@@ -481,7 +482,7 @@ public class ExpressionsTest
             SimpleExtraction.of("t", null),
             "\"t\""
         ),
-        new DateTime("2000-02-03T04:05:06Z").getMillis()
+        DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
 
     testExpression(
@@ -493,7 +494,7 @@ public class ExpressionsTest
             null,
             "timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss')"
         ),
-        new DateTime("2000-02-03T04:05:06Z").getMillis()
+        DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
   }
 
@@ -526,7 +527,7 @@ public class ExpressionsTest
             SimpleExtraction.of("t", null),
             "\"t\""
         ),
-        new DateTime("2000-02-03T04:05:06").getMillis()
+        DateTimes.of("2000-02-03T04:05:06").getMillis()
     );
   }
 
@@ -542,7 +543,7 @@ public class ExpressionsTest
             SimpleExtraction.of("t", new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)),
             "timestamp_floor(\"t\",'P1D','','UTC')"
         ),
-        new DateTime("2000-02-03").getMillis()
+        DateTimes.of("2000-02-03").getMillis()
     );
 
     testExpression(
@@ -553,7 +554,7 @@ public class ExpressionsTest
         DruidExpression.fromExpression(
             "timestamp_floor(timestamp_parse(\"dstr\",'yyyy-MM-dd'),'P1D','','UTC')"
         ),
-        new DateTime("2000-02-03").getMillis()
+        DateTimes.of("2000-02-03").getMillis()
     );
   }
 
@@ -586,7 +587,7 @@ public class ExpressionsTest
             SimpleExtraction.of("t", new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)),
             "timestamp_floor(\"t\",'P1D','','UTC')"
         ),
-        new DateTime("2000-02-03").getMillis()
+        DateTimes.of("2000-02-03").getMillis()
     );
   }
 

@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.DataSegmentChangeCallback;
 import io.druid.server.coordination.DataSegmentChangeHandler;
 import io.druid.server.coordination.DataSegmentChangeRequest;
@@ -40,7 +41,6 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.Duration;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -350,7 +350,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
   {
     return DataSegment.builder()
                       .dataSource("test_load_queue_peon")
-                      .interval(new Interval(intervalStr))
+                      .interval(Intervals.of(intervalStr))
                       .loadSpec(ImmutableMap.<String, Object>of())
                       .version("2015-05-27T03:38:35.683Z")
                       .dimensions(ImmutableList.<String>of())

@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -117,7 +117,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     final String entryId = "1234";
 
-    handler.insert(entryId, new DateTime("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null);
+    handler.insert(entryId, DateTimes.of("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null);
 
     Assert.assertEquals(
         Optional.of(entry),
@@ -146,7 +146,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(),
-        handler.getInactiveStatusesSince(new DateTime("2014-01-01"))
+        handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"))
     );
 
     Assert.assertTrue(handler.setStatus(entryId, false, status1));
@@ -171,12 +171,12 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(),
-        handler.getInactiveStatusesSince(new DateTime("2014-01-03"))
+        handler.getInactiveStatusesSince(DateTimes.of("2014-01-03"))
     );
 
     Assert.assertEquals(
         ImmutableList.of(status1),
-        handler.getInactiveStatusesSince(new DateTime("2014-01-01"))
+        handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"))
     );
   }
 
@@ -187,10 +187,10 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
 
     thrown.expect(EntryExistsException.class);
-    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
   }
 
   @Test
@@ -200,7 +200,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
 
     Assert.assertEquals(
         ImmutableList.of(),
@@ -232,7 +232,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
 
     Assert.assertEquals(
         ImmutableMap.<Long, Map<String, Integer>>of(),

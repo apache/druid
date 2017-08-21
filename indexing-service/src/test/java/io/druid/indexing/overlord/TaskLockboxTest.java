@@ -31,6 +31,7 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
@@ -90,13 +91,13 @@ public class TaskLockboxTest
   {
     Task task = NoopTask.create();
     lockbox.add(task);
-    Assert.assertNotNull(lockbox.lock(TaskLockType.EXCLUSIVE, task, new Interval("2015-01-01/2015-01-02")));
+    Assert.assertNotNull(lockbox.lock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02")));
   }
 
   @Test(expected = IllegalStateException.class)
   public void testLockForInactiveTask() throws InterruptedException
   {
-    lockbox.lock(TaskLockType.EXCLUSIVE, NoopTask.create(), new Interval("2015-01-01/2015-01-02"));
+    lockbox.lock(TaskLockType.EXCLUSIVE, NoopTask.create(), Intervals.of("2015-01-01/2015-01-02"));
   }
 
   @Test
@@ -107,13 +108,13 @@ public class TaskLockboxTest
     exception.expectMessage("Unable to grant lock to inactive Task");
     lockbox.add(task);
     lockbox.remove(task);
-    lockbox.lock(TaskLockType.EXCLUSIVE, task, new Interval("2015-01-01/2015-01-02"));
+    lockbox.lock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"));
   }
 
   @Test
   public void testTrySharedLock()
   {
-    final Interval interval = new Interval("2017-01/2017-02");
+    final Interval interval = Intervals.of("2017-01/2017-02");
     final List<Task> tasks = new ArrayList<>();
     final Set<TaskLock> actualLocks = new HashSet<>();
 
@@ -137,9 +138,9 @@ public class TaskLockboxTest
     final Task lowPriorityTask = NoopTask.create(0);
     final Task lowPriorityTask2 = NoopTask.create(0);
     final Task highPiorityTask = NoopTask.create(10);
-    final Interval interval1 = new Interval("2017-01-01/2017-01-02");
-    final Interval interval2 = new Interval("2017-01-02/2017-01-03");
-    final Interval interval3 = new Interval("2017-01-03/2017-01-04");
+    final Interval interval1 = Intervals.of("2017-01-01/2017-01-02");
+    final Interval interval2 = Intervals.of("2017-01-02/2017-01-03");
+    final Interval interval3 = Intervals.of("2017-01-03/2017-01-04");
 
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
     taskStorage.insert(lowPriorityTask2, TaskStatus.running(lowPriorityTask2.getId()));
@@ -180,24 +181,24 @@ public class TaskLockboxTest
   {
     Task task = NoopTask.create();
     lockbox.add(task);
-    Assert.assertTrue(lockbox.tryLock(TaskLockType.EXCLUSIVE, task, new Interval("2015-01-01/2015-01-03")).isOk());
+    Assert.assertTrue(lockbox.tryLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-03")).isOk());
 
     // try to take lock for task 2 for overlapping interval
     Task task2 = NoopTask.create();
     lockbox.add(task2);
-    Assert.assertFalse(lockbox.tryLock(TaskLockType.EXCLUSIVE, task2, new Interval("2015-01-01/2015-01-02")).isOk());
+    Assert.assertFalse(lockbox.tryLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-02")).isOk());
 
     // task 1 unlocks the lock
     lockbox.remove(task);
 
     // Now task2 should be able to get the lock
-    Assert.assertTrue(lockbox.tryLock(TaskLockType.EXCLUSIVE, task2, new Interval("2015-01-01/2015-01-02")).isOk());
+    Assert.assertTrue(lockbox.tryLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-02")).isOk());
   }
 
   @Test(expected = IllegalStateException.class)
   public void testTryLockForInactiveTask()
   {
-    Assert.assertFalse(lockbox.tryLock(TaskLockType.EXCLUSIVE, NoopTask.create(), new Interval("2015-01-01/2015-01-02")).isOk());
+    Assert.assertFalse(lockbox.tryLock(TaskLockType.EXCLUSIVE, NoopTask.create(), Intervals.of("2015-01-01/2015-01-02")).isOk());
   }
 
   @Test
@@ -208,7 +209,7 @@ public class TaskLockboxTest
     exception.expectMessage("Unable to grant lock to inactive Task");
     lockbox.add(task);
     lockbox.remove(task);
-    Assert.assertFalse(lockbox.tryLock(TaskLockType.EXCLUSIVE, task, new Interval("2015-01-01/2015-01-02")).isOk());
+    Assert.assertFalse(lockbox.tryLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02")).isOk());
   }
 
   @Test
@@ -219,8 +220,8 @@ public class TaskLockboxTest
 
     lockbox.add(task1);
     lockbox.add(task2);
-    Assert.assertTrue(lockbox.lock(TaskLockType.EXCLUSIVE, task1, new Interval("2015-01-01/2015-01-02"), 5000).isOk());
-    Assert.assertFalse(lockbox.lock(TaskLockType.EXCLUSIVE, task2, new Interval("2015-01-01/2015-01-15"), 1000).isOk());
+    Assert.assertTrue(lockbox.lock(TaskLockType.EXCLUSIVE, task1, Intervals.of("2015-01-01/2015-01-02"), 5000).isOk());
+    Assert.assertFalse(lockbox.lock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-15"), 1000).isOk());
   }
 
   @Test
@@ -235,7 +236,7 @@ public class TaskLockboxTest
           originalBox.tryLock(
               TaskLockType.EXCLUSIVE,
               task,
-              new Interval(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
+              Intervals.of(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
           ).isOk()
       );
     }
@@ -263,7 +264,7 @@ public class TaskLockboxTest
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Shared lock cannot be upgraded");
 
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task task = NoopTask.create();
     lockbox.add(task);
     Assert.assertTrue(lockbox.tryLock(TaskLockType.SHARED, task, interval).isOk());
@@ -277,7 +278,7 @@ public class TaskLockboxTest
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Shared lock cannot be downgraded");
 
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task task = NoopTask.create();
     lockbox.add(task);
     Assert.assertTrue(lockbox.tryLock(TaskLockType.SHARED, task, interval).isOk());
@@ -288,7 +289,7 @@ public class TaskLockboxTest
   @Test
   public void testUpgradeAndDowngradeExclusiveLock()
   {
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task task = NoopTask.create();
     lockbox.add(task);
     final TaskLock lock = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
@@ -306,9 +307,9 @@ public class TaskLockboxTest
   @Test
   public void testUpgradeDownGradeWithSmallerInterval()
   {
-    final Interval interval = new Interval("2017-01-01/2017-02-01");
-    final Interval smallInterval1 = new Interval("2017-01-01/2017-01-02");
-    final Interval smallInterval2 = new Interval("2017-01-10/2017-01-11");
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    final Interval smallInterval1 = Intervals.of("2017-01-01/2017-01-02");
+    final Interval smallInterval2 = Intervals.of("2017-01-10/2017-01-11");
     final Task task = NoopTask.create();
     lockbox.add(task);
     final TaskLock lock = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
@@ -326,7 +327,7 @@ public class TaskLockboxTest
   @Test
   public void testPreemptAndUpgradeExclusiveLock() throws EntryExistsException
   {
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     for (int i = 0; i < 5; i++) {
       final Task task = NoopTask.create();
       lockbox.add(task);
@@ -348,7 +349,7 @@ public class TaskLockboxTest
   @Test
   public void testPreemption() throws EntryExistsException
   {
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task lowPriorityTask = NoopTask.create(10);
     final Task highPriorityTask = NoopTask.create(100);
     lockbox.add(lowPriorityTask);
@@ -371,7 +372,7 @@ public class TaskLockboxTest
   @Test
   public void testUpgradeRevokedLock() throws EntryExistsException
   {
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task lowPriorityTask = NoopTask.create("task1", 0);
     final Task highPriorityTask = NoopTask.create("task2", 10);
     lockbox.add(lowPriorityTask);
@@ -392,7 +393,7 @@ public class TaskLockboxTest
   @Test
   public void testAcquireLockAfterRevoked() throws EntryExistsException
   {
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task lowPriorityTask = NoopTask.create("task1", 0);
     final Task highPriorityTask = NoopTask.create("task2", 10);
     lockbox.add(lowPriorityTask);
@@ -429,7 +430,7 @@ public class TaskLockboxTest
           lockbox.tryLock(
               TaskLockType.EXCLUSIVE,
               task,
-              new Interval(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
+              Intervals.of(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
           ).isOk()
       );
     }
@@ -444,7 +445,7 @@ public class TaskLockboxTest
           lockbox.tryLock(
               TaskLockType.EXCLUSIVE,
               task,
-              new Interval(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
+              Intervals.of(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
           ).isOk()
       );
     }
@@ -461,18 +462,18 @@ public class TaskLockboxTest
     for (int i = 0; i < 4; i++) {
       lockbox.unlock(
           lowPriorityTasks.get(i),
-          new Interval(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
+          Intervals.of(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
       );
       lockbox.unlock(
           highPriorityTasks.get(i),
-          new Interval(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
+          Intervals.of(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
       );
     }
 
     for (int i = 4; i < 8; i++) {
       lockbox.unlock(
           lowPriorityTasks.get(i),
-          new Interval(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
+          Intervals.of(StringUtils.format("2017-01-0%d/2017-01-0%d", (i + 1), (i + 2)))
       );
     }
 

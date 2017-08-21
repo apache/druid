@@ -19,7 +19,7 @@
 
 package io.druid.indexing.overlord;
 
-import org.joda.time.DateTime;
+import io.druid.java.util.common.DateTimes;
 
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -30,6 +30,6 @@ public class RemoteTaskRunnerWorkQueue extends ConcurrentSkipListMap<String, Rem
   @Override
   public RemoteTaskRunnerWorkItem put(String s, RemoteTaskRunnerWorkItem taskRunnerWorkItem)
   {
-    return super.put(s, taskRunnerWorkItem.withQueueInsertionTime(new DateTime()));
+    return super.put(s, taskRunnerWorkItem.withQueueInsertionTime(DateTimes.nowUtc()));
   }
 }

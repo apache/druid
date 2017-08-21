@@ -32,6 +32,7 @@ import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -46,7 +47,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -86,7 +86,7 @@ public class SameIntervalMergeTaskTest
     final SameIntervalMergeTask task = new SameIntervalMergeTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D"),
+        Intervals.of("2010-01-01/P1D"),
         aggregators,
         true,
         indexSpec,
@@ -108,7 +108,7 @@ public class SameIntervalMergeTaskTest
     Assert.assertEquals("foo", mergeSegment.getDataSource());
     Assert.assertEquals(newVersion, mergeSegment.getVersion());
     // the merged segment's interval is within the requested interval
-    Assert.assertTrue(new Interval("2010-01-01/P1D").contains(mergeSegment.getInterval()));
+    Assert.assertTrue(Intervals.of("2010-01-01/P1D").contains(mergeSegment.getInterval()));
     // the merged segment should be NoneShardSpec
     Assert.assertTrue(mergeSegment.getShardSpec() instanceof NoneShardSpec);
   }
@@ -156,19 +156,19 @@ public class SameIntervalMergeTaskTest
               List<DataSegment> segments = ImmutableList.of(
                   DataSegment.builder()
                              .dataSource(mergeTask.getDataSource())
-                             .interval(new Interval("2010-01-01/PT1H"))
+                             .interval(Intervals.of("2010-01-01/PT1H"))
                              .version("oldVersion")
                              .shardSpec(new LinearShardSpec(0))
                              .build(),
                   DataSegment.builder()
                              .dataSource(mergeTask.getDataSource())
-                             .interval(new Interval("2010-01-01/PT1H"))
+                             .interval(Intervals.of("2010-01-01/PT1H"))
                              .version("oldVersion")
                              .shardSpec(new LinearShardSpec(0))
                              .build(),
                   DataSegment.builder()
                              .dataSource(mergeTask.getDataSource())
-                             .interval(new Interval("2010-01-01/PT2H"))
+                             .interval(Intervals.of("2010-01-01/PT2H"))
                              .version("oldVersion")
                              .shardSpec(new LinearShardSpec(0))
                              .build()

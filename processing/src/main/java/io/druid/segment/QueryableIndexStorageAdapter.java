@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -126,7 +127,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public DateTime getMinTime()
   {
     try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
-      return new DateTime(column.getLongSingleValueRow(0));
+      return DateTimes.utc(column.getLongSingleValueRow(0));
     }
   }
 
@@ -134,7 +135,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public DateTime getMaxTime()
   {
     try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
-      return new DateTime(column.getLongSingleValueRow(column.length() - 1));
+      return DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
     }
   }
 
@@ -206,12 +207,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     Interval actualInterval = interval;
 
-    long minDataTimestamp = getMinTime().getMillis();
-    long maxDataTimestamp = getMaxTime().getMillis();
-    final Interval dataInterval = new Interval(
-        minDataTimestamp,
-        gran.bucketEnd(getMaxTime()).getMillis()
-    );
+    DateTime minTime = getMinTime();
+    long minDataTimestamp = minTime.getMillis();
+    DateTime maxTime = getMaxTime();
+    long maxDataTimestamp = maxTime.getMillis();
+    final Interval dataInterval = new Interval(minTime, gran.bucketEnd(maxTime));
 
     if (!actualInterval.overlaps(dataInterval)) {
       return Sequences.empty();

@@ -25,10 +25,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -37,7 +37,6 @@ import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.List;
@@ -98,7 +97,7 @@ public class WorkerCuratorCoordinator
           curatorFramework,
           getTaskPathForWorker(),
           CreateMode.PERSISTENT,
-          jsonMapper.writeValueAsBytes(ImmutableMap.of("created", new DateTime().toString())),
+          jsonMapper.writeValueAsBytes(ImmutableMap.of("created", DateTimes.nowUtc().toString())),
           config.getMaxZnodeBytes()
       );
 
@@ -106,7 +105,7 @@ public class WorkerCuratorCoordinator
           curatorFramework,
           getStatusPathForWorker(),
           CreateMode.PERSISTENT,
-          jsonMapper.writeValueAsBytes(ImmutableMap.of("created", new DateTime().toString())),
+          jsonMapper.writeValueAsBytes(ImmutableMap.of("created", DateTimes.nowUtc().toString())),
           config.getMaxZnodeBytes()
       );
 

@@ -73,12 +73,6 @@ public class RangeIndexedInts implements IndexedInts
   }
 
   @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill");
-  }
-
-  @Override
   public IntIterator iterator()
   {
     return IntIterators.fromTo(0, size);

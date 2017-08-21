@@ -42,6 +42,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.IndexIO;
@@ -75,7 +76,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     super(
         // _not_ the version, just something uniqueish
         id != null ? id : StringUtils.format(
-            "merge_%s_%s", computeProcessingID(dataSource, segments), new DateTime().toString()
+            "merge_%s_%s", computeProcessingID(dataSource, segments), DateTimes.nowUtc().toString()
         ),
         dataSource,
         computeMergedInterval(segments),

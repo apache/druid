@@ -22,6 +22,7 @@ package io.druid.server;
 import com.google.common.base.Strings;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DirectDruidClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
@@ -44,7 +45,6 @@ import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizationInfo;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceType;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashMap;
@@ -303,7 +303,7 @@ public class QueryLifecycle
 
       requestLogger.log(
           new RequestLogLine(
-              new DateTime(startMs),
+              DateTimes.utc(startMs),
               Strings.nullToEmpty(remoteAddress),
               queryPlus.getQuery(),
               new QueryStats(statsMap)

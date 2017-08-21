@@ -24,10 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,15 +50,15 @@ public class LocalDataSegmentPusherTest
   LocalDataSegmentPusherConfig config;
   File dataSegmentFiles;
   DataSegment dataSegment = new DataSegment(
-    "ds",
-    new Interval(0, 1),
-    "v1",
-    null,
-    null,
-    null,
-    NoneShardSpec.instance(),
-    null,
-    -1
+      "ds",
+      Intervals.utc(0, 1),
+      "v1",
+      null,
+      null,
+      null,
+      NoneShardSpec.instance(),
+      null,
+      -1
   );
 
   @Before

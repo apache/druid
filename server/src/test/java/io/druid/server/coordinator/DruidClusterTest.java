@@ -26,11 +26,11 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,7 +46,7 @@ public class DruidClusterTest
   private static final List<DataSegment> segments = ImmutableList.of(
       new DataSegment(
           "test",
-          new Interval("2015-04-12/2015-04-13"),
+          Intervals.of("2015-04-12/2015-04-13"),
           "1",
           ImmutableMap.of("containerName", "container1", "blobPath", "blobPath1"),
           null,
@@ -57,7 +57,7 @@ public class DruidClusterTest
       ),
       new DataSegment(
           "test",
-          new Interval("2015-04-12/2015-04-13"),
+          Intervals.of("2015-04-12/2015-04-13"),
           "1",
           ImmutableMap.of("containerName", "container2", "blobPath", "blobPath2"),
           null,

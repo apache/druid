@@ -23,6 +23,7 @@ import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
+import org.joda.time.chrono.ISOChronology;
 
 /**
  * Only to create a mapping of the granularity and all the supported file patterns
@@ -159,7 +160,8 @@ public enum GranularityType
         dateValuePositions >= 4 ? vals[4] : 0,
         dateValuePositions >= 5 ? vals[5] : 0,
         dateValuePositions >= 6 ? vals[6] : 0,
-        0
+        0,
+        ISOChronology.getInstanceUTC()
     );
   }
 

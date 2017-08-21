@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -61,7 +62,7 @@ public class DurationGranularity extends Granularity
   @JsonProperty("origin")
   public DateTime getOrigin()
   {
-    return new DateTime(origin);
+    return DateTimes.utc(origin);
   }
 
   public long getOriginMillis()
@@ -78,13 +79,13 @@ public class DurationGranularity extends Granularity
   @Override
   public DateTime increment(DateTime time)
   {
-    return new DateTime(time.getMillis() + getDurationMillis());
+    return time.plus(getDuration());
   }
 
   @Override
   public DateTime decrement(DateTime time)
   {
-    return new DateTime(time.getMillis() - getDurationMillis());
+    return time.minus(getDuration());
   }
 
   @Override
@@ -96,7 +97,7 @@ public class DurationGranularity extends Granularity
     if (offset < 0) {
       offset += duration;
     }
-    return new DateTime(t - offset);
+    return new DateTime(t - offset, time.getChronology());
   }
 
   @Override

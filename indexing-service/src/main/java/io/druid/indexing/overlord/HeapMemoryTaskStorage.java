@@ -34,6 +34,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
@@ -83,7 +84,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       }
 
       log.info("Inserting task %s with status: %s", task.getId(), status);
-      tasks.put(task.getId(), new TaskStuff(task, status, new DateTime()));
+      tasks.put(task.getId(), new TaskStuff(task, status, DateTimes.nowUtc()));
     }
     finally {
       giant.unlock();

@@ -19,13 +19,13 @@
 
 package io.druid.indexing.common.task;
 
-import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.overlord.LockResult;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.guava.Comparators;
 import org.joda.time.Interval;
 
