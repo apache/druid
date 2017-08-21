@@ -35,11 +35,11 @@ public final class HyperLogLogCollectorAggregateCombiner extends ObjectAggregate
   public void reset(ColumnValueSelector selector)
   {
     combined = null;
-    combine(selector);
+    fold(selector);
   }
 
   @Override
-  public void combine(ColumnValueSelector selector)
+  public void fold(ColumnValueSelector selector)
   {
     @SuppressWarnings("unchecked")
     HyperLogLogCollector other = ((ObjectColumnSelector<HyperLogLogCollector>) selector).get();

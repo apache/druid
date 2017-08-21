@@ -59,7 +59,7 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract Object combine(Object lhs, Object rhs);
 
   /**
-   * Creates an AggregateCombiner to combine rollup aggregation results from serveral "rows" of different indexes during
+   * Creates an AggregateCombiner to fold rollup aggregation results from serveral "rows" of different indexes during
    * index merging. AggregateCombiner implements the same logic as {@link #combine}, with the difference that it uses
    * {@link io.druid.segment.ColumnValueSelector} and it's subinterfaces to get inputs and implements {@code
    * ColumnValueSelector} to provide output.

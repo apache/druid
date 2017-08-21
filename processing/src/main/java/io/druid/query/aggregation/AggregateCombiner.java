@@ -22,13 +22,16 @@ package io.druid.query.aggregation;
 import io.druid.segment.ColumnValueSelector;
 
 /**
- * AggregateCombiner is used to combine rollup aggregation results from serveral "rows" of different indexes during index
+ * AggregateCombiner is used to fold rollup aggregation results from serveral "rows" of different indexes during index
  * merging (see {@link io.druid.segment.IndexMerger}).
  *
  * The state of the implementations of this interface is an aggregation value (either a primitive or an object), that
  * could be queried via {@link ColumnValueSelector}'s methods. Before {@link #reset} is ever called on an
  * AggregateCombiner, it's state is undefined and {@link ColumnValueSelector}'s methods could return something random,
  * or null, or throw an exception.
+ *
+ * This interface would probably better be called "AggregateFolder", but somebody may confuse it with "folder" as
+ * "directory" synonym.
  *
  * @see AggregatorFactory#makeAggregateCombiner()
  * @see LongAggregateCombiner
@@ -43,24 +46,24 @@ public interface AggregateCombiner extends ColumnValueSelector
    *
    * If the selector is an {@link io.druid.segment.ObjectColumnSelector}, the object returned from {@link
    * io.druid.segment.ObjectColumnSelector#get()} must not be modified, and must not become a subject for modification
-   * during subsequent {@link #combine} calls.
+   * during subsequent {@link #fold} calls.
    */
   void reset(ColumnValueSelector selector);
 
   /**
-   * Combines this AggregateCombiner's state value with the value of the given selector and saves it in this
-   * AggregateCombiner's state, e. g. after calling combiner.combine(selector), combiner.get*() should return the value
+   * Folds this AggregateCombiner's state value with the value of the given selector and saves it in this
+   * AggregateCombiner's state, e. g. after calling combiner.fold(selector), combiner.get*() should return the value
    * that would be the result of {@link AggregatorFactory#combine
    * aggregatorFactory.combine(combiner.get*(), selector.get*())} call.
    *
    * Unlike {@link AggregatorFactory#combine}, if the selector is an {@link io.druid.segment.ObjectColumnSelector}, the
    * object returned from {@link io.druid.segment.ObjectColumnSelector#get()} must not be modified, and must not become
-   * a subject for modification during subsequent combine() calls.
+   * a subject for modification during subsequent fold() calls.
    *
-   * Since the state of AggregateCombiner is undefined before {@link #reset} is ever called on it, the effects of calling
-   * combine() on an AggregateCombiner instance are also undefined in this case.
+   * Since the state of AggregateCombiner is undefined before {@link #reset} is ever called on it, the effects of
+   * calling fold() are also undefined in this case.
    *
    * @see AggregatorFactory#combine
    */
-  void combine(ColumnValueSelector selector);
+  void fold(ColumnValueSelector selector);
 }

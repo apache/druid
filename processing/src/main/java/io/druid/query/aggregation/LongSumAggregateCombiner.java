@@ -32,7 +32,7 @@ public final class LongSumAggregateCombiner extends LongAggregateCombiner
   }
 
   @Override
-  public void combine(ColumnValueSelector selector)
+  public void fold(ColumnValueSelector selector)
   {
     sum += selector.getLong();
   }

@@ -133,7 +133,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public void combine(ColumnValueSelector selector)
+      public void fold(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
         ApproximateHistogram other = ((ObjectColumnSelector<ApproximateHistogram>) selector).get();

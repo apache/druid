@@ -162,7 +162,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public void combine(ColumnValueSelector selector)
+      public void fold(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
         VarianceAggregatorCollector other = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).get();

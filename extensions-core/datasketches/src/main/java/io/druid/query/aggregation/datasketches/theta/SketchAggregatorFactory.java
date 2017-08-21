@@ -116,11 +116,11 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
       public void reset(ColumnValueSelector selector)
       {
         union.reset();
-        combine(selector);
+        fold(selector);
       }
 
       @Override
-      public void combine(ColumnValueSelector selector)
+      public void fold(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
         SketchHolder other = ((ObjectColumnSelector<SketchHolder>) selector).get();

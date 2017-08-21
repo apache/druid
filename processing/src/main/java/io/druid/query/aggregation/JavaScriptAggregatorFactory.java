@@ -155,7 +155,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public void combine(ColumnValueSelector selector)
+      public void fold(ColumnValueSelector selector)
       {
         combined = getCompiledScript().combine(combined, selector.getDouble());
       }

@@ -115,7 +115,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public void combine(ColumnValueSelector selector)
+      public void fold(ColumnValueSelector selector)
       {
         max = Math.max(max, selector.getLong());
       }

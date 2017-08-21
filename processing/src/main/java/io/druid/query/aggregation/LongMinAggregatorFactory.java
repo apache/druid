@@ -116,7 +116,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public void combine(ColumnValueSelector selector)
+      public void fold(ColumnValueSelector selector)
       {
         min = Math.min(min, selector.getLong());
       }

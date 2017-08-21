@@ -113,7 +113,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public void combine(ColumnValueSelector selector)
+      public void fold(ColumnValueSelector selector)
       {
         long other = getTimestamp(selector);
         if (comparator.compare(result, other) <= 0) {

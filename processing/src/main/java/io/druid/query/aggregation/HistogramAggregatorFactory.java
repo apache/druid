@@ -113,7 +113,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public void combine(ColumnValueSelector selector)
+      public void fold(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
         Histogram other = ((ObjectColumnSelector<Histogram>) selector).get();

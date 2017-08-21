@@ -32,7 +32,7 @@ final class DoubleMaxAggregateCombiner extends DoubleAggregateCombiner
   }
 
   @Override
-  public void combine(ColumnValueSelector selector)
+  public void fold(ColumnValueSelector selector)
   {
     max = Math.max(max, selector.getDouble());
   }
