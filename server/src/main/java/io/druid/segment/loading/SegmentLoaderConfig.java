@@ -21,6 +21,7 @@ package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.ISE;
 import org.hibernate.validator.constraints.NotEmpty;
 
 import java.io.File;
@@ -85,6 +86,10 @@ public class SegmentLoaderConfig
   public File getInfoDir()
   {
     if (infoDir == null) {
+
+      if (locations == null || locations.size() == 0) {
+        throw new ISE("You have no segment cache locations defined. Please configure druid.segmentCache.locations to use one or more locations.");
+      }
       infoDir = new File(locations.get(0).getPath(), "info_dir");
     }
 

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.LegacyDataSource;
@@ -72,7 +73,7 @@ public class LoggingRequestLoggerTest
         @Override
         public List<Interval> getIntervals()
         {
-          return Collections.singletonList(Interval.parse("2016-01-01T00Z/2016-01-02T00Z"));
+          return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
         }
 
         @Override

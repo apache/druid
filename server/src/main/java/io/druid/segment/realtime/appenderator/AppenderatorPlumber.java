@@ -35,6 +35,7 @@ import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -243,14 +244,15 @@ public class AppenderatorPlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
-    final long truncatedTime = segmentGranularity.bucketStart(new DateTime(timestamp)).getMillis();
+    DateTime truncatedDateTime = segmentGranularity.bucketStart(DateTimes.utc(timestamp));
+    final long truncatedTime = truncatedDateTime.getMillis();
 
     SegmentIdentifier retVal = segments.get(truncatedTime);
 
     if (retVal == null) {
       final Interval interval = new Interval(
-          new DateTime(truncatedTime),
-          segmentGranularity.increment(new DateTime(truncatedTime))
+          truncatedDateTime,
+          segmentGranularity.increment(truncatedDateTime)
       );
 
       retVal = new SegmentIdentifier(
@@ -335,12 +337,12 @@ public class AppenderatorPlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
-    final DateTime truncatedNow = segmentGranularity.bucketStart(new DateTime());
+    final DateTime truncatedNow = segmentGranularity.bucketStart(DateTimes.nowUtc());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
     log.info(
         "Expect to run at [%s]",
-        new DateTime().plus(
+        DateTimes.nowUtc().plus(
             new Duration(
                 System.currentTimeMillis(),
                 segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
@@ -393,14 +395,7 @@ public class AppenderatorPlumber implements Plumber
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
     DateTime minTimestampAsDate = segmentGranularity.bucketStart(
-        new DateTime(
-            Math.max(
-                windowMillis,
-                rejectionPolicy.getCurrMaxTime()
-                               .getMillis()
-            )
-            - windowMillis
-        )
+        DateTimes.utc(Math.max(windowMillis, rejectionPolicy.getCurrMaxTime().getMillis()) - windowMillis)
     );
     long minTimestamp = minTimestampAsDate.getMillis();
 
@@ -426,7 +421,7 @@ public class AppenderatorPlumber implements Plumber
           log.info(
               "Skipping persist and merge for entry [%s] : Start time [%s] >= [%s] min timestamp required in this run. Segment will be picked up in a future run.",
               segment,
-              new DateTime(intervalStart),
+              DateTimes.utc(intervalStart),
               minTimestampAsDate
           );
         }

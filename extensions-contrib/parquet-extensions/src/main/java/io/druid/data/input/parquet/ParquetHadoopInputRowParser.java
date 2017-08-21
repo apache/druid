@@ -29,6 +29,7 @@ import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import org.apache.avro.LogicalType;
 import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
@@ -92,7 +93,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
     if (logicalType instanceof LogicalTypes.Date) {
       int daysSinceEpoch = (Integer) genericRecordAsMap.get(timestampSpec.getTimestampColumn());
 
-      dateTime = new DateTime(TimeUnit.DAYS.toMillis(daysSinceEpoch));
+      dateTime = DateTimes.utc(TimeUnit.DAYS.toMillis(daysSinceEpoch));
     } else {
       // Fall back to a binary format that will be parsed using joda-time
       dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);

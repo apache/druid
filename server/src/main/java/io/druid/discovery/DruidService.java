@@ -17,18 +17,21 @@
  * under the License.
  */
 
-package io.druid.indexer;
+package io.druid.discovery;
 
-import com.google.common.base.Function;
-import org.joda.time.Interval;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
-*/
-class StringIntervalFunction implements Function<String, Interval>
+ * Metadata of a service announced by node. See DataNodeService and LookupNodeService for examples.
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = DataNodeService.DISCOVERY_SERVICE_KEY, value = DataNodeService.class),
+    @JsonSubTypes.Type(name = LookupNodeService.DISCOVERY_SERVICE_KEY, value = LookupNodeService.class),
+    @JsonSubTypes.Type(name = WorkerNodeService.DISCOVERY_SERVICE_KEY, value = WorkerNodeService.class)
+})
+public abstract class DruidService
 {
-  @Override
-  public Interval apply(String input)
-  {
-    return new Interval(input);
-  }
+  public abstract String getName();
 }

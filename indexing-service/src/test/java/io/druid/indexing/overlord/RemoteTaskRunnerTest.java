@@ -39,10 +39,11 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -602,11 +603,11 @@ public class RemoteTaskRunnerTest
   public void testSortByInsertionTime() throws Exception
   {
     RemoteTaskRunnerWorkItem item1 = new RemoteTaskRunnerWorkItem("b", null, null)
-        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:03Z"));
+        .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:03Z"));
     RemoteTaskRunnerWorkItem item2 = new RemoteTaskRunnerWorkItem("a", null, null)
-        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:02Z"));
+        .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:02Z"));
     RemoteTaskRunnerWorkItem item3 = new RemoteTaskRunnerWorkItem("c", null, null)
-        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:01Z"));
+        .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:01Z"));
     ArrayList<RemoteTaskRunnerWorkItem> workItems = Lists.newArrayList(item1, item2, item3);
     RemoteTaskRunner.sortByInsertionTime(workItems);
     Assert.assertEquals(item3, workItems.get(0));
@@ -709,7 +710,7 @@ public class RemoteTaskRunnerTest
     makeRemoteTaskRunner(rtrConfig);
 
     for (int i = 1; i < 13; i++) {
-      String taskId = String.format("rt-%d", i);
+      String taskId = StringUtils.format("rt-%d", i);
       TestRealtimeTask task = new TestRealtimeTask(
           taskId, new TaskResource(taskId, 1), "foo", TaskStatus.success(taskId), jsonMapper
       );
@@ -747,7 +748,7 @@ public class RemoteTaskRunnerTest
     makeRemoteTaskRunner(rtrConfig);
 
     for (int i = 1; i < 13; i++) {
-      String taskId = String.format("rt-%d", i);
+      String taskId = StringUtils.format("rt-%d", i);
       TestRealtimeTask task = new TestRealtimeTask(
           taskId, new TaskResource(taskId, 1), "foo", TaskStatus.success(taskId), jsonMapper
       );

@@ -34,9 +34,9 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -100,7 +100,7 @@ public class RemoteTaskActionClientTest
     result = Collections.singletonList(new TaskLock(
         "groupId",
         "dataSource",
-        new Interval(now - 30 * 1000, now),
+        Intervals.utc(now - 30 * 1000, now),
         "version"
     ));
   }

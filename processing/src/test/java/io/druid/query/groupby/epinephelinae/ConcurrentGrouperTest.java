@@ -21,6 +21,8 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.concurrent.Execs;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -187,7 +189,7 @@ public class ConcurrentGrouperTest
     }
   };
 
-  @Test
+  @Test(timeout = 5000L)
   public void testAggregate() throws InterruptedException, ExecutionException
   {
     final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
@@ -202,7 +204,11 @@ public class ConcurrentGrouperTest
         null,
         8,
         null,
-        false
+        false,
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "concurrent-grouper-test-%d")),
+        0,
+        false,
+        0
     );
 
     Future<?>[] futures = new Future[8];

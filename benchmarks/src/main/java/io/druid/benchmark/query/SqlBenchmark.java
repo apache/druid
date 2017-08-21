@@ -25,12 +25,13 @@ import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.datagen.SegmentGenerator;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -47,7 +48,6 @@ import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -123,7 +123,7 @@ public class SqlBenchmark
     groupByQuery = GroupByQuery
         .builder()
         .setDataSource("foo")
-        .setInterval(new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT))
+        .setInterval(Intervals.ETERNITY)
         .setDimensions(
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec("dimZipf", "d0"),
@@ -165,7 +165,7 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryNative(Blackhole blackhole) throws Exception
   {
-    final Sequence<Row> resultSequence = groupByQuery.run(walker, Maps.<String, Object>newHashMap());
+    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, Maps.newHashMap());
     final ArrayList<Row> resultList = Sequences.toList(resultSequence, Lists.<Row>newArrayList());
 
     for (Row row : resultList) {

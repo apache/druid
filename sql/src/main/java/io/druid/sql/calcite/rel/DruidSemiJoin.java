@@ -266,7 +266,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
                 } else {
                   bounds.add(
                       new ExpressionDimFilter(
-                          String.format(
+                          StringUtils.format(
                               "(%s == %s)",
                               leftExpression.getExpression(),
                               DruidExpression.stringLiteral(values.get(i))

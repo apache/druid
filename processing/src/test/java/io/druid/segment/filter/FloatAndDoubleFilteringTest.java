@@ -35,6 +35,7 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -52,7 +53,6 @@ import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -79,7 +79,7 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "millis", new DateTime("2000")),
+          new TimestampSpec(TIMESTAMP_COLUMN, "millis", DateTimes.of("2000")),
           new DimensionsSpec(
               ImmutableList.of(
                   new StringDimensionSchema("dim0"),

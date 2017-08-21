@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -894,7 +895,7 @@ public class Druids
 
     public ResultBuilder()
     {
-      timestamp = new DateTime(0);
+      timestamp = DateTimes.EPOCH;
       value = null;
     }
 

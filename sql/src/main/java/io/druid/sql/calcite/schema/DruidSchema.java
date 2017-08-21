@@ -33,6 +33,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
@@ -58,7 +59,6 @@ import io.druid.sql.calcite.view.ViewManager;
 import io.druid.timeline.DataSegment;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
-import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -133,6 +133,37 @@ public class DruidSchema extends AbstractSchema
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
     this.tables = Maps.newConcurrentMap();
+
+    serverView.registerTimelineCallback(
+        MoreExecutors.sameThreadExecutor(),
+        new TimelineServerView.TimelineCallback()
+        {
+          @Override
+          public ServerView.CallbackAction timelineInitialized()
+          {
+            synchronized (lock) {
+              isServerViewInitialized = true;
+              lock.notifyAll();
+            }
+
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
+          {
+            addSegment(server, segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
+          {
+            removeSegment(segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
   }
 
   @LifecycleStart
@@ -151,7 +182,8 @@ public class DruidSchema extends AbstractSchema
 
                 try {
                   synchronized (lock) {
-                    final long nextRefreshNoFuzz = new DateTime(lastRefresh)
+                    final long nextRefreshNoFuzz = DateTimes
+                        .utc(lastRefresh)
                         .plus(config.getMetadataRefreshPeriod())
                         .getMillis();
 
@@ -236,37 +268,6 @@ public class DruidSchema extends AbstractSchema
             finally {
               log.info("Metadata refresh stopped.");
             }
-          }
-        }
-    );
-
-    serverView.registerTimelineCallback(
-        MoreExecutors.sameThreadExecutor(),
-        new TimelineServerView.TimelineCallback()
-        {
-          @Override
-          public ServerView.CallbackAction timelineInitialized()
-          {
-            synchronized (lock) {
-              isServerViewInitialized = true;
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
-          {
-            addSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
-          {
-            removeSegment(segment);
-            return ServerView.CallbackAction.CONTINUE;
           }
         }
     );

@@ -577,53 +577,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public ObjectColumnSelector makeObjectColumnSelector(
-      final DimensionSpec spec,
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final ExtractionFn extractionFn = spec.getExtractionFn();
-    final int dimIndex = desc.getIndex();
-
-    class StringIndexerObjectColumnSelector implements ObjectColumnSelector<String>
-    {
-      @Override
-      public Class<String> classOfObject()
-      {
-        return String.class;
-      }
-
-      @Override
-      public String get()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        int[] indices;
-        if (dimIndex < dims.length) {
-          indices = (int[]) dims[dimIndex];
-          if (indices.length > 1) {
-            throw new UnsupportedOperationException(
-                "makeObjectColumnSelector does not support multi-value columns."
-            );
-          }
-        } else {
-          indices = null;
-        }
-
-        if (indices == null || indices.length == 0) {
-          return extractionFn.apply(null);
-        }
-
-        final String strValue = getActualValue(indices[0], false);
-        return extractionFn == null ? strValue : extractionFn.apply(strValue);
-      }
-    }
-
-    return new StringIndexerObjectColumnSelector();
-  }
-
-  @Override
   public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(int[] key, boolean asList)
   {
     if (key == null || key.length == 0) {

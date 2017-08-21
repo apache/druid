@@ -27,6 +27,7 @@ import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
@@ -128,7 +129,7 @@ public class GroupByQueryEngineV2
 
     final DateTime fudgeTimestamp = fudgeTimestampString == null
                                     ? null
-                                    : new DateTime(Long.parseLong(fudgeTimestampString));
+                                    : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
     return cursors.flatMap(
         cursor -> new BaseSequence<>(
@@ -582,7 +583,7 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected Grouper<Integer> newGrouper()
+    protected IntGrouper newGrouper()
     {
       return new BufferArrayGrouper(
           Suppliers.ofInstance(buffer),
@@ -595,6 +596,17 @@ public class GroupByQueryEngineV2
 
     @Override
     protected void aggregateSingleValueDims(Grouper<Integer> grouper)
+    {
+      aggregateSingleValueDims((IntGrouper) grouper);
+    }
+
+    @Override
+    protected void aggregateMultiValueDims(Grouper<Integer> grouper)
+    {
+      aggregateMultiValueDims((IntGrouper) grouper);
+    }
+
+    private void aggregateSingleValueDims(IntGrouper grouper)
     {
       while (!cursor.isDone()) {
         final int key;
@@ -612,8 +624,7 @@ public class GroupByQueryEngineV2
       }
     }
 
-    @Override
-    protected void aggregateMultiValueDims(Grouper<Integer> grouper)
+    private void aggregateMultiValueDims(IntGrouper grouper)
     {
       if (dim == null) {
         throw new ISE("dim must exist");

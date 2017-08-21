@@ -27,9 +27,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.TuningConfig;
-import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -50,7 +50,7 @@ public class HadoopTuningConfig implements TuningConfig
   {
     return new HadoopTuningConfig(
         null,
-        new DateTime().toString(),
+        DateTimes.nowUtc().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
@@ -115,7 +115,7 @@ public class HadoopTuningConfig implements TuningConfig
   )
   {
     this.workingPath = workingPath;
-    this.version = version == null ? new DateTime().toString() : version;
+    this.version = version == null ? DateTimes.nowUtc().toString() : version;
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;

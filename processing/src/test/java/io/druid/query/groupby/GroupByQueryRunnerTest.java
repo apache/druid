@@ -30,15 +30,16 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularities;
@@ -54,14 +55,12 @@ import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
-import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -130,7 +129,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -2495,10 +2493,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -2523,7 +2521,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
@@ -2537,7 +2535,11 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    TestHelper.assertExpectedObjects(allGranExpectedResults, mergedRunner.run(allGranQuery, context), "merged");
+    TestHelper.assertExpectedObjects(
+        allGranExpectedResults,
+        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
+        "merged"
+    );
   }
 
   @Test
@@ -2582,7 +2584,9 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit),
+        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        StringUtils.format("limit: %d", limit)
     );
   }
 
@@ -2629,7 +2633,9 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit),
+        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        StringUtils.format("limit: %d", limit)
     );
   }
 
@@ -2684,7 +2690,9 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), StringUtils.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit),
+        mergeRunner.run(QueryPlus.wrap(fullQuery), context),
+        StringUtils.format("limit: %d", limit)
     );
   }
 
@@ -2796,10 +2804,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -2812,7 +2820,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
   @Test
@@ -2849,10 +2857,12 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
 
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        "limited"
     );
 
     // Now try it with an expression based aggregator.
@@ -2877,9 +2887,14 @@ public class GroupByQueryRunnerTest
         new Object[]{"2011-04-01", "mezzanine", 6L, 6635.47998046875D}
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(builder.build(), context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
+        expectedResults,
+        mergeRunner.run(QueryPlus.wrap(builder.build()), context),
+        "no-limit");
+    TestHelper.assertExpectedObjects(
+        Iterables.limit(expectedResults, 5),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        "limited"
     );
 
     // Now try it with an expression virtual column.
@@ -2894,9 +2909,15 @@ public class GroupByQueryRunnerTest
                )
            );
 
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(builder.build(), context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
+        expectedResults,
+        mergeRunner.run(QueryPlus.wrap(builder.build()), context),
+        "no-limit"
+    );
+    TestHelper.assertExpectedObjects(
+        Iterables.limit(expectedResults, 5),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        "limited"
     );
   }
 
@@ -2934,9 +2955,11 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        "limited"
     );
   }
 
@@ -2975,9 +2998,11 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        "limited"
     );
   }
 
@@ -3015,9 +3040,11 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.setLimit(5).build(), context), "limited"
+        Iterables.limit(expectedResults, 5),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        "limited"
     );
   }
 
@@ -3584,10 +3611,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -3600,7 +3627,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
   @Test
@@ -3802,7 +3829,7 @@ public class GroupByQueryRunnerTest
                         new SelectorDimFilter("idx", "217", null)
                     )
                 ),
-                new SelectorDimFilter("__time", String.valueOf(new DateTime("2011-04-01").getMillis()), null)
+                new SelectorDimFilter("__time", String.valueOf(DateTimes.of("2011-04-01").getMillis()), null)
             )
         )
     );
@@ -3917,10 +3944,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -3933,7 +3960,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
   @Test
@@ -4026,10 +4053,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -4049,7 +4076,7 @@ public class GroupByQueryRunnerTest
             factory.getToolchest().mergeResults(
                 factory.getToolchest().preMergeQueryDecoration(mergedRunner)
             )
-        ).run(fullQuery, context),
+        ).run(QueryPlus.wrap(fullQuery), context),
         "merged"
     );
 
@@ -4065,7 +4092,7 @@ public class GroupByQueryRunnerTest
             factory.getToolchest().mergeResults(
                 factory.getToolchest().preMergeQueryDecoration(mergedRunner)
             )
-        ).run(fullQuery, context),
+        ).run(QueryPlus.wrap(fullQuery), context),
         "merged"
     );
   }
@@ -4094,7 +4121,7 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
   }
 
   @Test
@@ -4153,7 +4180,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
   }
 
   // A subquery identical to the query should yield identical results
@@ -4252,8 +4279,8 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
                 ImmutableList.of(
-                    new Interval("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
-                    new Interval("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
+                    Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
         )
@@ -4325,8 +4352,8 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
                 ImmutableList.of(
-                    new Interval("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
-                    new Interval("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
+                    Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
         )
@@ -4399,7 +4426,7 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
                 ImmutableList.of(
-                    new Interval("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
         )
@@ -6575,7 +6602,7 @@ public class GroupByQueryRunnerTest
   {
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
-        new DateTime("2011-01-12T00:00:00.000Z"),
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass(
             Arrays.asList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6587,7 +6614,7 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -6623,7 +6650,11 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    TestHelper.assertExpectedObjects(
+        bySegmentResults,
+        theRunner.run(QueryPlus.wrap(fullQuery), Maps.newHashMap()),
+        ""
+    );
     exec.shutdownNow();
   }
 
@@ -6633,7 +6664,7 @@ public class GroupByQueryRunnerTest
   {
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
-        new DateTime("2011-01-12T00:00:00.000Z"),
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass(
             Arrays.asList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6645,7 +6676,7 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -6698,7 +6729,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), Maps.newHashMap()), "");
     exec.shutdownNow();
   }
 
@@ -6707,7 +6738,7 @@ public class GroupByQueryRunnerTest
   {
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
-        new DateTime("2011-01-12T00:00:00.000Z"),
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass(
             Arrays.asList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6719,7 +6750,7 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -6772,7 +6803,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), Maps.newHashMap()), "");
     exec.shutdownNow();
   }
 
@@ -7123,7 +7154,7 @@ public class GroupByQueryRunnerTest
   {
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
-        new DateTime("2011-01-12T00:00:00.000Z"),
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass(
             Arrays.asList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -7135,7 +7166,7 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -7202,7 +7233,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), Maps.newHashMap()), "");
     exec.shutdownNow();
   }
 
@@ -8687,33 +8718,27 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+            final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+            final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
-                new QueryRunner<Row>()
-                {
-                  @Override
-                  public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
-                  {
-                    return new MergeSequence(
-                        query.getResultOrdering(),
-                        Sequences.simple(
-                            Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                (queryPlus3, responseContext1) -> new MergeSequence<>(
+                    queryPlus3.getQuery().getResultOrdering(),
+                    Sequences.simple(
+                        Arrays.asList(
+                            runner.run(queryPlus1, responseContext1),
+                            runner.run(queryPlus2, responseContext1)
                         )
-                    );
-                  }
-                }
-            ).run(query, responseContext);
+                    )
+                )
+            ).run(queryPlus, responseContext);
           }
         }
     );
@@ -8726,7 +8751,11 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
-    TestHelper.assertExpectedObjects(allGranExpectedResults, mergedRunner.run(allGranQuery, context), "merged");
+    TestHelper.assertExpectedObjects(
+        allGranExpectedResults,
+        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
+        "merged"
+    );
   }
 
   @Test
@@ -8772,32 +8801,28 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
+              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+            final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+            final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
-                new QueryRunner<Row>()
-                {
-                  @Override
-                  public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
-                  {
-                    return new MergeSequence(
-                        query.getResultOrdering(),
-                        Sequences.simple(
-                            Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                (queryPlus3, responseContext1) -> new MergeSequence<>(
+                    queryPlus3.getQuery().getResultOrdering(),
+                    Sequences.simple(
+                        Arrays.asList(
+                            runner.run(queryPlus1, responseContext1),
+                            runner.run(queryPlus2, responseContext1)
                         )
-                    );
-                  }
-                }
-            ).run(query, responseContext);
+                    )
+                )
+            ).run(queryPlus, responseContext);
           }
         }
     );
@@ -8811,7 +8836,10 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<Row> results = Sequences.toList(mergedRunner.run(allGranQuery, context), Lists.<Row>newArrayList());
+    Iterable<Row> results = Sequences.toList(
+        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
+        new ArrayList<Row>()
+    );
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -8866,32 +8894,28 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
+              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+            final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+            final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
-                new QueryRunner<Row>()
-                {
-                  @Override
-                  public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
-                  {
-                    return new MergeSequence(
-                        query.getResultOrdering(),
-                        Sequences.simple(
-                            Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                (queryPlus3, responseContext1) -> new MergeSequence<>(
+                    queryPlus3.getQuery().getResultOrdering(),
+                    Sequences.simple(
+                        Arrays.asList(
+                            runner.run(queryPlus1, responseContext1),
+                            runner.run(queryPlus2, responseContext1)
                         )
-                    );
-                  }
-                }
-            ).run(query, responseContext);
+                    )
+                )
+            ).run(queryPlus, responseContext);
           }
         }
     );
@@ -8905,7 +8929,10 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<Row> results = Sequences.toList(mergedRunner.run(allGranQuery, context), Lists.<Row>newArrayList());
+    Iterable<Row> results = Sequences.toList(
+        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
+        Lists.<Row>newArrayList()
+    );
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -8964,32 +8991,28 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> responseContext
+              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+            final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
-            final Query query2 = query.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+            final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
-                new QueryRunner<Row>()
-                {
-                  @Override
-                  public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
-                  {
-                    return new MergeSequence(
-                        query.getResultOrdering(),
-                        Sequences.simple(
-                            Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                (queryPlus3, responseContext1) -> new MergeSequence<>(
+                    queryPlus3.getQuery().getResultOrdering(),
+                    Sequences.simple(
+                        Arrays.asList(
+                            runner.run(queryPlus1, responseContext1),
+                            runner.run(queryPlus2, responseContext1)
                         )
-                    );
-                  }
-                }
-            ).run(query, responseContext);
+                    )
+                )
+            ).run(queryPlus, responseContext);
           }
         }
     );
@@ -9003,7 +9026,10 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<Row> results = Sequences.toList(mergedRunner.run(allGranQuery, context), Lists.<Row>newArrayList());
+    Iterable<Row> results = Sequences.toList(
+        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
+        Lists.<Row>newArrayList()
+    );
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -9151,8 +9177,8 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
                 ImmutableList.of(
-                    new Interval("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
-                    new Interval("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
+                    Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
         )
@@ -9281,13 +9307,8 @@ public class GroupByQueryRunnerTest
 
     ChainedExecutionQueryRunner ceqr = new ChainedExecutionQueryRunner(
         MoreExecutors.sameThreadExecutor(),
-        new QueryWatcher()
-        {
-          @Override
-          public void registerQuery(Query query, ListenableFuture future)
-          {
-            return;
-          }
+        (query1, future) -> {
+          return;
         },
         ImmutableList.<QueryRunner<Row>>of(runner, runner)
     );

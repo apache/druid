@@ -22,6 +22,7 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
@@ -160,7 +161,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    return new DateTime((long) object);
+    return DateTimes.utc((long) object);
   }
 
   @Override

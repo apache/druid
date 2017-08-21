@@ -39,6 +39,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -327,7 +328,7 @@ public class TopNTypeInterfaceBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 

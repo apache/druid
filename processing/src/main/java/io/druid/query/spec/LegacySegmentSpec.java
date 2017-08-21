@@ -20,15 +20,15 @@
 package io.druid.query.spec;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import io.druid.java.util.common.IAE;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -49,17 +49,10 @@ public class LegacySegmentSpec extends MultipleIntervalSegmentSpec
       throw new IAE("Unknown type[%s] for intervals[%s]", intervals.getClass(), intervals);
     }
 
-    return Lists.transform(
-        intervalStringList,
-        new Function<Object, Interval>()
-        {
-          @Override
-          public Interval apply(Object input)
-          {
-            return new Interval(input);
-          }
-        }
-    );
+    return intervalStringList
+        .stream()
+        .map(input -> new Interval(input, ISOChronology.getInstanceUTC()))
+        .collect(Collectors.toList());
   }
 
   @JsonCreator

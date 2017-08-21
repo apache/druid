@@ -42,6 +42,7 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -123,7 +124,7 @@ public class SimpleProvisioningStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(DateTimes.nowUtc())
         )
     );
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -160,7 +161,7 @@ public class SimpleProvisioningStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -218,7 +219,7 @@ public class SimpleProvisioningStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -270,7 +271,7 @@ public class SimpleProvisioningStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -314,7 +315,7 @@ public class SimpleProvisioningStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -365,7 +366,7 @@ public class SimpleProvisioningStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -472,7 +473,7 @@ public class SimpleProvisioningStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
