@@ -30,12 +30,23 @@ public interface DruidNodeDiscovery
   Collection<DiscoveryDruidNode> getAllNodes();
   void registerListener(Listener listener);
 
+  /**
+   * Listener for watching nodes in a DruidNodeDiscovery instance obtained via DruidNodeDiscoveryProvider.getXXX().
+   * DruidNodeDiscovery implementation should assume that Listener is not threadsafe and never call methods in
+   * Listener concurrently.
+   *
+   * Implementation of Listener must ensure to not do any time consuming work or block in any of the methods.
+   */
   interface Listener
   {
-    // Implementation must ensure that methods below are never called in parallel and Listener implementation
-    // is not expected to be threadsafe.
-
+    /**
+     * List of nodes added.
+     * First call to this method is also a signal that underlying cache in the DruidNodeDiscovery implementation
+     * has been initialized.
+     * @param nodes
+     */
     void nodesAdded(List<DiscoveryDruidNode> nodes);
+
     void nodesRemoved(List<DiscoveryDruidNode> nodes);
   }
 }
