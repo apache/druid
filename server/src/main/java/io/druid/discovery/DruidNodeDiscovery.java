@@ -31,11 +31,6 @@ public interface DruidNodeDiscovery
 
   interface Listener
   {
-    default void initialized()
-    {
-
-    }
-
     void nodeAdded(DiscoveryDruidNode node);
     void nodeRemoved(DiscoveryDruidNode node);
   }

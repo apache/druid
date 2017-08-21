@@ -40,7 +40,6 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
@@ -106,8 +105,6 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     druidNodeAnnouncer.announce(node1);
     druidNodeAnnouncer.announce(node3);
 
-    AtomicBoolean cacheInitialized = new AtomicBoolean(false);
-
     CuratorDruidNodeDiscoveryProvider druidNodeDiscoveryProvider = new CuratorDruidNodeDiscoveryProvider(
         curator,
         new ZkPathsConfig(),
@@ -117,32 +114,6 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 
     DruidNodeDiscovery coordDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR);
     DruidNodeDiscovery overlordDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD);
-
-    coordDiscovery.registerListener(
-        new DruidNodeDiscovery.Listener()
-        {
-          @Override
-          public void initialized()
-          {
-            cacheInitialized.getAndSet(true);
-          }
-          @Override
-          public void nodeAdded(DiscoveryDruidNode node)
-          {
-
-          }
-
-          @Override
-          public void nodeRemoved(DiscoveryDruidNode node)
-          {
-
-          }
-        }
-    );
-
-    while (!cacheInitialized.get()) {
-      Thread.sleep(100);
-    }
 
     while (!checkNodes(ImmutableSet.of(node1), coordDiscovery.getAllNodes())) {
       Thread.sleep(100);
