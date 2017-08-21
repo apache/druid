@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -42,7 +43,7 @@ public class SegmentChangeRequestLoadTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
 
-    final Interval interval = new Interval("2011-10-01/2011-10-02");
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.<String, Object>of("something", "or_other");
 
     DataSegment segment = new DataSegment(

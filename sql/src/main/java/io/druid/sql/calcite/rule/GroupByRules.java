@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.ExprType;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -856,8 +857,8 @@ public class GroupByRules
               createMaxAggregatorFactory(aggregationType, name, fieldName, expression, macroTable)
           );
         } else if (kind == SqlKind.AVG) {
-          final String sumName = String.format("%s:sum", name);
-          final String countName = String.format("%s:count", name);
+          final String sumName = StringUtils.format("%s:sum", name);
+          final String countName = StringUtils.format("%s:count", name);
           final AggregatorFactory sum = createSumAggregatorFactory(
               aggregationType,
               sumName,

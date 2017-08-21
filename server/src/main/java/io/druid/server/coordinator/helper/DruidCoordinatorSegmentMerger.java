@@ -32,6 +32,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.FunctionalIterable;
@@ -99,7 +100,7 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
       // Get serviced segments from the timeline
       VersionedIntervalTimeline<String, DataSegment> timeline = entry.getValue();
       List<TimelineObjectHolder<String, DataSegment>> timelineObjects =
-          timeline.lookup(new Interval(new DateTime(0), new DateTime("3000-01-01")));
+          timeline.lookup(new Interval(DateTimes.EPOCH, DateTimes.of("3000-01-01")));
 
       // Accumulate timelineObjects greedily until we reach our limits, then backtrack to the maximum complete set
       SegmentsToMerge segmentsToMerge = new SegmentsToMerge();

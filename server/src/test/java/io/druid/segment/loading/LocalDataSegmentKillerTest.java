@@ -21,9 +21,9 @@ package io.druid.segment.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -103,7 +103,7 @@ public class LocalDataSegmentKillerTest
   {
     return new DataSegment(
         "dataSource",
-        Interval.parse("2000/3000"),
+        Intervals.of("2000/3000"),
         "ver",
         ImmutableMap.<String, Object>of(
             "type", "local",

@@ -28,6 +28,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.IllegalFieldValueException;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,9 +52,9 @@ public class GranularityTest
     public void testHiveFormat()
     {
         PathDate[] secondChecks = {
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "dt=2011-03-15-20-50-43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "/dt=2011-03-15-20-50-43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "valid/dt=2011-03-15-20-50-43/Test1"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0, ISOChronology.getInstanceUTC()), null, "dt=2011-03-15-20-50-43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0, ISOChronology.getInstanceUTC()), null, "/dt=2011-03-15-20-50-43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0, ISOChronology.getInstanceUTC()), null, "valid/dt=2011-03-15-20-50-43/Test1"),
                 new PathDate(null, null, "valid/dt=2011-03-15-20-50/Test2"),
                 new PathDate(null, null, "valid/dt=2011-03-15-20/Test3"),
                 new PathDate(null, null, "valid/dt=2011-03-15/Test4"),
@@ -75,9 +76,9 @@ public class GranularityTest
     public void testSecondToDate()
     {
         PathDate[] secondChecks = {
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 43, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/H=20/Test3"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/Test4"),
@@ -102,10 +103,10 @@ public class GranularityTest
     {
 
         PathDate[] minuteChecks = {
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 0, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 50, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 0, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 0, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 50, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/H=20/Test3"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/Test4"),
                 new PathDate(null, null, "valid/y=2011/m=03/Test5"),
@@ -114,7 +115,7 @@ public class GranularityTest
                 new PathDate(null, null, "null/m=10/y=2011/d=23/Test8"),
                 new PathDate(null, null, "null/Test9"),
                 new PathDate(null, null, ""), //Test10 Intentionally empty.
-                new PathDate(new DateTime(2011, 10, 20, 20, 42, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
+                new PathDate(new DateTime(2011, 10, 20, 20, 42, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
@@ -129,18 +130,18 @@ public class GranularityTest
     {
 
         PathDate[] minuteChecks = {
-                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 00, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=00/Test2a"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 00, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=14/Test2b"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 15, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=15/Test2c"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 15, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=29/Test2d"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 30, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=30/Test2e"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 30, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=44/Test2f"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=45/Test2g"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=59/Test2h"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 00, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=00/Test2a"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 00, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=14/Test2b"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 15, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=15/Test2c"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 15, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=29/Test2d"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 30, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=30/Test2e"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 30, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=44/Test2f"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=45/Test2g"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 45, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=59/Test2h"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/H=20/Test3"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/Test4"),
                 new PathDate(null, null, "valid/y=2011/m=03/Test5"),
@@ -149,7 +150,7 @@ public class GranularityTest
                 new PathDate(null, null, "null/m=10/y=2011/d=23/Test8"),
                 new PathDate(null, null, "null/Test9"),
                 new PathDate(null, null, ""), //Test10 Intentionally empty.
-                new PathDate(new DateTime(2011, 10, 20, 20, 30, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
+                new PathDate(new DateTime(2011, 10, 20, 20, 30, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
@@ -163,11 +164,11 @@ public class GranularityTest
     public void testHourToDate()
     {
         PathDate[] hourChecks = {
-                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
-                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
+                new PathDate(new DateTime(2011, 3, 15, 20, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/Test4"),
                 new PathDate(null, null, "valid/y=2011/m=03/Test5"),
                 new PathDate(null, null, "valid/y=2011/Test6"),
@@ -175,8 +176,8 @@ public class GranularityTest
                 new PathDate(null, null, "null/m=10/y=2011/d=23/Test8"),
                 new PathDate(null, null, "null/Test9"),
                 new PathDate(null, null, ""), //Test10 Intentionally empty.
-                new PathDate(new DateTime(2011, 10, 20, 20, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
-                new PathDate(new DateTime(2011, 10, 20, 20, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 20, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
+                new PathDate(new DateTime(2011, 10, 20, 20, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
@@ -189,11 +190,11 @@ public class GranularityTest
     public void testSixHourToDate()
     {
         PathDate[] hourChecks = {
-                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
-                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
-                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
+                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
+                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
+                new PathDate(new DateTime(2011, 3, 15, 18, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
                 new PathDate(null, null, "valid/y=2011/m=03/d=15/Test4"),
                 new PathDate(null, null, "valid/y=2011/m=03/Test5"),
                 new PathDate(null, null, "valid/y=2011/Test6"),
@@ -201,14 +202,14 @@ public class GranularityTest
                 new PathDate(null, null, "null/m=10/y=2011/d=23/Test8"),
                 new PathDate(null, null, "null/Test9"),
                 new PathDate(null, null, ""), //Test10 Intentionally empty.
-                new PathDate(new DateTime(2011, 10, 20, 18, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
-                new PathDate(new DateTime(2011, 10, 20, 18, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=00/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=02/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 10, 20, 6, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=06/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 10, 20, 6, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=11/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 10, 20, 12, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=12/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 10, 20, 12, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=13/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 18, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
+                new PathDate(new DateTime(2011, 10, 20, 18, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=00/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=02/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 6, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=06/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 6, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=11/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 12, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=12/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 12, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=13/M=90/S=24/Test12"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
@@ -221,21 +222,21 @@ public class GranularityTest
     public void testDayToDate()
     {
         PathDate[] dayChecks = {
-                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
-                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
-                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
-                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/Test4"),
+                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
+                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
+                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
+                new PathDate(new DateTime(2011, 3, 15, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/Test4"),
                 new PathDate(null, null, "valid/y=2011/m=03/Test5"),
                 new PathDate(null, null, "valid/y=2011/Test6"),
                 new PathDate(null, null, "null/y=/m=/d=/Test7"),
                 new PathDate(null, null, "null/m=10/y=2011/d=23/Test8"),
                 new PathDate(null, null, "null/Test9"),
                 new PathDate(null, null, ""), //Test10 Intentionally empty.
-                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
-                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
+                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
+                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 20, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
@@ -247,22 +248,22 @@ public class GranularityTest
     public void testMonthToDate()
     {
         PathDate[] monthChecks = {
-                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
-                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
-                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
-                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/Test4"),
-                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/Test5"),
+                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
+                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
+                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
+                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/Test4"),
+                new PathDate(new DateTime(2011, 3, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/Test5"),
                 new PathDate(null, null, "valid/y=2011/Test6"),
                 new PathDate(null, null, "null/y=/m=/d=/Test7"),
                 new PathDate(null, null, "null/m=10/y=2011/d=23/Test8"),
                 new PathDate(null, null, "null/Test9"),
                 new PathDate(null, null, ""), //Test10 Intentionally empty.
-                new PathDate(new DateTime(2011, 10, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
-                new PathDate(new DateTime(2011, 10, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 10, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
-                new PathDate(new DateTime(2011, 10, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
+                new PathDate(new DateTime(2011, 10, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
+                new PathDate(new DateTime(2011, 10, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 10, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
+                new PathDate(new DateTime(2011, 10, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
 
@@ -273,23 +274,23 @@ public class GranularityTest
     public void testYearToDate()
     {
         PathDate[] yearChecks = {
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/d=15/Test4"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "valid/y=2011/m=03/Test5"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "valid/y=2011/Test6"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/Test2"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/Test3"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/Test4"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/Test5"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/Test6"),
                 new PathDate(null, null, "null/y=/m=/d=/Test7"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "null/m=10/y=2011/d=23/Test8"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "null/m=10/y=2011/d=23/Test8"),
                 new PathDate(null, null, "null/Test9"),
                 new PathDate(null, null, ""), //Test10 Intentionally empty.
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
-                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
+                new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), null, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
         checkToDate(YEAR, Granularity.Formatter.DEFAULT, yearChecks);
     }
@@ -366,54 +367,54 @@ public class GranularityTest
     @Test
     public void testBucket()
     {
-        DateTime dt = new DateTime("2011-02-03T04:05:06.100");
+        DateTime dt = DateTimes.of("2011-02-03T04:05:06.100");
 
-        Assert.assertEquals(new Interval("2011-01-01/2012-01-01"), YEAR.bucket(dt));
-        Assert.assertEquals(new Interval("2011-02-01/2011-03-01"), MONTH.bucket(dt));
-        Assert.assertEquals(new Interval("2011-01-31/2011-02-07"), WEEK.bucket(dt));
-        Assert.assertEquals(new Interval("2011-02-03/2011-02-04"), DAY.bucket(dt));
-        Assert.assertEquals(new Interval("2011-02-03T04/2011-02-03T05"), HOUR.bucket(dt));
-        Assert.assertEquals(new Interval("2011-02-03T04:05:00/2011-02-03T04:06:00"), MINUTE.bucket(dt));
-        Assert.assertEquals(new Interval("2011-02-03T04:05:06/2011-02-03T04:05:07"), SECOND.bucket(dt));
+        Assert.assertEquals(Intervals.of("2011-01-01/2012-01-01"), YEAR.bucket(dt));
+        Assert.assertEquals(Intervals.of("2011-02-01/2011-03-01"), MONTH.bucket(dt));
+        Assert.assertEquals(Intervals.of("2011-01-31/2011-02-07"), WEEK.bucket(dt));
+        Assert.assertEquals(Intervals.of("2011-02-03/2011-02-04"), DAY.bucket(dt));
+        Assert.assertEquals(Intervals.of("2011-02-03T04/2011-02-03T05"), HOUR.bucket(dt));
+        Assert.assertEquals(Intervals.of("2011-02-03T04:05:00/2011-02-03T04:06:00"), MINUTE.bucket(dt));
+        Assert.assertEquals(Intervals.of("2011-02-03T04:05:06/2011-02-03T04:05:07"), SECOND.bucket(dt));
 
         // Test with aligned DateTime
-        Assert.assertEquals(new Interval("2011-01-01/2011-01-02"), DAY.bucket(new DateTime("2011-01-01")));
+        Assert.assertEquals(Intervals.of("2011-01-01/2011-01-02"), DAY.bucket(DateTimes.of("2011-01-01")));
     }
 
     @Test
     public void testTruncate() throws Exception
     {
-        DateTime date = new DateTime("2011-03-15T22:42:23.898");
-        Assert.assertEquals(new DateTime("2011-01-01T00:00:00.000"), YEAR.bucketStart(date));
-        Assert.assertEquals(new DateTime("2011-03-01T00:00:00.000"), MONTH.bucketStart(date));
-        Assert.assertEquals(new DateTime("2011-03-14T00:00:00.000"), WEEK.bucketStart(date));
-        Assert.assertEquals(new DateTime("2011-03-15T00:00:00.000"), DAY.bucketStart(date));
-        Assert.assertEquals(new DateTime("2011-03-15T22:00:00.000"), HOUR.bucketStart(date));
-        Assert.assertEquals(new DateTime("2011-03-15T22:42:00.000"), MINUTE.bucketStart(date));
-        Assert.assertEquals(new DateTime("2011-03-15T22:42:23.000"), SECOND.bucketStart(date));
+        DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
+        Assert.assertEquals(DateTimes.of("2011-01-01T00:00:00.000"), YEAR.bucketStart(date));
+        Assert.assertEquals(DateTimes.of("2011-03-01T00:00:00.000"), MONTH.bucketStart(date));
+        Assert.assertEquals(DateTimes.of("2011-03-14T00:00:00.000"), WEEK.bucketStart(date));
+        Assert.assertEquals(DateTimes.of("2011-03-15T00:00:00.000"), DAY.bucketStart(date));
+        Assert.assertEquals(DateTimes.of("2011-03-15T22:00:00.000"), HOUR.bucketStart(date));
+        Assert.assertEquals(DateTimes.of("2011-03-15T22:42:00.000"), MINUTE.bucketStart(date));
+        Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.000"), SECOND.bucketStart(date));
     }
 
     @Test
     public void testGetIterable() throws Exception
     {
-        DateTime start = new DateTime("2011-01-01T00:00:00");
-        DateTime end = new DateTime("2011-01-14T00:00:00");
+        DateTime start = DateTimes.of("2011-01-01T00:00:00");
+        DateTime end = DateTimes.of("2011-01-14T00:00:00");
 
         Iterator<Interval> intervals = DAY.getIterable(new Interval(start, end)).iterator();
 
-        Assert.assertEquals(new Interval("2011-01-01/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-02/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-03/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-04/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-05/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-06/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-07/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-08/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-09/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-10/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-11/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-12/P1d"), intervals.next());
-        Assert.assertEquals(new Interval("2011-01-13/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-01/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-02/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-03/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-04/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-05/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-06/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-07/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-08/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-09/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-10/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-11/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-12/P1d"), intervals.next());
+        Assert.assertEquals(Intervals.of("2011-01-13/P1d"), intervals.next());
 
         try {
             intervals.next();
@@ -427,9 +428,9 @@ public class GranularityTest
     public void testCustomPeriodToDate()
     {
         PathDate[] customChecks = {
-            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
-            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1")
+            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0, ISOChronology.getInstanceUTC()), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0, ISOChronology.getInstanceUTC()), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0, ISOChronology.getInstanceUTC()), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1")
         };
         checkToDate(new PeriodGranularity(new Period("PT2S"), null, DateTimeZone.UTC), Granularity.Formatter.DEFAULT, customChecks);
     }

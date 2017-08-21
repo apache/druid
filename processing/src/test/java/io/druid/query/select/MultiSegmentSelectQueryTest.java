@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
@@ -51,7 +53,6 @@ import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -153,7 +154,7 @@ public class MultiSegmentSelectQueryTest
     timeline.add(index2.getInterval(), "v2", new SingleElementPartitionChunk(segment_override));
 
     segmentIdentifiers = Lists.newArrayList();
-    for (TimelineObjectHolder<String, ?> holder : timeline.lookup(new Interval("2011-01-12/2011-01-14"))) {
+    for (TimelineObjectHolder<String, ?> holder : timeline.lookup(Intervals.of("2011-01-12/2011-01-14"))) {
       segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()));
     }
 
@@ -184,7 +185,7 @@ public class MultiSegmentSelectQueryTest
   private static IncrementalIndex newIndex(String minTimeStamp, int maxRowCount)
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(new DateTime(minTimeStamp).getMillis())
+        .withMinTimestamp(DateTimes.of(minTimeStamp).getMillis())
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();

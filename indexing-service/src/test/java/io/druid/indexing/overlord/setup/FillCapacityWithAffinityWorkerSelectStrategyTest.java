@@ -26,7 +26,7 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
-import org.joda.time.DateTime;
+import io.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -49,14 +49,14 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "lhost", "lhost", 1, "v1"), 0,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
-                DateTime.now()
+                DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
-                DateTime.now()
+                DateTimes.nowUtc()
             )
         ),
         new NoopTask(null, 1, 0, null, null, null)
@@ -87,14 +87,14 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "lhost", "lhost", 1, "v1"), 0,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
-                DateTime.now()
+                DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
-                DateTime.now()
+                DateTimes.nowUtc()
             )
         ),
         new NoopTask(null, 1, 0, null, null, null)
@@ -118,7 +118,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
-                DateTime.now()
+                DateTimes.nowUtc()
             )
         ),
         new NoopTask(null, 1, 0, null, null, null)

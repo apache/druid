@@ -17,18 +17,28 @@
  * under the License.
  */
 
-package io.druid.indexer;
+package io.druid.java.util.common;
 
-import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
-/**
-*/
-class StringIntervalFunction implements Function<String, Interval>
+public final class Intervals
 {
-  @Override
-  public Interval apply(String input)
+  public static final Interval ETERNITY = utc(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
+  public static final ImmutableList<Interval> ONLY_ETERNITY = ImmutableList.of(ETERNITY);
+
+  public static Interval utc(long startInstant, long endInstant)
   {
-    return new Interval(input);
+    return new Interval(startInstant, endInstant, ISOChronology.getInstanceUTC());
+  }
+
+  public static Interval of(String interval)
+  {
+    return new Interval(interval, ISOChronology.getInstanceUTC());
+  }
+
+  private Intervals()
+  {
   }
 }

@@ -31,6 +31,7 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
@@ -180,7 +181,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       this.jsonMapper = jsonMapper;
 
       // This is required to be single threaded from Docs in PathChildrenCache;
-      this.cacheExecutor = Execs.singleThreaded(String.format("NodeTypeWatcher[%s]", nodeType));
+      this.cacheExecutor = Execs.singleThreaded(StringUtils.format("NodeTypeWatcher[%s]", nodeType));
       this.cache = new PathChildrenCache(
           curatorFramework,
           ZKPaths.makePath(basePath, nodeType),

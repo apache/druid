@@ -24,6 +24,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
 import io.druid.server.http.security.ConfigResourceFilter;
 import org.joda.time.Interval;
@@ -105,7 +106,7 @@ public class CoordinatorDynamicConfigsResource
       @QueryParam("count") final Integer count
   )
   {
-    Interval theInterval = interval == null ? null : new Interval(interval);
+    Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
         return Response.ok(

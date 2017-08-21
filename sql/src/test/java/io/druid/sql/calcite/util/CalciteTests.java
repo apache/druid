@@ -99,6 +99,7 @@ import io.druid.sql.guice.SqlModule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -423,7 +424,7 @@ public class CalciteTests
   {
     return PARSER.parse(
         ImmutableMap.<String, Object>of(
-            "t", new DateTime(t).getMillis(),
+            "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
             "dim1", dim1,
             "dim2", dim2,
             "m1", m1

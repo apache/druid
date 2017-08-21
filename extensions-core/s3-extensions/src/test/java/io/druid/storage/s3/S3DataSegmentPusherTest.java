@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.commons.io.IOUtils;
@@ -32,7 +33,6 @@ import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -103,7 +103,7 @@ public class S3DataSegmentPusherTest
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
-        new Interval("2015/2016"),
+        Intervals.of("2015/2016"),
         "0",
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
