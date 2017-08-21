@@ -45,6 +45,9 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -109,6 +112,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
@@ -602,7 +606,11 @@ public class TaskLifecycleTest
         INDEX_IO,
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
-        INDEX_MERGER_V9
+        INDEX_MERGER_V9,
+        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
+        EasyMock.createNiceMock(DruidNode.class),
+        new LookupNodeService("tier"),
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
     );
   }
 

@@ -42,6 +42,9 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
@@ -50,6 +53,7 @@ import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
+import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
@@ -290,12 +294,25 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         )
     );
 
+    LookupNodeService lookupNodeService = getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER) == null ?
+                                          toolbox.getLookupNodeService() :
+                                          new LookupNodeService((String) getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER));
+    DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
+        toolbox.getDruidNode(),
+        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
+        ImmutableMap.of(
+            toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
+            lookupNodeService.getName(), lookupNodeService
+        )
+    );
+
     try (
         final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
         final AppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
         final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
       toolbox.getDataSegmentServerAnnouncer().announce();
+      toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 
       appenderator = appenderator0;
 
@@ -598,6 +615,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
     }
 
+    toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
     toolbox.getDataSegmentServerAnnouncer().unannounce();
 
     return success();

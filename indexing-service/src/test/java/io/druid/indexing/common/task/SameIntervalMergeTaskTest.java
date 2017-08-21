@@ -233,7 +233,8 @@ public class SameIntervalMergeTaskTest
           {
           }
         }, jsonMapper, temporaryFolder.newFolder(),
-            indexIO, null, null, EasyMock.createMock(IndexMergerV9.class)
+            indexIO, null, null, EasyMock.createMock(IndexMergerV9.class),
+            null, null, null, null
         )
     );
 
