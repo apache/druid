@@ -105,9 +105,7 @@ public class TieredBrokerHostSelectorTest
       @Override
       public void registerListener(Listener listener)
       {
-        listener.nodeAdded(node1);
-        listener.nodeAdded(node2);
-        listener.nodeAdded(node3);
+        listener.nodesAdded(ImmutableList.of(node1, node2, node3));
       }
     };
 

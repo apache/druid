@@ -129,21 +129,29 @@ public class TieredBrokerHostSelector<T>
           new DruidNodeDiscovery.Listener()
           {
             @Override
-            public void nodeAdded(DiscoveryDruidNode node)
+            public void nodesAdded(List<DiscoveryDruidNode> nodes)
             {
-              NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
-              if (nodesHolder != null) {
-                nodesHolder.add(node.getDruidNode().getHostAndPortToUse(), TO_SERVER.apply(node));
-              }
+              nodes.forEach(
+                  (node) -> {
+                    NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
+                    if (nodesHolder != null) {
+                      nodesHolder.add(node.getDruidNode().getHostAndPortToUse(), TO_SERVER.apply(node));
+                    }
+                  }
+              );
             }
 
             @Override
-            public void nodeRemoved(DiscoveryDruidNode node)
+            public void nodesRemoved(List<DiscoveryDruidNode> nodes)
             {
-              NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
-              if (nodesHolder != null) {
-                nodesHolder.remove(node.getDruidNode().getHostAndPortToUse());
-              }
+              nodes.forEach(
+                  (node) -> {
+                    NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
+                    if (nodesHolder != null) {
+                      nodesHolder.remove(node.getDruidNode().getHostAndPortToUse());
+                    }
+                  }
+              );
             }
           }
       );
