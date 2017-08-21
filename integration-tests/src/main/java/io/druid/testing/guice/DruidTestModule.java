@@ -35,6 +35,9 @@ import io.druid.curator.CuratorConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.Self;
+import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.IntegrationTestingConfigProvider;
 import io.druid.testing.IntegrationTestingCuratorConfig;
@@ -52,6 +55,11 @@ public class DruidTestModule implements Module
     JsonConfigProvider.bind(binder, "druid.test.config", IntegrationTestingConfigProvider.class);
 
     binder.bind(CuratorConfig.class).to(IntegrationTestingCuratorConfig.class);
+
+    // Bind DruidNode instance to make Guice happy. This instance is currently unused.
+    binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(
+        new DruidNode("integration-tests", "localhost", 9191, null, null, new ServerConfig())
+    );
   }
 
   @Provides

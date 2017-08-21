@@ -26,6 +26,7 @@ import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.server.DruidNode;
 import org.apache.curator.framework.CuratorFramework;
@@ -122,7 +123,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
             }
           }
         },
-        Execs.singleThreaded(String.format("LeaderSelector[%s]", latchPath))
+        Execs.singleThreaded(StringUtils.format("LeaderSelector[%s]", latchPath))
     );
 
     return leaderLatch.getAndSet(newLeaderLatch);
