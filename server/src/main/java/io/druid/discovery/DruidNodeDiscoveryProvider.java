@@ -63,7 +63,8 @@ public abstract class DruidNodeDiscoveryProvider
       WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_MM)
   );
 
-  private final Map<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap = new ConcurrentHashMap<>(SERVICE_TO_NODE_TYPES.size());
+  private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap = new ConcurrentHashMap<>(
+      SERVICE_TO_NODE_TYPES.size());
 
   /**
    * Get DruidNodeDiscovery instance to discover nodes of given nodeType.
@@ -73,25 +74,28 @@ public abstract class DruidNodeDiscoveryProvider
   /**
    * Get DruidNodeDiscovery instance to discover nodes that announce given service in its metadata.
    */
-  public synchronized DruidNodeDiscovery getForService(String serviceName)
+  public DruidNodeDiscovery getForService(String serviceName)
   {
-    ServiceDruidNodeDiscovery serviceDiscovery = serviceDiscoveryMap.get(serviceName);
+    return serviceDiscoveryMap.compute(
+        serviceName,
+        (k, v) -> {
+          if (v != null) {
+            return v;
+          }
 
-    if (serviceDiscovery == null) {
-      Set<String> nodeTypesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(serviceName);
-      if (nodeTypesToWatch == null) {
-        throw new IAE("Unknown service [%s].", serviceName);
-      }
+          Set<String> nodeTypesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(serviceName);
+          if (nodeTypesToWatch == null) {
+            throw new IAE("Unknown service [%s].", serviceName);
+          }
 
-      serviceDiscovery = new ServiceDruidNodeDiscovery(serviceName);
-      DruidNodeDiscovery.Listener nodeListener = serviceDiscovery.serviceNodeListener();
-      for (String nodeType : nodeTypesToWatch) {
-        getForNodeType(nodeType).registerListener(nodeListener);
-      }
-      serviceDiscoveryMap.put(serviceName, serviceDiscovery);
-    }
-
-    return serviceDiscovery;
+          ServiceDruidNodeDiscovery serviceDiscovery = new ServiceDruidNodeDiscovery(serviceName);
+          DruidNodeDiscovery.Listener nodeListener = serviceDiscovery.serviceNodeListener();
+          for (String nodeType : nodeTypesToWatch) {
+            getForNodeType(nodeType).registerListener(nodeListener);
+          }
+          return serviceDiscovery;
+        }
+    );
   }
 
   private static class ServiceDruidNodeDiscovery implements DruidNodeDiscovery
