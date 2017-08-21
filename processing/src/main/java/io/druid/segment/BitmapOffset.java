@@ -23,6 +23,7 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
+import io.druid.extendedset.intset.EmptyIntIterator;
 import io.druid.java.util.common.RE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Offset;
@@ -127,7 +128,7 @@ public class BitmapOffset extends Offset
   private final int valueForReset;
   private int value;
 
-  public static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
+  static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
   {
     ImmutableBitmap roaringBitmap = bitmapIndex;
     if (!(bitmapIndex instanceof WrappedImmutableRoaringBitmap)) {
@@ -153,7 +154,7 @@ public class BitmapOffset extends Offset
     increment();
     // It's important to set iteratorForReset and valueForReset after calling increment(), because only after that the
     // iterator and the value are in proper initial state.
-    this.iteratorForReset = iterator.clone();
+    this.iteratorForReset = safeClone(iterator);
     this.valueForReset = value;
   }
 
@@ -173,7 +174,7 @@ public class BitmapOffset extends Offset
   {
     this.fullness = fullness;
     this.iterator = iterator;
-    this.iteratorForReset = iterator.clone();
+    this.iteratorForReset = safeClone(iterator);
     this.valueForReset = value;
     this.value = value;
   }
@@ -197,14 +198,15 @@ public class BitmapOffset extends Offset
   @Override
   public void reset()
   {
-    iterator = iteratorForReset.clone();
+    iterator = safeClone(iteratorForReset);
     value = valueForReset;
   }
 
+  @SuppressWarnings("MethodDoesntCallSuperMethod")
   @Override
   public Offset clone()
   {
-    return new BitmapOffset(fullness, iterator.clone(), value);
+    return new BitmapOffset(fullness, safeClone(iterator), value);
   }
 
   @Override
@@ -218,5 +220,12 @@ public class BitmapOffset extends Offset
   {
     inspector.visit("iterator", iterator);
     inspector.visit("fullness", fullness);
+  }
+
+  private static IntIterator safeClone(IntIterator iterator)
+  {
+    // Calling clone() on empty iterators from RoaringBitmap library sometimes fails with NPE,
+    // see https://github.com/RoaringBitmap/RoaringBitmap/issues/177
+    return iterator.hasNext() ? iterator.clone() : EmptyIntIterator.instance();
   }
 }
