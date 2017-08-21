@@ -19,73 +19,27 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 
-/**
- */
-public class FloatMinAggregator implements Aggregator
+final class DoubleSumAggregateCombiner extends DoubleAggregateCombiner
 {
-  static double combineValues(Object lhs, Object rhs)
+  private double sum;
+
+  @Override
+  public void reset(ColumnValueSelector selector)
   {
-    return Math.min(((Number) lhs).floatValue(), ((Number) rhs).floatValue());
-  }
-
-  private final FloatColumnSelector selector;
-
-  private float min;
-
-  public FloatMinAggregator(FloatColumnSelector selector)
-  {
-    this.selector = selector;
-
-    reset();
+    sum = selector.getDouble();
   }
 
   @Override
-  public void aggregate()
+  public void fold(ColumnValueSelector selector)
   {
-    min = Math.min(min, selector.getFloat());
-  }
-
-  @Override
-  public void reset()
-  {
-    min = Float.POSITIVE_INFINITY;
-  }
-
-  @Override
-  public Object get()
-  {
-    return min;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return min;
-  }
-
-  @Override
-  public long getLong()
-  {
-    return (long) min;
+    sum += selector.getDouble();
   }
 
   @Override
   public double getDouble()
   {
-    return (double) min;
-  }
-
-  @Override
-  public Aggregator clone()
-  {
-    return new FloatMinAggregator(selector);
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
+    return sum;
   }
 }

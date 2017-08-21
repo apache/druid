@@ -32,6 +32,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
@@ -138,6 +139,33 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return getCompiledScript().combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new DoubleAggregateCombiner()
+    {
+      private double combined;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        combined = selector.getDouble();
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        combined = getCompiledScript().combine(combined, selector.getDouble());
+      }
+
+      @Override
+      public double getDouble()
+      {
+        return combined;
+      }
+    };
   }
 
   @Override
