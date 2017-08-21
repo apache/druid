@@ -22,6 +22,7 @@ package io.druid.curator.discovery;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.druid.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
@@ -167,6 +168,8 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private final Object lock = new Object();
 
+    private boolean cacheInitialized = false;
+
     NodeTypeWatcher(
         ExecutorService listenerExecutor,
         CuratorFramework curatorFramework,
@@ -201,12 +204,13 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     public void registerListener(DruidNodeDiscovery.Listener listener)
     {
       synchronized (lock) {
-        for (DiscoveryDruidNode node : nodes.values()) {
+        if (cacheInitialized) {
+          ImmutableList<DiscoveryDruidNode> currNodes = ImmutableList.copyOf(nodes.values());
           safeSchedule(
               () -> {
-                listener.nodeAdded(node);
+                listener.nodesAdded(currNodes);
               },
-              "Exception occured in nodeAdded(node=[%s]) in listener [%s].", node, listener
+              "Exception occured in nodesAdded([%s]) in listener [%s].", currNodes, listener
           );
         }
         nodeListeners.add(listener);
@@ -273,6 +277,28 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
               break;
             }
+            case INITIALIZED: {
+              if (cacheInitialized) {
+                log.warn("cache is already initialized. ignoring [%s] event, nodeType [%s].", event.getType(), nodeType);
+                return;
+              }
+
+              log.info("Received INITIALIZED in node watcher for type [%s].", nodeType);
+
+              cacheInitialized = true;
+
+              ImmutableList<DiscoveryDruidNode> currNodes = ImmutableList.copyOf(nodes.values());
+              for (Listener l : nodeListeners) {
+                safeSchedule(
+                    () -> {
+                      l.nodesAdded(currNodes);
+                    },
+                    "Exception occured in nodesAdded([%s]) in listener [%s].", currNodes, l
+                );
+              }
+
+              break;
+            }
             default: {
               log.error("Ignored event type [%s] for nodeType [%s] watcher.", event.getType(), nodeType);
             }
@@ -286,7 +312,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private void safeSchedule(
         Runnable runnable,
-        String errMsgFormat, Object ... args
+        String errMsgFormat, Object... args
     )
     {
       listenerExecutor.submit(() -> {
@@ -303,13 +329,16 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     {
       DiscoveryDruidNode prev = nodes.putIfAbsent(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
       if (prev == null) {
-        for (Listener l : nodeListeners) {
-          safeSchedule(
-              () -> {
-                l.nodeAdded(druidNode);
-              },
-              "Exception occured in nodeAdded(node=[%s]) in listener [%s].", druidNode, l
-          );
+        if (cacheInitialized) {
+          List<DiscoveryDruidNode> newNode = ImmutableList.of(druidNode);
+          for (Listener l : nodeListeners) {
+            safeSchedule(
+                () -> {
+                  l.nodesAdded(newNode);
+                },
+                "Exception occured in nodeAdded(node=[%s]) in listener [%s].", druidNode, l
+            );
+          }
         }
       } else {
         log.warn("Node[%s] discovered but existed already [%s].", druidNode, prev);
@@ -325,13 +354,16 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         return;
       }
 
-      for (Listener l : nodeListeners) {
-        safeSchedule(
-            () -> {
-              l.nodeRemoved(druidNode);
-            },
-            "Exception occured in nodeRemoved(node=[%s]) in listener [%s].", druidNode, l
-        );
+      if (cacheInitialized) {
+        List<DiscoveryDruidNode> nodeRemoved = ImmutableList.of(druidNode);
+        for (Listener l : nodeListeners) {
+          safeSchedule(
+              () -> {
+                l.nodesRemoved(nodeRemoved);
+              },
+              "Exception occured in nodeRemoved(node=[%s]) in listener [%s].", druidNode, l
+          );
+        }
       }
     }
 
@@ -341,7 +373,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         cache.getListenable().addListener(
             (client, event) -> handleChildEvent(client, event)
         );
-        cache.start();
+        cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
       }
       catch (Exception ex) {
         throw Throwables.propagate(ex);

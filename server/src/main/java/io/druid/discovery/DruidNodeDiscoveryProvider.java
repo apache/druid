@@ -19,6 +19,7 @@
 
 package io.druid.discovery;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.java.util.common.IAE;
@@ -27,6 +28,7 @@ import io.druid.java.util.common.logger.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -89,9 +91,8 @@ public abstract class DruidNodeDiscoveryProvider
           }
 
           ServiceDruidNodeDiscovery serviceDiscovery = new ServiceDruidNodeDiscovery(serviceName);
-          DruidNodeDiscovery.Listener nodeListener = serviceDiscovery.serviceNodeListener();
           for (String nodeType : nodeTypesToWatch) {
-            getForNodeType(nodeType).registerListener(nodeListener);
+            getForNodeType(nodeType).registerListener(serviceDiscovery.nodeTypeListener());
           }
           return serviceDiscovery;
         }
@@ -100,12 +101,16 @@ public abstract class DruidNodeDiscoveryProvider
 
   private static class ServiceDruidNodeDiscovery implements DruidNodeDiscovery
   {
+    private static final Logger log = new Logger(ServiceDruidNodeDiscovery.class);
+
     private final String service;
     private final Map<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
 
     private final List<Listener> listeners = new ArrayList<>();
 
     private final Object lock = new Object();
+
+    private Set<NodeTypeListener> uninitializedNodeTypeListeners = new HashSet<>();
 
     ServiceDruidNodeDiscovery(String service)
     {
@@ -122,51 +127,85 @@ public abstract class DruidNodeDiscoveryProvider
     public void registerListener(Listener listener)
     {
       synchronized (lock) {
-        for (DiscoveryDruidNode node : nodes.values()) {
-          listener.nodeAdded(node);
+        if (uninitializedNodeTypeListeners.isEmpty()) {
+          listener.nodesAdded(ImmutableList.copyOf(nodes.values()));
         }
         listeners.add(listener);
       }
     }
 
-    ServiceNodeListener serviceNodeListener()
+    NodeTypeListener nodeTypeListener()
     {
-      return new ServiceNodeListener();
+      NodeTypeListener nodeListener = new NodeTypeListener();
+      uninitializedNodeTypeListeners.add(nodeListener);
+      return nodeListener;
     }
 
-    class ServiceNodeListener implements DruidNodeDiscovery.Listener
+    class NodeTypeListener implements DruidNodeDiscovery.Listener
     {
       @Override
-      public void nodeAdded(DiscoveryDruidNode node)
+      public void nodesAdded(List<DiscoveryDruidNode> nodesDiscovered)
       {
         synchronized (lock) {
-          if (node.getServices().containsKey(service)) {
-            DiscoveryDruidNode prev = nodes.putIfAbsent(node.getDruidNode().getHostAndPortToUse(), node);
+          ImmutableList.Builder<DiscoveryDruidNode> builder = ImmutableList.builder();
+          for (DiscoveryDruidNode node : nodesDiscovered) {
+            if (node.getServices().containsKey(service)) {
+              DiscoveryDruidNode prev = nodes.putIfAbsent(node.getDruidNode().getHostAndPortToUse(), node);
 
-            if (prev == null) {
-              for (Listener listener : listeners) {
-                listener.nodeAdded(node);
+              if (prev == null) {
+                builder.add(node);
+              } else {
+                log.warn("Node[%s] discovered but already exists [%s].", node, prev);
               }
             } else {
-              log.warn("Node[%s] discovered but already exists [%s].", node, prev);
+              log.warn("Node[%s] discovered but doesn't have service[%s]. Ignored.", node, service);
             }
-          } else {
-            log.warn("Node[%s] discovered but doesn't have service[%s]. Ignored.", node, service);
+          }
+
+          ImmutableList<DiscoveryDruidNode> newNodesAdded = null;
+          if (uninitializedNodeTypeListeners.isEmpty()) {
+            newNodesAdded = builder.build();
+          } else if (uninitializedNodeTypeListeners.remove(this) && uninitializedNodeTypeListeners.isEmpty()) {
+            newNodesAdded = ImmutableList.copyOf(nodes.values());
+          }
+
+          if (newNodesAdded != null) {
+            for (Listener listener : listeners) {
+              try {
+                listener.nodesAdded(newNodesAdded);
+              }
+              catch (Exception ex) {
+                log.error(ex, "Listener[%s].nodesAdded(%s) threw exception. Ignored.", listener, newNodesAdded);
+              }
+            }
           }
         }
       }
 
       @Override
-      public void nodeRemoved(DiscoveryDruidNode node)
+      public void nodesRemoved(List<DiscoveryDruidNode> nodesDisappeared)
       {
         synchronized (lock) {
-          DiscoveryDruidNode prev = nodes.remove(node.getDruidNode().getHostAndPortToUse());
-          if (prev != null) {
-            for (Listener listener : listeners) {
-              listener.nodeRemoved(node);
+          ImmutableList.Builder<DiscoveryDruidNode> builder = ImmutableList.builder();
+          for (DiscoveryDruidNode node : nodesDisappeared) {
+            DiscoveryDruidNode prev = nodes.remove(node.getDruidNode().getHostAndPortToUse());
+            if (prev != null) {
+              builder.add(node);
+            } else {
+              log.warn("Node[%s] disappeared but was unknown for service listener [%s].", node, service);
             }
-          } else {
-            log.warn("Node[%s] disappeared but was unknown for service listener [%s].", node, service);
+          }
+
+          if (uninitializedNodeTypeListeners.isEmpty()) {
+            ImmutableList<DiscoveryDruidNode> nodesRemoved = builder.build();
+            for (Listener listener : listeners) {
+              try {
+                listener.nodesRemoved(nodesRemoved);
+              }
+              catch (Exception ex) {
+                log.error(ex, "Listener[%s].nodesRemoved(%s) threw exception. Ignored.", listener, nodesRemoved);
+              }
+            }
           }
         }
       }

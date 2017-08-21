@@ -20,6 +20,7 @@
 package io.druid.discovery;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Interface for discovering Druid Nodes announced by DruidNodeAnnouncer.
@@ -31,7 +32,10 @@ public interface DruidNodeDiscovery
 
   interface Listener
   {
-    void nodeAdded(DiscoveryDruidNode node);
-    void nodeRemoved(DiscoveryDruidNode node);
+    // Implementation must ensure that methods below are never called in parallel and Listener implementation
+    // is not expected to be threadsafe.
+
+    void nodesAdded(List<DiscoveryDruidNode> nodes);
+    void nodesRemoved(List<DiscoveryDruidNode> nodes);
   }
 }
