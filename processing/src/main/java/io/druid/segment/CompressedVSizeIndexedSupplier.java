@@ -201,12 +201,6 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
         }
 
         @Override
-        public void fill(int index, int[] toFill)
-        {
-          throw new UnsupportedOperationException("fill not supported");
-        }
-
-        @Override
         public void close() throws IOException
         {
           // no-op
