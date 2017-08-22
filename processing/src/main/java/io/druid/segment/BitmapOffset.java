@@ -225,7 +225,7 @@ public class BitmapOffset extends Offset
   private static IntIterator safeClone(IntIterator iterator)
   {
     // Calling clone() on empty iterators from RoaringBitmap library sometimes fails with NPE,
-    // see https://github.com/RoaringBitmap/RoaringBitmap/issues/177
+    // see https://github.com/druid-io/druid/issues/4709, https://github.com/RoaringBitmap/RoaringBitmap/issues/177
     return iterator.hasNext() ? iterator.clone() : EmptyIntIterator.instance();
   }
 }
