@@ -300,7 +300,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               break;
             }
             default: {
-              log.error("Ignored event type [%s] for nodeType [%s] watcher.", event.getType(), nodeType);
+              log.info("Ignored event type [%s] for nodeType [%s] watcher.", event.getType(), nodeType);
             }
           }
         }
