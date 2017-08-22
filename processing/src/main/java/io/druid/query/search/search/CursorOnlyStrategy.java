@@ -117,7 +117,7 @@ public class CursorOnlyStrategy extends SearchStrategy
                   DimensionHandlerUtils.createColumnSelectorPluses(
                       SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
                       dimsToSearch,
-                      cursor
+                      cursor.getColumnSelectorFactory()
                   )
               );
 

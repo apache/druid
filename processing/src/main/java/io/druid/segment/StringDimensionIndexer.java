@@ -41,7 +41,7 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.segment.incremental.TimeAndDimsHolder;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
@@ -370,7 +370,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public DimensionSelector makeDimensionSelector(
       final DimensionSpec spec,
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      final TimeAndDimsHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
   {
@@ -553,25 +553,19 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
-  )
+  public LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
   {
      return ZeroLongColumnSelector.instance();
   }
 
   @Override
-  public FloatColumnSelector makeFloatColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
-  )
+  public FloatColumnSelector makeFloatColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
   {
     return ZeroFloatColumnSelector.instance();
   }
 
   @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
-  )
+  public DoubleColumnSelector makeDoubleColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
   {
     return ZeroDoubleColumnSelector.instance();
   }

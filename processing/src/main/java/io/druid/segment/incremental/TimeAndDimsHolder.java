@@ -17,19 +17,33 @@
  * under the License.
  */
 
-package io.druid.segment.historical;
+package io.druid.segment.incremental;
 
-import io.druid.segment.data.Offset;
-import io.druid.segment.data.ReadableOffset;
-
-public interface OffsetHolder
+/**
+ * This interface is the core "pointer" interface that is used to create {@link io.druid.segment.ColumnValueSelector}s
+ * over incremental index. It's counterpart for historical segments is {@link io.druid.segment.data.Offset}.
+ */
+public class TimeAndDimsHolder
 {
-  Offset getOffset();
+  IncrementalIndex.TimeAndDims currEntry = null;
 
-  /**
-   * Should return the same, or a "view" of the same offset as {@link #getOffset()}. The difference is that smaller
-   * interface allows to return unwrapped underlying offset sometimes, e. g. {@link
-   * io.druid.segment.FilteredOffset#baseOffset}, instead of the wrapper {@link io.druid.segment.FilteredOffset}.
-   */
-  ReadableOffset getReadableOffset();
+  public IncrementalIndex.TimeAndDims get()
+  {
+    return currEntry;
+  }
+
+  public void set(IncrementalIndex.TimeAndDims currEntry)
+  {
+    this.currEntry = currEntry;
+  }
+
+  public IncrementalIndex.TimeAndDims getKey()
+  {
+    return currEntry;
+  }
+
+  public int getValue()
+  {
+    return currEntry.getRowIndex();
+  }
 }

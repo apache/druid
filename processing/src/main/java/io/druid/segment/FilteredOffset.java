@@ -27,31 +27,33 @@ import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Offset;
+import io.druid.segment.data.ReadableOffset;
 import io.druid.segment.filter.BooleanValueMatcher;
-import io.druid.segment.historical.HistoricalCursor;
-import io.druid.segment.historical.OffsetHolder;
 import org.roaringbitmap.IntIterator;
 
 public final class FilteredOffset extends Offset
 {
+  /** This field is non-final only for {@link #clone()} */
   private Offset baseOffset;
   private final ValueMatcher filterMatcher;
 
   FilteredOffset(
-      HistoricalCursor cursor,
+      Offset baseOffset,
+      ColumnSelectorFactory columnSelectorFactory,
       boolean descending,
       Filter postFilter,
       ColumnSelectorBitmapIndexSelector bitmapIndexSelector
   )
   {
+    this.baseOffset = baseOffset;
     RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
-        cursor,
+        baseOffset.getBaseReadableOffset(),
         descending
     );
     if (postFilter instanceof BooleanFilter) {
       filterMatcher = ((BooleanFilter) postFilter).makeMatcher(
           bitmapIndexSelector,
-          cursor,
+          columnSelectorFactory,
           rowOffsetMatcherFactory
       );
     } else {
@@ -60,20 +62,10 @@ public final class FilteredOffset extends Offset
             postFilter.getBitmapIndex(bitmapIndexSelector)
         );
       } else {
-        filterMatcher = postFilter.makeMatcher(cursor);
+        filterMatcher = postFilter.makeMatcher(columnSelectorFactory);
       }
     }
-  }
-
-  void reset(Offset baseOffset)
-  {
-    this.baseOffset = baseOffset;
-    if (baseOffset.withinBounds()) {
-      if (!filterMatcher.matches()) {
-        BaseQuery.checkInterrupted();
-        incrementInterruptibly();
-      }
-    }
+    incrementIfNeededOnCreationOrReset();
   }
 
   @Override
@@ -113,6 +105,23 @@ public final class FilteredOffset extends Offset
   public void reset()
   {
     baseOffset.reset();
+    incrementIfNeededOnCreationOrReset();
+  }
+
+  private void incrementIfNeededOnCreationOrReset()
+  {
+    if (baseOffset.withinBounds()) {
+      if (!filterMatcher.matches()) {
+        BaseQuery.checkInterrupted();
+        incrementInterruptibly();
+      }
+    }
+  }
+
+  @Override
+  public ReadableOffset getBaseReadableOffset()
+  {
+    return baseOffset.getBaseReadableOffset();
   }
 
   @Override
@@ -138,12 +147,12 @@ public final class FilteredOffset extends Offset
 
   private static class CursorOffsetHolderRowOffsetMatcherFactory implements RowOffsetMatcherFactory
   {
-    private final OffsetHolder holder;
+    private final ReadableOffset offset;
     private final boolean descending;
 
-    CursorOffsetHolderRowOffsetMatcherFactory(OffsetHolder holder, boolean descending)
+    CursorOffsetHolderRowOffsetMatcherFactory(ReadableOffset offset, boolean descending)
     {
-      this.holder = holder;
+      this.offset = offset;
       this.descending = descending;
     }
 
@@ -168,7 +177,7 @@ public final class FilteredOffset extends Offset
           @Override
           public boolean matches()
           {
-            int currentOffset = holder.getReadableOffset().getOffset();
+            int currentOffset = offset.getOffset();
             while (iterOffset > currentOffset && iter.hasNext()) {
               iterOffset = iter.next();
             }
@@ -179,8 +188,7 @@ public final class FilteredOffset extends Offset
           @Override
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
-            inspector.visit("holder", holder);
-            inspector.visit("offset", holder.getReadableOffset());
+            inspector.visit("offset", offset);
             inspector.visit("iter", iter);
           }
         };
@@ -192,7 +200,7 @@ public final class FilteredOffset extends Offset
           @Override
           public boolean matches()
           {
-            int currentOffset = holder.getReadableOffset().getOffset();
+            int currentOffset = offset.getOffset();
             while (iterOffset < currentOffset && iter.hasNext()) {
               iterOffset = iter.next();
             }
@@ -203,8 +211,7 @@ public final class FilteredOffset extends Offset
           @Override
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
-            inspector.visit("holder", holder);
-            inspector.visit("offset", holder.getReadableOffset());
+            inspector.visit("offset", offset);
             inspector.visit("iter", iter);
           }
         };

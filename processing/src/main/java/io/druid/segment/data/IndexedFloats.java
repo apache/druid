@@ -19,6 +19,11 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.historical.HistoricalFloatColumnSelector;
+
 import java.io.Closeable;
 
 /**
@@ -32,4 +37,67 @@ public interface IndexedFloats extends Closeable
 
   @Override
   void close();
+
+  default HistoricalFloatColumnSelector makeFloatColumnSelector(ReadableOffset offset)
+  {
+    return new HistoricalFloatColumnSelector()
+    {
+      @Override
+      public float getFloat()
+      {
+        return IndexedFloats.this.get(offset.getOffset());
+      }
+
+      @Override
+      public float get(int offset)
+      {
+        return IndexedFloats.this.get(offset);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedFloats.this);
+        inspector.visit("offset", offset);
+      }
+    };
+  }
+
+  default DoubleColumnSelector makeDoubleColumnSelector(ReadableOffset offset)
+  {
+    return new DoubleColumnSelector()
+    {
+      @Override
+      public double getDouble()
+      {
+        return IndexedFloats.this.get(offset.getOffset());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedFloats.this);
+        inspector.visit("offset", offset);
+      }
+    };
+  }
+
+  default LongColumnSelector makeLongColumnSelector(ReadableOffset offset)
+  {
+    return new LongColumnSelector()
+    {
+      @Override
+      public long getLong()
+      {
+        return (long) IndexedFloats.this.get(offset.getOffset());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedFloats.this);
+        inspector.visit("offset", offset);
+      }
+    };
+  }
 }
