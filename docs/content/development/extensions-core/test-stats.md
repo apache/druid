@@ -4,7 +4,7 @@ layout: doc_page
 
 # Test Stats Aggregators
 
-Incorporates test statistics related aggregators, including z-score and p-value. Please refer to [https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/](https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/) for background and details.
+Incorporates test statistics related aggregators, including z-score and p-value. Please refer to [https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/](https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/) for math background and details, although its input spec and example are out of date.
 
 Make sure to include `druid-stats` extension in order to use these aggregrators.
 
@@ -14,7 +14,8 @@ Please refer to [https://www.isixsigma.com/tools-templates/hypothesis-testing/ma
 
 z = (p1 - p2) / S.E.  (assuming null hypothesis is true)
 
-where S.E. stands for standard error, and
+Please see below for p1 and p2.
+Please note S.E. stands for standard error where 
 
 S.E. = sqrt{ p1 * ( 1 - p1 )/n1 + p2 * (1 - p2)/n2) }
 
@@ -27,46 +28,36 @@ S.E. = sqrt{ p1 * ( 1 - p1 )/n1 + p2 * (1 - p2)/n2) }
 {
   "type": "zscore2sample",
   "name": "<output_name>",
-  "fields": [<count 1 (post_aggregator1)>, <sample size 1 (post_aggregator2)>, <count 2 (post_aggregator3)>, <sample size 2 (post_aggregator4)>]
+  "successCount1": <post_aggregator> success count of sample 1,
+  "sample1Size": <post_aggregaror> sample 1 size,
+  "successCount2": <post_aggregator> success count of sample 2,
+  "sample2size" : <post_aggregator> sample 2 size
 }
 ```
-Please note as the post aggregator will be converting binary variables to continuous variables for two population proportions, it is sensitive to the ordering of the post aggregators.  In other words,
 
-p1 = (count 1) / (sample size 1)
+Please note the post aggregator will be converting binary variables to continuous variables for two population proportions.  Specifically
 
-p2 = (count 2) / (sample size 2)
+p1 = (successCount1) / (sample size 1)
 
-For example,
+p2 = (successCount2) / (sample size 2)
 
-```
-"fields": [<total success count of population 1>, <sample size of population 1>, <total success count of population 2>, <sample size of population 2>]
-```
+### pvalue2tailedZtest post aggregator
 
-### pvalue2tailedztest post aggregator
-
-* **`pvalue2tailedztest`**: calculate p-value for two sided z-test from zscore
-    - ***pvalue2tailedZtest(zscore)*** - the input is the z-score calculated using zscore2samples post aggregator
+* **`pvalue2tailedZtest`**: calculate p-value of two-sided z-test from zscore
+    - ***pvalue2tailedZtest(zscore)*** - the input is a z-score which can be calculated using the zscore2sample post aggregator
 
 
 ```json
 {
-  "type": "pvalue2tailedztest",
+  "type": "pvalue2tailedZtest",
   "name": "<output_name>",
-  "field": "<aggregator_name>"
+  "zScore": <zscore post_aggregator>
 }
-```
-
-For example,
-
-```
-  "type": "pvalue2tailedztest",
-  "name": "pvalue",
-  "field": <zscore>
 ```
   
 ## Example Usage
 
-In this example, we use zscore2sample post aggregator to calculate z-score, and feed the z-score to pvalue2tailedztest post aggregator to calculate p-value.
+In this example, we use zscore2sample post aggregator to calculate z-score, and then feed the z-score to pvalue2tailedZtest post aggregator to calculate p-value.
 
 A JSON query example can be as follows:
 
@@ -74,30 +65,32 @@ A JSON query example can be as follows:
 {
   ...
     "postAggregations" : {
-    "type"   : "pvalue2tailedztest",
+    "type"   : "pvalue2tailedZtest",
     "name"   : "pvalue",
-    "field" : 
+    "zScore" : 
     {
      "type"   : "zscore2sample",
      "name"   : "zscore",
-     "fields" : [
+     "successCount1" :
        { "type"   : "constant",
-         "name"   : "successCountPopulation1",
+         "name"   : "successCountFromPopulation1Sample",
          "value"  : 300
        },
+     "sample1Size" :
        { "type"   : "constant",
-         "name"   : "sampleSizePopulation1",
+         "name"   : "sampleSizeOfPopulation1",
          "value"  : 500
        },
+     "successCount2":
        { "type"   : "constant",
-         "name"   : "successCountPopulation2",
+         "name"   : "successCountFromPopulation2Sample",
          "value"  : 450
        },
+     "sample2Size" :
        { "type"   : "constant",
-         "name"   : "sampleSizePopulation2",
+         "name"   : "sampleSizeOfPopulation2",
          "value"  : 600
        }
-     ]
      }
     }
 }

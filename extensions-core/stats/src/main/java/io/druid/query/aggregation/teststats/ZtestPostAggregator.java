@@ -23,15 +23,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.PostAggregatorIds;
 import io.druid.query.cache.CacheKeyBuilder;
 
+import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,79 +48,92 @@ import java.util.Set;
    http://facweb.cs.depaul.edu/sjost/csc423/documents/test-descriptions/indep-z.pdf
 */
 @JsonTypeName("zscore2sample")
-public class ZtestPostAggregator implements PostAggregator {
+public class ZtestPostAggregator implements PostAggregator
+{
   private final String name;
-  private final List<PostAggregator> fields;
+  private final PostAggregator successCount1;
+  private final PostAggregator sample1Size;
+  private final PostAggregator successCount2;
+  private final PostAggregator sample2Size;
+
 
   @JsonCreator
   public ZtestPostAggregator(
       @JsonProperty("name") String name,
-      @JsonProperty("fields") List<PostAggregator> fields
-  ) {
+      @JsonProperty("successCount1") PostAggregator successCount1,
+      @JsonProperty("sample1Size") PostAggregator sample1Size,
+      @JsonProperty("successCount2") PostAggregator successCount2,
+      @JsonProperty("sample2Size") PostAggregator sample2Size
+
+  )
+  {
     Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator name");
-    Preconditions.checkArgument(fields.size() == 4, "Must have 4 fields; " +
-        "\"fields\": <total success count of sample 1>, <sample size of population 1>," +
-        " <total success counts of sample 2>, <sample size of population 2>");
+    Preconditions.checkNotNull(successCount1, "success count from sample 1 can not be null");
+    Preconditions.checkNotNull(sample1Size, "sample size of population 1 can not null");
+    Preconditions.checkNotNull(successCount2, "success count from sample 2 can not be null");
+    Preconditions.checkNotNull(sample2Size, "sample size of population 2 can not be null");
+
     this.name = name;
-    this.fields = fields;
+    this.successCount1 = successCount1;
+    this.sample1Size = sample1Size;
+    this.successCount2 = successCount2;
+    this.sample2Size = sample2Size;
   }
 
   @Override
-  public Set<String> getDependentFields() {
+  public Set<String> getDependentFields()
+  {
     Set<String> dependentFields = Sets.newLinkedHashSet();
-    for (PostAggregator field : fields) {
-      dependentFields.addAll(field.getDependentFields());
-    }
+    dependentFields.addAll(successCount1.getDependentFields());
+    dependentFields.addAll(sample1Size.getDependentFields());
+    dependentFields.addAll(successCount2.getDependentFields());
+    dependentFields.addAll(sample2Size.getDependentFields());
+
     return dependentFields;
   }
 
   @Override
-  public Comparator getComparator() {
+  public Comparator getComparator()
+  {
     return ArithmeticPostAggregator.DEFAULT_COMPARATOR;
   }
 
   @Override
-  public Object compute(Map<String, Object> combinedAggregators) {
-
-    PostAggregator[] args = new PostAggregator[fields.size()];
-    for (int j = 0; j < fields.size(); j++) {
-      args[j] = fields.get(j);
-    }
-
+  public Object compute(Map<String, Object> combinedAggregators)
+  {
     return zScoreTwoSamples(
-        ((Number) args[0].compute(combinedAggregators)).doubleValue(),
-        ((Number) args[1].compute(combinedAggregators)).doubleValue(),
-        ((Number) args[2].compute(combinedAggregators)).doubleValue(),
-        ((Number) args[3].compute(combinedAggregators)).doubleValue());
+        ((Number) successCount1.compute(combinedAggregators)).doubleValue(),
+        ((Number) sample1Size.compute(combinedAggregators)).doubleValue(),
+        ((Number) successCount2.compute(combinedAggregators)).doubleValue(),
+        ((Number) sample2Size.compute(combinedAggregators)).doubleValue()
+    );
   }
 
   @Override
   @JsonProperty
-  public String getName() {
+  public String getName()
+  {
     return name;
   }
 
   @Override
-  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators) {
-    return this;
-  }
-
-  @JsonProperty
-  public List<PostAggregator> getFields() {
-    return fields;
+  public ZtestPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return new ZtestPostAggregator(name, Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(successCount1), aggregators)), Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(sample1Size), aggregators)), Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(successCount2), aggregators)), Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(sample2Size), aggregators)));
   }
 
   /**
    * 1. calculating zscore for two-sample Z test. IOW,
-   *    using z-test statistic for testing the difference of two population proportions.
+   * using z-test statistic for testing the difference of two population proportions.
    * 2. converting binary variables (e.g. success or not) to continuous variables (e.g. conversion rate).
    *
-   * @param the success count of population 1
-   * @param param sample size of population 1
-   * @param the success count of population 2
-   * @param sample size of population 2
+   * @param s1count - success count of population 1
+   * @param p1count - sample size of population 1
+   * @param s2count - the success count of population 2
+   * @param p2count - sample size of population 2
    */
-  private double zScoreTwoSamples(Double s1count, Double p1count, Double s2count, Double p2count) {
+  private double zScoreTwoSamples(double s1count, double p1count, double s2count, double p2count)
+  {
     double convertRate1;
     double convertRate2;
     Preconditions.checkState(s1count >= 0, "success count can't be negative.");
@@ -131,29 +146,45 @@ public class ZtestPostAggregator implements PostAggregator {
       convertRate2 = s2count / p2count;
 
       return (convertRate1 - convertRate2) /
-          Math.sqrt((convertRate1 * (1 - convertRate1) / p1count) +
-              (convertRate2 * (1 - convertRate2) / p2count));
-    } catch (Exception ex) {
+             Math.sqrt((convertRate1 * (1 - convertRate1) / p1count) +
+                       (convertRate2 * (1 - convertRate2) / p2count));
+    }
+    catch (IllegalArgumentException ex) {
       return 0;
     }
   }
 
-  @Override
-  public String toString() {
-    return "ZtestPostAggregator{" +
-        "name='"
-        + name
-        + '\''
-        + ", fields="
-        + fields
-        + "}";
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + successCount1.hashCode();
+    result = 31 * result + sample1Size.hashCode();
+    result = 31 * result + successCount2.hashCode();
+    result = 31 * result + sample2Size.hashCode();
+    return result;
   }
 
   @Override
-  public byte[] getCacheKey() {
+  public String toString()
+  {
+    return "ZtestPostAggregator{" +
+           "name='" + name + '\'' +
+           ", successCount1" + successCount1 +
+           ", sample1Size" + sample1Size +
+           ", successCount2" + successCount2 +
+           ", sample2size" + sample2Size +
+           '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
     return new CacheKeyBuilder(
         PostAggregatorIds.ZTEST)
-        .appendCacheables(fields)
+        .appendCacheable(successCount1)
+        .appendCacheable(sample1Size)
+        .appendCacheable(successCount2)
+        .appendCacheable(sample2Size)
         .build();
   }
 }

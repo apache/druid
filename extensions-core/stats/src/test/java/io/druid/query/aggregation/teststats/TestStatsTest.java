@@ -30,36 +30,34 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by chunchen on 4/23/17.
- */
 public class TestStatsTest {
 
   @Test
   public void testCompute() {
     ZtestPostAggregator ztestPostAggregator;
     PvaluefromZscorePostAggregator pvaluePostAggregator;
-    ConstantPostAggregator constPostAgg1, constPostAgg2, constPostAgg3, constPostAgg4;
+    ConstantPostAggregator successCount1, sample1Size, successCount2, sample2Size;
 
-    constPostAgg1 = new ConstantPostAggregator("successCountPopulation1", 39244);
-    constPostAgg2 = new ConstantPostAggregator("sampleSizePopulation1", 394298);
-    constPostAgg3 = new ConstantPostAggregator("successCountPopulation2", 8991275);
-    constPostAgg4 = new ConstantPostAggregator("sampleSizePopulation2", 9385573);
+    successCount1 = new ConstantPostAggregator("successCountPopulation1", 39244);
+    sample1Size = new ConstantPostAggregator("sampleSizePopulation1", 394298);
+    successCount2 = new ConstantPostAggregator("successCountPopulation2", 8991275);
+    sample2Size = new ConstantPostAggregator("sampleSizePopulation2", 9385573);
 
-    List<PostAggregator> postAggregatorList =
-        Lists.newArrayList(
-            (PostAggregator) constPostAgg1,
-            constPostAgg2,
-            constPostAgg3,
-            constPostAgg4
-        );
+    List<PostAggregator> postAggregatorList;
+    postAggregatorList = Lists.newArrayList(
+        successCount1,
+        sample1Size,
+        successCount2,
+        sample2Size
+    );
 
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     for (PostAggregator pa : postAggregatorList) {
       metricValues.put(pa.getName(), ((ConstantPostAggregator) pa).getConstantValue());
     }
 
-    ztestPostAggregator = new ZtestPostAggregator("zscore", postAggregatorList);
+    ztestPostAggregator = new ZtestPostAggregator("zscore", successCount1,
+        sample1Size, successCount2, sample2Size);
 
     double zscore = ((Number) ztestPostAggregator.compute(metricValues)).doubleValue();
 
@@ -67,7 +65,7 @@ public class TestStatsTest {
 
     System.out.print("zscore = " + zscore + "\n");
     System.out.print("pvalue = " +
-        pvaluePostAggregator.compute(ImmutableMap.<String, Object>of("zscore", -1783.8762354220219)));
+        pvaluePostAggregator.compute(ImmutableMap.of("zscore", -1783.8762354220219)));
 
     Assert.assertEquals(-1783.8762354220219,
         zscore, 0.0001);

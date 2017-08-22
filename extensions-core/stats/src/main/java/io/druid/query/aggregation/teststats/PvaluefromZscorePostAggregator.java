@@ -23,98 +23,113 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.PostAggregatorIds;
 import io.druid.query.cache.CacheKeyBuilder;
 import org.apache.commons.math3.distribution.NormalDistribution;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Created by chunchen on 4/5/17.
- */
-@JsonTypeName("pvalue2tailedztest")
-public class PvaluefromZscorePostAggregator implements PostAggregator {
+@JsonTypeName("pvalue2tailedZtest")
+public class PvaluefromZscorePostAggregator implements PostAggregator
+{
   private final String name;
-  private final PostAggregator field;
+  private final PostAggregator zScore;
 
   @JsonCreator
   public PvaluefromZscorePostAggregator(
       @JsonProperty("name") String name,
-      @JsonProperty("field") PostAggregator field
-  ) {
+      @JsonProperty("zScore") PostAggregator zScore
+  )
+  {
     Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator");
+    Preconditions.checkNotNull(zScore, "Must have a valid, non-null post-aggregator");
     this.name = name;
-    this.field = field;
+    this.zScore = zScore;
   }
 
   @Override
-  public Set<String> getDependentFields() {
-
+  public Set<String> getDependentFields()
+  {
     Set<String> dependentFields = Sets.newHashSet();
 
-    dependentFields.addAll(field.getDependentFields());
+    dependentFields.addAll(zScore.getDependentFields());
 
     return dependentFields;
   }
 
   @Override
-  public Comparator getComparator() {
-    throw new UnsupportedOperationException();
+  public Comparator getComparator()
+  {
+    return ArithmeticPostAggregator.DEFAULT_COMPARATOR;
   }
 
   @Override
-  public Object compute(Map<String, Object> combinedAggregators) {
+  public Object compute(Map<String, Object> combinedAggregators)
+  {
 
-    double zScore =
-        ((Number) field.compute(combinedAggregators)).doubleValue();
+    double zScoreValue =
+        ((Number) zScore.compute(combinedAggregators)).doubleValue();
 
-    zScore = Math.abs(zScore);
-    return 2 * (1 - cumulativeProbability(zScore));
+    zScoreValue = Math.abs(zScoreValue);
+    return 2 * (1 - cumulativeProbability(zScoreValue));
   }
 
-  private double cumulativeProbability(double x) {
+  private double cumulativeProbability(double x)
+  {
     try {
       NormalDistribution normDist = new NormalDistribution();
       return normDist.cumulativeProbability(x);
-    } catch (Exception ex) {
+    }
+    catch (IllegalArgumentException ex) {
       return Double.NaN;
     }
   }
 
   @Override
   @JsonProperty
-  public String getName() {
+  public String getName()
+  {
     return name;
   }
 
   @Override
-  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators) {
-    return this;
-  }
-
-  @JsonProperty
-  public PostAggregator getField() {
-    return field;
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return new PvaluefromZscorePostAggregator(name, Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(zScore), aggregators)));
   }
 
   @Override
-  public String toString() {
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + zScore.hashCode();
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
     return "PvaluefromZscorePostAggregator{" +
-        "name'" + name + '\'' +
-        ", field=" + field +
-        "}";
+           "name'" + name + '\'' +
+           ", zScore=" + zScore +
+           '}';
   }
 
   @Override
-  public byte[] getCacheKey() {
+  public byte[] getCacheKey()
+  {
     return new CacheKeyBuilder(
         PostAggregatorIds.PVALUE_FROM_ZTEST)
-        .appendCacheable(field)
+        .appendCacheable(zScore)
         .build();
   }
 }
