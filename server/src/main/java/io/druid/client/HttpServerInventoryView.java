@@ -53,9 +53,9 @@ import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
-import io.druid.server.coordination.SegmentChangeRequestHistory;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
-import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
+import io.druid.server.coordination.ChangeRequestHistory;
+import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -434,7 +434,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     //lock is used to keep state in counter and and segment list in druidServer consistent
     private final DruidServer druidServer;
 
-    private volatile SegmentChangeRequestHistory.Counter counter = null;
+    private volatile ChangeRequestHistory.Counter counter = null;
 
     private final HostAndPort serverHostAndPort;
 
@@ -532,9 +532,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
                   log.debug("Received segment list response from [%s]", druidServer.getName());
 
-                  SegmentChangeRequestsSnapshot delta = smileMapper.readValue(
+                  ChangeRequestsSnapshot delta = smileMapper.readValue(
                       stream,
-                      SegmentChangeRequestsSnapshot.class
+                      ChangeRequestsSnapshot.class
                   );
 
                   log.debug("Finished reading segment list response from [%s]", druidServer.getName());

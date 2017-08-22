@@ -31,10 +31,10 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentChangeRequest;
-import io.druid.server.coordination.SegmentChangeRequestHistory;
-import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
 import io.druid.server.coordination.SegmentLoadDropHandler;
 import io.druid.server.coordinator.HttpLoadQueuePeon;
+import io.druid.server.coordination.ChangeRequestHistory;
+import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.http.security.StateResourceFilter;
 
 import javax.annotation.Nullable;
@@ -130,8 +130,8 @@ public class SegmentListerResource
     }
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
-    final ListenableFuture<SegmentChangeRequestsSnapshot> future = announcer.getSegmentChangesSince(
-        new SegmentChangeRequestHistory.Counter(
+    final ListenableFuture<ChangeRequestsSnapshot> future = announcer.getSegmentChangesSince(
+        new ChangeRequestHistory.Counter(
             counter,
             hash
         )
@@ -170,10 +170,10 @@ public class SegmentListerResource
 
     Futures.addCallback(
         future,
-        new FutureCallback<SegmentChangeRequestsSnapshot>()
+        new FutureCallback<ChangeRequestsSnapshot>()
         {
           @Override
-          public void onSuccess(SegmentChangeRequestsSnapshot result)
+          public void onSuccess(ChangeRequestsSnapshot result)
           {
             try {
               HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();

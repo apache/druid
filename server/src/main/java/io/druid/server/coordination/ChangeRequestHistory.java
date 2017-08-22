@@ -46,7 +46,7 @@ import java.util.concurrent.Executors;
  * Clients call ListenableFuture<SegmentChangeRequestsSnapshot> getRequestsSince(final Counter counter) to get segment
  * updates since given counter.
  */
-public class SegmentChangeRequestHistory
+public class ChangeRequestHistory
 {
   private static int MAX_SIZE = 1000;
 
@@ -60,12 +60,12 @@ public class SegmentChangeRequestHistory
   private final ExecutorService singleThreadedExecutor;
   private final Runnable resolveWaitingFuturesRunnable;
 
-  public SegmentChangeRequestHistory()
+  public ChangeRequestHistory()
   {
     this(MAX_SIZE);
   }
 
-  public SegmentChangeRequestHistory(int maxSize)
+  public ChangeRequestHistory(int maxSize)
   {
     this.maxSize = maxSize;
     this.changes = new CircularBuffer(maxSize);
@@ -123,7 +123,7 @@ public class SegmentChangeRequestHistory
    * is added to the "waitingFutures" list and all the futures in the list get resolved as soon as a segment
    * update is provided.
    */
-  public synchronized ListenableFuture<SegmentChangeRequestsSnapshot> getRequestsSince(final Counter counter)
+  public synchronized ListenableFuture<ChangeRequestsSnapshot> getRequestsSince(final Counter counter)
   {
     final CustomSettableFuture future = new CustomSettableFuture(waitingFutures);
 
@@ -154,7 +154,7 @@ public class SegmentChangeRequestHistory
     return future;
   }
 
-  private synchronized SegmentChangeRequestsSnapshot getRequestsSinceWithoutWait(final Counter counter)
+  private synchronized ChangeRequestsSnapshot getRequestsSinceWithoutWait(final Counter counter)
   {
     Counter lastCounter = getLastCounter();
 
@@ -163,7 +163,7 @@ public class SegmentChangeRequestHistory
     } else if (lastCounter.counter - counter.counter >= maxSize) {
       // Note: counter reset is requested when client ask for "maxSize" number of changes even if all those changes
       // are present in the history because one extra elements is needed to match the counter hash.
-      return SegmentChangeRequestsSnapshot.fail(
+      return ChangeRequestsSnapshot.fail(
           StringUtils.format(
               "can't serve request, not enough history is kept. given counter [%s] and current last counter [%s]",
               counter,
@@ -183,7 +183,7 @@ public class SegmentChangeRequestHistory
         result.add(changes.get(i).changeRequest);
       }
 
-      return SegmentChangeRequestsSnapshot.success(changes.get(changes.size() - 1).counter, result);
+      return ChangeRequestsSnapshot.success(changes.get(changes.size() - 1).counter, result);
     }
   }
 
@@ -281,7 +281,7 @@ public class SegmentChangeRequestHistory
   }
 
   // Future with cancel() implementation to remove it from "waitingFutures" list
-  private static class CustomSettableFuture extends AbstractFuture<SegmentChangeRequestsSnapshot>
+  private static class CustomSettableFuture extends AbstractFuture<ChangeRequestsSnapshot>
   {
     private final LinkedHashMap<CustomSettableFuture, Counter> waitingFutures;
 
@@ -291,7 +291,7 @@ public class SegmentChangeRequestHistory
     }
 
     @Override
-    public boolean set(SegmentChangeRequestsSnapshot value)
+    public boolean set(ChangeRequestsSnapshot value)
     {
       return super.set(value);
     }

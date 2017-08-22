@@ -70,7 +70,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final Map<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
-  private final SegmentChangeRequestHistory changes = new SegmentChangeRequestHistory();
+  private final ChangeRequestHistory changes = new ChangeRequestHistory();
   private final SegmentZNode dummyZnode;
 
   @Inject
@@ -279,7 +279,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   /**
    * Returns Future that lists the segment load/drop requests since given counter.
    */
-  public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
+  public ListenableFuture<ChangeRequestsSnapshot> getSegmentChangesSince(ChangeRequestHistory.Counter counter)
   {
     if (counter.getCounter() < 0) {
       synchronized (lock) {
@@ -296,8 +296,8 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
             }
         );
 
-        SettableFuture<SegmentChangeRequestsSnapshot> future = SettableFuture.create();
-        future.set(SegmentChangeRequestsSnapshot.success(changes.getLastCounter(), Lists.newArrayList(segments)));
+        SettableFuture<ChangeRequestsSnapshot> future = SettableFuture.create();
+        future.set(ChangeRequestsSnapshot.success(changes.getLastCounter(), Lists.newArrayList(segments)));
         return future;
       }
     } else {
