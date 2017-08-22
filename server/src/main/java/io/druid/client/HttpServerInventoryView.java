@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Function;
@@ -50,12 +51,12 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.server.coordination.ChangeRequestHistory;
+import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
-import io.druid.server.coordination.ChangeRequestHistory;
-import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -86,6 +87,10 @@ import java.util.stream.Collectors;
  */
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
+  public static final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> SEGMENT_LIST_RESP_TYPE_REF = new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
+  {
+  };
+
   private final EmittingLogger log = new EmittingLogger(HttpServerInventoryView.class);
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
@@ -532,9 +537,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
                   log.debug("Received segment list response from [%s]", druidServer.getName());
 
-                  ChangeRequestsSnapshot delta = smileMapper.readValue(
+                  ChangeRequestsSnapshot<DataSegmentChangeRequest> delta = smileMapper.readValue(
                       stream,
-                      ChangeRequestsSnapshot.class
+                      SEGMENT_LIST_RESP_TYPE_REF
                   );
 
                   log.debug("Finished reading segment list response from [%s]", druidServer.getName());

@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,17 +36,17 @@ public class ChangeRequestHistoryTest
   @Test
   public void testSimple() throws Exception
   {
-    ChangeRequestHistory history = new ChangeRequestHistory();
+    ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory();
     Assert.assertEquals(0, history.getLastCounter().getCounter());
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     Assert.assertEquals(1, history.getLastCounter().getCounter());
 
-    ChangeRequestsSnapshot snapshot = history.getRequestsSince(ChangeRequestHistory.Counter.ZERO).get();
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(ChangeRequestHistory.Counter.ZERO).get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(1, snapshot.getCounter().getCounter());
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     Assert.assertEquals(2, history.getLastCounter().getCounter());
 
     snapshot = history.getRequestsSince(snapshot.getCounter()).get();
@@ -62,25 +61,25 @@ public class ChangeRequestHistoryTest
   @Test
   public void testTruncatedHistory() throws Exception
   {
-    ChangeRequestHistory history = new ChangeRequestHistory(2);
+    ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory(2);
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter one = history.getLastCounter();
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter two = history.getLastCounter();
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter three = history.getLastCounter();
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter four = history.getLastCounter();
 
     Assert.assertTrue(history.getRequestsSince(ChangeRequestHistory.Counter.ZERO).get().isResetCounter());
     Assert.assertTrue(history.getRequestsSince(one).get().isResetCounter());
     Assert.assertTrue(history.getRequestsSince(two).get().isResetCounter());
 
-    ChangeRequestsSnapshot snapshot = history.getRequestsSince(three).get();
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(three).get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(4, snapshot.getCounter().getCounter());
   }
@@ -88,67 +87,43 @@ public class ChangeRequestHistoryTest
   @Test
   public void testCounterHashMismatch() throws Exception
   {
-    ChangeRequestHistory history = new ChangeRequestHistory(3);
+    ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory(3);
 
-    try {
-      history.getRequestsSince(new ChangeRequestHistory.Counter(0, 1234)).get();
-      Assert.fail();
-    }
-    catch (ExecutionException ex) {
-      Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
-    }
+    Assert.assertTrue(history.getRequestsSince(new ChangeRequestHistory.Counter(0, 1234)).get().isResetCounter());
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter one = history.getLastCounter();
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter two = history.getLastCounter();
 
-    try {
-      history.getRequestsSince(new ChangeRequestHistory.Counter(0, 1234)).get();
-      Assert.fail();
-    }
-    catch (ExecutionException ex) {
-      Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
-    }
+    Assert.assertTrue(history.getRequestsSince(new ChangeRequestHistory.Counter(0, 1234)).get().isResetCounter());
 
-    ChangeRequestsSnapshot snapshot = history.getRequestsSince(one).get();
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(one).get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(2, snapshot.getCounter().getCounter());
 
-    try {
-      history.getRequestsSince(new ChangeRequestHistory.Counter(1, 1234)).get();
-      Assert.fail();
-    }
-    catch (ExecutionException ex) {
-      Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
-    }
+    Assert.assertTrue(history.getRequestsSince(new ChangeRequestHistory.Counter(1, 1234)).get().isResetCounter());
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter three = history.getLastCounter();
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter four = history.getLastCounter();
 
     snapshot = history.getRequestsSince(two).get();
     Assert.assertEquals(2, snapshot.getRequests().size());
     Assert.assertEquals(4, snapshot.getCounter().getCounter());
 
-    try {
-      history.getRequestsSince(new ChangeRequestHistory.Counter(2, 1234)).get();
-      Assert.fail();
-    }
-    catch (ExecutionException ex) {
-      Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
-    }
+    Assert.assertTrue(history.getRequestsSince(new ChangeRequestHistory.Counter(2, 1234)).get().isResetCounter());
   }
 
   @Test
   public void testCancel() throws Exception
   {
-    final ChangeRequestHistory history = new ChangeRequestHistory();
+    final ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory();
 
-    ListenableFuture<ChangeRequestsSnapshot> future = history.getRequestsSince(
+    ListenableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = history.getRequestsSince(
         ChangeRequestHistory.Counter.ZERO
     );
     Assert.assertEquals(1, history.waitingFutures.size());
@@ -156,7 +131,7 @@ public class ChangeRequestHistoryTest
     final AtomicBoolean callbackExcecuted = new AtomicBoolean(false);
     Futures.addCallback(
         future,
-        new FutureCallback<ChangeRequestsSnapshot>()
+        new FutureCallback<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
         {
           @Override
           public void onSuccess(ChangeRequestsSnapshot result)
@@ -188,7 +163,7 @@ public class ChangeRequestHistoryTest
 
     Assert.assertFalse(future.isDone());
 
-    history.addSegmentChangeRequest(new SegmentChangeRequestNoop());
+    history.addChangeRequest(new SegmentChangeRequestNoop());
 
     ChangeRequestsSnapshot snapshot = future.get(1, TimeUnit.MINUTES);
     Assert.assertEquals(1, snapshot.getCounter().getCounter());

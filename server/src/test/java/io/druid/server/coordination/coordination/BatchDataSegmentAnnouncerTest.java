@@ -33,6 +33,7 @@ import io.druid.curator.announcement.Announcer;
 import io.druid.java.util.common.DateTimes;
 import io.druid.segment.TestHelper;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
+import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ChangeRequestHistory;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
@@ -187,7 +188,7 @@ public class BatchDataSegmentAnnouncerTest
       Assert.assertEquals(Sets.newHashSet(firstSegment, secondSegment), segments);
     }
 
-    ChangeRequestsSnapshot snapshot = segmentAnnouncer.getSegmentChangesSince(
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = segmentAnnouncer.getSegmentChangesSince(
         new ChangeRequestHistory.Counter(-1, -1)
     ).get();
     Assert.assertEquals(2, snapshot.getRequests().size());
@@ -310,7 +311,7 @@ public class BatchDataSegmentAnnouncerTest
     }
     Assert.assertEquals(allSegments, testSegments);
 
-    ChangeRequestsSnapshot snapshot = null;
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = null;
 
     if (testHistory) {
       snapshot = segmentAnnouncer.getSegmentChangesSince(

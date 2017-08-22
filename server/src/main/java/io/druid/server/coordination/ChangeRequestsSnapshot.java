@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Return type of SegmentChangeRequestHistory.getRequestsSince(counter).
  */
-public class ChangeRequestsSnapshot
+public class ChangeRequestsSnapshot<T>
 {
   //if true, that means caller should reset the counter and request again.
   private final boolean resetCounter;
@@ -38,14 +38,14 @@ public class ChangeRequestsSnapshot
 
   //segments requests delta since counter, if resetCounter if false
   private final ChangeRequestHistory.Counter counter;
-  private final List<DataSegmentChangeRequest> requests;
+  private final List<T> requests;
 
   @JsonCreator
   public ChangeRequestsSnapshot(
       @JsonProperty("resetCounter") boolean resetCounter,
       @JsonProperty("resetCause") String resetCause,
       @JsonProperty("counter") ChangeRequestHistory.Counter counter,
-      @JsonProperty("requests") List<DataSegmentChangeRequest> requests
+      @JsonProperty("requests") List<T> requests
   )
   {
     this.resetCounter = resetCounter;
@@ -60,13 +60,13 @@ public class ChangeRequestsSnapshot
     this.requests = requests;
   }
 
-  public static ChangeRequestsSnapshot success(ChangeRequestHistory.Counter counter,
-                                               List<DataSegmentChangeRequest> requests)
+  public static <T> ChangeRequestsSnapshot<T> success(ChangeRequestHistory.Counter counter,
+                                               List<T> requests)
   {
     return new ChangeRequestsSnapshot(false, null, counter, requests);
   }
 
-  public static ChangeRequestsSnapshot fail(String resetCause)
+  public static <T> ChangeRequestsSnapshot<T> fail(String resetCause)
   {
     return new ChangeRequestsSnapshot(true, resetCause, null, null);
   }
@@ -90,7 +90,7 @@ public class ChangeRequestsSnapshot
   }
 
   @JsonProperty
-  public List<DataSegmentChangeRequest> getRequests()
+  public List<T> getRequests()
   {
     return requests;
   }
@@ -98,7 +98,7 @@ public class ChangeRequestsSnapshot
   @Override
   public String toString()
   {
-    return "SegmentChangeRequestsSnapshot{" +
+    return "ChangeRequestsSnapshot{" +
            "resetCounter=" + resetCounter +
            ", resetCause='" + resetCause + '\'' +
            ", counter=" + counter +
