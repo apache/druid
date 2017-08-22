@@ -28,16 +28,16 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -58,20 +58,20 @@ public class TaskActionPreconditionsTest
     segments = ImmutableSet.of(
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
-            .interval(new Interval("2017-01-01/2017-01-02"))
-            .version(new DateTime().toString())
+            .interval(Intervals.of("2017-01-01/2017-01-02"))
+            .version(DateTimes.nowUtc().toString())
             .shardSpec(new LinearShardSpec(2))
             .build(),
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
-            .interval(new Interval("2017-01-02/2017-01-03"))
-            .version(new DateTime().toString())
+            .interval(Intervals.of("2017-01-02/2017-01-03"))
+            .version(DateTimes.nowUtc().toString())
             .shardSpec(new LinearShardSpec(2))
             .build(),
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
-            .interval(new Interval("2017-01-03/2017-01-04"))
-            .version(new DateTime().toString())
+            .interval(Intervals.of("2017-01-03/2017-01-04"))
+            .version(DateTimes.nowUtc().toString())
             .shardSpec(new LinearShardSpec(2))
             .build()
     );
@@ -81,12 +81,12 @@ public class TaskActionPreconditionsTest
   public void testCheckLockCoversSegments() throws Exception
   {
     final List<Interval> intervals = ImmutableList.of(
-        new Interval("2017-01-01/2017-01-02"),
-        new Interval("2017-01-02/2017-01-03"),
-        new Interval("2017-01-03/2017-01-04")
+        Intervals.of("2017-01-01/2017-01-02"),
+        Intervals.of("2017-01-02/2017-01-03"),
+        Intervals.of("2017-01-03/2017-01-04")
     );
 
-    final Map<Interval, TaskLock> locks = intervals.stream().collect(
+    intervals.stream().collect(
         Collectors.toMap(
             Function.identity(),
             interval -> {

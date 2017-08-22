@@ -27,6 +27,7 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
@@ -81,7 +82,7 @@ public class TaskLockBoxConcurrencyTest
   @Test(timeout = 5000L)
   public void testTryExclusiveLock() throws ExecutionException, InterruptedException, EntryExistsException
   {
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task lowPriorityTask = NoopTask.create(10);
     final Task highPriorityTask = NoopTask.create(100);
     lockbox.add(lowPriorityTask);
