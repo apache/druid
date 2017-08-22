@@ -38,6 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -86,7 +87,7 @@ public class TaskActionPreconditionsTest
         Intervals.of("2017-01-03/2017-01-04")
     );
 
-    intervals.stream().collect(
+    final Map<Interval, TaskLock> locks = intervals.stream().collect(
         Collectors.toMap(
             Function.identity(),
             interval -> {
@@ -97,6 +98,7 @@ public class TaskActionPreconditionsTest
         )
     );
 
+    Assert.assertEquals(3, locks.size());
     Assert.assertTrue(TaskActionPreconditions.isLockCoversSegments(task, lockbox, segments));
   }
 }
