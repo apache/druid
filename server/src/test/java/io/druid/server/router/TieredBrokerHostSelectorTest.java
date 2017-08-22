@@ -158,7 +158,7 @@ public class TieredBrokerHostSelectorTest
                                   .dataSource("test")
                                   .granularity("all")
                                   .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
-                                  .intervals(Arrays.<Interval>asList(new Interval("2011-08-31/2011-09-01")))
+                                  .intervals(Arrays.<Interval>asList(Intervals.of("2011-08-31/2011-09-01")))
                                   .build();
 
     Pair<String, Server> p = brokerSelector.select(query);
