@@ -30,7 +30,7 @@ import org.joda.time.DateTime;
 public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 {
   private final SettableFuture<TaskStatus> result;
-  private final Worker worker;
+  private Worker worker;
   private TaskLocation location;
 
   public RemoteTaskRunnerWorkItem(
@@ -90,6 +90,11 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   public TaskLocation getLocation()
   {
     return location;
+  }
+
+  public void setWorker(Worker worker)
+  {
+    this.worker = worker;
   }
 
   public Worker getWorker()
