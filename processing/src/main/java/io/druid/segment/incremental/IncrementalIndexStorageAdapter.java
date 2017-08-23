@@ -55,9 +55,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
   private final IncrementalIndex<?> index;
 
-  public IncrementalIndexStorageAdapter(
-      IncrementalIndex<?> index
-  )
+  public IncrementalIndexStorageAdapter(IncrementalIndex<?> index)
   {
     this.index = index;
   }
@@ -77,7 +75,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<String>(index.getDimensionNames(), String.class);
+    return new ListIndexed<>(index.getDimensionNames(), String.class);
   }
 
   @Override
@@ -120,6 +118,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     return index.getMaxTime();
   }
 
+  @Nullable
   @Override
   public Comparable getMinValue(String column)
   {
@@ -132,6 +131,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     return indexer.getMinValue();
   }
 
+  @Nullable
   @Override
   public Comparable getMaxValue(String column)
   {
@@ -233,7 +233,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     private int numAdvanced;
     private boolean done;
 
-    public IncrementalIndexCursor(
+    IncrementalIndexCursor(
         VirtualColumns virtualColumns,
         boolean descending,
         Filter filter,

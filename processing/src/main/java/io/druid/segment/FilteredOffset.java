@@ -33,8 +33,7 @@ import org.roaringbitmap.IntIterator;
 
 public final class FilteredOffset extends Offset
 {
-  /** This field is non-final only for {@link #clone()} */
-  private Offset baseOffset;
+  private final Offset baseOffset;
   private final ValueMatcher filterMatcher;
 
   FilteredOffset(
@@ -127,9 +126,7 @@ public final class FilteredOffset extends Offset
   @Override
   public Offset clone()
   {
-    FilteredOffset offset = (FilteredOffset) super.clone();
-    offset.baseOffset = offset.baseOffset.clone();
-    return offset;
+    throw new UnsupportedOperationException("FilteredOffset should not be cloned");
   }
 
   @Override

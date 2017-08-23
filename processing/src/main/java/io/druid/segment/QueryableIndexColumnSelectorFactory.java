@@ -197,6 +197,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     return cachedMetricVals.makeLongSingleValueRowSelector(offset);
   }
 
+  @Nullable
   @Override
   public ObjectColumnSelector makeObjectColumnSelector(String column)
   {
@@ -261,7 +262,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
         return new ObjectColumnSelector<Double>()
         {
           @Override
-          public Class classOfObject()
+          public Class<Double> classOfObject()
           {
             return Double.class;
           }

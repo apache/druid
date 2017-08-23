@@ -544,12 +544,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   public abstract static class TimestampCheckingOffset extends Offset
   {
-    protected final Offset baseOffset;
-    protected final GenericColumn timestamps;
-    protected final long timeLimit;
-    protected final boolean allWithinThreshold;
+    final Offset baseOffset;
+    final GenericColumn timestamps;
+    final long timeLimit;
+    final boolean allWithinThreshold;
 
-    public TimestampCheckingOffset(
+    TimestampCheckingOffset(
         Offset baseOffset,
         GenericColumn timestamps,
         long timeLimit,
@@ -601,6 +601,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       baseOffset.increment();
     }
 
+    @SuppressWarnings("MethodDoesntCallSuperMethod")
     @Override
     public Offset clone()
     {
@@ -618,7 +619,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   public static class AscendingTimestampCheckingOffset extends TimestampCheckingOffset
   {
-    public AscendingTimestampCheckingOffset(
+    AscendingTimestampCheckingOffset(
         Offset baseOffset,
         GenericColumn timestamps,
         long timeLimit,
@@ -641,6 +642,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
              "<" + timeLimit + "::" + baseOffset;
     }
 
+    @SuppressWarnings("MethodDoesntCallSuperMethod")
     @Override
     public Offset clone()
     {
@@ -650,7 +652,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   public static class DescendingTimestampCheckingOffset extends TimestampCheckingOffset
   {
-    public DescendingTimestampCheckingOffset(
+    DescendingTimestampCheckingOffset(
         Offset baseOffset,
         GenericColumn timestamps,
         long timeLimit,
@@ -674,6 +676,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
              "::" + baseOffset;
     }
 
+    @SuppressWarnings("MethodDoesntCallSuperMethod")
     @Override
     public Offset clone()
     {
