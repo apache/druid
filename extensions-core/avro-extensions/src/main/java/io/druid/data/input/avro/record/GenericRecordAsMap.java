@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package io.druid.data.input.avro;
+package io.druid.data.input.avro.record;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;

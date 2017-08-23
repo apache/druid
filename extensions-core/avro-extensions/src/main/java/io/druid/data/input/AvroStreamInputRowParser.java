@@ -18,23 +18,23 @@
  */
 package io.druid.data.input;
 
+import java.util.Objects;
+import java.nio.ByteBuffer;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.avro.AvroBytesDecoder;
-import io.druid.data.input.avro.GenericRecordAsMap;
 import io.druid.data.input.impl.ParseSpec;
-import io.druid.data.input.impl.TimestampSpec;
-import org.apache.avro.generic.GenericRecord;
-import org.joda.time.DateTime;
+import io.druid.data.input.avro.AvroBytesDecoder;
+import io.druid.data.input.avro.record.GenericRecordRowConverter;
 
-import java.nio.ByteBuffer;
-import java.util.List;
-
+/**
+ *
+ */
 public class AvroStreamInputRowParser implements ByteBufferInputRowParser
 {
   private final ParseSpec parseSpec;
-  private final List<String> dimensions;
   private final AvroBytesDecoder avroBytesDecoder;
+  private final GenericRecordRowConverter recordConverter;
 
   @JsonCreator
   public AvroStreamInputRowParser(
@@ -43,28 +43,18 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   )
   {
     this.parseSpec = parseSpec;
-    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.avroBytesDecoder = avroBytesDecoder;
+    this.recordConverter = GenericRecordRowConverter.fromParseSpec(
+        parseSpec,
+        false,
+        false
+    );
   }
 
   @Override
   public InputRow parse(ByteBuffer input)
   {
-    return parseGenericRecord(avroBytesDecoder.parse(input), parseSpec, dimensions, false, false);
-  }
-
-  protected static InputRow parseGenericRecord(
-      GenericRecord record,
-      ParseSpec parseSpec,
-      List<String> dimensions,
-      boolean fromPigAvroStorage,
-      boolean binaryAsString
-  )
-  {
-    GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, fromPigAvroStorage, binaryAsString);
-    TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
-    DateTime dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);
-    return new MapBasedInputRow(dateTime, dimensions, genericRecordAsMap);
+    return this.recordConverter.convert(avroBytesDecoder.parse(input));
   }
 
   @JsonProperty
@@ -101,21 +91,13 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
 
     AvroStreamInputRowParser that = (AvroStreamInputRowParser) o;
 
-    if (!parseSpec.equals(that.parseSpec)) {
-      return false;
-    }
-    if (!dimensions.equals(that.dimensions)) {
-      return false;
-    }
-    return avroBytesDecoder.equals(that.avroBytesDecoder);
+    return Objects.equals(avroBytesDecoder, that.avroBytesDecoder) &&
+           Objects.equals(recordConverter, that.recordConverter);
   }
 
   @Override
   public int hashCode()
   {
-    int result = parseSpec.hashCode();
-    result = 31 * result + dimensions.hashCode();
-    result = 31 * result + avroBytesDecoder.hashCode();
-    return result;
+    return Objects.hash(avroBytesDecoder, recordConverter);
   }
 }

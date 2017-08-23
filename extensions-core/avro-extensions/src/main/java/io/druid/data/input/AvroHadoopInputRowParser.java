@@ -18,19 +18,20 @@
  */
 package io.druid.data.input;
 
+
+import org.apache.avro.generic.GenericRecord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.data.input.avro.record.GenericRecordRowConverter;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
-import org.apache.avro.generic.GenericRecord;
 
-import java.util.List;
 
 public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
 {
   private final ParseSpec parseSpec;
-  private final List<String> dimensions;
   private final boolean fromPigAvroStorage;
+  private final GenericRecordRowConverter recordConverter;
 
   @JsonCreator
   public AvroHadoopInputRowParser(
@@ -39,14 +40,18 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
   )
   {
     this.parseSpec = parseSpec;
-    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.fromPigAvroStorage = fromPigAvroStorage == null ? false : fromPigAvroStorage;
+    this.recordConverter = GenericRecordRowConverter.fromParseSpec(
+        parseSpec,
+        fromPigAvroStorage,
+        false
+    );
   }
 
   @Override
   public InputRow parse(GenericRecord record)
   {
-    return AvroStreamInputRowParser.parseGenericRecord(record, parseSpec, dimensions, fromPigAvroStorage, false);
+    return this.recordConverter.convert(record);
   }
 
   @JsonProperty
