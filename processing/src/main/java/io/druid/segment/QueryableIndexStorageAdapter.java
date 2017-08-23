@@ -966,6 +966,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return timeInRange(timestamps.getLongSingleValueRow(baseOffset.getOffset()));
     }
 
+    @Override
+    public void reset()
+    {
+      baseOffset.reset();
+    }
+
     protected abstract boolean timeInRange(long current);
 
     @Override
@@ -1051,56 +1057,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public Offset clone()
     {
       return new DescendingTimestampCheckingOffset(baseOffset.clone(), timestamps, timeLimit, allWithinThreshold);
-    }
-  }
-
-  public static class NoFilterOffset extends Offset
-  {
-    private final int rowCount;
-    private final boolean descending;
-    private int currentOffset;
-
-    NoFilterOffset(int currentOffset, int rowCount, boolean descending)
-    {
-      this.currentOffset = currentOffset;
-      this.rowCount = rowCount;
-      this.descending = descending;
-    }
-
-    @Override
-    public void increment()
-    {
-      currentOffset++;
-    }
-
-    @Override
-    public boolean withinBounds()
-    {
-      return currentOffset < rowCount;
-    }
-
-    @Override
-    public Offset clone()
-    {
-      return new NoFilterOffset(currentOffset, rowCount, descending);
-    }
-
-    @Override
-    public int getOffset()
-    {
-      return descending ? rowCount - currentOffset - 1 : currentOffset;
-    }
-
-    @Override
-    public String toString()
-    {
-      return currentOffset + "/" + rowCount + (descending ? "(DSC)" : "");
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("descending", descending);
     }
   }
 

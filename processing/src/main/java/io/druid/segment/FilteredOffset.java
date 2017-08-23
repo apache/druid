@@ -110,6 +110,12 @@ public final class FilteredOffset extends Offset
   }
 
   @Override
+  public void reset()
+  {
+    baseOffset.reset();
+  }
+
+  @Override
   public Offset clone()
   {
     FilteredOffset offset = (FilteredOffset) super.clone();
