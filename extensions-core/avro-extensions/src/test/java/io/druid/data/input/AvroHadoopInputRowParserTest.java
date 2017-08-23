@@ -35,7 +35,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static io.druid.data.input.AvroStreamInputRowParserTest.PARSE_SPEC;
+import static io.druid.data.input.AvroStreamInputRowParserTest.DEFAULT_PARSE_SPEC;
 import static io.druid.data.input.AvroStreamInputRowParserTest.assertInputRowCorrect;
 import static io.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatum;
 
@@ -63,7 +63,7 @@ public class AvroHadoopInputRowParserTest
 
   private void testParse(GenericRecord record, boolean fromPigAvroStorage) throws IOException
   {
-    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(PARSE_SPEC, fromPigAvroStorage);
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(DEFAULT_PARSE_SPEC, fromPigAvroStorage);
     AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class

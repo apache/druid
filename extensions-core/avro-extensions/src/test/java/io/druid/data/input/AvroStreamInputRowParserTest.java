@@ -28,6 +28,10 @@ import com.google.common.collect.Maps;
 import io.druid.data.input.avro.AvroExtensionsModule;
 import io.druid.data.input.avro.SchemaRepoBasedAvroBytesDecoder;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.JSONParseSpec;
+import io.druid.data.input.impl.JSONPathSpec;
+import io.druid.data.input.impl.JSONPathFieldSpec;
+import io.druid.data.input.impl.JSONPathFieldType;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
@@ -75,11 +79,8 @@ public class AvroStreamInputRowParserTest
   public static final int SOME_INT_VALUE = 1;
   public static final long SOME_LONG_VALUE = 679865987569912369L;
   public static final DateTime DATE_TIME = new DateTime(2015, 10, 25, 19, 30);
-  public static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
-  public static final TimeAndDimsParseSpec PARSE_SPEC = new TimeAndDimsParseSpec(
-      new TimestampSpec("timestamp", "millis", null),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS), Collections.<String>emptyList(), null)
-  );
+
+
   public static final MyFixed SOME_FIXED_VALUE = new MyFixed(ByteBuffer.allocate(16).array());
   private static final long SUB_LONG_VALUE = 1543698L;
   private static final int SUB_INT_VALUE = 4892;
@@ -106,7 +107,7 @@ public class AvroStreamInputRowParserTest
       }
   );
   public static final String SOME_UNION_VALUE = "string as union";
-  public static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
+  public static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.wrap("hello".getBytes());
   private static final Function<Object, String> TO_STRING_INCLUDING_NULL = new Function<Object, String>()
   {
     @Override
@@ -114,6 +115,56 @@ public class AvroStreamInputRowParserTest
   };
 
   private final ObjectMapper jsonMapper = new ObjectMapper();
+
+  public static final List<String> JSON_DIMENSIONS = Arrays.asList(
+      "eventType",
+      "id",
+      "someOtherId",
+      "isValid",
+      "someIntArray",
+      "someStringArray",
+      "someIntValueMap",
+      "someUnion",
+      "someFixed",
+      "someBytes",
+      "someEnum",
+      "someFloat",
+      "someLong",
+      "someInt",
+      "subRecInt",
+      "subRecLong"
+  );
+
+  public static final List<JSONPathFieldSpec> JSON_FIELDS = Arrays.asList(
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "timestamp", "$.timestamp"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "eventType", "$.eventType"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "id", "$.id"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someOtherId", "$.someOtherId"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "isValid", "$.isValid"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someIntArray", "$.someIntArray"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someStringArray", "$.someStringArray"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someIntValueMap", "$.someIntValueMap"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someUnion", "$.someUnion"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someFixed", "$.someFixed"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someBytes", "$.someBytes"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someEnum", "$.someEnum"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someInt", "$.subInt"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someLong", "$.subLong"),
+      new JSONPathFieldSpec(JSONPathFieldType.ROOT, "someFloat", "$.subFloat"),
+      new JSONPathFieldSpec(JSONPathFieldType.PATH, "subRecInt", "$.someRecord.subInt"),
+      new JSONPathFieldSpec(JSONPathFieldType.PATH, "subRecLong", "$.someRecord.subLong")
+      );
+
+  public static final TimeAndDimsParseSpec DEFAULT_PARSE_SPEC = new TimeAndDimsParseSpec(
+      new TimestampSpec("timestamp", "millis", null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(JSON_DIMENSIONS), Collections.<String>emptyList(), null)
+  );
+  public static final JSONParseSpec JSON_PARSE_SPEC = new JSONParseSpec(
+      new TimestampSpec("timestamp", "millis", null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(JSON_DIMENSIONS), Collections.<String>emptyList(), null),
+      new JSONPathSpec(false, JSON_FIELDS),
+      null
+  );
 
 
   @Before
@@ -131,7 +182,7 @@ public class AvroStreamInputRowParserTest
   {
     Repository repository = new Avro1124RESTRepositoryClientWrapper("http://github.io");
     AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
-        PARSE_SPEC,
+        DEFAULT_PARSE_SPEC,
         new SchemaRepoBasedAvroBytesDecoder<String, Integer>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
     );
     ByteBufferInputRowParser parser2 = jsonMapper.readValue(
@@ -148,7 +199,7 @@ public class AvroStreamInputRowParserTest
     // serde test
     Repository repository = new InMemoryRepository(null);
     AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
-        PARSE_SPEC,
+        DEFAULT_PARSE_SPEC,
         new SchemaRepoBasedAvroBytesDecoder<String, Integer>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
     );
     ByteBufferInputRowParser parser2 = jsonMapper.readValue(
@@ -183,9 +234,107 @@ public class AvroStreamInputRowParserTest
     assertInputRowCorrect(inputRow);
   }
 
+  @Test
+  public void testParseJSON() throws SchemaValidationException, IOException
+  {
+    // serde test
+    Repository repository = new InMemoryRepository(null);
+    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
+        JSON_PARSE_SPEC,
+        new SchemaRepoBasedAvroBytesDecoder<String, Integer>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
+    );
+    ByteBufferInputRowParser parser2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(parser),
+        ByteBufferInputRowParser.class
+    );
+    repository = ((SchemaRepoBasedAvroBytesDecoder) ((AvroStreamInputRowParser) parser2).getAvroBytesDecoder()).getSchemaRepository();
+
+    // prepare data
+    GenericRecord someAvroDatum = buildSomeAvroDatum();
+
+    // encode schema id
+    Avro1124SubjectAndIdConverter converter = new Avro1124SubjectAndIdConverter(TOPIC);
+    TypedSchemaRepository<Integer, Schema, String> repositoryClient = new TypedSchemaRepository<Integer, Schema, String>(
+        repository,
+        new IntegerConverter(),
+        new AvroSchemaConverter(),
+        new IdentityConverter()
+    );
+    Integer id = repositoryClient.registerSchema(TOPIC, SomeAvroDatum.getClassSchema());
+    ByteBuffer byteBuffer = ByteBuffer.allocate(4);
+    converter.putSubjectAndId(TOPIC, id, byteBuffer);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    out.write(byteBuffer.array());
+    // encode data
+    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(someAvroDatum.getSchema());
+    // write avro datum to bytes
+    writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
+
+    InputRow inputRow = parser2.parse(ByteBuffer.wrap(out.toByteArray()));
+
+
+    assertEquals(JSON_DIMENSIONS, inputRow.getDimensions());
+    assertEquals(DATE_TIME.getMillis(), inputRow.getTimestampFromEpoch());
+
+    // test dimensions
+    assertEquals(Collections.singletonList(String.valueOf(EVENT_TYPE_VALUE)), inputRow.getDimension(EVENT_TYPE));
+    assertEquals(Collections.singletonList(String.valueOf(ID_VALUE)), inputRow.getDimension(ID));
+    assertEquals(Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)), inputRow.getDimension(SOME_OTHER_ID));
+    assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
+    assertEquals(
+        Lists.transform(SOME_INT_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
+        inputRow.getDimension("someIntArray")
+    );
+    assertEquals(
+        Lists.transform(SOME_STRING_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
+        inputRow.getDimension("someStringArray")
+    );
+    // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
+    assertEquals(1, inputRow.getDimension("someIntValueMap").size());
+    assertEquals(
+        SOME_INT_VALUE_MAP_VALUE, new HashMap<CharSequence, Integer>(
+            Maps.transformValues(
+                Splitter.on(",")
+                        .withKeyValueSeparator("=")
+                        .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", "")),
+                new Function<String, Integer>()
+                {
+                  @Nullable
+                  @Override
+                  public Integer apply(@Nullable String input)
+                  {
+                    return Integer.valueOf(input);
+                  }
+                }
+            )
+        )
+    );
+    assertEquals(
+        SOME_STRING_VALUE_MAP_VALUE, new HashMap<CharSequence, CharSequence>(
+            Splitter.on(",")
+                    .withKeyValueSeparator("=")
+                    .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", ""))
+        )
+    );
+    assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));
+    assertEquals(Collections.emptyList(), inputRow.getDimension("someNull"));
+    assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
+    assertEquals(Collections.singletonList("4892"), inputRow.getDimension("subRecInt"));
+    assertEquals(Collections.singletonList("1543698"), inputRow.getDimension("subRecLong"));
+
+
+    assertEquals(4892, inputRow.getLongMetric("subRecInt"));
+    assertEquals(1543698, inputRow.getLongMetric("subRecLong"));
+    // test metrics
+    assertEquals(SOME_FLOAT_VALUE, inputRow.getFloatMetric("someFloat"), 0);
+    assertEquals(SOME_LONG_VALUE, inputRow.getLongMetric("someLong"));
+    assertEquals(SOME_INT_VALUE, inputRow.getLongMetric("someInt"));
+    // test metrics
+  }
+
   public static void assertInputRowCorrect(InputRow inputRow)
   {
-    assertEquals(DIMENSIONS, inputRow.getDimensions());
+    assertEquals(JSON_DIMENSIONS, inputRow.getDimensions());
     assertEquals(DATE_TIME.getMillis(), inputRow.getTimestampFromEpoch());
 
     // test dimensions
