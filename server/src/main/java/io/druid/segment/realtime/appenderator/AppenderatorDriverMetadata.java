@@ -27,35 +27,26 @@ import java.util.Map;
 
 public class AppenderatorDriverMetadata
 {
-  private final Map<String, List<SegmentIdentifier>> activeSegments;
-  private final Map<String, List<SegmentIdentifier>> publishPendingSegments;
+  private final Map<String, List<AppenderatorDriver.SegmentWithState>> segments;
   private final Map<String, String> lastSegmentIds;
   private final Object callerMetadata;
 
   @JsonCreator
   public AppenderatorDriverMetadata(
-      @JsonProperty("activeSegments") Map<String, List<SegmentIdentifier>> activeSegments,
-      @JsonProperty("publishPendingSegments") Map<String, List<SegmentIdentifier>> publishPendingSegments,
+      @JsonProperty("segments") Map<String, List<AppenderatorDriver.SegmentWithState>> segments,
       @JsonProperty("lastSegmentIds") Map<String, String> lastSegmentIds,
       @JsonProperty("callerMetadata") Object callerMetadata
   )
   {
-    this.activeSegments = activeSegments;
-    this.publishPendingSegments = publishPendingSegments;
+    this.segments = segments;
     this.lastSegmentIds = lastSegmentIds;
     this.callerMetadata = callerMetadata;
   }
 
   @JsonProperty
-  public Map<String, List<SegmentIdentifier>> getActiveSegments()
+  public Map<String, List<AppenderatorDriver.SegmentWithState>> getSegments()
   {
-    return activeSegments;
-  }
-
-  @JsonProperty
-  public Map<String, List<SegmentIdentifier>> getPublishPendingSegments()
-  {
-    return publishPendingSegments;
+    return segments;
   }
 
   @JsonProperty
@@ -74,8 +65,7 @@ public class AppenderatorDriverMetadata
   public String toString()
   {
     return "AppenderatorDriverMetadata{" +
-           "activeSegments=" + activeSegments +
-           ", publishPendingSegments=" + publishPendingSegments +
+           "segments=" + segments +
            ", lastSegmentIds=" + lastSegmentIds +
            ", callerMetadata=" + callerMetadata +
            '}';

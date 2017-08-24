@@ -94,7 +94,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -129,6 +131,7 @@ public class AppenderatorImpl implements Appenderator
   private volatile long nextFlush;
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
+  private AtomicBoolean closed = new AtomicBoolean(false);
 
   public AppenderatorImpl(
       DataSchema schema,
@@ -365,7 +368,7 @@ public class AppenderatorImpl implements Appenderator
   @Override
   public ListenableFuture<Object> persist(Collection<SegmentIdentifier> identifiers, Committer committer)
   {
-    final Map<SegmentIdentifier, Integer> commitHydrants = Maps.newHashMap();
+    final Map<String, Integer> currentHydrants = Maps.newHashMap();
     final List<Pair<FireHydrant, SegmentIdentifier>> indexesToPersist = Lists.newArrayList();
     int numPersistedRows = 0;
     for (SegmentIdentifier identifier : identifiers) {
@@ -374,7 +377,7 @@ public class AppenderatorImpl implements Appenderator
         throw new ISE("No sink for identifier: %s", identifier);
       }
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
-      commitHydrants.put(identifier, hydrants.size());
+      currentHydrants.put(identifier.getIdentifierAsString(), hydrants.size());
       numPersistedRows += sink.getNumRowsInMemory();
 
       final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
@@ -410,22 +413,28 @@ public class AppenderatorImpl implements Appenderator
 
               log.info(
                   "Committing metadata[%s] for sinks[%s].", commitMetadata, Joiner.on(", ").join(
-                      Iterables.transform(
-                          commitHydrants.entrySet(),
-                          new Function<Map.Entry<SegmentIdentifier, Integer>, String>()
-                          {
-                            @Override
-                            public String apply(Map.Entry<SegmentIdentifier, Integer> entry)
-                            {
-                              return StringUtils.format("%s:%d", entry.getKey().getIdentifierAsString(), entry.getValue());
-                            }
-                          }
-                      )
+                      currentHydrants.entrySet()
+                                     .stream()
+                                     .map(entry -> StringUtils.format(
+                                         "%s:%d",
+                                         entry.getKey(),
+                                         entry.getValue()
+                                     ))
+                                     .collect(Collectors.toList())
                   )
               );
 
               committer.run();
-              objectMapper.writeValue(computeCommitFile(), Committed.create(commitHydrants, commitMetadata));
+
+              final File commitFile = computeCommitFile();
+              final Map<String, Integer> commitHydrants = Maps.newHashMap();
+              if (commitFile.exists()) {
+                // merge current hydrants with existing hydrants
+                final Committed oldCommitted = objectMapper.readValue(commitFile, Committed.class);
+                commitHydrants.putAll(oldCommitted.getHydrants());
+              }
+              commitHydrants.putAll(currentHydrants);
+              objectMapper.writeValue(commitFile, new Committed(commitHydrants, commitMetadata));
 
               return commitMetadata;
             }
@@ -481,29 +490,24 @@ public class AppenderatorImpl implements Appenderator
 
     return Futures.transform(
         persist(identifiers, committer),
-        new Function<Object, SegmentsAndMetadata>()
-        {
-          @Override
-          public SegmentsAndMetadata apply(Object commitMetadata)
-          {
-            final List<DataSegment> dataSegments = Lists.newArrayList();
+        (Function<Object, SegmentsAndMetadata>) commitMetadata -> {
+          final List<DataSegment> dataSegments = Lists.newArrayList();
 
-            for (Map.Entry<SegmentIdentifier, Sink> entry : theSinks.entrySet()) {
-              if (droppingSinks.contains(entry.getKey())) {
-                log.info("Skipping push of currently-dropping sink[%s]", entry.getKey());
-                continue;
-              }
-
-              final DataSegment dataSegment = mergeAndPush(entry.getKey(), entry.getValue());
-              if (dataSegment != null) {
-                dataSegments.add(dataSegment);
-              } else {
-                log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
-              }
+          for (Map.Entry<SegmentIdentifier, Sink> entry : theSinks.entrySet()) {
+            if (droppingSinks.contains(entry.getKey())) {
+              log.info("Skipping push of currently-dropping sink[%s]", entry.getKey());
+              continue;
             }
 
-            return new SegmentsAndMetadata(dataSegments, commitMetadata);
+            final DataSegment dataSegment = mergeAndPush(entry.getKey(), entry.getValue());
+            if (dataSegment != null) {
+              dataSegments.add(dataSegment);
+            } else {
+              log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
+            }
           }
+
+          return new SegmentsAndMetadata(dataSegments, commitMetadata);
         },
         pushExecutor
     );
@@ -632,6 +636,11 @@ public class AppenderatorImpl implements Appenderator
   @Override
   public void close()
   {
+    if (!closed.compareAndSet(false, true)) {
+      log.info("Appenderator already closed");
+      return;
+    }
+
     log.info("Shutting down...");
 
     final List<ListenableFuture<?>> futures = Lists.newArrayList();
@@ -652,8 +661,14 @@ public class AppenderatorImpl implements Appenderator
 
     try {
       shutdownExecutors();
-      Preconditions.checkState(persistExecutor.awaitTermination(365, TimeUnit.DAYS), "persistExecutor not terminated");
-      Preconditions.checkState(pushExecutor.awaitTermination(365, TimeUnit.DAYS), "pushExecutor not terminated");
+      Preconditions.checkState(
+          persistExecutor == null || persistExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "persistExecutor not terminated"
+      );
+      Preconditions.checkState(
+          pushExecutor == null || pushExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "pushExecutor not terminated"
+      );
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -662,6 +677,46 @@ public class AppenderatorImpl implements Appenderator
 
     // Only unlock if executors actually shut down.
     unlockBasePersistDirectory();
+  }
+
+  /**
+   * Unannounce the segments and wait for outstanding persists to finish.
+   * Do not unlock base persist dir as we are not waiting for push executor to shut down
+   * relying on current JVM to shutdown to not cause any locking problem if the task is restored.
+   * In case when task is restored and current task is still active because of push executor (which it shouldn't be
+   * since push executor starts daemon threads) then the locking should fail and new task should fail to start.
+   * This also means that this method should only be called when task is shutting down.
+   */
+  @Override
+  public void closeNow()
+  {
+    if (!closed.compareAndSet(false, true)) {
+      log.info("Appenderator already closed");
+      return;
+    }
+
+    log.info("Shutting down immediately...");
+    for (Map.Entry<SegmentIdentifier, Sink> entry : sinks.entrySet()) {
+      try {
+        segmentAnnouncer.unannounceSegment(entry.getValue().getSegment());
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
+           .addData("identifier", entry.getKey().getIdentifierAsString())
+           .emit();
+      }
+    }
+    try {
+      shutdownExecutors();
+      Preconditions.checkState(
+          persistExecutor == null || persistExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "persistExecutor not terminated"
+      );
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new ISE("Failed to shutdown executors during close()");
+    }
   }
 
   private void lockBasePersistDirectory()
@@ -723,8 +778,12 @@ public class AppenderatorImpl implements Appenderator
 
   private void shutdownExecutors()
   {
-    persistExecutor.shutdownNow();
-    pushExecutor.shutdownNow();
+    if (persistExecutor != null) {
+      persistExecutor.shutdownNow();
+    }
+    if (pushExecutor != null) {
+      pushExecutor.shutdownNow();
+    }
   }
 
   private void resetNextFlush()

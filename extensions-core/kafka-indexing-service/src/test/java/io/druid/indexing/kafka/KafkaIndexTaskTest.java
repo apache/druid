@@ -121,6 +121,7 @@ import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
+import io.druid.segment.realtime.appenderator.AppenderatorImpl;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
@@ -144,6 +145,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -153,6 +156,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+//CHECKSTYLE.OFF: Regexp
+//CHECKSTYLE.ON: Regexp
 
 public class KafkaIndexTaskTest
 {
@@ -1024,7 +1030,7 @@ public class KafkaIndexTaskTest
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2011/P1D", 1);
+    SegmentDescriptor desc3 = SD(task, "2011/P1D", 0);
     SegmentDescriptor desc4 = SD(task, "2012/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
@@ -1151,6 +1157,8 @@ public class KafkaIndexTaskTest
 
     // Stop without publishing segment
     task1.stopGracefully();
+    unlockAppenderatorBasePersistDirForTask(task1);
+
     Assert.assertEquals(TaskStatus.Status.SUCCESS, future1.get().getStatusCode());
 
     // Start a new task
@@ -1326,7 +1334,7 @@ public class KafkaIndexTaskTest
 
     Assert.assertEquals(ImmutableMap.of(0, 3L), task.getEndOffsets());
     Map<Integer, Long> newEndOffsets = ImmutableMap.of(0, 4L);
-    task.setEndOffsets(newEndOffsets, false);
+    task.setEndOffsets(newEndOffsets, false, true);
     Assert.assertEquals(newEndOffsets, task.getEndOffsets());
     Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
     task.resume();
@@ -1341,7 +1349,7 @@ public class KafkaIndexTaskTest
 
     // try again but with resume flag == true
     newEndOffsets = ImmutableMap.of(0, 6L);
-    task.setEndOffsets(newEndOffsets, true);
+    task.setEndOffsets(newEndOffsets, true, true);
     Assert.assertEquals(newEndOffsets, task.getEndOffsets());
     Assert.assertNotEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
 
@@ -1736,6 +1744,16 @@ public class KafkaIndexTaskTest
           }
         }
     ).toSet();
+  }
+
+  private void unlockAppenderatorBasePersistDirForTask(KafkaIndexTask task)
+      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
+  {
+    Method unlockBasePersistDir = ((AppenderatorImpl) task.getAppenderator()).getClass()
+                                                                             .getDeclaredMethod(
+                                                                                 "unlockBasePersistDirectory");
+    unlockBasePersistDir.setAccessible(true);
+    unlockBasePersistDir.invoke(task.getAppenderator());
   }
 
   private File getSegmentDirectory()
