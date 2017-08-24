@@ -562,11 +562,7 @@ public class HadoopDruidIndexerConfig
 
   public void addJobProperties(Job job)
   {
-    Configuration conf = job.getConfiguration();
-
-    for (final Map.Entry<String, String> entry : schema.getTuningConfig().getJobProperties().entrySet()) {
-      conf.set(entry.getKey(), entry.getValue());
-    }
+    addJobProperties(job.getConfiguration());
   }
 
   public void addJobProperties(Configuration conf)
