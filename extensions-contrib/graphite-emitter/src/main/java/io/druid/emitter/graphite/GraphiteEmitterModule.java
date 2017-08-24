@@ -22,6 +22,7 @@ package io.druid.emitter.graphite;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -57,28 +58,32 @@ public class GraphiteEmitterModule implements DruidModule
   @Named(EMITTER_TYPE)
   public Emitter getEmitter(GraphiteEmitterConfig graphiteEmitterConfig, ObjectMapper mapper, final Injector injector)
   {
-    List<Emitter> emitters = Lists.transform(
-        graphiteEmitterConfig.getAlertEmitters(),
-        new Function<String, Emitter>()
-        {
-          @Override
-          public Emitter apply(String s)
-          {
-            return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
-          }
-        }
+    List<Emitter> emitters = ImmutableList.copyOf(
+        Lists.transform(
+            graphiteEmitterConfig.getAlertEmitters(),
+            new Function<String, Emitter>()
+            {
+              @Override
+              public Emitter apply(String s)
+              {
+                return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
+              }
+            }
+        )
     );
 
-    List<Emitter> requestLogEmitters = Lists.transform(
-        graphiteEmitterConfig.getRequestLogEmitters(),
-        new Function<String, Emitter>()
-        {
-          @Override
-          public Emitter apply(String s)
-          {
-            return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
-          }
-        }
+    List<Emitter> requestLogEmitters = ImmutableList.copyOf(
+        Lists.transform(
+            graphiteEmitterConfig.getRequestLogEmitters(),
+            new Function<String, Emitter>()
+            {
+              @Override
+              public Emitter apply(String s)
+              {
+                return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
+              }
+            }
+        )
     );
     return new GraphiteEmitter(graphiteEmitterConfig, emitters, requestLogEmitters);
   }
