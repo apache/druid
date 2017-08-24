@@ -19,22 +19,71 @@
 
 package io.druid.discovery;
 
+import javax.annotation.Nullable;
+
 /**
+ * Interface for supporting Overlord and Coordinator Leader Elections in TaskMaster and DruidCoordinator
+ * which expect appropriate implementation available in guice annotated with @IndexingService and @Coordinator
+ * respectively.
+ *
+ * Usage is as follow.
+ * On lifecycle start:
+ *  druidLeaderSelector.registerListener(myListener);
+ *  druidLeaderSelector.start();
+ *
+ * On lifecycle stop:
+ *  druidLeaderSelector.stop();
  */
 public interface DruidLeaderSelector
 {
+
+  /**
+   * Get ID of current Leader.
+   */
+  @Nullable
   String getCurrentLeader();
+
+  /**
+   * Returns true if this node is elected leader from underlying system's point of view. For example if curator
+   * is used to implement this then true would be returned when curator believes this node to be the leader.
+   */
   boolean isLeader();
+
+  /**
+   * Implementation would increment it everytime it becomes leader. This allows users to start a long running
+   * task when they become leader and be able to intermittently check that they are still leader from same
+   * term when they started. DruidCoordinator class uses it to do intermittent checks and stop the activity
+   * as needed.
+   */
   int localTerm();
 
+  /**
+   * Register the listener for watching leadership notifications.
+   */
   void registerListener(Listener listener);
 
+  /**
+   * Must be called right after registerLeader(Listener).
+   */
   void start();
+
+  /**
+   * Must be called when the Druid process is stopping.
+   */
   void stop();
 
   interface Listener
   {
+    /**
+     * Notification that this node should start activities to be done by the leader. if this method throws
+     * exception then implementation would try to resign its leadership in the underlying system such as curator.
+     */
     void becomeLeader();
+
+    /**
+     * Notification that shid node should stop acitivities which are done by the leader. If this method throws
+     * exception then an alert is created.
+     */
     void stopBeingLeader();
   }
 }

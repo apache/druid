@@ -19,6 +19,7 @@
 
 package io.druid.curator.discovery;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
@@ -34,6 +35,7 @@ import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.curator.framework.recipes.leader.Participant;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -129,6 +131,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     return leaderLatch.getAndSet(newLeaderLatch);
   }
 
+  @Nullable
   @Override
   public String getCurrentLeader()
   {
@@ -166,6 +169,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   @Override
   public void registerListener(DruidLeaderSelector.Listener listener)
   {
+    Preconditions.checkArgument(this.listener == null, "listener is already registered.");
     this.listener = listener;
   }
 
