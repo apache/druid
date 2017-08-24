@@ -431,21 +431,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                   final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
 
                   if (postFilter == null) {
-                    return new QueryableIndexBaseCursor<Offset>(cursorOffset, columnSelectorFactory, myBucket)
-                    {
-                      @Override
-                      public void advance()
-                      {
-                        BaseQuery.checkInterrupted();
-                        this.cursorOffset.increment();
-                      }
-
-                      @Override
-                      public void advanceUninterruptibly()
-                      {
-                        this.cursorOffset.increment();
-                      }
-                    };
+                    return new QueryableIndexCursor(cursorOffset, columnSelectorFactory, myBucket);
                   } else {
                     FilteredOffset filteredOffset = new FilteredOffset(
                         cursorOffset,
@@ -454,24 +440,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         postFilter,
                         bitmapIndexSelector
                     );
-                    return new QueryableIndexBaseCursor<FilteredOffset>(filteredOffset, columnSelectorFactory, myBucket)
-                    {
-
-                      @Override
-                      public void advance()
-                      {
-                        BaseQuery.checkInterrupted();
-                        this.cursorOffset.incrementInterruptibly();
-                      }
-
-                      @Override
-                      public void advanceUninterruptibly()
-                      {
-                        if (!Thread.currentThread().isInterrupted()) {
-                          this.cursorOffset.increment();
-                        }
-                      }
-                    };
+                    return new QueryableIndexCursor(filteredOffset, columnSelectorFactory, myBucket);
                   }
 
                 }
@@ -482,13 +451,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private abstract static class QueryableIndexBaseCursor<OffsetType extends Offset> implements HistoricalCursor
+  private static class QueryableIndexCursor implements HistoricalCursor
   {
-    final OffsetType cursorOffset;
+    private final Offset cursorOffset;
     private final ColumnSelectorFactory columnSelectorFactory;
     private final DateTime bucketStart;
 
-    QueryableIndexBaseCursor(OffsetType cursorOffset, ColumnSelectorFactory columnSelectorFactory, DateTime bucketStart)
+    QueryableIndexCursor(Offset cursorOffset, ColumnSelectorFactory columnSelectorFactory, DateTime bucketStart)
     {
       this.cursorOffset = cursorOffset;
       this.columnSelectorFactory = columnSelectorFactory;
@@ -511,6 +480,24 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public DateTime getTime()
     {
       return bucketStart;
+    }
+
+    @Override
+    public void advance()
+    {
+      cursorOffset.increment();
+      // Must call BaseQuery.checkInterrupted() after cursorOffset.increment(), not before, because
+      // FilteredOffset.increment() is a potentially long, not an "instant" operation (unlike to all other subclasses
+      // of Offset) and it returns early on interruption, leaving itself in an illegal state. We should not let
+      // aggregators, etc. access this illegal state and throw a QueryInterruptedException by calling
+      // BaseQuery.checkInterrupted().
+      BaseQuery.checkInterrupted();
+    }
+
+    @Override
+    public void advanceUninterruptibly()
+    {
+      cursorOffset.increment();
     }
 
     @Override

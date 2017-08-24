@@ -70,26 +70,10 @@ public final class FilteredOffset extends Offset
   @Override
   public void increment()
   {
-    baseOffset.increment();
-
-    while (baseOffset.withinBounds() && !Thread.currentThread().isInterrupted()) {
-      if (filterMatcher.matches()) {
+    while (!Thread.currentThread().isInterrupted()) {
+      baseOffset.increment();
+      if (!baseOffset.withinBounds() || filterMatcher.matches()) {
         return;
-      } else {
-        baseOffset.increment();
-      }
-    }
-  }
-
-  void incrementInterruptibly()
-  {
-    baseOffset.increment();
-    while (baseOffset.withinBounds()) {
-      BaseQuery.checkInterrupted();
-      if (filterMatcher.matches()) {
-        return;
-      } else {
-        baseOffset.increment();
       }
     }
   }
@@ -111,8 +95,11 @@ public final class FilteredOffset extends Offset
   {
     if (baseOffset.withinBounds()) {
       if (!filterMatcher.matches()) {
+        increment();
+        // increment() returns early if it detects the current Thread is interrupted. It will leave this
+        // FilteredOffset in an illegal state, because it may point to an offset that should be filtered. So must to
+        // call BaseQuery.checkInterrupted() and thereby throw a QueryInterruptedException.
         BaseQuery.checkInterrupted();
-        incrementInterruptibly();
       }
     }
   }
