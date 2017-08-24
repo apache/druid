@@ -142,6 +142,7 @@ public class VirtualColumns implements Cacheable
     return withDotSupport.get(baseColumnName);
   }
 
+  @Nullable
   public ObjectColumnSelector makeObjectColumnSelector(String columnName, ColumnSelectorFactory factory)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
@@ -161,10 +162,14 @@ public class VirtualColumns implements Cacheable
   {
     final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
     if (virtualColumn == null) {
-      return dimensionSpec.decorate(NullDimensionSelector.instance());
+      return dimensionSpec.decorate(ConstantDimensionSelector.of(null, dimensionSpec.getExtractionFn()));
     } else {
       final DimensionSelector selector = virtualColumn.makeDimensionSelector(dimensionSpec, factory);
-      return selector == null ? dimensionSpec.decorate(NullDimensionSelector.instance()) : selector;
+      if (selector == null) {
+        return dimensionSpec.decorate(ConstantDimensionSelector.of(null, dimensionSpec.getExtractionFn()));
+      } else {
+        return selector;
+      }
     }
   }
 

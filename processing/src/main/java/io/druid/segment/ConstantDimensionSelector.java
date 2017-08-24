@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
@@ -29,19 +30,35 @@ import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
-public class NullDimensionSelector implements SingleValueHistoricalDimensionSelector, IdLookup
+public class ConstantDimensionSelector implements SingleValueHistoricalDimensionSelector, IdLookup
 {
-  private static final NullDimensionSelector INSTANCE = new NullDimensionSelector();
+  private static final ConstantDimensionSelector NULL_INSTANCE = new ConstantDimensionSelector(null);
 
-  private NullDimensionSelector()
+  private final String value;
+
+  protected ConstantDimensionSelector(final String value)
   {
-    // Singleton.
+    this.value = value;
   }
 
-  public static NullDimensionSelector instance()
+  public static ConstantDimensionSelector of(final String value)
   {
-    return INSTANCE;
+    if (Strings.isNullOrEmpty(value)) {
+      return NULL_INSTANCE;
+    } else {
+      return new ConstantDimensionSelector(value);
+    }
+  }
+
+  public static ConstantDimensionSelector of(final String value, final ExtractionFn extractionFn)
+  {
+    if (extractionFn == null) {
+      return of(value);
+    } else {
+      return of(extractionFn.apply(value));
+    }
   }
 
   @Override
@@ -69,15 +86,15 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(String value)
+  public ValueMatcher makeValueMatcher(String matchValue)
   {
-    return BooleanValueMatcher.of(value == null);
+    return BooleanValueMatcher.of(Objects.equals(value, matchValue));
   }
 
   @Override
   public ValueMatcher makeValueMatcher(Predicate<String> predicate)
   {
-    return BooleanValueMatcher.of(predicate.apply(null));
+    return BooleanValueMatcher.of(predicate.apply(value));
   }
 
   @Override
@@ -90,7 +107,7 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   public String lookupName(int id)
   {
     assert id == 0 : "id = " + id;
-    return null;
+    return value;
   }
 
   @Override
@@ -109,12 +126,16 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   @Override
   public int lookupId(String name)
   {
-    return Strings.isNullOrEmpty(name) ? 0 : -1;
+    if (value == null) {
+      return Strings.isNullOrEmpty(name) ? 0 : -1;
+    } else {
+      return value.equals(name) ? 0 : -1;
+    }
   }
 
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    // nothing to inspect
+    inspector.visit("value", value);
   }
 }

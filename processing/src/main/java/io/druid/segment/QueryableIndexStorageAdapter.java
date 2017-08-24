@@ -404,7 +404,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                 public Cursor apply(final Interval inputInterval)
                 {
                   final long timeStart = Math.max(interval.getStartMillis(), inputInterval.getStartMillis());
-                  final long timeEnd = Math.min(interval.getEndMillis(), gran.increment(inputInterval.getStart()).getMillis());
+                  final long timeEnd = Math.min(
+                      interval.getEndMillis(),
+                      gran.increment(inputInterval.getStart()).getMillis()
+                  );
 
                   if (descending) {
                     for (; baseOffset.withinBounds(); baseOffset.increment()) {
@@ -503,7 +506,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       final Column columnDesc = index.getColumn(dimension);
                       if (columnDesc == null) {
-                        return NullDimensionSelector.instance();
+                        return ConstantDimensionSelector.of(null, extractionFn);
                       }
 
                       if (dimension.equals(Column.TIME_COLUMN_NAME)) {
@@ -534,7 +537,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       final DictionaryEncodedColumn<String> column = cachedColumn;
                       if (column == null) {
-                        return NullDimensionSelector.instance();
+                        return ConstantDimensionSelector.of(null, extractionFn);
                       } else {
                         return column.makeDimensionSelector(this, extractionFn);
                       }
@@ -883,7 +886,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     return new QueryableIndexBaseCursor<FilteredOffset>()
                     {
                       private Offset baseOffset;
-                      
+
                       {
                         cursorOffset = new FilteredOffset(this, descending, postFilter, bitmapIndexSelector);
                         reset();
