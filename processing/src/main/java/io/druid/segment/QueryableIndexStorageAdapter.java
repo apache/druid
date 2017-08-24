@@ -419,22 +419,21 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                                         );
 
 
-                  final Offset cursorOffset = offset.clone();
-                  QueryableIndexColumnSelectorFactory columnSelectorFactory = new
-                      QueryableIndexColumnSelectorFactory(
+                  final Offset baseCursorOffset = offset.clone();
+                  final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
                       index,
                       virtualColumns,
                       descending,
                       closer,
-                      cursorOffset.getBaseReadableOffset()
+                      baseCursorOffset.getBaseReadableOffset()
                   );
                   final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
 
                   if (postFilter == null) {
-                    return new QueryableIndexCursor(cursorOffset, columnSelectorFactory, myBucket);
+                    return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, myBucket);
                   } else {
                     FilteredOffset filteredOffset = new FilteredOffset(
-                        cursorOffset,
+                        baseCursorOffset,
                         columnSelectorFactory,
                         descending,
                         postFilter,
