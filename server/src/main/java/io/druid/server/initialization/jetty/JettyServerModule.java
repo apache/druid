@@ -256,13 +256,15 @@ public class JettyServerModule extends JerseyServletModule
           public void stop()
           {
             if (activeConnections.get() != 0) {
-              long graceFullShutDownTime = (int)server.getAttribute(GRACEFUL_SHUTDOWN_TIME);
+              long graceFullShutDownTime = (int) server.getAttribute(GRACEFUL_SHUTDOWN_TIME);
               log.info("Waiting for [%s] milliseconds for active requests to be zero, current active requests=[%s]",
                   graceFullShutDownTime, activeConnections.get());
               try {
                 Thread.sleep(graceFullShutDownTime);
-              } catch (InterruptedException e) {
+              }
+              catch (InterruptedException e) {
                 log.error("Sleep has been interrupted, while waiting for active requests to be zero");
+                Thread.currentThread().interrupt();
               }
             }
             log.info("Stopping Jetty Server with active requests=[%s]", activeConnections.get());
