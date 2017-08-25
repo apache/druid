@@ -56,7 +56,6 @@ public class ZtestPostAggregator implements PostAggregator
   private final PostAggregator successCount2;
   private final PostAggregator sample2Size;
 
-
   @JsonCreator
   public ZtestPostAggregator(
       @JsonProperty("name") String name,
@@ -119,13 +118,22 @@ public class ZtestPostAggregator implements PostAggregator
   @Override
   public ZtestPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    return new ZtestPostAggregator(name, Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(successCount1), aggregators)), Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(sample1Size), aggregators)), Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(successCount2), aggregators)), Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(sample2Size), aggregators)));
+    return new ZtestPostAggregator(
+        name,
+        Iterables
+            .getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(successCount1), aggregators)),
+        Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(sample1Size), aggregators)),
+        Iterables
+            .getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(successCount2), aggregators)),
+        Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(sample2Size), aggregators))
+    );
   }
 
   /**
-   * 1. calculating zscore for two-sample Z test. IOW,
-   * using z-test statistic for testing the difference of two population proportions.
-   * 2. converting binary variables (e.g. success or not) to continuous variables (e.g. conversion rate).
+   * 1. calculating zscore for two-sample Z test. IOW, using z-test statistic
+   * for testing the difference of two population proportions. 2. converting
+   * binary variables (e.g. success or not) to continuous variables (e.g.
+   * conversion rate).
    *
    * @param s1count - success count of population 1
    * @param p1count - sample size of population 1

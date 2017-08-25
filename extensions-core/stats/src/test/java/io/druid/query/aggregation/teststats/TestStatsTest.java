@@ -30,10 +30,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TestStatsTest {
+public class TestStatsTest
+{
 
   @Test
-  public void testCompute() {
+  public void testCompute()
+  {
     ZtestPostAggregator ztestPostAggregator;
     PvaluefromZscorePostAggregator pvaluePostAggregator;
     ConstantPostAggregator successCount1, sample1Size, successCount2, sample2Size;
@@ -57,7 +59,8 @@ public class TestStatsTest {
     }
 
     ztestPostAggregator = new ZtestPostAggregator("zscore", successCount1,
-        sample1Size, successCount2, sample2Size);
+                                                  sample1Size, successCount2, sample2Size
+    );
 
     double zscore = ((Number) ztestPostAggregator.compute(metricValues)).doubleValue();
 
@@ -65,11 +68,14 @@ public class TestStatsTest {
 
     System.out.print("zscore = " + zscore + "\n");
     System.out.print("pvalue = " +
-        pvaluePostAggregator.compute(ImmutableMap.of("zscore", -1783.8762354220219)));
+                     pvaluePostAggregator.compute(ImmutableMap.of("zscore", -1783.8762354220219)));
 
     Assert.assertEquals(-1783.8762354220219,
-        zscore, 0.0001);
-    Assert.assertNotEquals(0.0,
-        ztestPostAggregator.compute(metricValues));
+                        zscore, 0.0001
+    );
+    Assert.assertNotEquals(
+        0.0,
+        ztestPostAggregator.compute(metricValues)
+    );
   }
 }

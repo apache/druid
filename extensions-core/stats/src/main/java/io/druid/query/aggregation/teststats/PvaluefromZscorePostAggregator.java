@@ -50,8 +50,14 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
       @JsonProperty("zScore") PostAggregator zScore
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator");
-    Preconditions.checkNotNull(zScore, "Must have a valid, non-null post-aggregator");
+    Preconditions.checkNotNull(
+        name,
+        "Must have a valid, non-null post-aggregator"
+    );
+    Preconditions.checkNotNull(
+        zScore,
+        "Must have a valid, non-null post-aggregator"
+    );
     this.name = name;
     this.zScore = zScore;
   }
@@ -76,8 +82,8 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   public Object compute(Map<String, Object> combinedAggregators)
   {
 
-    double zScoreValue =
-        ((Number) zScore.compute(combinedAggregators)).doubleValue();
+    double zScoreValue = ((Number) zScore.compute(combinedAggregators))
+        .doubleValue();
 
     zScoreValue = Math.abs(zScoreValue);
     return 2 * (1 - cumulativeProbability(zScoreValue));
@@ -104,7 +110,11 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    return new PvaluefromZscorePostAggregator(name, Iterables.getOnlyElement(Queries.decoratePostAggregators(Collections.singletonList(zScore), aggregators)));
+    return new PvaluefromZscorePostAggregator(
+        name,
+        Iterables.getOnlyElement(Queries.decoratePostAggregators(
+            Collections.singletonList(zScore), aggregators))
+    );
   }
 
   @Override
@@ -118,18 +128,14 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public String toString()
   {
-    return "PvaluefromZscorePostAggregator{" +
-           "name'" + name + '\'' +
-           ", zScore=" + zScore +
-           '}';
+    return "PvaluefromZscorePostAggregator{" + "name'" + name + '\''
+           + ", zScore=" + zScore + '}';
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(
-        PostAggregatorIds.PVALUE_FROM_ZTEST)
-        .appendCacheable(zScore)
-        .build();
+    return new CacheKeyBuilder(PostAggregatorIds.PVALUE_FROM_ZTEST)
+        .appendCacheable(zScore).build();
   }
 }
