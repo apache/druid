@@ -3557,8 +3557,10 @@ public class CalciteQueryTest
                             new CountAggregatorFactory("a0"),
                             new CardinalityAggregatorFactory(
                                 "a1",
+                                null,
                                 DIMS(new DefaultDimensionSpec("d0", null)),
-                                false
+                                false,
+                                true
                             )
                         ))
                         .setPostAggregatorSpecs(
@@ -3706,7 +3708,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{6L, 3L, 3.0f, 1L, 4L, 5.0f}
+            new Object[]{6L, 3L, 3.0f, 2L, 5L, 5.0f}
         )
     );
   }
