@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
@@ -30,29 +29,19 @@ import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
-public class ConstantDimensionSelector implements SingleValueHistoricalDimensionSelector, IdLookup
+public class NullDimensionSelector implements SingleValueHistoricalDimensionSelector, IdLookup
 {
-  private final String value;
+  private static final NullDimensionSelector INSTANCE = new NullDimensionSelector();
 
-  public ConstantDimensionSelector(final String value)
+  private NullDimensionSelector()
   {
-    if (Strings.isNullOrEmpty(value)) {
-      // There's an optimized implementation for nulls that callers should use instead.
-      throw new IllegalArgumentException("Use NullDimensionSelector or DimensionSelectorUtils.constantSelector");
-    }
-
-    this.value = value;
+    // Singleton.
   }
 
-  public static ConstantDimensionSelector of(final String value)
+  public static NullDimensionSelector instance()
   {
-    if (Strings.isNullOrEmpty(value)) {
-      throw new IllegalArgumentException("Use NullDimensionSelector");
-    } else {
-      return new ConstantDimensionSelector(value);
-    }
+    return INSTANCE;
   }
 
   @Override
@@ -80,15 +69,15 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(String matchValue)
+  public ValueMatcher makeValueMatcher(String value)
   {
-    return BooleanValueMatcher.of(Objects.equals(value, matchValue));
+    return BooleanValueMatcher.of(value == null);
   }
 
   @Override
   public ValueMatcher makeValueMatcher(Predicate<String> predicate)
   {
-    return BooleanValueMatcher.of(predicate.apply(value));
+    return BooleanValueMatcher.of(predicate.apply(null));
   }
 
   @Override
@@ -101,7 +90,7 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   public String lookupName(int id)
   {
     assert id == 0 : "id = " + id;
-    return value;
+    return null;
   }
 
   @Override
@@ -120,16 +109,12 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   @Override
   public int lookupId(String name)
   {
-    if (value == null) {
-      return Strings.isNullOrEmpty(name) ? 0 : -1;
-    } else {
-      return value.equals(name) ? 0 : -1;
-    }
+    return Strings.isNullOrEmpty(name) ? 0 : -1;
   }
 
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    inspector.visit("value", value);
+    // nothing to inspect
   }
 }

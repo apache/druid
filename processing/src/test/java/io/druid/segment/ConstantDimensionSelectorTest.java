@@ -29,13 +29,13 @@ import java.util.Iterator;
 
 public class ConstantDimensionSelectorTest
 {
-  private final ConstantDimensionSelector NULL_SELECTOR = ConstantDimensionSelector.of(null);
-  private final ConstantDimensionSelector CONST_SELECTOR = ConstantDimensionSelector.of("billy");
-  private final ConstantDimensionSelector NULL_EXTRACTION_SELECTOR = ConstantDimensionSelector.of(
+  private final DimensionSelector NULL_SELECTOR = DimensionSelectorUtils.constantSelector(null);
+  private final DimensionSelector CONST_SELECTOR = DimensionSelectorUtils.constantSelector("billy");
+  private final DimensionSelector NULL_EXTRACTION_SELECTOR = DimensionSelectorUtils.constantSelector(
       null,
       new StringFormatExtractionFn("billy")
   );
-  private final ConstantDimensionSelector CONST_EXTRACTION_SELECTOR = ConstantDimensionSelector.of(
+  private final DimensionSelector CONST_EXTRACTION_SELECTOR = DimensionSelectorUtils.constantSelector(
       "billybilly",
       new SubstringDimExtractionFn(0, 5)
   );

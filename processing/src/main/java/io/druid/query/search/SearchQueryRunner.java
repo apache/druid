@@ -153,14 +153,9 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       return true;
     }
 
-    if (selector.nameLookupPossibleInAdvance()
-        && selector.getValueCardinality() == 1
-        && selector.lookupName(0) == null) {
-      // Column exists, all values are null
-      return true;
-    }
-
-    return false;
+    return selector.nameLookupPossibleInAdvance()
+           && selector.getValueCardinality() == 1
+           && selector.lookupName(0) == null;
   }
 
   public static class LongSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<LongColumnSelector>

@@ -506,7 +506,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       final Column columnDesc = index.getColumn(dimension);
                       if (columnDesc == null) {
-                        return ConstantDimensionSelector.of(null, extractionFn);
+                        return DimensionSelectorUtils.constantSelector(null, extractionFn);
                       }
 
                       if (dimension.equals(Column.TIME_COLUMN_NAME)) {
@@ -537,7 +537,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       final DictionaryEncodedColumn<String> column = cachedColumn;
                       if (column == null) {
-                        return ConstantDimensionSelector.of(null, extractionFn);
+                        return DimensionSelectorUtils.constantSelector(null, extractionFn);
                       } else {
                         return column.makeDimensionSelector(this, extractionFn);
                       }

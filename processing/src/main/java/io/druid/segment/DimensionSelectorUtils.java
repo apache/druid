@@ -21,7 +21,9 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import io.druid.java.util.common.IAE;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
@@ -245,5 +247,23 @@ public final class DimensionSelectorUtils
       }
     }
     return valueIds;
+  }
+
+  public static DimensionSelector constantSelector(final String value)
+  {
+    if (Strings.isNullOrEmpty(value)) {
+      return NullDimensionSelector.instance();
+    } else {
+      return new ConstantDimensionSelector(value);
+    }
+  }
+
+  public static DimensionSelector constantSelector(final String value, final ExtractionFn extractionFn)
+  {
+    if (extractionFn == null) {
+      return constantSelector(value);
+    } else {
+      return constantSelector(extractionFn.apply(value));
+    }
   }
 }

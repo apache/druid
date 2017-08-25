@@ -66,6 +66,28 @@ public class VirtualColumnsTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
+  public void testExists()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+
+    Assert.assertTrue(virtualColumns.exists("expr"));
+    Assert.assertTrue(virtualColumns.exists("foo"));
+    Assert.assertTrue(virtualColumns.exists("foo.5"));
+    Assert.assertFalse(virtualColumns.exists("bar"));
+  }
+
+  @Test
+  public void testNonExistentSelector()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("No such virtual column[bar]");
+
+    virtualColumns.makeObjectColumnSelector("bar", null);
+  }
+
+  @Test
   public void testMakeSelectors()
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
@@ -406,7 +428,8 @@ public class VirtualColumnsTest
     public DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory)
     {
       final ColumnValueSelector selector = makeLongColumnSelector(columnName, factory);
-      return new TestDoubleColumnSelector() {
+      return new TestDoubleColumnSelector()
+      {
 
         @Override
         public double getDouble()
