@@ -19,150 +19,180 @@
 
 package io.druid.indexing.worker;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
-import io.druid.indexing.common.TaskLocation;
+import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.client.indexing.IndexingService;
+import io.druid.concurrent.LifecycleLock;
+import io.druid.discovery.DruidLeaderClient;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerListener;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.server.coordination.ChangeRequestHistory;
+import io.druid.server.coordination.ChangeRequestsSnapshot;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-
+import javax.ws.rs.core.MediaType;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * The monitor watches ZK at a specified path for new tasks to appear. Upon starting the monitor, a listener will be
- * created that waits for new tasks. Tasks are executed as soon as they are seen.
+ * This class manages the list of tasks assigned to this worker.
+ *
+ * It persists the list of assigned and completed tasks on disk. assigned task from disk is deleted as soon as it
+ * starts running and completed task on disk is deleted based on a periodic schedule where overlord is asked for
+ * active tasks to see which completed tasks are safe to delete.
  */
-public class WorkerTaskMonitor
+public abstract class WorkerTaskManager
 {
-  private static final EmittingLogger log = new EmittingLogger(WorkerTaskMonitor.class);
-  private static final int STOP_WARNING_SECONDS = 10;
+  private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
   private final ObjectMapper jsonMapper;
-  private final PathChildrenCache pathChildrenCache;
-  private final CuratorFramework cf;
-  private final WorkerCuratorCoordinator workerCuratorCoordinator;
   private final TaskRunner taskRunner;
   private final ExecutorService exec;
 
-  private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
-  private final Map<String, TaskDetails> running = new ConcurrentHashMap<>();
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
-  private final CountDownLatch doneStopping = new CountDownLatch(1);
-  private final Object lifecycleLock = new Object();
-  private volatile boolean started = false;
+  private final ConcurrentMap<String, Task> assignedTasks = new ConcurrentHashMap<>();
+
+  // ZK_CLEANUP_TODO : these are marked protected to be used in subclass WorkerTaskMonitor that updates ZK.
+  // should be marked private alongwith WorkerTaskMonitor removal.
+  protected final Map<String, TaskDetails> runningTasks = new ConcurrentHashMap<>();
+  protected final Map<String, TaskAnnouncement> completedTasks = new ConcurrentHashMap<>();
+
+  private final ChangeRequestHistory<WorkerHistoryItem> changeHistory = new ChangeRequestHistory<>();
+
+  //synchronizes access to "running", "completed" and "changeHistory"
+  protected final Object lock = new Object();
+
+  private final TaskConfig taskConfig;
+
+  private final ScheduledExecutorService completedTasksCleanupExecutor;
+
+  private final AtomicBoolean disabled = new AtomicBoolean(false);
+
+  private final DruidLeaderClient overlordClient;
 
   @Inject
-  public WorkerTaskMonitor(
+  public WorkerTaskManager(
       ObjectMapper jsonMapper,
-      CuratorFramework cf,
-      WorkerCuratorCoordinator workerCuratorCoordinator,
-      TaskRunner taskRunner
+      TaskRunner taskRunner,
+      TaskConfig taskConfig,
+      @IndexingService DruidLeaderClient overlordClient
   )
   {
     this.jsonMapper = jsonMapper;
-    this.pathChildrenCache = new PathChildrenCache(
-        cf, workerCuratorCoordinator.getTaskPathForWorker(), false, true, Execs.makeThreadFactory("TaskMonitorCache-%s")
-    );
-    this.cf = cf;
-    this.workerCuratorCoordinator = workerCuratorCoordinator;
     this.taskRunner = taskRunner;
-    this.exec = Execs.singleThreaded("WorkerTaskMonitor");
+    this.taskConfig = taskConfig;
+    this.exec = Execs.singleThreaded("WorkerTaskManager-NoticeHandler");
+    this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
+    this.overlordClient = overlordClient;
   }
 
-  /**
-   * Register a monitor for new tasks. When new tasks appear, the worker node announces a status to indicate it has
-   * started the task. When the task is complete, the worker node updates the status.
-   */
   @LifecycleStart
   public void start() throws Exception
   {
-    synchronized (lifecycleLock) {
-      Preconditions.checkState(!started, "already started");
-      Preconditions.checkState(!exec.isShutdown(), "already stopped");
-      started = true;
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("can't start.");
+    }
 
+    synchronized (lock) {
       try {
-        restoreRestorableTasks();
-        cleanupStaleAnnouncements();
-        registerRunListener();
+        log.info("Starting...");
         registerLocationListener();
-        pathChildrenCache.start();
-        exec.submit(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                mainLoop();
-              }
-            }
-        );
-
-        log.info("Started WorkerTaskMonitor.");
-        started = true;
-      }
-      catch (InterruptedException e) {
-        throw e;
+        restoreRestorableTasks();
+        initAssignedTasks();
+        initCompletedTasks();
+        scheduleCompletedTasksCleanup();
+        lifecycleLock.started();
+        log.info("Started.");
       }
       catch (Exception e) {
-        log.makeAlert(e, "Exception starting WorkerTaskMonitor")
-           .emit();
+        log.makeAlert(e, "Exception starting WorkerTaskManager.").emit();
         throw e;
+      }
+      finally {
+        lifecycleLock.exitStart();
       }
     }
   }
 
-  private void mainLoop()
+  @LifecycleStop
+  public void stop() throws Exception
   {
-    try {
-      while (!Thread.currentThread().isInterrupted()) {
-        final Notice notice = notices.take();
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("can't stop.");
+    }
 
-        try {
-          notice.handle();
-        }
-        catch (InterruptedException e) {
-          // Will be caught and logged in the outer try block
-          throw e;
-        }
-        catch (Exception e) {
-          log.makeAlert(e, "Failed to handle notice")
-             .addData("noticeClass", notice.getClass().getSimpleName())
-             .addData("noticeTaskId", notice.getTaskId())
-             .emit();
-        }
+    synchronized (lock) {
+      try {
+        taskRunner.unregisterListener("WorkerTaskManager");
+        exec.shutdownNow();
+        taskRunner.stop();
+        log.info("Stopped WorkerTaskManager.");
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Exception stopping WorkerTaskManager")
+           .emit();
       }
     }
-    catch (InterruptedException e) {
-      log.info("WorkerTaskMonitor interrupted, exiting.");
-    }
-    finally {
-      doneStopping.countDown();
-    }
+  }
+
+  public Map<String, TaskAnnouncement> getCompletedTasks()
+  {
+    return completedTasks;
+  }
+
+  private void submitNoticeToExec(Notice notice)
+  {
+    exec.execute(
+        () -> {
+          try {
+            notice.handle();
+          }
+          catch (Exception e) {
+            if (e instanceof InterruptedException) {
+              Thread.currentThread().interrupt();
+            }
+
+            log.makeAlert(e, "Failed to handle notice")
+               .addData("noticeClass", notice.getClass().getSimpleName())
+               .addData("noticeTaskId", notice.getTaskId())
+               .emit();
+          }
+        }
+    );
   }
 
   private void restoreRestorableTasks()
@@ -173,46 +203,6 @@ public class WorkerTaskMonitor
     }
   }
 
-  private void cleanupStaleAnnouncements() throws Exception
-  {
-    // cleanup any old running task announcements which are invalid after restart
-    for (TaskAnnouncement announcement : workerCuratorCoordinator.getAnnouncements()) {
-      if (!running.containsKey(announcement.getTaskStatus().getId()) && announcement.getTaskStatus().isRunnable()) {
-        log.info("Cleaning up stale announcement for task [%s].", announcement.getTaskStatus().getId());
-        workerCuratorCoordinator.updateTaskStatusAnnouncement(
-            TaskAnnouncement.create(
-                announcement.getTaskStatus().getId(),
-                announcement.getTaskResource(),
-                TaskStatus.failure(announcement.getTaskStatus().getId()),
-                TaskLocation.unknown()
-            )
-        );
-      }
-    }
-  }
-
-  private void registerRunListener()
-  {
-    pathChildrenCache.getListenable().addListener(
-        new PathChildrenCacheListener()
-        {
-          @Override
-          public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent)
-              throws Exception
-          {
-            if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
-              final Task task = jsonMapper.readValue(
-                  cf.getData().forPath(pathChildrenCacheEvent.getData().getPath()),
-                  Task.class
-              );
-
-              notices.add(new RunNotice(task));
-            }
-          }
-        }
-    );
-  }
-
   private void registerLocationListener()
   {
     taskRunner.registerListener(
@@ -221,13 +211,13 @@ public class WorkerTaskMonitor
           @Override
           public String getListenerId()
           {
-            return "WorkerTaskMonitor";
+            return "WorkerTaskManager";
           }
 
           @Override
           public void locationChanged(final String taskId, final TaskLocation newLocation)
           {
-            notices.add(new LocationNotice(taskId, newLocation));
+            submitNoticeToExec(new LocationNotice(taskId, newLocation));
           }
 
           @Override
@@ -242,7 +232,7 @@ public class WorkerTaskMonitor
 
   private void addRunningTask(final Task task, final ListenableFuture<TaskStatus> future)
   {
-    running.put(task.getId(), new TaskDetails(task));
+    runningTasks.put(task.getId(), new TaskDetails(task));
     Futures.addCallback(
         future,
         new FutureCallback<TaskStatus>()
@@ -250,45 +240,298 @@ public class WorkerTaskMonitor
           @Override
           public void onSuccess(TaskStatus result)
           {
-            notices.add(new StatusNotice(task, result));
+            submitNoticeToExec(new StatusNotice(task, result));
           }
 
           @Override
           public void onFailure(Throwable t)
           {
-            notices.add(new StatusNotice(task, TaskStatus.failure(task.getId())));
+            submitNoticeToExec(new StatusNotice(task, TaskStatus.failure(task.getId())));
           }
         }
     );
   }
 
-  @LifecycleStop
-  public void stop() throws InterruptedException
+  public void assignTask(Task task)
   {
-    synchronized (lifecycleLock) {
-      Preconditions.checkState(started, "not started");
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
+
+    synchronized (lock) {
+      if (assignedTasks.containsKey(task.getId())
+          || runningTasks.containsKey(task.getId())
+          || completedTasks.containsKey(task.getId())) {
+        log.info("Assign task[%s] request ignored because it exists already.", task.getId());
+        return;
+      }
 
       try {
-        started = false;
-        taskRunner.unregisterListener("WorkerTaskMonitor");
-        exec.shutdownNow();
-        pathChildrenCache.close();
-        taskRunner.stop();
+        jsonMapper.writeValue(new File(getAssignedTaskDir(), task.getId()), task);
+        assignedTasks.put(task.getId(), task);
+      }
+      catch (IOException ex) {
+        log.error(ex, "Error while trying to persist assigned task[%s]", task.getId());
+        throw new ISE("Assign Task[%s] Request failed because [%s].", task.getId(), ex.getMessage());
+      }
 
-        if (!doneStopping.await(STOP_WARNING_SECONDS, TimeUnit.SECONDS)) {
-          log.warn("WorkerTaskMonitor taking longer than %s seconds to exit. Still waiting...", STOP_WARNING_SECONDS);
-          doneStopping.await();
+      changeHistory.addChangeRequest(
+          new WorkerHistoryItem.TaskUpdate(
+              TaskAnnouncement.create(
+                  task,
+                  TaskStatus.running(task.getId()),
+                  TaskLocation.unknown()
+              )
+          )
+      );
+    }
+
+    submitNoticeToExec(new RunNotice(task));
+  }
+
+  public File getAssignedTaskDir()
+  {
+    return new File(taskConfig.getBaseTaskDir(), "assignedTasks");
+  }
+
+  private void initAssignedTasks()
+  {
+    File assignedTaskDir = getAssignedTaskDir();
+
+    log.info("Looking for any previously assigned tasks on disk[%s].", assignedTaskDir);
+
+    assignedTaskDir.mkdirs();
+
+    if (!assignedTaskDir.isDirectory()) {
+      throw new ISE("Assigned Tasks Dir [%s] does not exist/not-a-directory.", assignedTaskDir);
+    }
+
+    for (File taskFile : assignedTaskDir.listFiles()) {
+      try {
+        String taskId = taskFile.getName();
+        Task task = jsonMapper.readValue(taskFile, Task.class);
+        if (taskId.equals(task.getId())) {
+          assignedTasks.put(taskId, task);
+          log.info("Found assigned task[%s].", taskId);
+        } else {
+          throw new ISE("Corrupted assigned task on disk[%s].", taskFile.getAbsoluteFile());
+        }
+      }
+      catch (IOException ex) {
+        throw new ISE(ex, "Failed to read assigned task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
+      }
+    }
+
+    for (Task task : assignedTasks.values()) {
+      submitNoticeToExec(new RunNotice(task));
+    }
+  }
+
+  private void cleanupAssignedTask(Task task)
+  {
+    assignedTasks.remove(task.getId());
+    File taskFile = new File(getAssignedTaskDir(), task.getId());
+    try {
+      Files.delete(taskFile.toPath());
+    }
+    catch (IOException ex) {
+      log.error(ex, "Failed to delete assigned task from disk at [%s].", taskFile);
+    }
+  }
+
+  public ListenableFuture<ChangeRequestsSnapshot<WorkerHistoryItem>> getChangesSince(ChangeRequestHistory.Counter counter)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
+
+    if (counter.getCounter() < 0) {
+      synchronized (lock) {
+
+        List<WorkerHistoryItem> items = new ArrayList<>();
+        items.add(new WorkerHistoryItem.Metadata(disabled.get()));
+
+        for (Task task : assignedTasks.values()) {
+          items.add(
+              new WorkerHistoryItem.TaskUpdate(
+                  TaskAnnouncement.create(
+                      task,
+                      TaskStatus.running(task.getId()),
+                      TaskLocation.unknown()
+                  )
+              )
+          );
         }
 
-        log.info("Stopped WorkerTaskMonitor.");
+        for (TaskDetails details : runningTasks.values()) {
+          items.add(
+              new WorkerHistoryItem.TaskUpdate(
+                  TaskAnnouncement.create(
+                      details.task,
+                      details.status,
+                      details.location
+                  )
+              )
+          );
+        }
+
+        for (TaskAnnouncement taskAnnouncement : completedTasks.values()) {
+          items.add(new WorkerHistoryItem.TaskUpdate(taskAnnouncement));
+        }
+
+        SettableFuture<ChangeRequestsSnapshot<WorkerHistoryItem>> future = SettableFuture.create();
+        future.set(ChangeRequestsSnapshot.success(changeHistory.getLastCounter(), Lists.newArrayList(items)));
+        return future;
       }
-      catch (InterruptedException e) {
-        throw e;
+    } else {
+      return changeHistory.getRequestsSince(counter);
+    }
+  }
+
+  public File getCompletedTaskDir()
+  {
+    return new File(taskConfig.getBaseTaskDir(), "completedTasks");
+  }
+
+  private void moveFromRunningToCompleted(String taskId, TaskAnnouncement taskAnnouncement)
+  {
+    synchronized (lock) {
+      runningTasks.remove(taskId);
+      completedTasks.put(taskId, taskAnnouncement);
+
+      try {
+        jsonMapper.writeValue(new File(getCompletedTaskDir(), taskId), taskAnnouncement);
       }
-      catch (Exception e) {
-        log.makeAlert(e, "Exception stopping WorkerTaskMonitor")
-           .emit();
+      catch (IOException ex) {
+        log.error(ex, "Error while trying to persist completed task[%s] announcement.", taskId);
+        throw new ISE("Persisting completed task[%s] announcement failed because [%s].", taskId, ex.getMessage());
       }
+    }
+  }
+
+  private void initCompletedTasks()
+  {
+    File completedTaskDir = getCompletedTaskDir();
+    log.info("Looking for any previously completed tasks on disk[%s].", completedTaskDir);
+
+    completedTaskDir.mkdirs();
+
+    if (!completedTaskDir.isDirectory()) {
+      throw new ISE("Completed Tasks Dir [%s] does not exist/not-a-directory.", completedTaskDir);
+    }
+
+    for (File taskFile : completedTaskDir.listFiles()) {
+      try {
+        String taskId = taskFile.getName();
+        TaskAnnouncement taskAnnouncement = jsonMapper.readValue(taskFile, TaskAnnouncement.class);
+        if (taskId.equals(taskAnnouncement.getTaskId())) {
+          completedTasks.put(taskId, taskAnnouncement);
+          log.info("Found completed task[%s] with status[%s].", taskId, taskAnnouncement.getStatus());
+        } else {
+          throw new ISE("Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
+        }
+      }
+      catch (IOException ex) {
+        throw new ISE(ex, "Failed to read completed task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
+      }
+    }
+  }
+
+  private void scheduleCompletedTasksCleanup()
+  {
+    completedTasksCleanupExecutor.scheduleAtFixedRate(
+        () -> {
+          try {
+            if (completedTasks.isEmpty()) {
+              log.debug("Skipping completed tasks cleanup. Its empty.");
+              return;
+            }
+
+            ImmutableSet<String> taskIds = ImmutableSet.copyOf(completedTasks.keySet());
+            Map<String, TaskStatus> taskStatusesFromOverlord = null;
+
+            try {
+              FullResponseHolder fullResponseHolder = overlordClient.go(
+                  overlordClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
+                                .setContent(jsonMapper.writeValueAsBytes(taskIds))
+                                .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
+                                .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+
+              );
+              if (fullResponseHolder.getStatus().getCode() == 200) {
+                String responseContent = fullResponseHolder.getContent();
+                taskStatusesFromOverlord = jsonMapper.readValue(responseContent, new TypeReference<Map<String, TaskStatus>>()
+                {
+                });
+                log.debug("Received completed task status response [%s].", responseContent);
+              } else if (fullResponseHolder.getStatus().getCode() == 404) {
+                // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
+                // this if clause should be removed in a future release.
+                log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
+                taskStatusesFromOverlord = ImmutableMap.of();
+              } else {
+                log.info(
+                    "Got non-success code[%s] from overlord while getting active tasks. will retry on next scheduled run.",
+                    fullResponseHolder.getStatus().getCode()
+                );
+              }
+            }
+            catch (Exception ex) {
+              log.info(ex, "Exception while getting active tasks from overlord. will retry on next scheduled run.");
+
+              if (ex instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+              }
+            }
+
+            if (taskStatusesFromOverlord == null) {
+              return;
+            }
+
+            for (String taskId : taskIds) {
+              TaskStatus status = taskStatusesFromOverlord.get(taskId);
+              if (status == null || status.isComplete()) {
+
+                log.info(
+                    "Deleting completed task[%s] information, overlord task status[%s].",
+                    taskId,
+                    status == null ? "unknown" : status.getStatusCode()
+                );
+
+                completedTasks.remove(taskId);
+                File taskFile = new File(getCompletedTaskDir(), taskId);
+                try {
+                  Files.deleteIfExists(taskFile.toPath());
+                  changeHistory.addChangeRequest(new WorkerHistoryItem.TaskRemoval(taskId));
+                }
+                catch (IOException ex) {
+                  log.error(ex, "Failed to delete completed task from disk [%s].", taskFile);
+                }
+
+              }
+            }
+          }
+          catch (Throwable th) {
+            log.error(th, "WTF! Got unknown exception while running the scheduled cleanup.");
+          }
+        },
+        1,
+        5,
+        TimeUnit.MINUTES
+    );
+  }
+  
+  public void workerEnabled()
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
+
+    if (disabled.compareAndSet(true, false)) {
+      changeHistory.addChangeRequest(new WorkerHistoryItem.Metadata(false));
+    }
+  }
+
+  public void workerDisabled()
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
+
+    if (disabled.compareAndSet(false, true)) {
+      changeHistory.addChangeRequest(new WorkerHistoryItem.Metadata(true));
     }
   }
 
@@ -333,29 +576,35 @@ public class WorkerTaskMonitor
     @Override
     public void handle() throws Exception
     {
-      if (running.containsKey(task.getId())) {
-        log.warn(
-            "Got run notice for task [%s] that I am already running...",
-            task.getId()
+      TaskAnnouncement announcement = null;
+      synchronized (lock) {
+        if (runningTasks.containsKey(task.getId()) || completedTasks.containsKey(task.getId())) {
+          log.warn(
+              "Got run notice for task [%s] that I am already running or completed...",
+              task.getId()
+          );
+
+          taskStarted(task.getId());
+          return;
+        }
+
+        final ListenableFuture<TaskStatus> future = taskRunner.run(task);
+        addRunningTask(task, future);
+
+        announcement = TaskAnnouncement.create(
+            task,
+            TaskStatus.running(task.getId()),
+            TaskLocation.unknown()
         );
-        workerCuratorCoordinator.removeTaskRunZnode(task.getId());
-        return;
+
+        changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(announcement));
+
+        cleanupAssignedTask(task);
+        log.info("Task[%s] started.", task.getId());
       }
 
-      log.info("Submitting runnable for task[%s]", task.getId());
-
-      workerCuratorCoordinator.updateTaskStatusAnnouncement(
-          TaskAnnouncement.create(
-              task,
-              TaskStatus.running(task.getId()),
-              TaskLocation.unknown()
-          )
-      );
-
-      log.info("Affirmative. Running task [%s]", task.getId());
-      workerCuratorCoordinator.removeTaskRunZnode(task.getId());
-      final ListenableFuture<TaskStatus> future = taskRunner.run(task);
-      addRunningTask(task, future);
+      taskAnnouncementChanged(announcement);
+      taskStarted(task.getId());
     }
   }
 
@@ -379,48 +628,41 @@ public class WorkerTaskMonitor
     @Override
     public void handle() throws Exception
     {
-      final TaskDetails details = running.get(task.getId());
+      synchronized (lock) {
+        final TaskDetails details = runningTasks.get(task.getId());
 
-      if (details == null) {
-        log.warn("Got status notice for task [%s] that isn't running...", task.getId());
-        return;
-      }
+        if (details == null) {
+          log.warn("Got status notice for task [%s] that isn't running...", task.getId());
+          return;
+        }
 
-      if (!status.isComplete()) {
-        log.warn(
-            "WTF?! Got status notice for task [%s] that isn't complete (status = [%s])...",
-            task.getId(),
-            status.getStatusCode()
+        if (!status.isComplete()) {
+          log.warn(
+              "WTF?! Got status notice for task [%s] that isn't complete (status = [%s])...",
+              task.getId(),
+              status.getStatusCode()
+          );
+          return;
+        }
+
+        details.status = status.withDuration(System.currentTimeMillis() - details.startTime);
+
+        TaskAnnouncement latest = TaskAnnouncement.create(
+            details.task,
+            details.status,
+            details.location
         );
-        return;
-      }
 
-      details.status = status.withDuration(System.currentTimeMillis() - details.startTime);
+        moveFromRunningToCompleted(task.getId(), latest);
 
-      try {
-        workerCuratorCoordinator.updateTaskStatusAnnouncement(
-            TaskAnnouncement.create(
-                details.task,
-                details.status,
-                details.location
-            )
-        );
+        changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
+        taskAnnouncementChanged(latest);
+
         log.info(
             "Job's finished. Completed [%s] with status [%s]",
             task.getId(),
             status.getStatusCode()
         );
-      }
-      catch (InterruptedException e) {
-        throw e;
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to update task announcement")
-           .addData("task", task.getId())
-           .emit();
-      }
-      finally {
-        running.remove(task.getId());
       }
     }
   }
@@ -445,35 +687,35 @@ public class WorkerTaskMonitor
     @Override
     public void handle() throws InterruptedException
     {
-      final TaskDetails details = running.get(taskId);
+      synchronized (lock) {
+        final TaskDetails details = runningTasks.get(taskId);
 
-      if (details == null) {
-        log.warn("Got location notice for task [%s] that isn't running...", taskId);
-        return;
-      }
+        if (details == null) {
+          log.warn("Got location notice for task [%s] that isn't running...", taskId);
+          return;
+        }
 
-      if (!Objects.equals(details.location, location)) {
-        details.location = location;
+        if (!Objects.equals(details.location, location)) {
+          details.location = location;
 
-        try {
-          log.info("Updating task [%s] announcement with location [%s]", taskId, location);
-          workerCuratorCoordinator.updateTaskStatusAnnouncement(
-              TaskAnnouncement.create(
-                  details.task,
-                  details.status,
-                  details.location
-              )
+          TaskAnnouncement latest = TaskAnnouncement.create(
+              details.task,
+              details.status,
+              details.location
           );
-        }
-        catch (InterruptedException e) {
-          throw e;
-        }
-        catch (Exception e) {
-          log.makeAlert(e, "Failed to update task announcement")
-             .addData("task", taskId)
-             .emit();
+
+          changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
+          taskAnnouncementChanged(latest);
         }
       }
     }
   }
+
+  // ZK_CLEANUP_TODO :
+  //Note: Following abstract methods exist only to support WorkerTaskMonitor that
+  //watches task assignments and updates task statuses inside Zookeeper. When the transition to HTTP is complete
+  //in Overlord as well as MiddleManagers then WorkerTaskMonitor should be deleted, this class should no longer be abstract
+  //and the methods below should be removed.
+  protected abstract void taskStarted(String taskId);
+  protected abstract void taskAnnouncementChanged(TaskAnnouncement announcement);
 }
