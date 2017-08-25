@@ -39,6 +39,7 @@ import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategyFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
@@ -46,10 +47,11 @@ import io.druid.segment.DimensionHandlerUtils;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class CardinalityAggregatorFactory extends AggregatorFactory
 {
@@ -87,28 +89,21 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     );
   }
 
-  public static Object estimateCardinality(Object object)
-  {
-    if (object == null) {
-      return 0;
-    }
-
-    return ((HyperLogLogCollector) object).estimateCardinality();
-  }
-
   private static final CardinalityAggregatorColumnSelectorStrategyFactory STRATEGY_FACTORY =
       new CardinalityAggregatorColumnSelectorStrategyFactory();
 
   private final String name;
   private final List<DimensionSpec> fields;
   private final boolean byRow;
+  private final boolean round;
 
   @JsonCreator
   public CardinalityAggregatorFactory(
       @JsonProperty("name") String name,
       @Deprecated @JsonProperty("fieldNames") final List<String> fieldNames,
       @JsonProperty("fields") final List<DimensionSpec> fields,
-      @JsonProperty("byRow") final boolean byRow
+      @JsonProperty("byRow") final boolean byRow,
+      @JsonProperty("round") final boolean round
   )
   {
     this.name = name;
@@ -123,6 +118,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
       this.fields = fields;
     }
     this.byRow = byRow;
+    this.round = round;
   }
 
   public CardinalityAggregatorFactory(
@@ -131,7 +127,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
       final boolean byRow
   )
   {
-    this(name, null, fields, byRow);
+    this(name, null, fields, byRow, false);
   }
 
   @Override
@@ -201,7 +197,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new HyperUniquesAggregatorFactory(name, name);
+    return new HyperUniquesAggregatorFactory(name, name, false, round);
   }
 
   @Override
@@ -213,17 +209,16 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Lists.transform(
-        fields,
-        new Function<DimensionSpec, AggregatorFactory>()
-        {
-          @Override
-          public AggregatorFactory apply(DimensionSpec input)
-          {
-            return new CardinalityAggregatorFactory(input.getOutputName(), Collections.singletonList(input), byRow);
-          }
-        }
-    );
+    return fields.stream()
+                 .map(
+                     input -> new CardinalityAggregatorFactory(
+                         input.getOutputName(),
+                         null,
+                         Collections.singletonList(input),
+                         byRow,
+                         round
+                     )
+                 ).collect(Collectors.toList());
   }
 
   @Override
@@ -249,7 +244,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
   public Object finalizeComputation(Object object)
   {
-    return estimateCardinality(object);
+    return HyperUniquesAggregatorFactory.estimateCardinality(object, round);
   }
 
   @Override
@@ -277,25 +272,20 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     return byRow;
   }
 
+  @JsonProperty
+  public boolean isRound()
+  {
+    return round;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
-    List<byte[]> dimSpecKeys = new ArrayList<>();
-    int dimSpecKeysLength = fields.size();
-    for (DimensionSpec dimSpec : fields) {
-      byte[] dimSpecKey = dimSpec.getCacheKey();
-      dimSpecKeysLength += dimSpecKey.length;
-      dimSpecKeys.add(dimSpec.getCacheKey());
-    }
-
-    ByteBuffer retBuf = ByteBuffer.allocate(2 + dimSpecKeysLength);
-    retBuf.put(AggregatorUtil.CARD_CACHE_TYPE_ID);
-    for (byte[] dimSpecKey : dimSpecKeys) {
-      retBuf.put(dimSpecKey);
-      retBuf.put(AggregatorUtil.STRING_SEPARATOR);
-    }
-    retBuf.put((byte) (byRow ? 1 : 0));
-    return retBuf.array();
+    return new CacheKeyBuilder(AggregatorUtil.CARD_CACHE_TYPE_ID)
+        .appendCacheables(fields)
+        .appendBoolean(byRow)
+        .appendBoolean(round)
+        .build();
   }
 
   @Override
@@ -311,7 +301,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -319,26 +309,17 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    CardinalityAggregatorFactory that = (CardinalityAggregatorFactory) o;
-
-    if (isByRow() != that.isByRow()) {
-      return false;
-    }
-    if (!getName().equals(that.getName())) {
-      return false;
-    }
-    return getFields().equals(that.getFields());
-
+    final CardinalityAggregatorFactory that = (CardinalityAggregatorFactory) o;
+    return byRow == that.byRow &&
+           round == that.round &&
+           Objects.equals(name, that.name) &&
+           Objects.equals(fields, that.fields);
   }
 
   @Override
   public int hashCode()
   {
-    int result = getName().hashCode();
-    result = 31 * result + getFields().hashCode();
-    result = 31 * result + (isByRow() ? 1 : 0);
-    return result;
+    return Objects.hash(name, fields, byRow, round);
   }
 
   @Override
@@ -346,7 +327,9 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   {
     return "CardinalityAggregatorFactory{" +
            "name='" + name + '\'' +
-           ", fields='" + fields + '\'' +
+           ", fields=" + fields +
+           ", byRow=" + byRow +
+           ", round=" + round +
            '}';
   }
 }

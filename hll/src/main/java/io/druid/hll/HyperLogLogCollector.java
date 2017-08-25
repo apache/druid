@@ -502,6 +502,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     return theBytes;
   }
 
+  public long estimateCardinalityRound()
+  {
+    return Math.round(estimateCardinality());
+  }
+
   public double estimateCardinality()
   {
     if (estimatedCardinality == null) {

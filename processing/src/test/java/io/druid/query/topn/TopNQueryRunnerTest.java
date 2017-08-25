@@ -713,6 +713,56 @@ public class TopNQueryRunnerTest
   }
 
   @Test
+  public void testTopNOverHyperUniqueExpressionRounded()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(QueryRunnerTestHelper.qualityUniquesRounded)
+        )
+        .postAggregators(
+            Collections.singletonList(new ExpressionPostAggregator(
+                QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
+                "uniques + 1",
+                null,
+                TestExprMacroTable.INSTANCE
+            ))
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put(QueryRunnerTestHelper.uniqueMetric, 9L)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, 10L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put(QueryRunnerTestHelper.uniqueMetric, 2L)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, 3L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put(QueryRunnerTestHelper.uniqueMetric, 2L)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, 3L)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
   public void testTopNOverFirstLastAggregator()
   {
     TopNQuery query = new TopNQueryBuilder()

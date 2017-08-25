@@ -2979,9 +2979,10 @@ public class CalciteQueryTest
                               "a1",
                               null,
                               DIMS(new DefaultDimensionSpec("dim2", null)),
-                              false
+                              false,
+                              true
                           ),
-                          new HyperUniquesAggregatorFactory("a2", "unique_dim1")
+                          new HyperUniquesAggregatorFactory("a2", "unique_dim1", false, true)
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -3050,7 +3051,8 @@ public class CalciteQueryTest
                               "a0",
                               null,
                               DIMS(new DefaultDimensionSpec("dim2", null)),
-                              false
+                              false,
+                              true
                           )
                       )
                   )
@@ -3136,19 +3138,22 @@ public class CalciteQueryTest
                               "a1",
                               null,
                               DIMS(new DefaultDimensionSpec("dim2", "dim2")),
-                              false
+                              false,
+                              true
                           ),
                           new FilteredAggregatorFactory(
                               new CardinalityAggregatorFactory(
                                   "a2",
                                   null,
                                   DIMS(new DefaultDimensionSpec("dim2", "dim2")),
-                                  false
+                                  false,
+                                  true
                               ),
                               NOT(SELECTOR("dim2", "", null))
                           ),
                           new CardinalityAggregatorFactory(
                               "a3",
+                              null,
                               DIMS(
                                   new ExtractionDimensionSpec(
                                       "dim2",
@@ -3157,14 +3162,17 @@ public class CalciteQueryTest
                                       new SubstringDimExtractionFn(0, 1)
                                   )
                               ),
-                              false
+                              false,
+                              true
                           ),
                           new CardinalityAggregatorFactory(
                               "a4",
+                              null,
                               DIMS(new DefaultDimensionSpec("a4:v", "a4:v", ValueType.STRING)),
-                              false
+                              false,
+                              true
                           ),
-                          new HyperUniquesAggregatorFactory("a5", "unique_dim1")
+                          new HyperUniquesAggregatorFactory("a5", "unique_dim1", false, true)
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -3562,7 +3570,7 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{5L, 5L, -0.12226936f}
+            new Object[]{5L, 5L, 0.0f}
         )
     );
   }
@@ -3683,7 +3691,8 @@ public class CalciteQueryTest
                               "a1",
                               null,
                               DIMS(new DefaultDimensionSpec("dim2", null)),
-                              false
+                              false,
+                              true
                           )
                       )
                   )
@@ -3697,7 +3706,7 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{6L, 3L, 3.0021994f, 1L, 4L, 4.9985347f}
+            new Object[]{6L, 3L, 3.0f, 1L, 4L, 5.0f}
         )
     );
   }
@@ -3717,6 +3726,7 @@ public class CalciteQueryTest
                       AGGS(
                           new CardinalityAggregatorFactory(
                               "a0",
+                              null,
                               DIMS(
                                   new ExtractionDimensionSpec(
                                       "dim1",
@@ -3724,7 +3734,8 @@ public class CalciteQueryTest
                                       new SubstringDimExtractionFn(0, 1)
                                   )
                               ),
-                              false
+                              false,
+                              true
                           )
                       )
                   )
@@ -4408,8 +4419,10 @@ public class CalciteQueryTest
                   .aggregators(AGGS(
                       new CardinalityAggregatorFactory(
                           "a0",
+                          null,
                           ImmutableList.<DimensionSpec>of(new ExtractionDimensionSpec("dim1", null, extractionFn)),
-                          false
+                          false,
+                          true
                       )
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
