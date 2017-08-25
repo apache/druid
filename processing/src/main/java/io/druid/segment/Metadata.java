@@ -175,7 +175,7 @@ public class Metadata
       }
     }
 
-    if(!foundSomeMetadata) {
+    if (!foundSomeMetadata) {
       return null;
     }
 

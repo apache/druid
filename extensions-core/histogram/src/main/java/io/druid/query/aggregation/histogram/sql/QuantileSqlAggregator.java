@@ -183,7 +183,7 @@ public class QuantileSqlAggregator implements SqlAggregator
       }
     } else {
       final ExpressionVirtualColumn virtualColumn = input.toVirtualColumn(
-          String.format("%s:v", name),
+          StringUtils.format("%s:v", name),
           ValueType.FLOAT,
           plannerContext.getExprMacroTable()
       );

@@ -20,9 +20,8 @@
 package io.druid.indexer;
 
 import com.google.common.annotations.VisibleForTesting;
-
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
-
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
@@ -54,8 +53,8 @@ public class Bucket
     buf.putInt(shardNum);
     buf.putLong(time.getMillis());
     buf.putInt(partitionNum);
-    for (int i = 0; i < parts.length; i++) {
-      buf.put(parts[i]);
+    for (byte[] part : parts) {
+      buf.put(part);
     }
 
     return buf.array();
@@ -108,8 +107,8 @@ public class Bucket
   private static int sizes(byte[]... parts)
   {
     int size = 0;
-    for (int i = 0; i < parts.length; i++) {
-      size += parts[i].length;
+    for (byte[] part : parts) {
+      size += part.length;
     }
     return size;
   }
@@ -118,7 +117,7 @@ public class Bucket
   {
     ByteBuffer buf = ByteBuffer.wrap(keyBytes);
 
-    Bucket bucket = new Bucket(buf.getInt(), new DateTime(buf.getLong()), buf.getInt());
+    Bucket bucket = new Bucket(buf.getInt(), DateTimes.utc(buf.getLong()), buf.getInt());
     byte[] bytesLeft = new byte[buf.remaining()];
     buf.get(bytesLeft);
 

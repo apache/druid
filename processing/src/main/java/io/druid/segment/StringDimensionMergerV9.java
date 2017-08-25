@@ -93,6 +93,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   protected List<IndexableAdapter> adapters;
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
+  protected IndexMerger.DictionaryMergeIterator dictionaryMergeIterator;
 
   public StringDimensionMergerV9(
       String dimensionName,
@@ -167,18 +168,18 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     cardinality = 0;
     if (numMergeIndex > 1) {
-      IndexMerger.DictionaryMergeIterator iterator = new IndexMerger.DictionaryMergeIterator(dimValueLookups, true);
+      dictionaryMergeIterator = new IndexMerger.DictionaryMergeIterator(dimValueLookups, true);
 
-      while (iterator.hasNext()) {
-        dictionaryWriter.write(iterator.next());
+      while (dictionaryMergeIterator.hasNext()) {
+        dictionaryWriter.write(dictionaryMergeIterator.next());
       }
 
       for (int i = 0; i < adapters.size(); i++) {
-        if (dimValueLookups[i] != null && iterator.needConversion(i)) {
-          dimConversions.set(i, iterator.conversions[i]);
+        if (dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
+          dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
         }
       }
-      cardinality = iterator.counter;
+      cardinality = dictionaryMergeIterator.counter;
     } else if (numMergeIndex == 1) {
       for (String value : dimValueLookup) {
         dictionaryWriter.write(value);
@@ -294,6 +295,10 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     try (
         Closeable toCloseEncodedValueWriter = encodedValueWriter;
         Closeable toCloseBitmapWriter = bitmapWriter;
+        // We need to free the ByteBuffers allocated by the dictionary merge iterator here,
+        // these buffers are used by dictIdSeeker in mergeBitmaps() below. The iterator is created and only used
+        // in writeMergedValueMetadata(), but the buffers are still used until after mergeBitmaps().
+        Closeable toCloseDictionaryMergeIterator = dictionaryMergeIterator;
         Closeable dimValsMappedUnmapper = new Closeable()
     {
       @Override
@@ -341,7 +346,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         spatialWriter.write(ImmutableRTree.newImmutableFromMutable(tree));
         spatialWriter.close();
       }
-
 
       log.info(
           "Completed dim[%s] inverted with cardinality[%,d] in %,d millis.",
@@ -579,7 +583,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         @Override
         public int skip(int n)
         {
-          return IntIteratorUtils.skip(this, n);
+          return IntIteratorUtils.skip(baseIterator, n);
         }
       };
     }

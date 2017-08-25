@@ -309,12 +309,12 @@ This deep storage is used to interface with Cassandra.
 
 You can enable caching of results at the broker, historical, or realtime level using following configurations.
 
-|Property|Description|Default|
-|--------|-----------|-------|
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.unCacheable</code>|All druid query types|All query types to not cache.|["groupBy", "select"]|
-|<code>druid.(broker&#124;historical&#124;realtime).cache.useCache</code>|Whether to use cache for getting query results.|false|
-|<code>druid.(broker&#124;historical&#124;realtime).cache.populateCache</code>|Whether to populate cache.|false|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.useCache</code>|true, false|Whether to use cache for getting query results.|false|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.populateCache</code>|true, false|Whether to populate cache.|false|
 
 #### Local Cache
 

@@ -25,11 +25,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -91,6 +93,12 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return FloatFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("FloatLastAggregatorFactory is not supported during ingestion for rollup");
   }
 
   @Override
@@ -199,7 +207,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
     return ByteBuffer.allocate(2 + fieldNameBytes.length)
                      .put(AggregatorUtil.FLOAT_LAST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
-                     .put((byte)0xff)
+                     .put((byte) 0xff)
                      .array();
   }
 

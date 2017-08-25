@@ -22,10 +22,13 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -53,8 +56,6 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -101,7 +102,7 @@ public class AppendTest
   final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum, uniques);
 
   final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(new Interval("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+      Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
   private Segment segment;
@@ -120,8 +121,8 @@ public class AppendTest
             new Pair<String, AggregatorFactory[]>("append.json.2", METRIC_AGGS)
         ),
         Arrays.asList(
-            new Interval("2011-01-12T00:00:00.000Z/2011-01-16T00:00:00.000Z"),
-            new Interval("2011-01-14T22:00:00.000Z/2011-01-16T00:00:00.000Z")
+            Intervals.of("2011-01-12T00:00:00.000Z/2011-01-16T00:00:00.000Z"),
+            Intervals.of("2011-01-14T22:00:00.000Z/2011-01-16T00:00:00.000Z")
         )
     );
     segment = new QueryableIndexSegment(null, appendedIndex);
@@ -135,8 +136,8 @@ public class AppendTest
             new Pair<String, AggregatorFactory[]>("append.json.4", METRIC_AGGS)
         ),
         Arrays.asList(
-            new Interval("2011-01-12T00:00:00.000Z/2011-01-16T00:00:00.000Z"),
-            new Interval("2011-01-13T00:00:00.000Z/2011-01-14T00:00:00.000Z")
+            Intervals.of("2011-01-12T00:00:00.000Z/2011-01-16T00:00:00.000Z"),
+            Intervals.of("2011-01-13T00:00:00.000Z/2011-01-14T00:00:00.000Z")
         )
     );
     segment2 = new QueryableIndexSegment(null, append2);
@@ -152,9 +153,9 @@ public class AppendTest
             new Pair<String, AggregatorFactory[]>("append.json.7", METRIC_AGGS)
         ),
         Arrays.asList(
-            new Interval("2011-01-12T00:00:00.000Z/2011-01-22T00:00:00.000Z"),
-            new Interval("2011-01-13T00:00:00.000Z/2011-01-16T00:00:00.000Z"),
-            new Interval("2011-01-18T00:00:00.000Z/2011-01-21T00:00:00.000Z")
+            Intervals.of("2011-01-12T00:00:00.000Z/2011-01-22T00:00:00.000Z"),
+            Intervals.of("2011-01-13T00:00:00.000Z/2011-01-16T00:00:00.000Z"),
+            Intervals.of("2011-01-18T00:00:00.000Z/2011-01-21T00:00:00.000Z")
         )
     );
     segment3 = new QueryableIndexSegment(null, append3);
@@ -165,13 +166,13 @@ public class AppendTest
   {
     List<Result<TimeBoundaryResultValue>> expectedResults = Arrays.asList(
         new Result<TimeBoundaryResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-15T02:00:00.000Z")
+                    DateTimes.of("2011-01-15T02:00:00.000Z")
                 )
             )
         )
@@ -181,8 +182,8 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -190,13 +191,13 @@ public class AppendTest
   {
     List<Result<TimeBoundaryResultValue>> expectedResults = Arrays.asList(
         new Result<TimeBoundaryResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-15T00:00:00.000Z")
+                    DateTimes.of("2011-01-15T00:00:00.000Z")
                 )
             )
         )
@@ -206,8 +207,8 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -215,7 +216,7 @@ public class AppendTest
   {
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 8L)
@@ -231,8 +232,8 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -240,7 +241,7 @@ public class AppendTest
   {
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 7L)
@@ -256,8 +257,8 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -265,7 +266,7 @@ public class AppendTest
   {
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 5L)
@@ -281,8 +282,8 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -290,7 +291,7 @@ public class AppendTest
   {
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 4L)
@@ -306,8 +307,8 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -315,7 +316,7 @@ public class AppendTest
   {
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -352,8 +353,8 @@ public class AppendTest
 
     TopNQuery query = makeTopNQuery();
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -361,7 +362,7 @@ public class AppendTest
   {
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -398,8 +399,8 @@ public class AppendTest
 
     TopNQuery query = makeTopNQuery();
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -407,7 +408,7 @@ public class AppendTest
   {
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -426,8 +427,8 @@ public class AppendTest
 
     TopNQuery query = makeFilteredTopNQuery();
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -435,7 +436,7 @@ public class AppendTest
   {
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Lists.<Map<String, Object>>newArrayList()
             )
@@ -444,8 +445,8 @@ public class AppendTest
 
     TopNQuery query = makeFilteredTopNQuery();
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -453,7 +454,7 @@ public class AppendTest
   {
     List<Result<SearchResultValue>> expectedResults = Arrays.asList(
         new Result<SearchResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -467,8 +468,8 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -476,7 +477,7 @@ public class AppendTest
   {
     List<Result<SearchResultValue>> expectedResults = Arrays.asList(
         new Result<SearchResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -489,8 +490,8 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -498,7 +499,7 @@ public class AppendTest
   {
     List<Result<SearchResultValue>> expectedResults = Arrays.asList(
         new Result<SearchResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementDimension, "mezzanine"),
@@ -510,8 +511,8 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -519,7 +520,7 @@ public class AppendTest
   {
     List<Result<SearchResultValue>> expectedResults = Arrays.asList(
         new Result<SearchResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -532,8 +533,8 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   @Test
@@ -541,7 +542,7 @@ public class AppendTest
   {
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 5L)
@@ -574,8 +575,8 @@ public class AppendTest
                                   .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
                                   .build();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment3);
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
   private TimeseriesQuery makeTimeseriesQuery()

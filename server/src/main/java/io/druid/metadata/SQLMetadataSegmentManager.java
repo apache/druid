@@ -37,6 +37,8 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -223,11 +225,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       );
 
       final List<DataSegment> segments = Lists.newArrayList();
-      for (TimelineObjectHolder<String, DataSegment> objectHolder : segmentTimeline.lookup(
-          new Interval(
-              "0000-01-01/3000-01-01"
-          )
-      )) {
+      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
+          Intervals.of("0000-01-01/3000-01-01")
+      );
+      for (TimelineObjectHolder<String, DataSegment> objectHolder : timelineObjectHolders) {
         for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
           segments.add(partitionChunk.getObject());
         }
@@ -504,7 +505,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         if (dataSource == null) {
           dataSource = new DruidDataSource(
               datasourceName,
-              ImmutableMap.of("created", new DateTime().toString())
+              ImmutableMap.of("created", DateTimes.nowUtc().toString())
           );
 
           Object shouldBeNull = newDataSources.put(

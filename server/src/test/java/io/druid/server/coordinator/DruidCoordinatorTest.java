@@ -36,6 +36,7 @@ import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
@@ -174,7 +175,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         null,
-        new NoopServiceAnnouncer(){
+        new NoopServiceAnnouncer() {
           @Override
           public void announce(DruidNode node)
           {
@@ -213,7 +214,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(segment.getDataSource()).andReturn("dummyDataSource");
     EasyMock.replay(segment);
     EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
-    DruidDataSource druidDataSource= EasyMock.createNiceMock(DruidDataSource.class);
+    DruidDataSource druidDataSource = EasyMock.createNiceMock(DruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(segment);
     EasyMock.replay(druidDataSource);
     EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
@@ -264,7 +265,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testCoordinatorRun() throws Exception
   {
     String dataSource = "dataSource1";
-    String tier= "hot";
+    String tier = "hot";
 
     // Setup MetadataRuleManager
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2));
@@ -280,7 +281,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     DruidDataSource[] druidDataSources = {
         new DruidDataSource(dataSource, Collections.<String, String>emptyMap())
     };
-    final DataSegment dataSegment = new DataSegment(dataSource, new Interval("2010-01-01/P1D"), "v1", null, null, null, null, 0x9, 0);
+    final DataSegment dataSegment = new DataSegment(dataSource, Intervals.of("2010-01-01/P1D"), "v1", null, null, null, null, 0x9, 0);
     druidDataSources[0].addSegment("0", dataSegment);
 
     EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
@@ -319,7 +320,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
             CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
         ) throws Exception
         {
-          if(pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)){
+          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
             if (assignSegmentLatch.getCount() > 0) {
               //Coordinator should try to assign segment to druidServer historical
               //Simulate historical loading segment
@@ -384,10 +385,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
   {
     DruidDataSource dataSource = new DruidDataSource("test", new HashMap());
     DataSegment[] segments = new DataSegment[]{
-        getSegment("test", new Interval("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
-        getSegment("test", new Interval("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
-        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z")),
-        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z"))
+        getSegment("test", Intervals.of("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z"))
     };
     for (DataSegment segment : segments) {
       dataSource.addSegment(segment.getIdentifier(), segment);
@@ -399,10 +400,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(databaseSegmentManager);
     Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
     DataSegment[] expected = new DataSegment[]{
-        getSegment("test", new Interval("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
-        getSegment("test", new Interval("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
-        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z")),
-        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z"))
+        getSegment("test", Intervals.of("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z"))
     };
     Assert.assertEquals(expected.length, availableSegments.size());
     Assert.assertEquals(expected, availableSegments.toArray());

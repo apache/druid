@@ -179,15 +179,19 @@ public class WorkerTaskMonitorTest
                       {
                         return Lists.newArrayList();
                       }
-                    }
-                    , jsonMapper
+                    },
+                    jsonMapper
                 )
             ),
                 jsonMapper,
                 indexIO,
                 null,
                 null,
-                indexMergerV9
+                indexMergerV9,
+                null,
+                null,
+                null,
+                null
             ),
             taskConfig,
             new NoopServiceEmitter(),

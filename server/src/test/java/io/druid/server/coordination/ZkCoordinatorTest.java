@@ -35,6 +35,7 @@ import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -269,7 +270,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   {
     zkCoordinator.start();
 
-    final DataSegment segment = makeSegment("test", "1", new Interval("P1d/2011-04-01"));
+    final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
     zkCoordinator.removeSegment(segment, new DataSegmentChangeCallback()
     {
@@ -318,7 +319,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   {
     zkCoordinator.start();
 
-    final DataSegment segment = makeSegment("test", "1", new Interval("P1d/2011-04-01"));
+    final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
     zkCoordinator.addSegment(segment, new DataSegmentChangeCallback()
     {
@@ -371,19 +372,19 @@ public class ZkCoordinatorTest extends CuratorTestBase
   {
     List<DataSegment> segments = Lists.newLinkedList();
     for (int i = 0; i < COUNT; ++i) {
-      segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-01")));
-      segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-02")));
-      segments.add(makeSegment("test" + i, "2", new Interval("P1d/2011-04-02")));
-      segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-03")));
-      segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-04")));
-      segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-05")));
-      segments.add(makeSegment("test" + i, "2", new Interval("PT1h/2011-04-04T01")));
-      segments.add(makeSegment("test" + i, "2", new Interval("PT1h/2011-04-04T02")));
-      segments.add(makeSegment("test" + i, "2", new Interval("PT1h/2011-04-04T03")));
-      segments.add(makeSegment("test" + i, "2", new Interval("PT1h/2011-04-04T05")));
-      segments.add(makeSegment("test" + i, "2", new Interval("PT1h/2011-04-04T06")));
-      segments.add(makeSegment("test_two" + i, "1", new Interval("P1d/2011-04-01")));
-      segments.add(makeSegment("test_two" + i, "1", new Interval("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-03")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-04")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-05")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T01")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T02")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T03")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T05")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("PT1h/2011-04-04T06")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
     Collections.sort(segments);
 
@@ -532,11 +533,11 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     List<DataSegment> segments = Lists.newLinkedList();
     for (int i = 0; i < COUNT; ++i) {
-      segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-01")));
-      segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-02")));
-      segments.add(makeSegment("test" + i, "2", new Interval("P1d/2011-04-02")));
-      segments.add(makeSegment("test_two" + i, "1", new Interval("P1d/2011-04-01")));
-      segments.add(makeSegment("test_two" + i, "1", new Interval("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test" + i, "2", Intervals.of("P1d/2011-04-02")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
+      segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
     Collections.sort(segments);
 

@@ -125,7 +125,7 @@ public class GranularityPathSpec implements PathSpec
     Pattern fileMatcher = Pattern.compile(filePattern);
 
     DateTimeFormatter customFormatter = null;
-    if(pathFormat != null) {
+    if (pathFormat != null) {
       customFormatter = DateTimeFormat.forPattern(pathFormat);
     }
 
@@ -168,7 +168,7 @@ public class GranularityPathSpec implements PathSpec
       end = inputInterval.getEndMillis();
       makeNew = true;
     }
-    return makeNew ? new Interval(start, end) : interval;
+    return makeNew ? new Interval(start, end, interval.getChronology()) : interval;
   }
 
 }

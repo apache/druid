@@ -40,6 +40,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.DoubleColumnSelector;
@@ -206,9 +207,9 @@ public class FilteredAggregatorTest
           return new DoubleColumnSelector()
           {
             @Override
-            public double get()
+            public double getDouble()
             {
-              return (double) selector.get();
+              return ((ColumnValueSelector) selector).getDouble();
             }
 
             @Override
@@ -248,12 +249,12 @@ public class FilteredAggregatorTest
     };
   }
 
-  private void assertValues(FilteredAggregator agg,TestFloatColumnSelector selector, double... expectedVals)
+  private void assertValues(FilteredAggregator agg, TestFloatColumnSelector selector, double... expectedVals)
   {
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());
-    for(double expectedVal : expectedVals){
+    for (double expectedVal : expectedVals) {
       aggregate(selector, agg);
       Assert.assertEquals(expectedVal, agg.get());
       Assert.assertEquals(expectedVal, agg.get());

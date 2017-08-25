@@ -28,9 +28,13 @@ public class TimestampAggregator implements Aggregator
 {
   static final Comparator COMPARATOR = LongMaxAggregator.COMPARATOR;
 
-  static long combineValues(Object lhs, Object rhs)
+  static Object combineValues(Comparator<Long> comparator, Object lhs, Object rhs)
   {
-    return Math.max(((Number)lhs).longValue(), ((Number)rhs).longValue());
+    if (comparator.compare(((Number) lhs).longValue(), ((Number) rhs).longValue()) > 0) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   private final ObjectColumnSelector selector;

@@ -25,6 +25,8 @@ import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
 
+import javax.annotation.Nullable;
+
 /**
  */
 @ExtensionPoint
@@ -77,7 +79,8 @@ public interface ExtractionFn
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(Object value);
+  @Nullable
+  public String apply(@Nullable Object value);
 
   /**
    * The "extraction" function.  This should map a String value into some other String value.
@@ -89,7 +92,8 @@ public interface ExtractionFn
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(String value);
+  @Nullable
+  public String apply(@Nullable String value);
 
   /**
    * The "extraction" function.  This should map a long value into some String value.

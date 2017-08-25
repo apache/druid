@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import io.druid.guice.annotations.ExtensionPoint;
-import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -89,15 +88,9 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @Override
-  public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context)
+  public QueryRunner<T> getRunner(QuerySegmentWalker walker, Map<String, Object> context)
   {
-    return run(querySegmentSpec.lookup(this, walker), context);
-  }
-
-  @Override
-  public Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context)
-  {
-    return runner.run(this, context);
+    return querySegmentSpec.lookup(this, walker);
   }
 
   @Override

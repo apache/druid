@@ -21,14 +21,10 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.FloatColumnSelector;
 
-import java.util.Comparator;
-
 /**
  */
 public class FloatMinAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = FloatSumAggregator.COMPARATOR;
-
   static double combineValues(Object lhs, Object rhs)
   {
     return Math.min(((Number) lhs).floatValue(), ((Number) rhs).floatValue());
@@ -48,7 +44,7 @@ public class FloatMinAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    min = Math.min(min, selector.get());
+    min = Math.min(min, selector.getFloat());
   }
 
   @Override

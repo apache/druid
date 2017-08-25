@@ -24,9 +24,9 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.segment.column.Column;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,8 +51,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -63,8 +63,8 @@ public class IntervalDimFilterTest
     intervalFilter = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         new RegexDimExtractionFn(".*", false, null)
     );
@@ -80,8 +80,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter1 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -89,8 +89,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter2 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -100,16 +100,16 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter3 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         regexFn
     );
     DimFilter intervalFilter4 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         regexFn
     );
@@ -124,8 +124,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter1 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -133,8 +133,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter2 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         regexFn
     );
@@ -142,8 +142,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter3 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1977-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1977-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -154,9 +154,9 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter4 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1977-01-01T00:00:00.004Z"),
-            Interval.parse("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1977-01-01T00:00:00.004Z"),
+            Intervals.of("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -166,8 +166,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter5 = new IntervalDimFilter(
         "__thyme",
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -182,8 +182,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter1 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -191,8 +191,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter2 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         regexFn
     );
@@ -200,8 +200,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter3 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1977-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1977-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -212,9 +212,9 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter4 = new IntervalDimFilter(
         Column.TIME_COLUMN_NAME,
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1977-01-01T00:00:00.004Z"),
-            Interval.parse("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1977-01-01T00:00:00.004Z"),
+            Intervals.of("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
@@ -223,8 +223,8 @@ public class IntervalDimFilterTest
     DimFilter intervalFilter5 = new IntervalDimFilter(
         "__thyme",
         Arrays.asList(
-            Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
-            Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );

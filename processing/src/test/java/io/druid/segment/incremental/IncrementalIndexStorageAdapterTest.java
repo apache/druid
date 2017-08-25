@@ -29,6 +29,8 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -114,14 +116,14 @@ public class IncrementalIndexStorageAdapterTest
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy"),
             ImmutableMap.<String, Object>of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("sally"),
             ImmutableMap.<String, Object>of("sally", "bo")
         )
@@ -133,7 +135,7 @@ public class IncrementalIndexStorageAdapterTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(0, new DateTime().getMillis()))
+                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
                     .addDimension("billy")
                     .addDimension("sally")
                     .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
@@ -158,14 +160,14 @@ public class IncrementalIndexStorageAdapterTest
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
-            new DateTime("2014-09-01T00:00:00"),
+            DateTimes.of("2014-09-01T00:00:00"),
             Lists.newArrayList("billy"),
             ImmutableMap.<String, Object>of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime("2014-09-01T01:00:00"),
+            DateTimes.of("2014-09-01T01:00:00"),
             Lists.newArrayList("billy", "sally"),
             ImmutableMap.<String, Object>of(
                 "billy", "hip",
@@ -180,7 +182,7 @@ public class IncrementalIndexStorageAdapterTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(0, new DateTime().getMillis()))
+                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
                     .addDimension("billy")
                     .addDimension("sally")
                     .addAggregator(
@@ -243,7 +245,7 @@ public class IncrementalIndexStorageAdapterTest
   {
 
     IncrementalIndex index = indexCreator.createIndex();
-    DateTime t = DateTime.now();
+    DateTime t = DateTimes.nowUtc();
     Interval interval = new Interval(t.minusMinutes(1), t.plusMinutes(1));
 
     index.add(
@@ -299,7 +301,7 @@ public class IncrementalIndexStorageAdapterTest
   public void testSingleValueTopN() throws IOException
   {
     IncrementalIndex index = indexCreator.createIndex();
-    DateTime t = DateTime.now();
+    DateTime t = DateTimes.nowUtc();
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
@@ -326,7 +328,7 @@ public class IncrementalIndexStorageAdapterTest
         engine.query(
             new TopNQueryBuilder().dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Lists.newArrayList(new Interval(0, new DateTime().getMillis())))
+                                  .intervals(Lists.newArrayList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
                                   .dimension("sally")
                                   .metric("cnt")
                                   .threshold(10)
@@ -355,14 +357,14 @@ public class IncrementalIndexStorageAdapterTest
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy"),
             ImmutableMap.<String, Object>of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("sally"),
             ImmutableMap.<String, Object>of("sally", "bo")
         )
@@ -374,7 +376,7 @@ public class IncrementalIndexStorageAdapterTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(0, new DateTime().getMillis()))
+                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
                     .addDimension("billy")
                     .addDimension("sally")
                     .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
@@ -411,7 +413,7 @@ public class IncrementalIndexStorageAdapterTest
 
     Sequence<Cursor> cursors = sa.makeCursors(
         null,
-        new Interval(timestamp - 60_000, timestamp + 60_000),
+        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
@@ -494,7 +496,7 @@ public class IncrementalIndexStorageAdapterTest
 
     Sequence<Cursor> cursors = sa.makeCursors(
         null,
-        new Interval(timestamp - 60_000, timestamp + 60_000),
+        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,

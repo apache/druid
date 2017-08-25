@@ -53,7 +53,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
     return new TestFloatColumnSelector()
     {
       @Override
-      public float get()
+      public float getFloat()
       {
         return row.get().getFloatMetric(columnName);
       }
@@ -66,7 +66,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
     return new TestLongColumnSelector()
     {
       @Override
-      public long get()
+      public long getLong()
       {
         return row.get().getLongMetric(columnName);
       }
@@ -104,7 +104,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
     return new TestDoubleColumnSelector()
     {
       @Override
-      public double get()
+      public double getDouble()
       {
         return row.get().getFloatMetric(columnName);
       }

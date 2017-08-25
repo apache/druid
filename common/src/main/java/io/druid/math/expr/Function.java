@@ -30,7 +30,9 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.util.List;
 
 /**
+ * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
+@SuppressWarnings("unused")
 interface Function
 {
   String name();
@@ -1024,7 +1026,7 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(Strings.nullToEmpty(arg).toLowerCase());
+      return ExprEval.of(StringUtils.toLowerCase(Strings.nullToEmpty(arg)));
     }
   }
 
@@ -1044,7 +1046,7 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(Strings.nullToEmpty(arg).toUpperCase());
+      return ExprEval.of(StringUtils.toUpperCase(Strings.nullToEmpty(arg)));
     }
   }
 }

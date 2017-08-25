@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.inject.Inject;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.Expr;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -65,7 +66,7 @@ public class LookupOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        calciteOperator().getName().toLowerCase(),
+        StringUtils.toLowerCase(calciteOperator().getName()),
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(0);
           final Expr lookupNameExpr = inputExpressions.get(1).parse(plannerContext.getExprMacroTable());

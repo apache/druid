@@ -171,7 +171,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   @Override
   protected boolean connectorIsTransientException(Throwable e)
   {
-    if(e instanceof SQLException) {
+    if (e instanceof SQLException) {
       final String sqlState = ((SQLException) e).getSQLState();
       // limited to errors that are likely to be resolved within a few retries
       // retry on connection errors and insufficient resources

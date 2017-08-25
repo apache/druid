@@ -24,6 +24,8 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -54,8 +56,8 @@ public class SinkTest
         new DefaultObjectMapper()
     );
 
-    final Interval interval = new Interval("2013-01-01/2013-01-02");
-    final String version = new DateTime().toString();
+    final Interval interval = Intervals.of("2013-01-01/2013-01-02");
+    final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         100,
         new Period("P1Y"),
@@ -94,13 +96,13 @@ public class SinkTest
           @Override
           public long getTimestampFromEpoch()
           {
-            return new DateTime("2013-01-01").getMillis();
+            return DateTimes.of("2013-01-01").getMillis();
           }
 
           @Override
           public DateTime getTimestamp()
           {
-            return new DateTime("2013-01-01");
+            return DateTimes.of("2013-01-01");
           }
 
           @Override
@@ -142,7 +144,7 @@ public class SinkTest
     );
 
     FireHydrant currHydrant = sink.getCurrHydrant();
-    Assert.assertEquals(new Interval("2013-01-01/PT1M"), currHydrant.getIndex().getInterval());
+    Assert.assertEquals(Intervals.of("2013-01-01/PT1M"), currHydrant.getIndex().getInterval());
 
 
     FireHydrant swapHydrant = sink.swap();
@@ -159,13 +161,13 @@ public class SinkTest
           @Override
           public long getTimestampFromEpoch()
           {
-            return new DateTime("2013-01-01").getMillis();
+            return DateTimes.of("2013-01-01").getMillis();
           }
 
           @Override
           public DateTime getTimestamp()
           {
-            return new DateTime("2013-01-01");
+            return DateTimes.of("2013-01-01");
           }
 
           @Override
@@ -208,7 +210,7 @@ public class SinkTest
 
     Assert.assertEquals(currHydrant, swapHydrant);
     Assert.assertNotSame(currHydrant, sink.getCurrHydrant());
-    Assert.assertEquals(new Interval("2013-01-01/PT1M"), sink.getCurrHydrant().getIndex().getInterval());
+    Assert.assertEquals(Intervals.of("2013-01-01/PT1M"), sink.getCurrHydrant().getIndex().getInterval());
 
     Assert.assertEquals(2, Iterators.size(sink.iterator()));
   }

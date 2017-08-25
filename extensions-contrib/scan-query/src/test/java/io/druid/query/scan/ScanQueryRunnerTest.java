@@ -25,9 +25,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.TableDataSource;
@@ -38,8 +41,6 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -93,7 +94,7 @@ public class ScanQueryRunnerTest
   };
 
   public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
-      new Interval("2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z")
+      Intervals.of("2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z")
   );
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
@@ -159,7 +160,7 @@ public class ScanQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<ScanResultValue> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<ScanResultValue>newArrayList()
     );
 
@@ -202,7 +203,7 @@ public class ScanQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<ScanResultValue> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<ScanResultValue>newArrayList()
     );
 
@@ -225,7 +226,7 @@ public class ScanQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<ScanResultValue> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<ScanResultValue>newArrayList()
     );
 
@@ -263,7 +264,7 @@ public class ScanQueryRunnerTest
 
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<ScanResultValue> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<ScanResultValue>newArrayList()
     );
 
@@ -304,7 +305,7 @@ public class ScanQueryRunnerTest
 
       HashMap<String, Object> context = new HashMap<String, Object>();
       Iterable<ScanResultValue> results = Sequences.toList(
-          runner.run(query, context),
+          runner.run(QueryPlus.wrap(query), context),
           Lists.<ScanResultValue>newArrayList()
       );
 
@@ -366,12 +367,13 @@ public class ScanQueryRunnerTest
         .build();
 
     Iterable<ScanResultValue> results = Sequences.toList(
-        runner.run(query, Maps.newHashMap()),
+        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         Lists.<ScanResultValue>newArrayList()
     );
     Iterable<ScanResultValue> resultsOptimize = Sequences.toList(
-        toolChest.postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner))).
-            run(query, Maps.<String, Object>newHashMap()), Lists.<ScanResultValue>newArrayList()
+        toolChest
+            .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
+            .run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()), Lists.<ScanResultValue>newArrayList()
     );
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -421,7 +423,7 @@ public class ScanQueryRunnerTest
         .build();
 
     Iterable<ScanResultValue> results = Sequences.toList(
-        runner.run(query, Maps.newHashMap()),
+        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         Lists.<ScanResultValue>newArrayList()
     );
 
@@ -439,7 +441,7 @@ public class ScanQueryRunnerTest
         .build();
 
     Iterable<ScanResultValue> results = Sequences.toList(
-        runner.run(query, Maps.newHashMap()),
+        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         Lists.<ScanResultValue>newArrayList()
     );
 
@@ -504,7 +506,7 @@ public class ScanQueryRunnerTest
                       event.put(
                           specs[0],
                           specs.length == 1 || specs[1].equals("STRING") ? values[i] :
-                          specs[1].equals("TIME") ? new DateTime(values[i]) :
+                          specs[1].equals("TIME") ? DateTimes.of(values[i]) :
                           specs[1].equals("FLOAT") ? Float.valueOf(values[i]) :
                           specs[1].equals("DOUBLE") ? Double.valueOf(values[i]) :
                           specs[1].equals("LONG") ? Long.valueOf(values[i]) :
@@ -617,8 +619,8 @@ public class ScanQueryRunnerTest
       {
         List mapEvents = Lists.newLinkedList();
         List events = ((List) input.getEvents());
-        for (int i = 0; i < events.size(); i++) {
-          Iterator compactedEventIter = ((List) events.get(i)).iterator();
+        for (Object event : events) {
+          Iterator compactedEventIter = ((List) event).iterator();
           Map mapEvent = new LinkedHashMap();
           for (String column : input.getColumns()) {
             mapEvent.put(column, compactedEventIter.next());

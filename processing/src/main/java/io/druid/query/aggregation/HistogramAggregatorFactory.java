@@ -27,8 +27,11 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -86,6 +89,50 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return HistogramAggregator.combineHistograms(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    // HistogramAggregatorFactory.combine() delegates to HistogramAggregator.combineHistograms() and it doesn't check
+    // for nulls, so this AggregateCombiner neither.
+    return new ObjectAggregateCombiner<Histogram>()
+    {
+      private Histogram combined;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        @SuppressWarnings("unchecked")
+        Histogram first = ((ObjectColumnSelector<Histogram>) selector).get();
+        if (combined == null) {
+          combined = new Histogram(first);
+        } else {
+          combined.copyFrom(first);
+        }
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        @SuppressWarnings("unchecked")
+        Histogram other = ((ObjectColumnSelector<Histogram>) selector).get();
+        combined.fold(other);
+      }
+
+      @Override
+      public Class<Histogram> classOfObject()
+      {
+        return Histogram.class;
+      }
+
+      @Nullable
+      @Override
+      public Histogram get()
+      {
+        return combined;
+      }
+    };
   }
 
   @Override

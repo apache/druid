@@ -21,6 +21,7 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.io.Closeable;
@@ -28,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.function.ToIntFunction;
 
 /**
  * Groupers aggregate metrics from rows that they typically get from a ColumnSelectorFactory, under
@@ -59,7 +61,7 @@ public interface Grouper<KeyType> extends Closeable
    * some are not.
    *
    * @param key     key object
-   * @param keyHash result of {@link Groupers#hash(Object)} on the key
+   * @param keyHash result of {@link #hashFunction()} on the key
    *
    * @return result that is ok if the row was aggregated, not ok if a resource limit was hit
    */
@@ -73,12 +75,21 @@ public interface Grouper<KeyType> extends Closeable
    *
    * @return result that is ok if the row was aggregated, not ok if a resource limit was hit
    */
-  AggregateResult aggregate(KeyType key);
+  default AggregateResult aggregate(KeyType key)
+  {
+    Preconditions.checkNotNull(key, "key");
+    return aggregate(key, hashFunction().applyAsInt(key));
+  }
 
   /**
    * Reset the grouper to its initial state.
    */
   void reset();
+
+  default ToIntFunction<KeyType> hashFunction()
+  {
+    return Groupers::hash;
+  }
 
   /**
    * Close the grouper and release associated resources.
@@ -87,15 +98,19 @@ public interface Grouper<KeyType> extends Closeable
   void close();
 
   /**
-   * Iterate through entries. If a comparator is provided, do a sorted iteration.
+   * Iterate through entries.
    * <p>
    * Once this method is called, writes are no longer safe. After you are done with the iterator returned by this
    * method, you should either call {@link #close()} (if you are done with the Grouper), {@link #reset()} (if you
-   * want to reuse it), or {@link #iterator(boolean)} again if you want another iterator.
+   * want to reuse it), or {@link #iterator(boolean)} again if you want another iterator. This method is not thread-safe
+   * and must not be called by multiple threads concurrently.
    * <p>
    * If "sorted" is true then the iterator will return sorted results. It will use KeyType's natural ordering on
    * deserialized objects, and will use the {@link KeySerde#comparator()} on serialized objects. Woe be unto you
    * if these comparators are not equivalent.
+   * <p>
+   * Callers must process and discard the returned {@link Entry}s immediately because some implementations can reuse the
+   * key objects.
    *
    * @param sorted return sorted results
    *

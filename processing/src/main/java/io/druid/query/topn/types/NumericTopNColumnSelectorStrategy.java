@@ -67,7 +67,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      int key = Float.floatToIntBits(selector.get());
+      int key = Float.floatToIntBits(selector.getFloat());
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
         theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -91,7 +91,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      long key = Double.doubleToLongBits(selector.get());
+      long key = Double.doubleToLongBits(selector.getDouble());
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
         theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -115,7 +115,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      long key = selector.get();
+      long key = selector.getLong();
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
         theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());

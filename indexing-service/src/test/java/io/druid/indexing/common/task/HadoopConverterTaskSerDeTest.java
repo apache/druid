@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.TestUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
@@ -44,7 +45,7 @@ public class HadoopConverterTaskSerDeTest
 
   private static final String TASK_ID = "task id";
   private static final String DATA_SOURCE = "datasource";
-  private static final Interval INTERVAL = Interval.parse("2010/2011");
+  private static final Interval INTERVAL = Intervals.of("2010/2011");
   private static final String SEGMENT_VERSION = "some version";
   private static final Map<String, Object> LOAD_SPEC = ImmutableMap.<String, Object>of("someKey", "someVal");
   private static final List<String> DIMENSIONS = ImmutableList.of("dim1", "dim2");

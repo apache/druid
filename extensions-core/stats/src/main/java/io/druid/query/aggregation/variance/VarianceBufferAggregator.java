@@ -98,7 +98,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      float v = selector.get();
+      float v = selector.getFloat();
       long count = buf.getLong(position + COUNT_OFFSET) + 1;
       double sum = buf.getDouble(position + SUM_OFFSET) + v;
       buf.putLong(position, count);
@@ -130,7 +130,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      long v = selector.get();
+      long v = selector.getLong();
       long count = buf.getLong(position + COUNT_OFFSET) + 1;
       double sum = buf.getDouble(position + SUM_OFFSET) + v;
       buf.putLong(position, count);

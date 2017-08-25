@@ -126,7 +126,7 @@ public class CompressedVSizeIndexedBenchmark
       int rowToAccess = rand.nextInt(rows.size());
       // Skip already selected rows if any
       while (filter.get(rowToAccess)) {
-        rowToAccess = (rowToAccess+1) % rows.size();
+        rowToAccess = (rowToAccess + 1) % rows.size();
       }
       filter.set(rowToAccess);
     }

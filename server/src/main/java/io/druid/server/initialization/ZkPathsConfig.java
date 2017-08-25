@@ -67,7 +67,7 @@ public class ZkPathsConfig
   @Deprecated
   public String getServedSegmentsPath()
   {
-    return (null == servedSegmentsPath) ?  defaultPath("servedSegments") : servedSegmentsPath;
+    return (null == servedSegmentsPath) ? defaultPath("servedSegments") : servedSegmentsPath;
   }
 
   public String getLiveSegmentsPath()
@@ -77,17 +77,22 @@ public class ZkPathsConfig
 
   public String getCoordinatorPath()
   {
-    return (null == coordinatorPath) ?  defaultPath("coordinator") : coordinatorPath;
+    return (null == coordinatorPath) ? defaultPath("coordinator") : coordinatorPath;
   }
 
   public String getLoadQueuePath()
   {
-    return (null == loadQueuePath) ?  defaultPath("loadQueue") : loadQueuePath;
+    return (null == loadQueuePath) ? defaultPath("loadQueue") : loadQueuePath;
   }
 
   public String getConnectorPath()
   {
-    return (null == connectorPath) ?  defaultPath("connector") : connectorPath;
+    return (null == connectorPath) ? defaultPath("connector") : connectorPath;
+  }
+
+  public String getInternalDiscoveryPath()
+  {
+    return defaultPath("internal-discovery");
   }
 
   public String defaultPath(final String subPath)

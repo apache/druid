@@ -36,7 +36,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -116,7 +117,11 @@ public class IndexTask extends AbstractTask
 
   private static String makeId(String id, IndexIngestionSpec ingestionSchema)
   {
-    return id != null ? id : StringUtils.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime());
+    if (id != null) {
+      return id;
+    } else {
+      return StringUtils.format("index_%s_%s", makeDataSource(ingestionSchema), DateTimes.nowUtc());
+    }
   }
 
   private static String makeGroupId(IndexIngestionSpec ingestionSchema)
@@ -207,7 +212,9 @@ public class IndexTask extends AbstractTask
     final DataSchema dataSchema;
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(shardSpecs.getIntervals());
-      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval));
+      final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+      // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
+      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval, lockTimeoutMs));
       version = lock.getVersion();
       dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
           ingestionSchema.getDataSchema()

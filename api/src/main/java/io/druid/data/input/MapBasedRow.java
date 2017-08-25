@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
@@ -56,7 +57,7 @@ public class MapBasedRow implements Row
       Map<String, Object> event
   )
   {
-    this(new DateTime(timestamp), event);
+    this(DateTimes.utc(timestamp), event);
   }
 
   @Override

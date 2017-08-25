@@ -89,10 +89,10 @@ public class CoordinatorDynamicConfig
   private Set<String> parseKillDataSourceWhitelist(Object killDataSourceWhitelist)
   {
     if (killDataSourceWhitelist instanceof String) {
-      String[] tmp = ((String) killDataSourceWhitelist).split(",");
+      String[] list = ((String) killDataSourceWhitelist).split(",");
       Set<String> result = new HashSet<>();
-      for (int i = 0; i < tmp.length; i++) {
-        String trimmed = tmp[i].trim();
+      for (String item : list) {
+        String trimmed = item.trim();
         if (!trimmed.isEmpty()) {
           result.add(trimmed);
         }

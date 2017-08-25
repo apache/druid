@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -31,12 +30,14 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.collections.NonBlockingPool;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -146,7 +147,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
         final ObjectColumnSelector rawColumnSelector = baseSelectorFactory.makeObjectColumnSelector(column);
 
-        if ((Enums.getIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)).isPresent() && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
+        if ((GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)) != null && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
             || !deserializeComplexMetrics) {
           return rawColumnSelector;
         } else {
@@ -521,7 +522,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {
-      throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, new DateTime(minTimestamp));
+      throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, DateTimes.utc(minTimestamp));
     }
 
     final List<String> rowDimensions = row.getDimensions();
@@ -682,17 +683,20 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public Interval getInterval()
   {
-    return new Interval(minTimestamp, isEmpty() ? minTimestamp : gran.increment(new DateTime(getMaxTimeMillis())).getMillis());
+    DateTime min = DateTimes.utc(minTimestamp);
+    return new Interval(min, isEmpty() ? min : gran.increment(DateTimes.utc(getMaxTimeMillis())));
   }
 
+  @Nullable
   public DateTime getMinTime()
   {
-    return isEmpty() ? null : new DateTime(getMinTimeMillis());
+    return isEmpty() ? null : DateTimes.utc(getMinTimeMillis());
   }
 
+  @Nullable
   public DateTime getMaxTime()
   {
-    return isEmpty() ? null : new DateTime(getMaxTimeMillis());
+    return isEmpty() ? null : DateTimes.utc(getMaxTimeMillis());
   }
 
   public Integer getDimensionIndex(String dimension)
@@ -1010,7 +1014,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public String toString()
     {
       return "TimeAndDims{" +
-             "timestamp=" + new DateTime(timestamp) +
+             "timestamp=" + DateTimes.utc(timestamp) +
              ", dims=" + Lists.transform(
           Arrays.asList(dims), new Function<Object, Object>()
           {

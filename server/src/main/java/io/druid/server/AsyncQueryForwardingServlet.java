@@ -31,6 +31,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
@@ -47,7 +48,6 @@ import org.eclipse.jetty.client.api.Result;
 import org.eclipse.jetty.client.util.BytesContentProvider;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
-import org.joda.time.DateTime;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -76,7 +76,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String OBJECTMAPPER_ATTRIBUTE = "io.druid.proxy.objectMapper";
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
-  private static final int MAX_QUEUED_CANCELLATIONS = 64;
+
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -116,7 +116,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
       @Router Provider<HttpClient> httpClientProvider,
-      DruidHttpClientConfig httpClientConfig,
+      @Router DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
       GenericQueryMetricsFactory queryMetricsFactory
@@ -138,12 +138,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     super.init();
 
-    // separate client with more aggressive connection timeouts
-    // to prevent cancellations requests from blocking queries
+    // Note that httpClientProvider is setup to return same HttpClient instance on each get() so
+    // it is same http client as that is used by parent ProxyServlet.
     broadcastClient = httpClientProvider.get();
-    broadcastClient.setConnectTimeout(CANCELLATION_TIMEOUT_MILLIS);
-    broadcastClient.setMaxRequestsQueuedPerDestination(MAX_QUEUED_CANCELLATIONS);
-
     try {
       broadcastClient.start();
     }
@@ -224,7 +221,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         final String errorMessage = e.getMessage() == null ? "no error message" : e.getMessage();
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(),
+                DateTimes.nowUtc(),
                 request.getRemoteAddr(),
                 null,
                 new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", errorMessage))
@@ -397,7 +394,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         emitQueryTime(requestTimeNs, success);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(),
+                DateTimes.nowUtc(),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
@@ -430,7 +427,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         emitQueryTime(System.nanoTime() - startNs, false);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(),
+                DateTimes.nowUtc(),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(

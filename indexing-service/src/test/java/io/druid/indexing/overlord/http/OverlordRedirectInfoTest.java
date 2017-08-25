@@ -70,7 +70,7 @@ public class OverlordRedirectInfoTest
   {
     EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(null).anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("http","query", "/request");
+    URL url = redirectInfo.getRedirectURL("http", "query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(taskMaster);
   }

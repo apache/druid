@@ -22,7 +22,6 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -65,12 +64,13 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.io.Closer;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -85,7 +85,6 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -108,7 +107,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -161,7 +159,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private final ConcurrentMap<String, ZkWorker> lazyWorkers = new ConcurrentHashMap<>();
 
   // Workers that have been blacklisted.
-  private final Set<ZkWorker> blackListedWorkers = Collections.synchronizedSet(new HashSet<ZkWorker>());
+  private final Set<ZkWorker> blackListedWorkers = Collections.synchronizedSet(new HashSet<>());
 
   // task runner listeners
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
@@ -190,7 +188,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
-      ScheduledExecutorService cleanupExec,
       ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
   )
   {
@@ -207,7 +204,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         .build();
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
-    this.cleanupExec = MoreExecutors.listeningDecorator(cleanupExec);
+    this.cleanupExec = MoreExecutors.listeningDecorator(
+        ScheduledExecutors.fixed(1, "RemoteTaskRunner-Scheduled-Cleanup--%d")
+    );
     this.provisioningStrategy = provisioningStrategy;
     this.runPendingTasksExec = Execs.multiThreaded(
         config.getPendingTasksRunnerNumThreads(),
@@ -328,7 +327,14 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           waitingForMonitor.wait();
         }
       }
-      scheduleBlackListedNodesCleanUp();
+
+      ScheduledExecutors.scheduleAtFixedRate(
+          cleanupExec,
+          Period.ZERO.toStandardDuration(),
+          config.getWorkerBlackListCleanupPeriod().toStandardDuration(),
+          () -> checkBlackListedNodes()
+      );
+
       provisioningService = provisioningStrategy.makeProvisioningService(this);
       lifecycleLock.started();
     }
@@ -364,6 +370,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       if (runPendingTasksExec != null) {
         runPendingTasksExec.shutdown();
+      }
+
+      if (cleanupExec != null) {
+        cleanupExec.shutdown();
       }
     }
     catch (Exception e) {
@@ -678,15 +688,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @VisibleForTesting
   static void sortByInsertionTime(List<RemoteTaskRunnerWorkItem> tasks)
   {
-    Collections.sort(tasks, new Comparator<RemoteTaskRunnerWorkItem>()
-                     {
-                       @Override
-                       public int compare(RemoteTaskRunnerWorkItem o1, RemoteTaskRunnerWorkItem o2)
-                       {
-                         return o1.getQueueInsertionTime().compareTo(o2.getQueueInsertionTime());
-                       }
-                     }
-    );
+    Collections.sort(tasks, Comparator.comparing(RemoteTaskRunnerWorkItem::getQueueInsertionTime));
   }
 
   /**
@@ -744,8 +746,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       WorkerBehaviorConfig workerConfig = workerConfigRef.get();
       WorkerSelectStrategy strategy;
       if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
-        log.warn("No worker selections strategy set. Using default.");
         strategy = WorkerBehaviorConfig.DEFAULT_STRATEGY;
+        log.info("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
       } else {
         strategy = workerConfig.getSelectStrategy();
       }
@@ -787,7 +789,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
           if (immutableZkWorker.isPresent() &&
               workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.get().getWorker().getHost(), task.getId())
-                == null) {
+              == null) {
             assignedWorker = zkWorkers.get(immutableZkWorker.get().getWorker().getHost());
           }
         }
@@ -834,7 +836,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     final String worker = theZkWorker.getWorker().getHost();
     synchronized (statusLock) {
       if (!zkWorkers.containsKey(worker) || lazyWorkers.containsKey(worker)) {
-        // the worker might got killed or has been marked as lazy.
+        // the worker might have been killed or marked as lazy
         log.info("Not assigning task to already removed worker[%s]", worker);
         return false;
       }
@@ -1080,43 +1082,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           log.error(e, "Exception closing worker[%s]!", worker.getHost());
         }
         zkWorkers.remove(worker.getHost());
+        checkBlackListedNodes();
       }
     }
     lazyWorkers.remove(worker.getHost());
-  }
-
-  /**
-   * Schedule a task that will clean the blackListed ZK Workers periodically
-   */
-  private void scheduleBlackListedNodesCleanUp()
-  {
-    ScheduledExecutors.scheduleAtFixedRate(
-            cleanupExec,
-            Period.ZERO.toStandardDuration(),
-            config.getWorkerBlackListCleanupPeriod().toStandardDuration(),
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                long currentTimeStamp = System.currentTimeMillis();
-                for (ZkWorker zkWorker : blackListedWorkers) {
-                  cleanBlackListedNode(zkWorker, currentTimeStamp);
-                }
-              }
-            }
-    );
-  }
-
-  public void cleanBlackListedNode(ZkWorker zkWorker, long currentTimeStamp)
-  {
-    // Clean blacklisted workers if blacklisted time has elapsed
-    if(currentTimeStamp - zkWorker.getLastCompletedTaskTime().getMillis() >
-            config.getWorkerBlackListBackoffTime().toStandardDuration().getMillis()){
-      // White listing node
-      log.info("Whitelisting worker [%s]. ", zkWorker);
-      blackListedWorkers.remove(zkWorker);
-    }
   }
 
   /**
@@ -1212,7 +1181,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           taskStatus.getStatusCode()
       );
       // Worker is done with this task
-      zkWorker.setLastCompletedTaskTime(new DateTime());
+      zkWorker.setLastCompletedTaskTime(DateTimes.nowUtc());
     } else {
       log.info("Workerless task[%s] completed with status[%s]", taskStatus.getId(), taskStatus.getStatusCode());
     }
@@ -1222,17 +1191,32 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     runningTasks.remove(taskStatus.getId());
 
     // Update success/failure counters
-    if(taskStatus.isSuccess()){
-      zkWorker.resetCountinouslyFailedTasksCount();
-    } else if(taskStatus.isFailure()){
-      zkWorker.incrementCountinouslyFailedTasksCount();
-    }
+    if (zkWorker != null) {
+      if (taskStatus.isSuccess()) {
+        zkWorker.resetContinuouslyFailedTasksCount();
+        if (blackListedWorkers.remove(zkWorker)) {
+          zkWorker.setBlacklistedUntil(null);
+          log.info("[%s] removed from blacklist because a task finished with SUCCESS", zkWorker.getWorker());
+        }
+      } else if (taskStatus.isFailure()) {
+        zkWorker.incrementContinuouslyFailedTasksCount();
+      }
 
-    // BlackList node if there are too many failures.
-    if(zkWorker.getCountinouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
-            blackListedWorkers.size() <=
-                    zkWorkers.size()*(config.getMaxPercentageBlacklistWorkers()/100)){
-      blackListedWorkers.add(zkWorker);
+      // Blacklist node if there are too many failures.
+      synchronized (blackListedWorkers) {
+        if (zkWorker.getContinuouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
+            blackListedWorkers.size() <= zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0) - 1) {
+          zkWorker.setBlacklistedUntil(DateTimes.nowUtc().plus(config.getWorkerBlackListBackoffTime()));
+          if (blackListedWorkers.add(zkWorker)) {
+            log.info(
+                "Blacklisting [%s] until [%s] after [%,d] failed tasks in a row.",
+                zkWorker.getWorker(),
+                zkWorker.getBlacklistedUntil(),
+                zkWorker.getContinuouslyFailedTasksCount()
+            );
+          }
+        }
+      }
     }
 
     // Notify interested parties
@@ -1297,41 +1281,71 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private static ImmutableList<ImmutableWorkerInfo> getImmutableWorkerFromZK(Collection<ZkWorker> workers)
   {
-    return ImmutableList.copyOf(
-        Collections2.transform(
-            workers,
-            new Function<ZkWorker, ImmutableWorkerInfo>()
-            {
-              @Override
-              public ImmutableWorkerInfo apply(ZkWorker input)
-              {
-                return input.toImmutable();
-              }
-            }
-        )
-    );
+    return ImmutableList.copyOf(Collections2.transform(workers, ZkWorker::toImmutable));
   }
 
   private static ImmutableList<Worker> getWorkerFromZK(Collection<ZkWorker> workers)
   {
-    return ImmutableList.copyOf(
-        Collections2.transform(
-          workers,
-          new Function<ZkWorker, Worker>()
-          {
-            @Override
-            public Worker apply(ZkWorker input)
-            {
-              return input.getWorker();
-            }
-          }
-        )
-    );
+    return ImmutableList.copyOf(Collections2.transform(workers, ZkWorker::getWorker));
   }
 
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
   {
-    return getImmutableWorkerFromZK(blackListedWorkers);
+    synchronized (blackListedWorkers) {
+      return getImmutableWorkerFromZK(blackListedWorkers);
+    }
+  }
+
+  private boolean shouldRemoveNodeFromBlackList(ZkWorker zkWorker)
+  {
+    if (blackListedWorkers.size() > zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0)) {
+      log.info(
+          "Removing [%s] from blacklist because percentage of blacklisted workers exceeds [%d]",
+          zkWorker.getWorker(),
+          config.getMaxPercentageBlacklistWorkers()
+      );
+
+      return true;
+    }
+
+    long remainingMillis = zkWorker.getBlacklistedUntil().getMillis() - getCurrentTimeMillis();
+    if (remainingMillis <= 0) {
+      log.info("Removing [%s] from blacklist because backoff time elapsed", zkWorker.getWorker());
+      return true;
+    }
+
+    log.info("[%s] still blacklisted for [%,ds]", zkWorker.getWorker(), remainingMillis / 1000);
+    return false;
+  }
+
+  @VisibleForTesting
+  void checkBlackListedNodes()
+  {
+    boolean shouldRunPendingTasks = false;
+
+    // must be synchronized while iterating:
+    // https://docs.oracle.com/javase/8/docs/api/java/util/Collections.html#synchronizedSet-java.util.Set-
+    synchronized (blackListedWorkers) {
+      for (Iterator<ZkWorker> iterator = blackListedWorkers.iterator(); iterator.hasNext(); ) {
+        ZkWorker zkWorker = iterator.next();
+        if (shouldRemoveNodeFromBlackList(zkWorker)) {
+          iterator.remove();
+          zkWorker.resetContinuouslyFailedTasksCount();
+          zkWorker.setBlacklistedUntil(null);
+          shouldRunPendingTasks = true;
+        }
+      }
+    }
+
+    if (shouldRunPendingTasks) {
+      runPendingTasks();
+    }
+  }
+
+  @VisibleForTesting
+  protected long getCurrentTimeMillis()
+  {
+    return System.currentTimeMillis();
   }
 
   @VisibleForTesting

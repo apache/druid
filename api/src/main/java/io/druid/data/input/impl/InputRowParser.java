@@ -33,9 +33,9 @@ import io.druid.guice.annotations.ExtensionPoint;
 })
 public interface InputRowParser<T>
 {
-  public InputRow parse(T input) ;
+  public InputRow parse(T input);
 
   public ParseSpec getParseSpec();
 
-  public InputRowParser withParseSpec(ParseSpec parseSpec) ;
+  public InputRowParser withParseSpec(ParseSpec parseSpec);
 }

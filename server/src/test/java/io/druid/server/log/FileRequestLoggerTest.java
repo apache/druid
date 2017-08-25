@@ -21,6 +21,7 @@ package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CharStreams;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.RequestLogLine;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -47,15 +48,14 @@ public class FileRequestLoggerTest
   @Test public void testLog() throws IOException
   {
     ObjectMapper objectMapper = new ObjectMapper();
-    DateTime dateTime = new DateTime();
+    DateTime dateTime = DateTimes.nowUtc();
     File logDir = temporaryFolder.newFolder();
     String actualLogString = dateTime.toString() + "\t" + HOST;
 
     FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir);
     fileRequestLogger.start();
     RequestLogLine requestLogLine = EasyMock.createMock(RequestLogLine.class);
-    EasyMock.expect(requestLogLine.getLine((ObjectMapper) EasyMock.anyObject())).
-        andReturn(actualLogString).anyTimes();
+    EasyMock.expect(requestLogLine.getLine(EasyMock.anyObject())).andReturn(actualLogString).anyTimes();
     EasyMock.replay(requestLogLine);
     fileRequestLogger.log(requestLogLine);
     File logFile = new File(logDir, dateTime.toString("yyyy-MM-dd'.log'"));

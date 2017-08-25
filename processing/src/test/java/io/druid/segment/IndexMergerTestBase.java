@@ -36,6 +36,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
@@ -56,7 +57,6 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -1746,7 +1746,7 @@ public class IndexMergerTestBase
     ));
     closer.closeLater(index2);
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index1, factory),
@@ -1797,7 +1797,7 @@ public class IndexMergerTestBase
     );
     closer.closeLater(index2);
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index1, factory),
@@ -1867,7 +1867,7 @@ public class IndexMergerTestBase
     );
 
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index1, factory),
@@ -1927,7 +1927,7 @@ public class IndexMergerTestBase
     closer.closeLater(index5);
 
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index1, factory),
@@ -1976,7 +1976,7 @@ public class IndexMergerTestBase
     closer.closeLater(index5);
 
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index2, factory)
@@ -2158,7 +2158,7 @@ public class IndexMergerTestBase
 
     SmooshedFileMapper sfm = closer.closeLater(SmooshedFileMapper.load(tempDir));
     List<String> expectedFilenames = Arrays.asList("A", "__time", "d1", "index.drd", "metadata.drd");
-    List<String> actualFilenames =  new ArrayList<>(sfm.getInternalFilenames());
+    List<String> actualFilenames = new ArrayList<>(sfm.getInternalFilenames());
     Collections.sort(expectedFilenames);
     Collections.sort(actualFilenames);
     Assert.assertEquals(expectedFilenames, actualFilenames);

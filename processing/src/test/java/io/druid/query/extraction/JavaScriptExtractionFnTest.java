@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.js.JavaScriptConfig;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -77,8 +77,8 @@ public class JavaScriptExtractionFnTest
   public void testTimeExample() throws Exception
   {
     String utcHour = "function(t) {\nreturn 'Second ' + Math.floor((t % 60000) / 1000);\n}";
-    final long millis = new DateTime("2015-01-02T13:00:59.999Z").getMillis();
-    Assert.assertEquals("Second 59" , new JavaScriptExtractionFn(utcHour, false, JavaScriptConfig.getEnabledInstance()).apply(millis));
+    final long millis = DateTimes.of("2015-01-02T13:00:59.999Z").getMillis();
+    Assert.assertEquals("Second 59", new JavaScriptExtractionFn(utcHour, false, JavaScriptConfig.getEnabledInstance()).apply(millis));
   }
 
   @Test
@@ -98,12 +98,12 @@ public class JavaScriptExtractionFnTest
   @Test
   public void testCastingAndNull()
   {
-    String function = "function(x) {\n  x = Number(x);\n  if(isNaN(x)) return null;\n  return Math.floor(x / 5) * 5;\n}";
+    String function = "function(x) {\n  x = Number(x);\n  if (isNaN(x)) return null;\n  return Math.floor(x / 5) * 5;\n}";
     ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
     Iterator<String> it = Iterators.forArray("0", "5", "5", "10", null);
 
-    for(String str : Lists.newArrayList("1", "5", "6", "10", "CA")) {
+    for (String str : Lists.newArrayList("1", "5", "6", "10", "CA")) {
       String res = extractionFn.apply(str);
       String expected = it.next();
       Assert.assertEquals(expected, res);
@@ -337,7 +337,7 @@ public class JavaScriptExtractionFnTest
     Iterator<String> inputs = Iterators.forArray("introducing", "exploratory", "analytics", "on", "large", "datasets");
     Iterator<String> it = Iterators.forArray("introduc", "exploratori", "analyt", "on", "larg", "dataset");
 
-    while(inputs.hasNext()) {
+    while (inputs.hasNext()) {
       String res = extractionFn.apply(inputs.next());
       Assert.assertEquals(it.next(), res);
     }

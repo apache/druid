@@ -33,6 +33,8 @@ import java.util.Map;
  */
 public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
 {
+  int GROUP_BY_MISSING_VALUE = -1;
+
   /**
    * Return the size, in bytes, of this dimension's values in the grouping key.
    *
@@ -65,7 +67,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   );
 
   /**
-   * Retrieve a row object from the ColumnSelectorPlus and put it in valuess at columnIndex.
+   * Retrieve a row object from the {@link ColumnValueSelector} and put it in valuess at columnIndex.
    *
    * @param selector Value selector for a column.
    * @param columnIndex Index of the column within the row values array
@@ -101,4 +103,22 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @return true if rowValIdx < size of rowObj, false otherwise
    */
   boolean checkRowIndexAndAddValueToGroupingKey(int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer);
+
+  /**
+   * Retrieve a single object using the {@link ColumnValueSelector}.  The reading column must have a single value.
+   *
+   * @param selector Value selector for a column
+   *
+   * @return an object retrieved from the column
+   */
+  Object getOnlyValue(ColumnValueSelector selector);
+
+  /**
+   * Write a given object to the keyBuffer at keyBufferPosition.
+   *
+   * @param keyBufferPosition starting offset for this column's value within the grouping key
+   * @param obj               row value object retrieved from {@link #getOnlyValue(ColumnValueSelector)}
+   * @param keyBuffer         grouping key
+   */
+  void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer);
 }

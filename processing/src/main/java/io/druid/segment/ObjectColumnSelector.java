@@ -19,12 +19,65 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import javax.annotation.Nullable;
 
 public interface ObjectColumnSelector<T> extends ColumnValueSelector
 {
   public Class<T> classOfObject();
 
-  @CalledFromHotLoop
+  /**
+   * This method is not annotated with {@link io.druid.query.monomorphicprocessing.CalledFromHotLoop}, because
+   * ObjectColumnSelector doesn't extend {@link io.druid.query.monomorphicprocessing.HotLoopCallee} yet. If it will,
+   * this method should be annotated.
+   */
+  @Nullable
   public T get();
+
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default float getFloat()
+  {
+    T value = get();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).floatValue();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default double getDouble()
+  {
+    T value = get();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).doubleValue();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default long getLong()
+  {
+    T value = get();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).longValue();
+  }
 }

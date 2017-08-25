@@ -56,7 +56,7 @@ public class FloatSumAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    sum += selector.get();
+    sum += selector.getFloat();
   }
 
   @Override

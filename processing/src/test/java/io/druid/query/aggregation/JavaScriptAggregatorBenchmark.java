@@ -67,7 +67,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
   public double timeJavaScriptDoubleSum(int reps)
   {
     double val = 0;
-    for(int i = 0; i < reps; ++i) {
+    for (int i = 0; i < reps; ++i) {
       aggregate(selector, jsAggregator);
     }
     return val;
@@ -76,7 +76,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
   public double timeNativeDoubleSum(int reps)
   {
     double val = 0;
-    for(int i = 0; i < reps; ++i) {
+    for (int i = 0; i < reps; ++i) {
       aggregate(selector, doubleAgg);
     }
     return val;
@@ -99,7 +99,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     }
 
     @Override
-    public float get()
+    public float getFloat()
     {
       return floats[(int) (index % floats.length)];
     }
@@ -126,7 +126,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     }
 
     @Override
-    public double get()
+    public double getDouble()
     {
       return doubles[(int) (index % doubles.length)];
     }

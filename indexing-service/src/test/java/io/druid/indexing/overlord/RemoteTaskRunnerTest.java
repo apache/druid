@@ -39,10 +39,11 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -439,7 +440,7 @@ public class RemoteTaskRunnerTest
 
   private void makeWorker() throws Exception
   {
-    worker = rtrTestUtils.makeWorker(workerHost);
+    worker = rtrTestUtils.makeWorker(workerHost, 3);
   }
 
   private void disableWorker() throws Exception
@@ -602,14 +603,14 @@ public class RemoteTaskRunnerTest
   public void testSortByInsertionTime() throws Exception
   {
     RemoteTaskRunnerWorkItem item1 = new RemoteTaskRunnerWorkItem("b", null, null)
-        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:03Z"));
+        .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:03Z"));
     RemoteTaskRunnerWorkItem item2 = new RemoteTaskRunnerWorkItem("a", null, null)
-        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:02Z"));
+        .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:02Z"));
     RemoteTaskRunnerWorkItem item3 = new RemoteTaskRunnerWorkItem("c", null, null)
-        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:01Z"));
+        .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:01Z"));
     ArrayList<RemoteTaskRunnerWorkItem> workItems = Lists.newArrayList(item1, item2, item3);
     RemoteTaskRunner.sortByInsertionTime(workItems);
-    Assert.assertEquals(item3,workItems.get(0));
+    Assert.assertEquals(item3, workItems.get(0));
     Assert.assertEquals(item2, workItems.get(1));
     Assert.assertEquals(item1, workItems.get(2));
   }
@@ -619,7 +620,11 @@ public class RemoteTaskRunnerTest
   {
     Period timeoutPeriod = Period.millis(1000);
     makeWorker();
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(timeoutPeriod));
+
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    rtrConfig.setMaxPercentageBlacklistWorkers(100);
+
+    makeRemoteTaskRunner(rtrConfig);
 
     TestRealtimeTask task1 = new TestRealtimeTask(
             "realtime1",
@@ -635,7 +640,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskFuture1.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isFailure());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
     Assert.assertEquals(1,
-            remoteTaskRunner.findWorkerRunningTask(task1.getId()).getCountinouslyFailedTasksCount());
+            remoteTaskRunner.findWorkerRunningTask(task1.getId()).getContinuouslyFailedTasksCount());
 
     TestRealtimeTask task2 = new TestRealtimeTask(
             "realtime2",
@@ -650,16 +655,25 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteFailedTask(task2);
     Assert.assertTrue(taskFuture2.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isFailure());
     Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(2,
-            remoteTaskRunner.findWorkerRunningTask(task2.getId()).getCountinouslyFailedTasksCount());
+    Assert.assertEquals(
+        2,
+        remoteTaskRunner.findWorkerRunningTask(task2.getId()).getContinuouslyFailedTasksCount()
+    );
 
-    remoteTaskRunner.cleanBlackListedNode(remoteTaskRunner.findWorkerRunningTask(task2.getId()),
-            System.currentTimeMillis() + 2*timeoutPeriod.toStandardDuration().getMillis());
+    ((RemoteTaskRunnerTestUtils.TestableRemoteTaskRunner) remoteTaskRunner)
+        .setCurrentTimeMillis(System.currentTimeMillis());
+    remoteTaskRunner.checkBlackListedNodes();
 
-    // After backOffTime the nodes are whitelisted
+    Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
+
+    ((RemoteTaskRunnerTestUtils.TestableRemoteTaskRunner) remoteTaskRunner)
+        .setCurrentTimeMillis(System.currentTimeMillis() + 2 * timeoutPeriod.toStandardDuration().getMillis());
+    remoteTaskRunner.checkBlackListedNodes();
+
+    // After backOffTime the nodes are removed from blacklist
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(2,
-            remoteTaskRunner.findWorkerRunningTask(task2.getId()).getCountinouslyFailedTasksCount());
+    Assert.assertEquals(0,
+            remoteTaskRunner.findWorkerRunningTask(task2.getId()).getContinuouslyFailedTasksCount());
 
     TestRealtimeTask task3 = new TestRealtimeTask(
             "realtime3",
@@ -675,6 +689,126 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskFuture3.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isSuccess());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
     Assert.assertEquals(0,
-            remoteTaskRunner.findWorkerRunningTask(task3.getId()).getCountinouslyFailedTasksCount());
+            remoteTaskRunner.findWorkerRunningTask(task3.getId()).getContinuouslyFailedTasksCount());
+  }
+
+  /**
+   * With 2 workers and maxPercentageBlacklistWorkers(25), neither worker should ever be blacklisted even after
+   * exceeding maxRetriesBeforeBlacklist.
+   */
+  @Test
+  public void testBlacklistZKWorkers25Percent() throws Exception
+  {
+    Period timeoutPeriod = Period.millis(1000);
+
+    rtrTestUtils.makeWorker("worker", 10);
+    rtrTestUtils.makeWorker("worker2", 10);
+
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    rtrConfig.setMaxPercentageBlacklistWorkers(25);
+
+    makeRemoteTaskRunner(rtrConfig);
+
+    for (int i = 1; i < 13; i++) {
+      String taskId = StringUtils.format("rt-%d", i);
+      TestRealtimeTask task = new TestRealtimeTask(
+          taskId, new TaskResource(taskId, 1), "foo", TaskStatus.success(taskId), jsonMapper
+      );
+
+      Future<TaskStatus> taskFuture = remoteTaskRunner.run(task);
+
+      rtrTestUtils.taskAnnounced(i % 2 == 0 ? "worker2" : "worker", task.getId());
+      rtrTestUtils.mockWorkerRunningTask(i % 2 == 0 ? "worker2" : "worker", task);
+      rtrTestUtils.mockWorkerCompleteFailedTask(i % 2 == 0 ? "worker2" : "worker", task);
+
+      Assert.assertTrue(taskFuture.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isFailure());
+      Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+      Assert.assertEquals(
+          ((i + 1) / 2),
+          remoteTaskRunner.findWorkerRunningTask(task.getId()).getContinuouslyFailedTasksCount()
+      );
+    }
+  }
+
+  /**
+   * With 2 workers and maxPercentageBlacklistWorkers(50), one worker should get blacklisted after the second failure
+   * and the second worker should never be blacklisted even after exceeding maxRetriesBeforeBlacklist.
+   */
+  @Test
+  public void testBlacklistZKWorkers50Percent() throws Exception
+  {
+    Period timeoutPeriod = Period.millis(1000);
+
+    rtrTestUtils.makeWorker("worker", 10);
+    rtrTestUtils.makeWorker("worker2", 10);
+
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    rtrConfig.setMaxPercentageBlacklistWorkers(50);
+
+    makeRemoteTaskRunner(rtrConfig);
+
+    for (int i = 1; i < 13; i++) {
+      String taskId = StringUtils.format("rt-%d", i);
+      TestRealtimeTask task = new TestRealtimeTask(
+          taskId, new TaskResource(taskId, 1), "foo", TaskStatus.success(taskId), jsonMapper
+      );
+
+      Future<TaskStatus> taskFuture = remoteTaskRunner.run(task);
+
+      rtrTestUtils.taskAnnounced(i % 2 == 0 || i > 4 ? "worker2" : "worker", task.getId());
+      rtrTestUtils.mockWorkerRunningTask(i % 2 == 0 || i > 4 ? "worker2" : "worker", task);
+      rtrTestUtils.mockWorkerCompleteFailedTask(i % 2 == 0 || i > 4 ? "worker2" : "worker", task);
+
+      Assert.assertTrue(taskFuture.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isFailure());
+      Assert.assertEquals(i > 2 ? 1 : 0, remoteTaskRunner.getBlackListedWorkers().size());
+      Assert.assertEquals(
+          i > 4 ? i - 2 : ((i + 1) / 2),
+          remoteTaskRunner.findWorkerRunningTask(task.getId()).getContinuouslyFailedTasksCount()
+      );
+    }
+  }
+
+  @Test
+  public void testSuccessfulTaskOnBlacklistedWorker() throws Exception
+  {
+    Period timeoutPeriod = Period.millis(1000);
+    makeWorker();
+
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    rtrConfig.setMaxPercentageBlacklistWorkers(100);
+
+    makeRemoteTaskRunner(rtrConfig);
+
+    TestRealtimeTask task1 = new TestRealtimeTask(
+        "realtime1", new TaskResource("realtime1", 1), "foo", TaskStatus.success("realtime1"), jsonMapper
+    );
+    TestRealtimeTask task2 = new TestRealtimeTask(
+        "realtime2", new TaskResource("realtime2", 1), "foo", TaskStatus.success("realtime2"), jsonMapper
+    );
+    TestRealtimeTask task3 = new TestRealtimeTask(
+        "realtime3", new TaskResource("realtime3", 1), "foo", TaskStatus.success("realtime3"), jsonMapper
+    );
+
+    Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+    mockWorkerCompleteFailedTask(task1);
+    Assert.assertTrue(taskFuture1.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isFailure());
+    Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+
+    Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
+    Assert.assertTrue(taskAnnounced(task2.getId()));
+    mockWorkerRunningTask(task2);
+
+    Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);
+    Assert.assertTrue(taskAnnounced(task3.getId()));
+    mockWorkerRunningTask(task3);
+    mockWorkerCompleteFailedTask(task3);
+    Assert.assertTrue(taskFuture3.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isFailure());
+    Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
+
+    mockWorkerCompleteSuccessfulTask(task2);
+    Assert.assertTrue(taskFuture2.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isSuccess());
+    Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
   }
 }

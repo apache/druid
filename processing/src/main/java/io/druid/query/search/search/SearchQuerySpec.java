@@ -22,6 +22,8 @@ package io.druid.query.search.search;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import javax.annotation.Nullable;
+
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -34,7 +36,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface SearchQuerySpec
 {
-  public boolean accept(String dimVal);
+  public boolean accept(@Nullable String dimVal);
 
   public byte[] getCacheKey();
 }

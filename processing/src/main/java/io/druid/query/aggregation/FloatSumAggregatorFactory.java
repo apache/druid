@@ -29,7 +29,6 @@ import io.druid.segment.ColumnSelectorFactory;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 /**
  */
@@ -67,6 +66,12 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return FloatSumAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new DoubleSumAggregateCombiner();
   }
 
   @Override
@@ -123,29 +128,5 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
            ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
            '}';
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    FloatSumAggregatorFactory that = (FloatSumAggregatorFactory) o;
-
-    if (!Objects.equals(fieldName, that.fieldName)) {
-      return false;
-    }
-    if (!Objects.equals(expression, that.expression)) {
-      return false;
-    }
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-    return true;
   }
 }

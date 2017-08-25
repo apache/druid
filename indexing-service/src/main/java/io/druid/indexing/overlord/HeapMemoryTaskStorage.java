@@ -35,6 +35,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
@@ -79,12 +80,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
           status.getId()
       );
 
-      if(tasks.containsKey(task.getId())) {
+      if (tasks.containsKey(task.getId())) {
         throw new EntryExistsException(task.getId());
       }
 
       log.info("Inserting task %s with status: %s", task.getId(), status);
-      tasks.put(task.getId(), new TaskStuff(task, status, new DateTime()));
+      tasks.put(task.getId(), new TaskStuff(task, status, DateTimes.nowUtc()));
     }
     finally {
       giant.unlock();
@@ -98,7 +99,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       Preconditions.checkNotNull(taskid, "taskid");
-      if(tasks.containsKey(taskid)) {
+      if (tasks.containsKey(taskid)) {
         return Optional.of(tasks.get(taskid).getTask());
       } else {
         return Optional.absent();
@@ -135,7 +136,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       Preconditions.checkNotNull(taskid, "taskid");
-      if(tasks.containsKey(taskid)) {
+      if (tasks.containsKey(taskid)) {
         return Optional.of(tasks.get(taskid).getStatus());
       } else {
         return Optional.absent();
@@ -153,8 +154,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
-      for(final TaskStuff taskStuff : tasks.values()) {
-        if(taskStuff.getStatus().isRunnable()) {
+      for (final TaskStuff taskStuff : tasks.values()) {
+        if (taskStuff.getStatus().isRunnable()) {
           listBuilder.add(taskStuff.getTask());
         }
       }
@@ -182,7 +183,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
         }
       }.reverse();
       for (final TaskStuff taskStuff : createdDateDesc.sortedCopy(tasks.values())) {
-        if(taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > recent) {
+        if (taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > recent) {
           returns.add(taskStuff.getStatus());
         }
       }

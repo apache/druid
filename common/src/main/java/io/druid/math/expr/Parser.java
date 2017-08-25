@@ -115,9 +115,9 @@ public class Parser
       List<Expr> args = functionExpr.args;
       boolean flattened = false;
       List<Expr> flattening = Lists.newArrayListWithCapacity(args.size());
-      for (int i = 0; i < args.size(); i++) {
-        Expr flatten = flatten(args.get(i));
-        flattened |= flatten != args.get(i);
+      for (Expr arg : args) {
+        Expr flatten = flatten(arg);
+        flattened |= flatten != arg;
         flattening.add(flatten);
       }
       if (Evals.isAllConstants(flattening)) {

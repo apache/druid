@@ -21,11 +21,11 @@ package io.druid.storage.google;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMockSupport;
-import org.joda.time.Interval;
 import org.junit.Test;
 
 import java.io.File;
@@ -42,7 +42,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
   private static final String path = "/path/to/storage/index.zip";
   private static final DataSegment dataSegment = new DataSegment(
       "test",
-      new Interval("2015-04-12/2015-04-13"),
+      Intervals.of("2015-04-12/2015-04-13"),
       "1",
       ImmutableMap.<String, Object>of("bucket", bucket, "path", path),
       null,

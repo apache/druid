@@ -26,14 +26,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -71,7 +71,7 @@ public class HadoopDruidIndexerConfigTest
             new UniformGranularitySpec(
                 Granularities.MINUTE,
                 Granularities.MINUTE,
-                ImmutableList.of(new Interval("2010-01-01/P1D"))
+                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
             ),
             jsonMapper
         ),
@@ -80,7 +80,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             null,
-            ImmutableMap.of(new DateTime("2010-01-01T01:00:00").getMillis(), specs),
+            ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(), specs),
             null,
             null,
             false,
@@ -110,9 +110,9 @@ public class HadoopDruidIndexerConfigTest
         "dim2",
         "4"
     );
-    final long timestamp = new DateTime("2010-01-01T01:00:01").getMillis();
+    final long timestamp = DateTimes.of("2010-01-01T01:00:01").getMillis();
     final Bucket expectedBucket = config.getBucket(new MapBasedInputRow(timestamp, dims, values)).get();
-    final long nextBucketTimestamp = Granularities.MINUTE.bucketEnd(new DateTime(timestamp)).getMillis();
+    final long nextBucketTimestamp = Granularities.MINUTE.bucketEnd(DateTimes.utc(timestamp)).getMillis();
     // check that all rows having same set of dims and truncated timestamp hash to same bucket
     for (int i = 0; timestamp + i < nextBucketTimestamp; i++) {
       Assert.assertEquals(
@@ -134,7 +134,7 @@ public class HadoopDruidIndexerConfigTest
             new UniformGranularitySpec(
                 Granularities.MINUTE,
                 Granularities.MINUTE,
-                ImmutableList.of(new Interval("2010-01-01/P1D"))
+                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
             ),
             jsonMapper
         ),
@@ -143,12 +143,12 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             null,
-            ImmutableMap.<Long, List<HadoopyShardSpec>>of(new DateTime("2010-01-01T01:00:00").getMillis(),
+            ImmutableMap.<Long, List<HadoopyShardSpec>>of(DateTimes.of("2010-01-01T01:00:00").getMillis(),
                                                               Lists.newArrayList(new HadoopyShardSpec(
                                                                   NoneShardSpec.instance(),
                                                                   1
                                                               )),
-                                                              new DateTime("2010-01-01T02:00:00").getMillis(),
+                                                              DateTimes.of("2010-01-01T02:00:00").getMillis(),
                                                               Lists.newArrayList(new HadoopyShardSpec(
                                                                   NoneShardSpec.instance(),
                                                                   2
@@ -183,10 +183,10 @@ public class HadoopDruidIndexerConfigTest
         "dim2",
         "4"
     );
-    final long ts1 = new DateTime("2010-01-01T01:00:01").getMillis();
+    final long ts1 = DateTimes.of("2010-01-01T01:00:01").getMillis();
     Assert.assertEquals(config.getBucket(new MapBasedInputRow(ts1, dims, values)).get().getShardNum(), 1);
 
-    final long ts2 = new DateTime("2010-01-01T02:00:01").getMillis();
+    final long ts2 = DateTimes.of("2010-01-01T02:00:01").getMillis();
     Assert.assertEquals(config.getBucket(new MapBasedInputRow(ts2, dims, values)).get().getShardNum(), 2);
 
   }

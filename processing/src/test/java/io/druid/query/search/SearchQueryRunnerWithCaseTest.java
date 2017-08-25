@@ -24,9 +24,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharSource;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.search.search.AutoStrategy;
@@ -40,7 +42,6 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -95,28 +96,28 @@ public class SearchQueryRunnerWithCaseTest
     QueryableIndex index4 = TestIndex.persistRealtimeAndLoadMMapped(index2);
 
     final List<QueryRunner<Result<SearchResultValue>>> runners = Lists.newArrayList();
-    for (int i = 0; i < configs.length; i++) {
+    for (SearchQueryConfig config : configs) {
       runners.addAll(Arrays.asList(
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index1",
               new IncrementalIndexSegment(index1, "index1"),
               "index1"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index2",
               new IncrementalIndexSegment(index2, "index2"),
               "index2"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index3",
               new QueryableIndexSegment("index3", index3),
               "index3"
           ),
           makeQueryRunner(
-              makeRunnerFactory(configs[i]),
+              makeRunnerFactory(config),
               "index4",
               new QueryableIndexSegment("index4", index4),
               "index4"
@@ -243,12 +244,12 @@ public class SearchQueryRunnerWithCaseTest
   {
     HashMap<String, List> context = new HashMap<>();
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(searchQuery, context),
+        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
 
     for (Result<SearchResultValue> result : results) {
-      Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), result.getTimestamp());
+      Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());
       Assert.assertNotNull(result.getValue());
 
       Iterable<SearchHit> resultValues = result.getValue();
