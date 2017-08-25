@@ -22,8 +22,7 @@ package io.druid.guice;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
-import java.util.Collections;
-import java.util.List;
+import java.util.LinkedHashSet;
 
 /**
  */
@@ -47,14 +46,7 @@ public class ExtensionsConfig
   private boolean addExtensionsToHadoopContainer = false;
 
   @JsonProperty
-  private List<String> loadList;
-
-  /**
-   * Canonical class names of modules, which should not be loaded despite they are founded in extensions from {@link
-   * #loadList}.
-   */
-  @JsonProperty
-  private List<String> moduleExcludeList = Collections.emptyList();
+  private LinkedHashSet<String> loadList;
 
   public boolean searchCurrentClassloader()
   {
@@ -81,14 +73,9 @@ public class ExtensionsConfig
     return addExtensionsToHadoopContainer;
   }
 
-  public List<String> getLoadList()
+  public LinkedHashSet<String> getLoadList()
   {
     return loadList;
-  }
-
-  public List<String> getModuleExcludeList()
-  {
-    return moduleExcludeList;
   }
 
   @Override
@@ -101,7 +88,6 @@ public class ExtensionsConfig
            ", hadoopContainerDruidClasspath='" + hadoopContainerDruidClasspath + '\'' +
            ", addExtensionsToHadoopContainer=" + addExtensionsToHadoopContainer +
            ", loadList=" + loadList +
-           ", moduleExcludeList=" + moduleExcludeList +
            '}';
   }
 }

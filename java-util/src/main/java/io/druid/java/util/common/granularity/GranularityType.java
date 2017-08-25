@@ -23,6 +23,7 @@ import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
+import org.joda.time.chrono.ISOChronology;
 
 /**
  * Only to create a mapping of the granularity and all the supported file patterns
@@ -159,7 +160,8 @@ public enum GranularityType
         dateValuePositions >= 4 ? vals[4] : 0,
         dateValuePositions >= 5 ? vals[5] : 0,
         dateValuePositions >= 6 ? vals[6] : 0,
-        0
+        0,
+        ISOChronology.getInstanceUTC()
     );
   }
 
@@ -203,8 +205,7 @@ public enum GranularityType
       case 1:
         if (vals[index] == 3) {
           return GranularityType.QUARTER;
-        }
-        else if (vals[index] == 1) {
+        } else if (vals[index] == 1) {
           return GranularityType.MONTH;
         }
         break;
@@ -215,25 +216,20 @@ public enum GranularityType
       case 4:
         if (vals[index] == 6) {
           return GranularityType.SIX_HOUR;
-        }
-        else if (vals[index] == 1) {
+        } else if (vals[index] == 1) {
           return GranularityType.HOUR;
         }
         break;
       case 5:
         if (vals[index] == 30) {
           return GranularityType.THIRTY_MINUTE;
-        }
-        else if (vals[index] == 15) {
+        } else if (vals[index] == 15) {
           return GranularityType.FIFTEEN_MINUTE;
-        }
-        else if (vals[index] == 10) {
+        } else if (vals[index] == 10) {
           return GranularityType.TEN_MINUTE;
-        }
-        else if (vals[index] == 5) {
+        } else if (vals[index] == 5) {
           return GranularityType.FIVE_MINUTE;
-        }
-        else if (vals[index] == 1) {
+        } else if (vals[index] == 1) {
           return GranularityType.MINUTE;
         }
         break;

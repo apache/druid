@@ -29,6 +29,8 @@ import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
@@ -49,6 +51,7 @@ import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -138,7 +141,7 @@ public class SchemalessIndexTest
           continue;
         }
 
-        final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
+        final long timestamp = new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis();
 
         if (theIndex == null) {
           theIndex = new IncrementalIndex.Builder()
@@ -286,15 +289,13 @@ public class SchemalessIndexTest
         mergedFile.deleteOnExit();
 
         List<QueryableIndex> indexesToMerge = Lists.newArrayList();
-        for (int i = 0; i < indexes.length; i++) {
-          indexesToMerge.add(rowPersistedIndexes.get(indexes[i]));
+        for (int index : indexes) {
+          indexesToMerge.add(rowPersistedIndexes.get(index));
         }
 
-        QueryableIndex index = INDEX_IO.loadIndex(
+        return INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, indexSpec)
         );
-
-        return index;
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
@@ -351,7 +352,7 @@ public class SchemalessIndexTest
 
         for (final Map<String, Object> event : events) {
 
-          final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
+          final long timestamp = new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis();
           final List<String> dims = Lists.newArrayList();
           for (Map.Entry<String, Object> entry : event.entrySet()) {
             if (!entry.getKey().equalsIgnoreCase(TIMESTAMP) && !METRICS.contains(entry.getKey())) {
@@ -389,7 +390,7 @@ public class SchemalessIndexTest
     }
   }
 
-  private static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
+  public static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
   {
     URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading resource[%s]", resource);
@@ -399,7 +400,7 @@ public class SchemalessIndexTest
     final IncrementalIndex retVal = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
-                .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+                .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
                 .withQueryGranularity(Granularities.MINUTE)
                 .withMetrics(aggs)
                 .build()
@@ -421,7 +422,7 @@ public class SchemalessIndexTest
 
         retVal.add(
             new MapBasedInputRow(
-                new DateTime(event.get(TIMESTAMP)).getMillis(),
+                new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis(),
                 dims,
                 event
             )
@@ -480,7 +481,7 @@ public class SchemalessIndexTest
           Iterables.concat(
               // TimelineObjectHolder is actually an iterable of iterable of indexable adapters
               Iterables.transform(
-                  timeline.lookup(new Interval("1000-01-01/3000-01-01")),
+                  timeline.lookup(Intervals.of("1000-01-01/3000-01-01")),
                   new Function<TimelineObjectHolder<Integer, File>, Iterable<IndexableAdapter>>()
                   {
                     @Override

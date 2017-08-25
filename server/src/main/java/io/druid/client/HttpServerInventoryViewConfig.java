@@ -24,12 +24,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.joda.time.Period;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  */
 public class HttpServerInventoryViewConfig
 {
+  // HTTP request timeout
   @JsonProperty
   private final long serverTimeout;
+
+  // Requests to server may fail when it is shutsdown abruptly and there is a lag in coordinator
+  // discovering its disappearance. So, failure would be logged only after the acceptable
+  // unstableTimeout has passed.
+  @JsonProperty
+  private final long serverUnstabilityTimeout;
 
   @JsonProperty
   private final int numThreads;
@@ -37,11 +46,17 @@ public class HttpServerInventoryViewConfig
   @JsonCreator
   public HttpServerInventoryViewConfig(
       @JsonProperty("serverTimeout") Period serverTimeout,
+      @JsonProperty("serverUnstabilityTimeout") Period serverUnstabilityTimeout,
       @JsonProperty("numThreads") Integer numThreads
-  ){
+  )
+  {
     this.serverTimeout = serverTimeout != null
                          ? serverTimeout.toStandardDuration().getMillis()
-                         : 4*60*1000; //4 mins
+                         : TimeUnit.MINUTES.toMillis(4);
+
+    this.serverUnstabilityTimeout = serverUnstabilityTimeout != null
+                         ? serverUnstabilityTimeout.toStandardDuration().getMillis()
+                         : TimeUnit.MINUTES.toMillis(1);
 
     this.numThreads = numThreads != null ? numThreads.intValue() : 5;
 
@@ -52,6 +67,11 @@ public class HttpServerInventoryViewConfig
   public long getServerTimeout()
   {
     return serverTimeout;
+  }
+
+  public long getServerUnstabilityTimeout()
+  {
+    return serverUnstabilityTimeout;
   }
 
   public int getNumThreads()

@@ -29,10 +29,8 @@ public class FilteringYieldingAccumulator<OutType, T> extends YieldingAccumulato
 
   private volatile boolean didSomething = false;
 
-  public FilteringYieldingAccumulator(
-      Predicate<T> pred,
-      YieldingAccumulator<OutType, T> accumulator
-  ) {
+  public FilteringYieldingAccumulator(Predicate<T> pred, YieldingAccumulator<OutType, T> accumulator)
+  {
     this.pred = pred;
     this.accumulator = accumulator;
   }

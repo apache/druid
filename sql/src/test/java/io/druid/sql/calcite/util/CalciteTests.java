@@ -30,6 +30,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.metamx.emitter.core.NoopEmitter;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -40,14 +42,19 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.ExpressionModule;
 import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryToolChest;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FloatSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.expression.LookupExprMacro;
 import io.druid.query.expression.TestExprMacroTable;
@@ -77,7 +84,10 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.log.NoopRequestLogger;
+import io.druid.server.security.AuthConfig;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -89,6 +99,7 @@ import io.druid.sql.guice.SqlModule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -241,19 +252,32 @@ public class CalciteTests
   private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
-          new DoubleSumAggregatorFactory("m1", "m1"),
+          new FloatSumAggregatorFactory("m1", "m1"),
+          new DoubleSumAggregatorFactory("m2", "m2"),
           new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
       )
       .withRollup(false)
       .build();
 
   public static final List<InputRow> ROWS1 = ImmutableList.of(
-      createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "", "dim2", ImmutableList.of("a"))),
-      createRow(ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "dim1", "10.1", "dim2", ImmutableList.of())),
-      createRow(ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "dim1", "2", "dim2", ImmutableList.of(""))),
-      createRow(ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "dim1", "1", "dim2", ImmutableList.of("a"))),
-      createRow(ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "dim1", "def", "dim2", ImmutableList.of("abc"))),
-      createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0", "dim1", "abc"))
+      createRow(
+          ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "m2", "1.0", "dim1", "", "dim2", ImmutableList.of("a"))
+      ),
+      createRow(
+          ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "m2", "2.0", "dim1", "10.1", "dim2", ImmutableList.of())
+      ),
+      createRow(
+          ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "m2", "3.0", "dim1", "2", "dim2", ImmutableList.of(""))
+      ),
+      createRow(
+          ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "m2", "4.0", "dim1", "1", "dim2", ImmutableList.of("a"))
+      ),
+      createRow(
+          ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "m2", "5.0", "dim1", "def", "dim2", ImmutableList.of("abc"))
+      ),
+      createRow(
+          ImmutableMap.of("t", "2001-01-03", "m1", "6.0", "m2", "6.0", "dim1", "abc")
+      )
   );
 
   public static final List<InputRow> ROWS2 = ImmutableList.of(
@@ -270,6 +294,26 @@ public class CalciteTests
   public static QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate()
   {
     return CONGLOMERATE;
+  }
+
+  public static QueryLifecycleFactory createMockQueryLifecycleFactory(final QuerySegmentWalker walker)
+  {
+    return new QueryLifecycleFactory(
+        new QueryToolChestWarehouse()
+        {
+          @Override
+          public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
+          {
+            return CONGLOMERATE.findFactory(query).getToolchest();
+          }
+        },
+        walker,
+        new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
+        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
+        new NoopRequestLogger(),
+        new ServerConfig(),
+        new AuthConfig()
+    );
   }
 
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(final File tmpDir)
@@ -353,11 +397,10 @@ public class CalciteTests
   )
   {
     final DruidSchema schema = new DruidSchema(
-        walker,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
-        viewManager,
-        new ServerConfig()
+        viewManager
     );
 
     schema.start();
@@ -381,7 +424,7 @@ public class CalciteTests
   {
     return PARSER.parse(
         ImmutableMap.<String, Object>of(
-            "t", new DateTime(t).getMillis(),
+            "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
             "dim1", dim1,
             "dim2", dim2,
             "m1", m1

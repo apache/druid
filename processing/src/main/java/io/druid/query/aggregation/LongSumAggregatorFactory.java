@@ -41,8 +41,6 @@ import java.util.Objects;
  */
 public class LongSumAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x1;
-
   private final String name;
   private final String fieldName;
   private final String expression;
@@ -100,6 +98,12 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return LongSumAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new LongSumAggregateCombiner();
   }
 
   @Override
@@ -170,7 +174,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
     byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.LONG_SUM_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)

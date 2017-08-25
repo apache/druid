@@ -22,6 +22,7 @@ package io.druid.query.timeboundary;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.BaseSequence;
@@ -103,7 +104,7 @@ public class TimeBoundaryQueryRunnerFactory
             return null;
           }
           final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
-          final DateTime timestamp = new DateTime(timestampColumnSelector.get());
+          final DateTime timestamp = DateTimes.utc(timestampColumnSelector.getLong());
           return new Result<>(adapter.getInterval().getStart(), timestamp);
         }
       };

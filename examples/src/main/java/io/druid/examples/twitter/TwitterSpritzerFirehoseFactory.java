@@ -30,8 +30,8 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.StringUtils;
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.GeoLocation;
 import twitter4j.HashtagEntity;
@@ -352,7 +352,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         theMap.put("location", hasUser ? user.getLocation() : "");
         theMap.put("verified", hasUser ? user.isVerified() : "");
 
-        theMap.put("ts",status.getCreatedAt().getTime());
+        theMap.put("ts", status.getCreatedAt().getTime());
 
         List<String> dimensions = Lists.newArrayList(theMap.keySet());
 

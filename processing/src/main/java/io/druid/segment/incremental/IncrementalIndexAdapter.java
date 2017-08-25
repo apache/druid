@@ -64,7 +64,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     {
       this.dimensionDesc = dimensionDesc;
       this.indexer = dimensionDesc.getIndexer();
-      if(dimensionDesc.getCapabilities().hasBitmapIndexes()) {
+      if (dimensionDesc.getCapabilities().hasBitmapIndexes()) {
         this.invertedIndexes = new MutableBitmap[indexer.getCardinality() + 1];
       } else {
         this.invertedIndexes = null;
@@ -110,7 +110,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         }
         final ColumnCapabilities capabilities = dimension.getCapabilities();
 
-        if(capabilities.hasBitmapIndexes()) {
+        if (capabilities.hasBitmapIndexes()) {
           final MutableBitmap[] bitmapIndexes = accessor.invertedIndexes;
           final DimensionIndexer indexer = accessor.indexer;
           indexer.fillBitmapsFromUnsortedEncodedKeyComponent(dims[dimIndex], rowNum, bitmapIndexes, bitmapFactory);
@@ -289,12 +289,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     public IntIterator iterator()
     {
       return IntIteratorUtils.fromRoaringBitmapIntIterator(bitmapIndex.iterator());
-    }
-
-    @Override
-    public void fill(int index, int[] toFill)
-    {
-      throw new UnsupportedOperationException("fill not supported");
     }
 
     @Override

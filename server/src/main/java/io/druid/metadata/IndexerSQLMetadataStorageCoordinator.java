@@ -32,12 +32,13 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
-import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.SegmentPublishResult;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
@@ -49,7 +50,6 @@ import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
@@ -315,8 +315,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = Sets.newHashSet();
-    for (TimelineObjectHolder<String, DataSegment> holder : VersionedIntervalTimeline.forSegments(segments)
-                                                                                     .lookupWithIncompletePartitions(JodaUtils.ETERNITY)) {
+    List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
+        VersionedIntervalTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
+    for (TimelineObjectHolder<String, DataSegment> holder : segmentHolders) {
       for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
         usedSegments.add(chunk.getObject());
       }
@@ -568,7 +569,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             )
                   .bind("id", newIdentifier.getIdentifierAsString())
                   .bind("dataSource", dataSource)
-                  .bind("created_date", new DateTime().toString())
+                  .bind("created_date", DateTimes.nowUtc().toString())
                   .bind("start", interval.getStart().toString())
                   .bind("end", interval.getEnd().toString())
                   .bind("sequence_name", sequenceName)
@@ -622,7 +623,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       )
             .bind("id", segment.getIdentifier())
             .bind("dataSource", segment.getDataSource())
-            .bind("created_date", new DateTime().toString())
+            .bind("created_date", DateTimes.nowUtc().toString())
             .bind("start", segment.getInterval().getStart().toString())
             .bind("end", segment.getInterval().getEnd().toString())
             .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
@@ -631,10 +632,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("payload", jsonMapper.writeValueAsBytes(segment))
             .execute();
 
-      log.info("Published segment [%s] to DB", segment.getIdentifier());
+      log.info("Published segment [%s] to DB with used flag [%s]", segment.getIdentifier(), used);
     }
     catch (Exception e) {
-      log.error(e, "Exception inserting segment [%s] into DB", segment.getIdentifier());
+      log.error(e, "Exception inserting segment [%s] with used flag [%s] into DB", segment.getIdentifier(), used);
       throw e;
     }
 
@@ -765,7 +766,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           )
       )
                                 .bind("dataSource", dataSource)
-                                .bind("created_date", new DateTime().toString())
+                                .bind("created_date", DateTimes.nowUtc().toString())
                                 .bind("commit_metadata_payload", newCommitMetadataBytes)
                                 .bind("commit_metadata_sha1", newCommitMetadataSha1)
                                 .execute();
@@ -928,10 +929,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           @Override
           public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
           {
+            // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
+            // Some databases can only use an index on one of the columns. An additional condition provides
+            // explicit knowledge that 'start' cannot be greater than 'end'.
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false",
+                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start "
+                        + "and start <= :end and %2$send%2$s <= :end and used = false",
                         dbTables.getSegmentsTable(), connector.getQuoteString()
                     )
                 )

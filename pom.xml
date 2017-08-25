@@ -58,6 +58,8 @@
     </scm>
 
     <properties>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
         <!-- Curator cannot be updated to 2.12.0 yet, see https://github.com/druid-io/druid/pull/4103 -->
         <apache.curator.version>2.11.0</apache.curator.version>
         <avatica.version>1.9.0</avatica.version>
@@ -135,6 +137,7 @@
         <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
+        <module>extensions-contrib/redis-cache</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -155,13 +158,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>server-metrics</artifactId>
-                <version>0.2.8</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.metamx</groupId>
-                        <artifactId>java-util</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>0.5.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
@@ -877,7 +874,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>6.19</version>
+                        <version>8.0</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -886,6 +883,69 @@
                         <phase>validate</phase>
                         <goals>
                             <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.8</version>
+                <configuration>
+                    <printFailingErrors>true</printFailingErrors>
+                    <rulesets>
+                        <ruleset>/rulesets/java/imports.xml</ruleset>
+                    </rulesets>
+                    <excludeRoots>
+                        <excludeRoot>target/generated-sources/</excludeRoot>
+                    </excludeRoots>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>de.thetaphi</groupId>
+                <artifactId>forbiddenapis</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <bundledSignatures>
+                        <!--
+                          This will automatically choose the right
+                          signatures based on 'maven.compiler.target':
+                        -->
+                        <bundledSignature>jdk-unsafe</bundledSignature>
+                    </bundledSignatures>
+                    <signaturesFiles>
+                        <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                    </signaturesFiles>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <bundledSignatures>
+                                <!-- Check jdk-system-out only for production code, but not in test code -->
+                                <bundledSignature>jdk-unsafe</bundledSignature>
+                                <bundledSignature>jdk-system-out</bundledSignature>
+                            </bundledSignatures>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>testValidate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>testCheck</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -1076,8 +1136,8 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
+                        <source>${maven.compiler.target}</source>
+                        <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
             </plugins>
@@ -1098,8 +1158,8 @@
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
-                            <source>1.8</source>
-                            <target>1.8</target>
+                            <source>${maven.compiler.target}</source>
+                            <target>${maven.compiler.target}</target>
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
                                 <arg>-XepDisableWarningsInGeneratedCode</arg>

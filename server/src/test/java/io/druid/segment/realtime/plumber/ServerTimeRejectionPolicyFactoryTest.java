@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -35,7 +36,7 @@ public class ServerTimeRejectionPolicyFactoryTest
 
     RejectionPolicy rejectionPolicy = new ServerTimeRejectionPolicyFactory().create(period);
 
-    DateTime now = new DateTime();
+    DateTime now = DateTimes.nowUtc();
     DateTime past = now.minus(period).minus(100);
     DateTime future = now.plus(period).plus(100);
 

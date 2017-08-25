@@ -819,7 +819,10 @@ public final class ProtoTestEventWrapper
             .parseWithIOException(PARSER, input, extensionRegistry);
       }
 
-      public Builder newBuilderForType() { return newBuilder(); }
+      public Builder newBuilderForType()
+      {
+        return newBuilder();
+      }
 
       public static Builder newBuilder()
       {
@@ -1848,7 +1851,10 @@ public final class ProtoTestEventWrapper
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
-    public Builder newBuilderForType() { return newBuilder(); }
+    public Builder newBuilderForType()
+    {
+      return newBuilder();
+    }
 
     public static Builder newBuilder()
     {
@@ -3250,7 +3256,7 @@ public final class ProtoTestEventWrapper
     internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable = new
         com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_prototest_ProtoTestEvent_Foo_descriptor,
-        new java.lang.String[]{"Bar",}
+        new java.lang.String[]{"Bar"}
     );
   }
 

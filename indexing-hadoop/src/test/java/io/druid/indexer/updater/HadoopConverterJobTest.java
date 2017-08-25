@@ -42,6 +42,7 @@ import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.metadata.MetadataSegmentManagerConfig;
 import io.druid.metadata.MetadataStorageConnectorConfig;
@@ -103,7 +104,7 @@ public class HadoopConverterJobTest
   private Supplier<MetadataStorageTablesConfig> metadataStorageTablesConfigSupplier;
   private DerbyConnector connector;
 
-  private final Interval interval = Interval.parse("2011-01-01T00:00:00.000Z/2011-05-01T00:00:00.000Z");
+  private final Interval interval = Intervals.of("2011-01-01T00:00:00.000Z/2011-05-01T00:00:00.000Z");
 
   @After
   public void tearDown()
@@ -173,7 +174,7 @@ public class HadoopConverterJobTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new DoubleSumAggregatorFactory(TestIndex.METRICS[0], TestIndex.METRICS[0]),
+                    new DoubleSumAggregatorFactory(TestIndex.DOUBLE_METRICS[0], TestIndex.DOUBLE_METRICS[0]),
                     new HyperUniquesAggregatorFactory("quality_uniques", "quality")
                 },
                 new UniformGranularitySpec(

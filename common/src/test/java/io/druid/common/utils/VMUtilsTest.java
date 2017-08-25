@@ -30,9 +30,11 @@ public class VMUtilsTest
     try {
       long maxMemory = VMUtils.getMaxDirectMemory();
       Assert.assertTrue((maxMemory > 0));
-    } catch (UnsupportedOperationException expected) {
+    }
+    catch (UnsupportedOperationException expected) {
       Assert.assertTrue(true);
-    } catch (RuntimeException expected) {
+    }
+    catch (RuntimeException expected) {
       Assert.assertTrue(true);
     }
   }

@@ -107,7 +107,8 @@ public class OrFilter implements BooleanFilter
   }
 
 
-  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers){
+  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  {
     Preconditions.checkState(baseMatchers.length > 0);
 
     if (baseMatchers.length == 1) {
@@ -148,7 +149,7 @@ public class OrFilter implements BooleanFilter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     for (Filter filter : filters) {
-      if(!filter.supportsBitmapIndex(selector)) {
+      if (!filter.supportsBitmapIndex(selector)) {
         return false;
       }
     }
@@ -161,7 +162,7 @@ public class OrFilter implements BooleanFilter
   )
   {
     for (Filter filter : filters) {
-      if(!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
+      if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
         return false;
       }
     }

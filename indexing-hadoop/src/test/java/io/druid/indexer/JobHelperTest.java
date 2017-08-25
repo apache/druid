@@ -25,6 +25,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -60,7 +61,7 @@ public class JobHelperTest
   private HadoopDruidIndexerConfig config;
   private File tmpDir;
   private File dataFile;
-  private Interval interval = new Interval("2014-10-22T00:00:00Z/P1D");
+  private Interval interval = Intervals.of("2014-10-22T00:00:00Z/P1D");
 
   @Before
   public void setup() throws Exception
@@ -155,7 +156,7 @@ public class JobHelperTest
   {
     DataSegment segment = new DataSegment(
         "test1",
-        Interval.parse("2000/3000"),
+        Intervals.of("2000/3000"),
         "ver",
         ImmutableMap.<String, Object>of(
             "type", "google",
@@ -197,6 +198,9 @@ public class JobHelperTest
       return job;
     }
 
-    public Map<String, String> getJobProperties() { return jobProperties; }
+    public Map<String, String> getJobProperties()
+    {
+      return jobProperties;
+    }
   }
 }

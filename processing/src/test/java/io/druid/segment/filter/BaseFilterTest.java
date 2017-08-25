@@ -27,7 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.common.guava.SettableSupplier;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -66,7 +66,6 @@ import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -302,7 +301,7 @@ public abstract class BaseFilterTest
   {
     return adapter.makeCursors(
         filter,
-        new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
+        Intervals.ETERNITY,
         VIRTUAL_COLUMNS,
         Granularities.ALL,
         false,

@@ -32,6 +32,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Query;
@@ -44,7 +45,6 @@ import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegment
 import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -69,21 +69,21 @@ public class AppenderatorDriverFailTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final long PUBLISH_TIMEOUT = 1000;
+  private static final long PUBLISH_TIMEOUT = 5000;
 
   private static final List<InputRow> ROWS = ImmutableList.of(
       new MapBasedInputRow(
-          new DateTime("2000"),
+          DateTimes.of("2000"),
           ImmutableList.of("dim1"),
           ImmutableMap.of("dim1", "foo", "met1", "1")
       ),
       new MapBasedInputRow(
-          new DateTime("2000T01"),
+          DateTimes.of("2000T01"),
           ImmutableList.of("dim1"),
           ImmutableMap.of("dim1", "foo", "met1", 2.0)
       ),
       new MapBasedInputRow(
-          new DateTime("2000T01"),
+          DateTimes.of("2000T01"),
           ImmutableList.of("dim2"),
           ImmutableMap.of("dim2", "bar", "met1", 2.0)
       )
@@ -115,7 +115,11 @@ public class AppenderatorDriverFailTest
   @Test
   public void testFailDuringPersist() throws IOException, InterruptedException, TimeoutException, ExecutionException
   {
-    expectedException.expect(TimeoutException.class);
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
+    expectedException.expectMessage("Fail test while persisting segments"
+                                    + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
+                                    + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
 
     driver = new AppenderatorDriver(
         createPersistFailAppenderator(),
@@ -146,43 +150,13 @@ public class AppenderatorDriverFailTest
   }
 
   @Test
-  public void testInterruptDuringPush() throws IOException, InterruptedException, TimeoutException, ExecutionException
-  {
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(InterruptedException.class));
-
-    driver = new AppenderatorDriver(
-        createPushInterruptAppenderator(),
-        allocator,
-        segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
-        OBJECT_MAPPER,
-        new FireDepartmentMetrics()
-    );
-
-    driver.startJob();
-
-    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
-    segmentHandoffNotifierFactory.setHandoffDelay(100);
-
-    Assert.assertNull(driver.startJob());
-
-    for (int i = 0; i < ROWS.size(); i++) {
-      committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
-    }
-
-    driver.publish(
-        AppenderatorDriverTest.makeOkPublisher(),
-        committerSupplier.get(),
-        ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-  }
-
-  @Test
   public void testFailDuringPush() throws IOException, InterruptedException, TimeoutException, ExecutionException
   {
-    expectedException.expect(TimeoutException.class);
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
+    expectedException.expectMessage("Fail test while pushing segments"
+                                    + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
+                                    + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
 
     driver = new AppenderatorDriver(
         createPushFailAppenderator(),
@@ -281,7 +255,6 @@ public class AppenderatorDriverFailTest
   }
 
   private static class FailableAppenderator implements Appenderator
-
   {
     private final Map<SegmentIdentifier, List<InputRow>> rows = new HashMap<>();
 
@@ -354,6 +327,12 @@ public class AppenderatorDriverFailTest
       } else {
         return 0;
       }
+    }
+
+    @Override
+    public int getTotalRowCount()
+    {
+      return numRows;
     }
 
     @Override

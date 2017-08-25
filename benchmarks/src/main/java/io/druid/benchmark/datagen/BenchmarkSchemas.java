@@ -20,6 +20,7 @@
 package io.druid.benchmark.datagen;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -84,7 +85,7 @@ public class BenchmarkSchemas
     basicSchemaIngestAggs.add(new DoubleMinAggregatorFactory("minFloatZipf", "metFloatZipf"));
     basicSchemaIngestAggs.add(new HyperUniquesAggregatorFactory("hyper", "dimHyperUnique"));
 
-    Interval basicSchemaDataInterval = new Interval(0, 1000000);
+    Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
     BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
         basicSchemaColumns,
@@ -104,7 +105,7 @@ public class BenchmarkSchemas
     List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
     basicSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
 
-    Interval basicSchemaDataInterval = new Interval(0, 1000000);
+    Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
     BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
         basicSchemaColumns,
@@ -125,7 +126,7 @@ public class BenchmarkSchemas
     basicSchemaIngestAggs.add(new LongSumAggregatorFactory("dimSequential", "dimSequential"));
     basicSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
 
-    Interval basicSchemaDataInterval = new Interval(0, 1000000);
+    Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
     BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
         basicSchemaColumns,
@@ -146,7 +147,7 @@ public class BenchmarkSchemas
     basicSchemaIngestAggs.add(new DoubleSumAggregatorFactory("dimSequential", "dimSequential"));
     basicSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
 
-    Interval basicSchemaDataInterval = new Interval(0, 1000000);
+    Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
     BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
         basicSchemaColumns,

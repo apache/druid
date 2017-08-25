@@ -32,6 +32,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class JavaScriptExtractionFn implements ExtractionFn
@@ -111,7 +112,8 @@ public class JavaScriptExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(Object value)
+  @Nullable
+  public String apply(@Nullable Object value)
   {
     if (fn == null) {
       throw new ISE("JavaScript is disabled");
@@ -121,7 +123,8 @@ public class JavaScriptExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
     return this.apply((Object) Strings.emptyToNull(value));
   }

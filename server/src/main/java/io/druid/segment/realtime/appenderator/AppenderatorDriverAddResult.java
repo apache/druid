@@ -32,21 +32,31 @@ public class AppenderatorDriverAddResult
 {
   private final SegmentIdentifier segmentIdentifier;
   private final int numRowsInSegment;
+  private final long totalNumRowsInAppenderator;
 
-  public static AppenderatorDriverAddResult ok(SegmentIdentifier segmentIdentifier, int numRowsInSegment)
+  public static AppenderatorDriverAddResult ok(
+      SegmentIdentifier segmentIdentifier,
+      int numRowsInSegment,
+      long totalNumRowsInAppenderator
+  )
   {
-    return new AppenderatorDriverAddResult(segmentIdentifier, numRowsInSegment);
+    return new AppenderatorDriverAddResult(segmentIdentifier, numRowsInSegment, totalNumRowsInAppenderator);
   }
 
   public static AppenderatorDriverAddResult fail()
   {
-    return new AppenderatorDriverAddResult(null, 0);
+    return new AppenderatorDriverAddResult(null, 0, 0);
   }
 
-  private AppenderatorDriverAddResult(@Nullable SegmentIdentifier segmentIdentifier, int numRowsInSegment)
+  private AppenderatorDriverAddResult(
+      @Nullable SegmentIdentifier segmentIdentifier,
+      int numRowsInSegment,
+      long totalNumRowsInAppenderator
+  )
   {
     this.segmentIdentifier = segmentIdentifier;
     this.numRowsInSegment = numRowsInSegment;
+    this.totalNumRowsInAppenderator = totalNumRowsInAppenderator;
   }
 
   public boolean isOk()
@@ -62,5 +72,10 @@ public class AppenderatorDriverAddResult
   public int getNumRowsInSegment()
   {
     return numRowsInSegment;
+  }
+
+  public long getTotalNumRowsInAppenderator()
+  {
+    return totalNumRowsInAppenderator;
   }
 }

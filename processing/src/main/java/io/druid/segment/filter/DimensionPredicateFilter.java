@@ -25,6 +25,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -63,40 +64,25 @@ public class DimensionPredicateFilter implements Filter
         @Override
         public Predicate<String> makeStringPredicate()
         {
-          return new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              return baseStringPredicate.apply(extractionFn.apply(input));
-            }
-          };
+          return input -> baseStringPredicate.apply(extractionFn.apply(input));
         }
 
         @Override
         public DruidLongPredicate makeLongPredicate()
         {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return baseStringPredicate.apply(extractionFn.apply(input));
-            }
-          };
+          return input -> baseStringPredicate.apply(extractionFn.apply(input));
         }
 
         @Override
         public DruidFloatPredicate makeFloatPredicate()
         {
-          return new DruidFloatPredicate()
-          {
-            @Override
-            public boolean applyFloat(float input)
-            {
-              return baseStringPredicate.apply(extractionFn.apply(input));
-            }
-          };
+          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+        }
+
+        @Override
+        public DruidDoublePredicate makeDoublePredicate()
+        {
+          return input -> baseStringPredicate.apply(extractionFn.apply(input));
         }
       };
     }

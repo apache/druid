@@ -21,7 +21,9 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
@@ -110,8 +112,10 @@ public class Calcites
 
   public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
   {
-    if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName)) {
+    if (SqlTypeName.FLOAT == sqlTypeName) {
       return ValueType.FLOAT;
+    } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName)) {
+      return ValueType.DOUBLE;
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName
                || SqlTypeName.DATE == sqlTypeName
                || SqlTypeName.BOOLEAN == sqlTypeName
@@ -129,10 +133,12 @@ public class Calcites
   public static StringComparator getStringComparatorForSqlTypeName(SqlTypeName sqlTypeName)
   {
     final ValueType valueType = getValueTypeForSqlTypeName(sqlTypeName);
-    if (valueType == ValueType.LONG || valueType == ValueType.FLOAT) {
+    if (ValueType.isNumeric(valueType)) {
       return StringComparators.NUMERIC;
-    } else {
+    } else if (ValueType.STRING == valueType) {
       return StringComparators.LEXICOGRAPHIC;
+    } else {
+      throw new ISE("Unrecognized valueType[%s]", valueType);
     }
   }
 
@@ -160,7 +166,7 @@ public class Calcites
   public static int jodaToCalciteDate(final DateTime dateTime, final DateTimeZone timeZone)
   {
     final DateTime date = dateTime.withZone(timeZone).dayOfMonth().roundFloorCopy();
-    return Days.daysBetween(new DateTime(0L, DateTimeZone.UTC), date.withZoneRetainFields(DateTimeZone.UTC)).getDays();
+    return Days.daysBetween(DateTimes.EPOCH, date.withZoneRetainFields(DateTimeZone.UTC)).getDays();
   }
 
   /**
@@ -174,8 +180,7 @@ public class Calcites
    */
   public static Calendar jodaToCalciteCalendarLiteral(final DateTime dateTime, final DateTimeZone timeZone)
   {
-    final Calendar calendar = Calendar.getInstance(Locale.ENGLISH);
-    calendar.setTimeZone(GMT_TIME_ZONE);
+    final Calendar calendar = Calendar.getInstance(GMT_TIME_ZONE, Locale.ENGLISH);
     calendar.setTimeInMillis(Calcites.jodaToCalciteTimestamp(dateTime, timeZone));
     return calendar;
   }
@@ -223,7 +228,7 @@ public class Calcites
    */
   public static DateTime calciteDateToJoda(final int date, final DateTimeZone timeZone)
   {
-    return new DateTime(0L, DateTimeZone.UTC).plusDays(date).withZoneRetainFields(timeZone);
+    return DateTimes.EPOCH.plusDays(date).withZoneRetainFields(timeZone);
   }
 
   /**

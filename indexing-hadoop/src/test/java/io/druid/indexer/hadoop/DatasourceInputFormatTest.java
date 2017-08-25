@@ -29,6 +29,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import io.druid.indexer.JobHelper;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.fs.BlockLocation;
@@ -42,7 +43,6 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -74,7 +74,7 @@ public class DatasourceInputFormatTest
         WindowedDataSegment.of(
             new DataSegment(
                 "test1",
-                Interval.parse("2000/3000"),
+                Intervals.of("2000/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
                     "type", "local",
@@ -90,7 +90,7 @@ public class DatasourceInputFormatTest
         WindowedDataSegment.of(
             new DataSegment(
                 "test2",
-                Interval.parse("2050/3000"),
+                Intervals.of("2050/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
                     "type", "hdfs",
@@ -106,7 +106,7 @@ public class DatasourceInputFormatTest
         WindowedDataSegment.of(
             new DataSegment(
                 "test3",
-                Interval.parse("2030/3000"),
+                Intervals.of("2030/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
                     "type", "hdfs",
@@ -174,7 +174,8 @@ public class DatasourceInputFormatTest
       return new TextInputFormat()
       {
         @Override
-        protected boolean isSplitable(FileSystem fs, Path file) {
+        protected boolean isSplitable(FileSystem fs, Path file)
+        {
           return false;
         }
 
@@ -286,7 +287,7 @@ public class DatasourceInputFormatTest
         WindowedDataSegment.of(
             new DataSegment(
                 "test1",
-                Interval.parse("2000/3000"),
+                Intervals.of("2000/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
                     "type", "local",
@@ -357,8 +358,8 @@ public class DatasourceInputFormatTest
   @Test
   public void testGetLocationsInputFormatException() throws IOException
   {
-    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
-        org.apache.hadoop.mapred.InputFormat.class
+    final InputFormat fio = EasyMock.mock(
+        InputFormat.class
     );
 
     EasyMock.expect(fio.getSplits(config, 1)).andThrow(new IOException("testing"));
@@ -373,8 +374,8 @@ public class DatasourceInputFormatTest
   @Test
   public void testGetLocationsSplitException() throws IOException
   {
-    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
-        org.apache.hadoop.mapred.InputFormat.class
+    final InputFormat fio = EasyMock.mock(
+        InputFormat.class
     );
 
     final org.apache.hadoop.mapred.InputSplit split = EasyMock.mock(
@@ -397,8 +398,8 @@ public class DatasourceInputFormatTest
   @Test
   public void testGetLocations() throws IOException
   {
-    final org.apache.hadoop.mapred.InputFormat fio = EasyMock.mock(
-        org.apache.hadoop.mapred.InputFormat.class
+    final InputFormat fio = EasyMock.mock(
+        InputFormat.class
     );
 
     final org.apache.hadoop.mapred.InputSplit split = EasyMock.mock(

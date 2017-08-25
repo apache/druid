@@ -29,9 +29,12 @@ import io.druid.client.cache.MapCache;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -79,9 +82,9 @@ public class CachingClusteredClientFunctionalityTest
   @Test
   public void testUncoveredInterval() throws Exception
   {
-    addToTimeline(new Interval("2015-01-02/2015-01-03"), "1");
-    addToTimeline(new Interval("2015-01-04/2015-01-05"), "1");
-    addToTimeline(new Interval("2015-02-04/2015-02-05"), "1");
+    addToTimeline(Intervals.of("2015-01-02/2015-01-03"), "1");
+    addToTimeline(Intervals.of("2015-01-04/2015-01-05"), "1");
+    addToTimeline(Intervals.of("2015-02-04/2015-02-05"), "1");
 
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource("test")
@@ -95,47 +98,47 @@ public class CachingClusteredClientFunctionalityTest
                                                         ));
 
     Map<String, Object> responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     Assert.assertNull(responseContext.get("uncoveredIntervals"));
 
     builder.intervals("2015-01-01/2015-01-03");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02");
 
     builder.intervals("2015-01-01/2015-01-04");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-02/2015-01-04");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-01/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-02/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-04/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-10/2015-01-30");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-10/2015-01-30");
 
     builder.intervals("2015-01-01/2015-02-25");
     responseContext = new HashMap<>();
-    client.run(builder.build(), responseContext);
+    runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, true, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-02-04");
   }
 
@@ -143,7 +146,7 @@ public class CachingClusteredClientFunctionalityTest
   {
     List<Interval> expectedList = Lists.newArrayListWithExpectedSize(intervals.length);
     for (String interval : intervals) {
-      expectedList.add(new Interval(interval));
+      expectedList.add(Intervals.of(interval));
     }
     Assert.assertEquals((Object) expectedList, context.get("uncoveredIntervals"));
     Assert.assertEquals(uncoveredIntervalsOverflowed, context.get("uncoveredIntervalsOverflowed"));
@@ -224,6 +227,12 @@ public class CachingClusteredClientFunctionalityTest
           }
 
           @Override
+          public void registerTimelineCallback(final Executor exec, final TimelineCallback callback)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
           public <T> QueryRunner<T> getQueryRunner(DruidServer server)
           {
             return serverView.getQueryRunner(server);
@@ -264,6 +273,18 @@ public class CachingClusteredClientFunctionalityTest
             return mergeLimit;
           }
         }
+    );
+  }
+
+  private static <T> Sequence<T> runQuery(
+      CachingClusteredClient client,
+      final Query<T> query,
+      final Map<String, Object> responseContext
+  )
+  {
+    return client.getQueryRunnerForIntervals(query, query.getIntervals()).run(
+        QueryPlus.wrap(query),
+        responseContext
     );
   }
 }

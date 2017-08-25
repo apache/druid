@@ -45,6 +45,7 @@ import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import io.druid.guice.annotations.Self;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -238,7 +239,7 @@ public class DruidCoordinator
       return retVal;
     }
 
-    final DateTime now = new DateTime();
+    final DateTime now = DateTimes.nowUtc();
 
     for (final DataSegment segment : getAvailableDataSegments()) {
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
@@ -738,8 +739,9 @@ public class DruidCoordinator
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
-      } finally {
-        if(balancerExec != null){
+      }
+      finally {
+        if (balancerExec != null) {
           balancerExec.shutdownNow();
         }
       }
@@ -827,7 +829,7 @@ public class DruidCoordinator
                                .withDatabaseRuleManager(metadataRuleManager)
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
-                               .withBalancerReferenceTimestamp(DateTime.now())
+                               .withBalancerReferenceTimestamp(DateTimes.nowUtc())
                                .build();
                 }
               },

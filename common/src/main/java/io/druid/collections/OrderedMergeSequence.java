@@ -119,8 +119,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
                 throw Throwables.propagate(e);
               }
               return null;
-            }
-            else {
+            } else {
               yield();
             }
 
@@ -144,19 +143,16 @@ public class OrderedMergeSequence<T> implements Sequence<T>
       Yielder<T> yielder;
       if (oldDudeAtCrosswalk.isDone()) {
         yielder = pQueue.remove();
-      }
-      else if (pQueue.isEmpty()) {
+      } else if (pQueue.isEmpty()) {
         yielder = oldDudeAtCrosswalk.get();
         oldDudeAtCrosswalk = oldDudeAtCrosswalk.next(null);
-      }
-      else {
+      } else {
         Yielder<T> queueYielder = pQueue.peek();
         Yielder<T> iterYielder = oldDudeAtCrosswalk.get();
 
         if (ordering.compare(queueYielder.get(), iterYielder.get()) <= 0) {
           yielder = pQueue.remove();
-        }
-        else {
+        } else {
           yielder = oldDudeAtCrosswalk.get();
           oldDudeAtCrosswalk = oldDudeAtCrosswalk.next(null);
         }
@@ -171,8 +167,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
         catch (IOException e) {
           throw Throwables.propagate(e);
         }
-      }
-      else {
+      } else {
         pQueue.add(yielder);
       }
     }
@@ -208,7 +203,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
       public void close() throws IOException
       {
         Closer closer = Closer.create();
-        while(!pQueue.isEmpty()) {
+        while (!pQueue.isEmpty()) {
           closer.register(pQueue.remove());
         }
         closer.close();

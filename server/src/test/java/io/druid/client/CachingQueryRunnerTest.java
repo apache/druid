@@ -31,7 +31,9 @@ import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheStats;
 import io.druid.client.cache.MapCache;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
@@ -56,7 +58,6 @@ import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNResultValue;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -92,11 +93,11 @@ public class CachingQueryRunnerTest
   );
 
   private static final Object[] objects = new Object[]{
-      new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-      new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-      new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-      new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-      new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+      DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+      DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+      DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+      DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+      DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
   };
 
   private ExecutorService backgroundExecutorService;
@@ -156,13 +157,13 @@ public class CachingQueryRunnerTest
                                     .build();
 
       Result row1 = new Result(
-          new DateTime("2011-04-01"),
+          DateTimes.of("2011-04-01"),
           new TimeseriesResultValue(
               ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
           )
       );
       Result row2 = new Result<>(
-          new DateTime("2011-04-02"),
+          DateTimes.of("2011-04-02"),
           new TimeseriesResultValue(
               ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
           )
@@ -258,7 +259,7 @@ public class CachingQueryRunnerTest
     };
 
     String segmentIdentifier = "segment";
-    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
+    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     CachingQueryRunner runner = new CachingQueryRunner(
@@ -300,7 +301,7 @@ public class CachingQueryRunnerTest
     );
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Sequence res = runner.run(query, context);
+    Sequence res = runner.run(QueryPlus.wrap(query), context);
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
@@ -336,7 +337,7 @@ public class CachingQueryRunnerTest
   {
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     String segmentIdentifier = "segment";
-    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
+    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
@@ -386,7 +387,7 @@ public class CachingQueryRunnerTest
 
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    List<Result> results = Sequences.toList(runner.run(query, context), new ArrayList());
+    List<Result> results = Sequences.toList(runner.run(QueryPlus.wrap(query), context), new ArrayList());
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 

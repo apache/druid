@@ -38,7 +38,9 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.BaseQuery;
@@ -102,10 +104,10 @@ public class RealtimeManagerTest
   private static QueryRunnerFactoryConglomerate conglomerate;
 
   private static final List<TestInputRowHolder> rows = Arrays.asList(
-      makeRow(new DateTime("9000-01-01").getMillis()),
+      makeRow(DateTimes.of("9000-01-01").getMillis()),
       makeRow(new ParseException("parse error")),
       null,
-      makeRow(new DateTime().getMillis())
+      makeRow(System.currentTimeMillis())
   );
 
   private RealtimeManager realtimeManager;
@@ -212,10 +214,10 @@ public class RealtimeManagerTest
         null
     );
     plumber = new TestPlumber(new Sink(
-        new Interval("0/P5000Y"),
+        Intervals.of("0/P5000Y"),
         schema,
         tuningConfig.getShardSpec(),
-        new DateTime().toString(),
+        DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.isReportParseExceptions()
     ));
@@ -232,10 +234,10 @@ public class RealtimeManagerTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class)
     );
     plumber2 = new TestPlumber(new Sink(
-        new Interval("0/P5000Y"),
+        Intervals.of("0/P5000Y"),
         schema2,
         tuningConfig.getShardSpec(),
-        new DateTime().toString(),
+        DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.isReportParseExceptions()
     ));
@@ -466,7 +468,7 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
@@ -535,7 +537,7 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
@@ -565,7 +567,7 @@ public class RealtimeManagerTest
               query,
               ImmutableList.<SegmentDescriptor>of(
                   new SegmentDescriptor(
-                      new Interval("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"),
+                      Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"),
                       "ver",
                       0
                   ))
@@ -580,7 +582,7 @@ public class RealtimeManagerTest
               query,
               ImmutableList.<SegmentDescriptor>of(
                   new SegmentDescriptor(
-                      new Interval("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"),
+                      Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"),
                       "ver",
                       1
                   ))
@@ -643,15 +645,15 @@ public class RealtimeManagerTest
                            .anyMatch(
                                fireChief -> {
                                  final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber)plumber).isStartedJob();
+                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
                                }
                            )
         ) {
       Thread.sleep(10);
     }
 
-    final Interval interval_26_28 = new Interval("2011-03-26T00:00:00.000Z/2011-03-28T00:00:00.000Z");
-    final Interval interval_28_29 = new Interval("2011-03-28T00:00:00.000Z/2011-03-29T00:00:00.000Z");
+    final Interval interval_26_28 = Intervals.of("2011-03-26T00:00:00.000Z/2011-03-28T00:00:00.000Z");
+    final Interval interval_28_29 = Intervals.of("2011-03-28T00:00:00.000Z/2011-03-29T00:00:00.000Z");
     final SegmentDescriptor descriptor_26_28_0 = new SegmentDescriptor(interval_26_28, "ver0", 0);
     final SegmentDescriptor descriptor_28_29_0 = new SegmentDescriptor(interval_28_29, "ver1", 0);
     final SegmentDescriptor descriptor_26_28_1 = new SegmentDescriptor(interval_26_28, "ver0", 1);
@@ -684,8 +686,7 @@ public class RealtimeManagerTest
             factory,
             "druid.sample.numeric.tsv.top",
             null
-        )
-        ,
+        ),
         interval_28_29,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
@@ -800,7 +801,7 @@ public class RealtimeManagerTest
         @Override
         public DateTime getTimestamp()
         {
-          return new DateTime(timestamp);
+          return DateTimes.utc(timestamp);
         }
 
         @Override
@@ -819,6 +820,12 @@ public class RealtimeManagerTest
         public long getLongMetric(String metric)
         {
           return 0L;
+        }
+
+        @Override
+        public double getDoubleMetric(String metric)
+        {
+          return 0.0d;
         }
 
         @Override

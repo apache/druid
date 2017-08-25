@@ -34,7 +34,8 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import io.druid.collections.CombiningIterable;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -63,6 +64,7 @@ import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.serde.DoubleGenericColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -319,8 +321,8 @@ public class IndexMergerV9 implements IndexMerger
     cols.writeToChannel(writer);
     dims.writeToChannel(writer);
 
-    DateTime minTime = new DateTime(JodaUtils.MAX_INSTANT);
-    DateTime maxTime = new DateTime(JodaUtils.MIN_INSTANT);
+    DateTime minTime = DateTimes.MAX;
+    DateTime maxTime = DateTimes.MIN;
 
     for (IndexableAdapter index : adapters) {
       minTime = JodaUtils.minDateTime(minTime, index.getDataInterval().getStart());
@@ -367,28 +369,42 @@ public class IndexMergerV9 implements IndexMerger
         case LONG:
           builder.setValueType(ValueType.LONG);
           builder.addSerde(
-              LongGenericColumnPartSerde.serializerBuilder()
-                                        .withByteOrder(IndexIO.BYTE_ORDER)
-                                        .withDelegate((LongColumnSerializer) writer)
-                                        .build()
+              LongGenericColumnPartSerde
+                  .serializerBuilder()
+                  .withByteOrder(IndexIO.BYTE_ORDER)
+                  .withDelegate((LongColumnSerializer) writer)
+                  .build()
           );
           break;
         case FLOAT:
           builder.setValueType(ValueType.FLOAT);
           builder.addSerde(
-              FloatGenericColumnPartSerde.serializerBuilder()
-                                         .withByteOrder(IndexIO.BYTE_ORDER)
-                                         .withDelegate((FloatColumnSerializer) writer)
-                                         .build()
+              FloatGenericColumnPartSerde
+                  .serializerBuilder()
+                  .withByteOrder(IndexIO.BYTE_ORDER)
+                  .withDelegate((FloatColumnSerializer) writer)
+                  .build()
+          );
+          break;
+        case DOUBLE:
+          builder.setValueType(ValueType.DOUBLE);
+          builder.addSerde(
+              DoubleGenericColumnPartSerde
+                  .serializerBuilder()
+                  .withByteOrder(IndexIO.BYTE_ORDER)
+                  .withDelegate((DoubleColumnSerializer) writer)
+                  .build()
           );
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
           builder.setValueType(ValueType.COMPLEX);
           builder.addSerde(
-              ComplexColumnPartSerde.serializerBuilder().withTypeName(typeName)
-                                    .withDelegate(writer)
-                                    .build()
+              ComplexColumnPartSerde
+                  .serializerBuilder()
+                  .withTypeName(typeName)
+                  .withDelegate(writer)
+                  .build()
           );
           break;
         default:
@@ -543,6 +559,9 @@ public class IndexMergerV9 implements IndexMerger
         case FLOAT:
           writer = FloatColumnSerializer.create(ioPeon, metric, metCompression);
           break;
+        case DOUBLE:
+          writer = DoubleColumnSerializer.create(ioPeon, metric, metCompression);
+          break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
           ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
@@ -645,14 +664,14 @@ public class IndexMergerV9 implements IndexMerger
       throw new IAE("Trying to persist an empty index!");
     }
 
-    final long firstTimestamp = index.getMinTime().getMillis();
-    final long lastTimestamp = index.getMaxTime().getMillis();
+    final DateTime firstTimestamp = index.getMinTime();
+    final DateTime lastTimestamp = index.getMaxTime();
     if (!(dataInterval.contains(firstTimestamp) && dataInterval.contains(lastTimestamp))) {
       throw new IAE(
           "interval[%s] does not encapsulate the full range of timestamps[%s, %s]",
           dataInterval,
-          new DateTime(firstTimestamp),
-          new DateTime(lastTimestamp)
+          firstTimestamp,
+          lastTimestamp
       );
     }
 
@@ -766,8 +785,7 @@ public class IndexMergerV9 implements IndexMerger
     );
 
     final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
-    for (int i = 0; i < metricAggs.length; i++) {
-      AggregatorFactory metricAgg = metricAggs[i];
+    for (AggregatorFactory metricAgg : metricAggs) {
       int metricIndex = mergedMetrics.indexOf(metricAgg.getName());
       /*
         If metricIndex is negative, one of the metricAggs was not present in the union of metrics from the indices

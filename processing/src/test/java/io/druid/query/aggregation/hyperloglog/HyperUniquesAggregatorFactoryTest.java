@@ -128,7 +128,8 @@ public class HyperUniquesAggregatorFactoryTest
   }
 
   @Test
-  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception {
+  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception
+  {
     // given
     Random rand = new Random(0);
     HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");

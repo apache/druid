@@ -36,6 +36,7 @@ import io.druid.client.ServerView;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
@@ -80,7 +81,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BatchServerInventoryViewTest
 {
   private static final String testBasePath = "/test";
-  public static final DateTime SEGMENT_INTERVAL_START = new DateTime("2013-01-01");
+  public static final DateTime SEGMENT_INTERVAL_START = DateTimes.of("2013-01-01");
   public static final int INITIAL_SEGMENTS = 100;
   private static final Timing timing = new Timing();
 
@@ -203,7 +204,7 @@ public class BatchServerInventoryViewTest
             return input.rhs.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
           }
         }
-    ){
+    ) {
       @Override
       protected DruidServer addInnerInventory(
           DruidServer container, String inventoryKey, Set<DataSegment> inventory
@@ -382,7 +383,7 @@ public class BatchServerInventoryViewTest
                               SEGMENT_INTERVAL_START.plusDays(offset + 1)
                           )
                       )
-                      .version(new DateTime().toString())
+                      .version(DateTimes.nowUtc().toString())
                       .build();
   }
 
@@ -472,7 +473,7 @@ public class BatchServerInventoryViewTest
                   List<DataSegment> segments = new ArrayList<DataSegment>();
                   try {
                     for (int j = 0; j < INITIAL_SEGMENTS / numThreads; ++j) {
-                      segments.add(makeSegment(INITIAL_SEGMENTS + ii  + numThreads * j));
+                      segments.add(makeSegment(INITIAL_SEGMENTS + ii + numThreads * j));
                     }
                     latch.countDown();
                     latch.await();

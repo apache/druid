@@ -76,7 +76,8 @@ public class DefaultLimitSpec implements LimitSpec
     return false;
   }
 
-  public static StringComparator getComparatorForDimName(DefaultLimitSpec limitSpec, String dimName) {
+  public static StringComparator getComparatorForDimName(DefaultLimitSpec limitSpec, String dimName)
+  {
     final OrderByColumnSpec orderBy = OrderByColumnSpec.getOrderByForDimName(limitSpec.getColumns(), dimName);
     if (orderBy == null) {
       return null;
@@ -145,7 +146,7 @@ public class DefaultLimitSpec implements LimitSpec
         final StringComparator naturalComparator;
         if (columnType == ValueType.STRING) {
           naturalComparator = StringComparators.LEXICOGRAPHIC;
-        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
+        } else if (ValueType.isNumeric(columnType)) {
           naturalComparator = StringComparators.NUMERIC;
         } else {
           sortingNeeded = true;
@@ -248,33 +249,12 @@ public class DefaultLimitSpec implements LimitSpec
 
   private Ordering<Row> metricOrdering(final String column, final Comparator comparator)
   {
-    return new Ordering<Row>()
-    {
-      @SuppressWarnings("unchecked")
-      @Override
-      public int compare(Row left, Row right)
-      {
-        return comparator.compare(left.getRaw(column), right.getRaw(column));
-      }
-    };
+    return Ordering.from(Comparator.comparing((Row row) -> row.getRaw(column), Comparator.nullsLast(comparator)));
   }
 
   private Ordering<Row> dimensionOrdering(final String dimension, final StringComparator comparator)
   {
-    return Ordering.from(comparator)
-                   .nullsFirst()
-                   .onResultOf(
-                       new Function<Row, String>()
-                       {
-                         @Override
-                         public String apply(Row input)
-                         {
-                           // Multi-value dimensions have all been flattened at this point;
-                           final List<String> dimList = input.getDimension(dimension);
-                           return dimList.isEmpty() ? null : dimList.get(0);
-                         }
-                       }
-                   );
+    return Ordering.from(Comparator.comparing((Row row) -> row.getDimension(dimension).isEmpty() ? null : row.getDimension(dimension).get(0), Comparator.nullsFirst(comparator)));
   }
 
   @Override

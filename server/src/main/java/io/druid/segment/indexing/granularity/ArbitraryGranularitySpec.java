@@ -27,7 +27,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -104,7 +104,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   public Optional<Interval> bucketInterval(DateTime dt)
   {
     // First interval with start time ≤ dt
-    final Interval interval = intervals.floor(new Interval(dt, new DateTime(JodaUtils.MAX_INSTANT)));
+    final Interval interval = intervals.floor(new Interval(dt, DateTimes.MAX));
 
     if (interval != null && interval.contains(dt)) {
       return Optional.of(interval);
@@ -178,7 +178,8 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public GranularitySpec withIntervals(List<Interval> inputIntervals) {
+  public GranularitySpec withIntervals(List<Interval> inputIntervals)
+  {
     return new ArbitraryGranularitySpec(queryGranularity, rollup, inputIntervals);
   }
 }

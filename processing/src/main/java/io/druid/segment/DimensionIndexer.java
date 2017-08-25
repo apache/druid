@@ -27,6 +27,8 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
+import javax.annotation.Nullable;
+
 /**
  * Processing related interface
  *
@@ -247,19 +249,16 @@ public interface DimensionIndexer
 
 
   /**
-   * Return an object used to read values from this indexer's column as Objects.
+   * Return an object used to read values from this indexer's column as Doubles.
    *
-   * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
    * @param currEntry Provides access to the current TimeAndDims object in the Cursor
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  ObjectColumnSelector makeObjectColumnSelector(
-      DimensionSpec spec,
+  DoubleColumnSelector makeDoubleColumnSelector(
       IncrementalIndexStorageAdapter.EntryHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   );
-
 
   /**
    * Compares the row values for this DimensionIndexer's dimension from a TimeAndDims key.
@@ -283,7 +282,7 @@ public interface DimensionIndexer
    * @param rhs dimension value array from a TimeAndDims key
    * @return comparison of the two arrays
    */
-  int compareUnsortedEncodedKeyComponents(EncodedKeyComponentType lhs, EncodedKeyComponentType rhs);
+  int compareUnsortedEncodedKeyComponents(@Nullable EncodedKeyComponentType lhs, @Nullable EncodedKeyComponentType rhs);
 
 
   /**
@@ -293,7 +292,7 @@ public interface DimensionIndexer
    * @param rhs dimension value array from a TimeAndDims key
    * @return true if the two arrays are equal
    */
-  boolean checkUnsortedEncodedKeyComponentsEqual(EncodedKeyComponentType lhs, EncodedKeyComponentType rhs);
+  boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable EncodedKeyComponentType lhs, @Nullable EncodedKeyComponentType rhs);
 
 
   /**
@@ -301,7 +300,7 @@ public interface DimensionIndexer
    * @param key dimension value array from a TimeAndDims key
    * @return hashcode of the array
    */
-  int getUnsortedEncodedKeyComponentHashCode(EncodedKeyComponentType key);
+  int getUnsortedEncodedKeyComponentHashCode(@Nullable EncodedKeyComponentType key);
 
   boolean LIST = true;
   boolean ARRAY = false;

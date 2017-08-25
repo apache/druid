@@ -28,12 +28,16 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+//CHECKSTYLE.OFF: Regexp
 import com.metamx.common.logger.Logger;
+//CHECKSTYLE.ON: Regexp
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -203,7 +207,7 @@ public class LoadRuleTest
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(balancerStrategy)
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
         segment
     );
@@ -317,7 +321,7 @@ public class LoadRuleTest
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(balancerStrategy)
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
         segment
     );
@@ -410,7 +414,7 @@ public class LoadRuleTest
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(balancerStrategy)
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
         segment
     );
@@ -519,7 +523,7 @@ public class LoadRuleTest
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(balancerStrategy)
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
         segment
     );
@@ -610,7 +614,7 @@ public class LoadRuleTest
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
             .withReplicationManager(throttler)
             .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
             .withAvailableSegments(Arrays.asList(dataSegment1, dataSegment2, dataSegment3))
             .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsInNodeLoadingQueue(2).build())
             .build();
@@ -629,8 +633,8 @@ public class LoadRuleTest
   {
     return new DataSegment(
         dataSource,
-        new Interval("0/3000"),
-        new DateTime().toString(),
+        Intervals.of("0/3000"),
+        DateTimes.nowUtc().toString(),
         Maps.newHashMap(),
         Lists.newArrayList(),
         Lists.newArrayList(),

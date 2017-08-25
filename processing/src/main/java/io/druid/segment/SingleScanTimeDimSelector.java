@@ -112,21 +112,20 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
   private int getDimensionValueIndex()
   {
     // if this the first timestamp, apply and cache extraction function result
-    final long timestamp = selector.get();
+    final long timestamp = selector.getLong();
     if (index < 0) {
       currentTimestamp = timestamp;
       currentValue = extractionFn.apply(timestamp);
       ++index;
       timeValues.add(currentValue);
-    }
-    // if this is a new timestamp, apply and cache extraction function result
-    // since timestamps are assumed grouped and scanned once, we only need to
-    // check if the current timestamp is different than the current timestamp.
-    //
-    // If this new timestamp is mapped to the same value by the extraction function,
-    // we can also avoid creating a dimension value and corresponding index
-    // and use the current one
-    else if (timestamp != currentTimestamp) {
+      // if this is a new timestamp, apply and cache extraction function result
+      // since timestamps are assumed grouped and scanned once, we only need to
+      // check if the current timestamp is different than the current timestamp.
+      //
+      // If this new timestamp is mapped to the same value by the extraction function,
+      // we can also avoid creating a dimension value and corresponding index
+      // and use the current one
+    } else if (timestamp != currentTimestamp) {
       if (descending ? timestamp > currentTimestamp : timestamp < currentTimestamp) {
         // re-using this selector for multiple scans would cause the same rows to return different IDs
         // we might want to re-visit if we ever need to do multiple scans with this dimension selector

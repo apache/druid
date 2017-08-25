@@ -27,7 +27,6 @@ import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.http.HostAndPortWithScheme;
 import org.apache.curator.utils.ZKPaths;
-import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 
@@ -38,7 +37,7 @@ public abstract class ListenerResourceAnnouncer
 {
   private static final byte[] ANNOUNCE_BYTES = ByteBuffer
       .allocate(Longs.BYTES)
-      .putLong(DateTime.now().getMillis())
+      .putLong(System.currentTimeMillis())
       .array();
   private static final Logger LOG = new Logger(ListenerResourceAnnouncer.class);
   private final Object startStopSync = new Object();

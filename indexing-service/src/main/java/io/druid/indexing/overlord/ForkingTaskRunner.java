@@ -53,6 +53,7 @@ import io.druid.indexing.common.tasklogs.LogUtils;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
@@ -238,7 +239,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         int tlsChildPort = -1;
                         int childChatHandlerPort = -1;
 
-                        if(serverConfig.isPlaintext()) {
+                        if (serverConfig.isPlaintext()) {
                           if (config.isSeparateIngestionEndpoint()) {
                             Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
                             childPort = portPair.lhs;
@@ -248,7 +249,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           }
                         }
 
-                        if(serverConfig.isTls()) {
+                        if (serverConfig.isTls()) {
                           tlsChildPort = tlsPortFinder.findUnusedPort();
                         }
 
@@ -500,10 +501,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
                             }
 
-                            if(serverConfig.isPlaintext()) {
+                            if (serverConfig.isPlaintext()) {
                               portFinder.markPortUnused(childPort);
                             }
-                            if(serverConfig.isTls()) {
+                            if (serverConfig.isTls()) {
                               tlsPortFinder.markPortUnused(tlsChildPort);
                             }
                             if (childChatHandlerPort > 0) {
@@ -560,7 +561,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
     }
 
-    final DateTime start = new DateTime();
+    final DateTime start = DateTimes.nowUtc();
     final long timeout = new Interval(start, taskConfig.getGracefulShutdownTimeout()).toDurationMillis();
 
     // Things should be terminating now. Wait for it to happen so logs can be uploaded and all that good stuff.

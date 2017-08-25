@@ -33,12 +33,15 @@ import io.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
-import io.druid.java.util.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
 import io.druid.query.Result;
@@ -52,9 +55,7 @@ import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -121,8 +122,8 @@ public class DirectDruidClientTest
     final ServerSelector serverSelector = new ServerSelector(
         new DataSegment(
             "test",
-            new Interval("2013-01-01/2013-01-02"),
-            new DateTime("2013-01-01").toString(),
+            Intervals.of("2013-01-01/2013-01-02"),
+            DateTimes.of("2013-01-01").toString(),
             Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),
@@ -165,22 +166,22 @@ public class DirectDruidClientTest
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
 
-    Sequence s1 = client1.run(query, defaultContext);
+    Sequence s1 = client1.run(QueryPlus.wrap(query), defaultContext);
     Assert.assertTrue(capturedRequest.hasCaptured());
     Assert.assertEquals(url, capturedRequest.getValue().getUrl());
     Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout
-    Sequence s2 = client1.run(query, defaultContext);
+    Sequence s2 = client1.run(QueryPlus.wrap(query), defaultContext);
     Assert.assertEquals(2, client1.getNumOpenConnections());
     futureException.setException(new ReadTimeoutException());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // subsequent connections should work
-    Sequence s3 = client1.run(query, defaultContext);
-    Sequence s4 = client1.run(query, defaultContext);
-    Sequence s5 = client1.run(query, defaultContext);
+    Sequence s3 = client1.run(QueryPlus.wrap(query), defaultContext);
+    Sequence s4 = client1.run(QueryPlus.wrap(query), defaultContext);
+    Sequence s5 = client1.run(QueryPlus.wrap(query), defaultContext);
 
     Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
@@ -192,11 +193,11 @@ public class DirectDruidClientTest
     );
     List<Result> results = Sequences.toList(s1, Lists.<Result>newArrayList());
     Assert.assertEquals(1, results.size());
-    Assert.assertEquals(new DateTime("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
+    Assert.assertEquals(DateTimes.of("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
     Assert.assertEquals(3, client1.getNumOpenConnections());
 
-    client2.run(query, defaultContext);
-    client2.run(query, defaultContext);
+    client2.run(QueryPlus.wrap(query), defaultContext);
+    client2.run(QueryPlus.wrap(query), defaultContext);
 
     Assert.assertTrue(client2.getNumOpenConnections() == 2);
 
@@ -239,8 +240,8 @@ public class DirectDruidClientTest
     final ServerSelector serverSelector = new ServerSelector(
         new DataSegment(
             "test",
-            new Interval("2013-01-01/2013-01-02"),
-            new DateTime("2013-01-01").toString(),
+            Intervals.of("2013-01-01/2013-01-02"),
+            DateTimes.of("2013-01-01").toString(),
             Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),
@@ -269,7 +270,7 @@ public class DirectDruidClientTest
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
-    Sequence results = client1.run(query, defaultContext);
+    Sequence results = client1.run(QueryPlus.wrap(query), defaultContext);
     Assert.assertEquals(HttpMethod.DELETE, capturedRequest.getValue().getMethod());
     Assert.assertEquals(0, client1.getNumOpenConnections());
 
@@ -307,8 +308,8 @@ public class DirectDruidClientTest
 
     DataSegment dataSegment = new DataSegment(
         "test",
-        new Interval("2013-01-01/2013-01-02"),
-        new DateTime("2013-01-01").toString(),
+        Intervals.of("2013-01-01/2013-01-02"),
+        DateTimes.of("2013-01-01").toString(),
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
@@ -316,8 +317,8 @@ public class DirectDruidClientTest
         0,
         0L
     );
-    final ServerSelector serverSelector = new ServerSelector( dataSegment
-        ,
+    final ServerSelector serverSelector = new ServerSelector(
+        dataSegment,
         new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
     );
 
@@ -344,7 +345,7 @@ public class DirectDruidClientTest
             StringUtils.toUtf8("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}")
         )
     );
-    Sequence results = client1.run(query, defaultContext);
+    Sequence results = client1.run(QueryPlus.wrap(query), defaultContext);
 
     QueryInterruptedException actualException = null;
     try {

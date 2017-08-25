@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -31,12 +30,14 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.collections.NonBlockingPool;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -50,6 +51,7 @@ import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
@@ -97,12 +99,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
   private static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
       .put(Long.class, ValueType.LONG)
-      .put(Double.class, ValueType.FLOAT)
+      .put(Double.class, ValueType.DOUBLE)
       .put(Float.class, ValueType.FLOAT)
       .put(String.class, ValueType.STRING)
       .put(DimensionSchema.ValueType.LONG, ValueType.LONG)
       .put(DimensionSchema.ValueType.FLOAT, ValueType.FLOAT)
       .put(DimensionSchema.ValueType.STRING, ValueType.STRING)
+      .put(DimensionSchema.ValueType.DOUBLE, ValueType.DOUBLE)
       .build();
 
   /**
@@ -144,7 +147,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
         final ObjectColumnSelector rawColumnSelector = baseSelectorFactory.makeObjectColumnSelector(column);
 
-        if ((Enums.getIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)).isPresent() && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
+        if ((GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)) != null && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
             || !deserializeComplexMetrics) {
           return rawColumnSelector;
         } else {
@@ -182,6 +185,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       public ColumnCapabilities getColumnCapabilities(String columnName)
       {
         return baseSelectorFactory.getColumnCapabilities(columnName);
+      }
+
+      @Override
+      public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+      {
+        return baseSelectorFactory.makeDoubleColumnSelector(columnName);
       }
     }
 
@@ -438,6 +447,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   protected abstract Object getMetricObjectValue(int rowOffset, int aggOffset);
 
+  protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
+
   @Override
   public void close()
   {
@@ -511,7 +522,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {
-      throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, new DateTime(minTimestamp));
+      throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, DateTimes.utc(minTimestamp));
     }
 
     final List<String> rowDimensions = row.getDimensions();
@@ -658,6 +669,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     switch (metricDesc.getCapabilities().getType()) {
       case COMPLEX:
         return ComplexMetrics.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();
+      case DOUBLE:
+        return Double.class;
       case FLOAT:
         return Float.class;
       case LONG:
@@ -670,17 +683,20 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public Interval getInterval()
   {
-    return new Interval(minTimestamp, isEmpty() ? minTimestamp : gran.increment(new DateTime(getMaxTimeMillis())).getMillis());
+    DateTime min = DateTimes.utc(minTimestamp);
+    return new Interval(min, isEmpty() ? min : gran.increment(DateTimes.utc(getMaxTimeMillis())));
   }
 
+  @Nullable
   public DateTime getMinTime()
   {
-    return isEmpty() ? null : new DateTime(getMinTimeMillis());
+    return isEmpty() ? null : DateTimes.utc(getMinTimeMillis());
   }
 
+  @Nullable
   public DateTime getMaxTime()
   {
-    return isEmpty() ? null : new DateTime(getMaxTimeMillis());
+    return isEmpty() ? null : DateTimes.utc(getMaxTimeMillis());
   }
 
   public Integer getDimensionIndex(String dimension)
@@ -906,6 +922,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       } else if (typeInfo.equalsIgnoreCase("long")) {
         capabilities.setType(ValueType.LONG);
         this.type = typeInfo;
+      } else if (typeInfo.equalsIgnoreCase("double")) {
+        capabilities.setType(ValueType.DOUBLE);
+        this.type = typeInfo;
       } else {
         capabilities.setType(ValueType.COMPLEX);
         this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
@@ -995,7 +1014,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public String toString()
     {
       return "TimeAndDims{" +
-             "timestamp=" + new DateTime(timestamp) +
+             "timestamp=" + DateTimes.utc(timestamp) +
              ", dims=" + Lists.transform(
           Arrays.asList(dims), new Function<Object, Object>()
           {

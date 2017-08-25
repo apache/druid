@@ -28,6 +28,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -41,8 +42,6 @@ import java.util.Objects;
  */
 public class LongMaxAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0xA;
-
   private final String name;
   private final String fieldName;
   private final String expression;
@@ -100,6 +99,33 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return LongMaxAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new LongAggregateCombiner()
+    {
+      private long max;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        max = selector.getLong();
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        max = Math.max(max, selector.getLong());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return max;
+      }
+    };
   }
 
   @Override
@@ -170,7 +196,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
     byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.LONG_MAX_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)

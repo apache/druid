@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
+import io.druid.java.util.common.DateTimes;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -39,7 +41,6 @@ import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNQueryRunnerFactory;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.TestHelper;
-import org.joda.time.DateTime;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -125,7 +126,7 @@ public class ApproximateHistogramTopNQueryTest
         .aggregators(
             Lists.<AggregatorFactory>newArrayList(
                 Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
+                    QueryRunnerTestHelper.commonDoubleAggregators,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index"),
@@ -145,7 +146,7 @@ public class ApproximateHistogramTopNQueryTest
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -247,6 +248,6 @@ public class ApproximateHistogramTopNQueryTest
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
 
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 }

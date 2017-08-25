@@ -25,18 +25,14 @@ import io.druid.query.DefaultBitmapResultFactory;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
-/**
- * {@link #getBitmapIndex} and {@link #getBitmapResult} methods both have default implementations, delegating to each
- * other. Every implementation of {@link Filter} should override {@link #getBitmapResult}, currently it has a default
- * implementation for compatibility with Filters in extensions. In Druid 0.11 {@link #getBitmapResult} is going to
- * become an abstract method without a default implementation.
- */
 public interface Filter
 {
   /**
    * Get a bitmap index, indicating rows that match this filter. Do not call this method unless
    * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns true. Behavior in the case that
    * {@link #supportsBitmapIndex(BitmapIndexSelector)} returns false is undefined.
+   *
+   * This method is OK to be called, but generally should not be overridden, override {@link #getBitmapResult} instead.
    *
    * @param selector Object used to retrieve bitmap indexes
    *
@@ -60,10 +56,7 @@ public interface Filter
    *
    * @see Filter#estimateSelectivity(BitmapIndexSelector)
    */
-  default <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
-  {
-    return bitmapResultFactory.wrapUnknown(getBitmapIndex(selector));
-  }
+  <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory);
 
   /**
    * Estimate selectivity of this filter.

@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.ExprType;
@@ -40,6 +42,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.filtration.BoundRefKey;
 import io.druid.sql.calcite.filtration.Bounds;
 import io.druid.sql.calcite.filtration.Filtration;
@@ -57,7 +60,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -120,33 +122,6 @@ public class Expressions
       .put(SqlStdOperatorTable.AND, "&&")
       .put(SqlStdOperatorTable.OR, "||")
       .build();
-
-  private static final Map<SqlTypeName, ExprType> EXPRESSION_TYPES;
-
-  static {
-    final ImmutableMap.Builder<SqlTypeName, ExprType> builder = ImmutableMap.builder();
-
-    for (SqlTypeName type : SqlTypeName.FRACTIONAL_TYPES) {
-      builder.put(type, ExprType.DOUBLE);
-    }
-
-    for (SqlTypeName type : SqlTypeName.INT_TYPES) {
-      builder.put(type, ExprType.LONG);
-    }
-
-    for (SqlTypeName type : SqlTypeName.STRING_TYPES) {
-      builder.put(type, ExprType.STRING);
-    }
-
-    // Booleans are treated as longs in Druid expressions, using two-value logic (positive = true, nonpositive = false).
-    builder.put(SqlTypeName.BOOLEAN, ExprType.LONG);
-
-    // Timestamps are treated as longs (millis since the epoch) in Druid expressions.
-    builder.put(SqlTypeName.TIMESTAMP, ExprType.LONG);
-    builder.put(SqlTypeName.DATE, ExprType.LONG);
-
-    EXPRESSION_TYPES = builder.build();
-  }
 
   private Expressions()
   {
@@ -277,8 +252,8 @@ public class Expressions
         );
       } else {
         // Handle other casts.
-        final ExprType fromExprType = EXPRESSION_TYPES.get(fromType);
-        final ExprType toExprType = EXPRESSION_TYPES.get(toType);
+        final ExprType fromExprType = exprTypeForValueType(Calcites.getValueTypeForSqlTypeName(fromType));
+        final ExprType toExprType = exprTypeForValueType(Calcites.getValueTypeForSqlTypeName(toType));
 
         if (fromExprType == null || toExprType == null) {
           // We have no runtime type for these SQL types.
@@ -291,7 +266,7 @@ public class Expressions
           // Ignore casts for simple extractions (use Function.identity) since it is ok in many cases.
           typeCastExpression = operandExpression.map(
               Function.identity(),
-              expression -> String.format("CAST(%s, '%s')", expression, toExprType.toString())
+              expression -> StringUtils.format("CAST(%s, '%s')", expression, toExprType.toString())
           );
         } else {
           typeCastExpression = operandExpression;
@@ -327,7 +302,7 @@ public class Expressions
         return null;
       } else if (UNARY_PREFIX_OPERATOR_MAP.containsKey(operator)) {
         return DruidExpression.fromExpression(
-            String.format(
+            StringUtils.format(
                 "(%s %s)",
                 UNARY_PREFIX_OPERATOR_MAP.get(operator),
                 Iterables.getOnlyElement(operands).getExpression()
@@ -335,7 +310,7 @@ public class Expressions
         );
       } else if (UNARY_SUFFIX_OPERATOR_MAP.containsKey(operator)) {
         return DruidExpression.fromExpression(
-            String.format(
+            StringUtils.format(
                 "(%s %s)",
                 Iterables.getOnlyElement(operands).getExpression(),
                 UNARY_SUFFIX_OPERATOR_MAP.get(operator)
@@ -346,7 +321,7 @@ public class Expressions
           throw new ISE("WTF?! Got binary operator[%s] with %s args?", kind, operands.size());
         }
         return DruidExpression.fromExpression(
-            String.format(
+            StringUtils.format(
                 "(%s %s %s)",
                 operands.get(0).getExpression(),
                 BINARY_OPERATOR_MAP.get(operator),
@@ -548,7 +523,7 @@ public class Expressions
         if (granularity != null) {
           // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
           final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
-          final Interval rhsInterval = granularity.bucket(new DateTime(rhsMillis));
+          final Interval rhsInterval = granularity.bucket(DateTimes.utc(rhsMillis));
 
           // Is rhs aligned on granularity boundaries?
           final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;
@@ -641,6 +616,21 @@ public class Expressions
       );
     } else {
       return null;
+    }
+  }
+
+  public static ExprType exprTypeForValueType(final ValueType valueType)
+  {
+    switch (valueType) {
+      case LONG:
+        return ExprType.LONG;
+      case FLOAT:
+      case DOUBLE:
+        return ExprType.DOUBLE;
+      case STRING:
+        return ExprType.STRING;
+      default:
+        throw new ISE("No ExprType for valueType[%s]", valueType);
     }
   }
 

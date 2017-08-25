@@ -34,6 +34,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
@@ -41,6 +42,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -467,7 +469,7 @@ public class IncrementalIndexTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
                                   .granularity(Granularities.ALL)
-                                  .intervals(ImmutableList.of(new Interval("2000/2030")))
+                                  .intervals(ImmutableList.of(Intervals.of("2000/2030")))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
 
@@ -484,7 +486,7 @@ public class IncrementalIndexTest
 
 
     List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, new HashMap<String, Object>()),
+        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
         new LinkedList<Result<TimeseriesResultValue>>()
     );
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
@@ -568,7 +570,7 @@ public class IncrementalIndexTest
         )
     );
     final long timestamp = System.currentTimeMillis();
-    final Interval queryInterval = new Interval("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
+    final Interval queryInterval = Intervals.of("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
     final List<ListenableFuture<?>> indexFutures = Lists.newArrayListWithExpectedSize(concurrentThreads);
     final List<ListenableFuture<?>> queryFutures = Lists.newArrayListWithExpectedSize(concurrentThreads);
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
@@ -642,7 +644,7 @@ public class IncrementalIndexTest
                         factory.getToolchest()
                     );
                     Map<String, Object> context = new HashMap<String, Object>();
-                    Sequence<Result<TimeseriesResultValue>> sequence = runner.run(query, context);
+                    Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query), context);
 
                     for (Double result :
                         sequence.accumulate(
@@ -701,7 +703,7 @@ public class IncrementalIndexTest
                                   .build();
     Map<String, Object> context = new HashMap<String, Object>();
     List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         new LinkedList<Result<TimeseriesResultValue>>()
     );
     boolean isRollup = index.isRollup();

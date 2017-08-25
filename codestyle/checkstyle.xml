@@ -51,6 +51,45 @@
     <module name="RedundantImport"/>
     <module name="UnusedImports" />
     <module name="NeedBraces"/>
+    <module name="LeftCurly">
+      <property name="option" value="nl"/>
+      <property name="tokens" value="INTERFACE_DEF,CLASS_DEF,ANNOTATION_DEF,ENUM_DEF,CTOR_DEF,METHOD_DEF"/>
+    </module>
+    <module name="LeftCurly">
+      <property name="option" value="eol"/>
+      <property name="tokens" value="LITERAL_WHILE,LITERAL_TRY,LITERAL_CATCH,LITERAL_FINALLY,LITERAL_SYNCHRONIZED,LITERAL_SWITCH,LITERAL_DO,LITERAL_IF,LITERAL_ELSE,LITERAL_FOR,STATIC_INIT,LAMBDA,ENUM_CONSTANT_DEF"/>
+    </module>
+    <module name="RightCurly">
+      <property name="option" value="same"/>
+      <property name="tokens" value="LITERAL_IF,LITERAL_ELSE,LITERAL_DO"/>
+    </module>
+    <module name="RightCurly">
+      <property name="option" value="alone"/>
+      <property name="tokens" value="LITERAL_TRY,LITERAL_CATCH,LITERAL_FINALLY,CLASS_DEF,METHOD_DEF,CTOR_DEF,LITERAL_FOR,LITERAL_WHILE,STATIC_INIT,INSTANCE_INIT"/>
+    </module>
+
+    <module name="WhitespaceAfter"/>
+    <module name="WhitespaceAround">
+      <property name="allowEmptyConstructors" value="true"/>
+      <property name="allowEmptyMethods" value="true"/>
+      <property name="allowEmptyLambdas" value="true"/>
+      <property name="allowEmptyTypes" value="true"/>
+    </module>
+    <module name="ParenPad"/>
+    <module name="SingleSpaceSeparator"/>
+    <module name="NoWhitespaceBefore">
+      <property name="tokens" value="COMMA,SEMI,POST_INC,POST_DEC,ELLIPSIS,METHOD_REF"/>
+    </module>
+    <module name="NoWhitespaceBefore">
+      <property name="tokens" value="DOT"/>
+      <property name="allowLineBreaks" value="true"/>
+    </module>
+    <module name="NoWhitespaceAfter"/>
+    <module name="NoWhitespaceAfter">
+      <property name="tokens" value="DOT"/>
+      <property name="allowLineBreaks" value="false"/>
+    </module>
+
     <module name="Regexp">
       <property name="format" value="com\.google\.common\.io\.Closer"/>
       <property name="illegalPattern" value="true"/>
@@ -71,7 +110,11 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use Comparators.naturalNullsFirst() instead of Ordering.natural().nullsFirst()"/>
     </module>
-
+    <module name="Regexp">
+      <property name="format" value="Enums\.getIfPresent\("/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use GuavaUtils.getEnumIfPresent() instead of Enums.getIfPresent()"/>
+    </module>
     <module name="Regexp">
       <property name="format" value="(Byte|Character|Short|Integer|Long|Float|Double)\.TYPE"/>
       <property name="illegalPattern" value="true"/>
@@ -96,6 +139,11 @@
       <property name="format" value="Double\.MIN_VALUE"/>
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use Double.NEGATIVE_INFINITY"/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="com\.metamx\.common\.logger"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use io.druid.java.util.common.logger.Logger instead"/>
     </module>
   </module>
 </module>

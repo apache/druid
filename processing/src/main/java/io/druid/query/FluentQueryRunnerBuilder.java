@@ -29,7 +29,8 @@ public class FluentQueryRunnerBuilder<T>
 {
   final QueryToolChest<T, Query<T>> toolChest;
 
-  public FluentQueryRunner create(QueryRunner<T> baseRunner) {
+  public FluentQueryRunner create(QueryRunner<T> baseRunner)
+  {
     return new FluentQueryRunner(baseRunner);
   }
 
@@ -55,7 +56,8 @@ public class FluentQueryRunnerBuilder<T>
       return baseRunner.run(queryPlus, responseContext);
     }
 
-    public FluentQueryRunner from(QueryRunner<T> runner) {
+    public FluentQueryRunner from(QueryRunner<T> runner)
+    {
       return new FluentQueryRunner(runner);
     }
 

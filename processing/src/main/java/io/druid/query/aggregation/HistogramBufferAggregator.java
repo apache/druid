@@ -37,7 +37,7 @@ public class HistogramBufferAggregator implements BufferAggregator
   public HistogramBufferAggregator(FloatColumnSelector selector, float[] breaks)
   {
     this.selector = selector;
-    this.breaks   = breaks;
+    this.breaks = breaks;
     this.minOffset = Longs.BYTES * (breaks.length + 1);
     this.maxOffset = this.minOffset + Floats.BYTES;
   }
@@ -57,14 +57,14 @@ public class HistogramBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final float value = selector.get();
+    final float value = selector.getFloat();
     final int minPos = position + minOffset;
     final int maxPos = position + maxOffset;
 
-    if(value < buf.getFloat(minPos)) {
+    if (value < buf.getFloat(minPos)) {
       buf.putFloat(minPos, value);
     }
-    if(value > buf.getFloat(maxPos)) {
+    if (value > buf.getFloat(maxPos)) {
       buf.putFloat(maxPos, value);
     }
 
@@ -99,6 +99,12 @@ public class HistogramBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     throw new UnsupportedOperationException("HistogramBufferAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getDouble");
   }
 
   @Override

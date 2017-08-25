@@ -21,6 +21,7 @@ package io.druid.common.config;
 
 import com.google.common.base.Throwables;
 import io.druid.java.util.common.ISE;
+import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.util.Cancellable;
 import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
 
@@ -29,7 +30,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Log4jShutdown implements ShutdownCallbackRegistry, org.apache.logging.log4j.core.LifeCycle
+public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
 {
   private static final long SHUTDOWN_WAIT_TIMEOUT = 60000;
 
@@ -149,7 +150,8 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, org.apache.loggi
     @GuardedBy("this")
     private State current;
 
-    private SynchronizedStateHolder(State initial) {
+    private SynchronizedStateHolder(State initial)
+    {
       current = initial;
     }
 

@@ -40,6 +40,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -265,7 +266,7 @@ public class SelectBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 
@@ -374,7 +375,7 @@ public class SelectBenchmark
 
     boolean done = false;
     while (!done) {
-      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(queryCopy, Maps.<String, Object>newHashMap());
+      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), Maps.newHashMap());
       List<Result<SelectResultValue>> results = Sequences.toList(queryResult, Lists.<Result<SelectResultValue>>newArrayList());
       
       SelectResultValue result = results.get(0).getValue();

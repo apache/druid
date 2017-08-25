@@ -30,6 +30,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.joda.deser.DurationDeserializer;
 import com.fasterxml.jackson.datatype.joda.deser.PeriodDeserializer;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -72,7 +74,7 @@ class JodaStuff
     public Interval deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
         throws IOException, JsonProcessingException
     {
-      return new Interval(jsonParser.getText());
+      return Intervals.of(jsonParser.getText());
     }
   }
 
@@ -81,13 +83,14 @@ class JodaStuff
     @Override
     public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException, JsonProcessingException
     {
-      return new DateTime(key);
+      return DateTimes.of(key);
     }
   }
 
   private static class DateTimeDeserializer extends StdDeserializer<DateTime>
   {
-      public DateTimeDeserializer() {
+      public DateTimeDeserializer()
+      {
         super(DateTime.class);
       }
 
@@ -97,7 +100,7 @@ class JodaStuff
       {
           JsonToken t = jp.getCurrentToken();
           if (t == JsonToken.VALUE_NUMBER_INT) {
-              return new DateTime(jp.getLongValue());
+              return DateTimes.utc(jp.getLongValue());
           }
           if (t == JsonToken.VALUE_STRING) {
               String str = jp.getText().trim();

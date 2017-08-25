@@ -23,14 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
-
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregateCombiner;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -43,8 +43,6 @@ import java.util.List;
 
 public class DistinctCountAggregatorFactory extends AggregatorFactory
 {
-  private static final Logger log = new Logger(DistinctCountAggregatorFactory.class);
-  private static final byte CACHE_TYPE_ID = 20;
   private static final BitMapFactory DEFAULT_BITMAP_FACTORY = new RoaringBitMapFactory();
 
   private final String name;
@@ -124,6 +122,13 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    // This is likely wrong as well as combine(), see https://github.com/druid-io/druid/pull/2602#issuecomment-321224202
+    return new LongSumAggregateCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new LongSumAggregatorFactory(name, name);
@@ -178,7 +183,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     byte[] bitMapFactoryCacheKey = StringUtils.toUtf8(bitMapFactory.toString());
     return ByteBuffer.allocate(2 + fieldNameBytes.length + bitMapFactoryCacheKey.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.DISTINCT_COUNT_CACHE_KEY)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(bitMapFactoryCacheKey)

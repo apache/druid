@@ -28,9 +28,13 @@ public class TimestampAggregator implements Aggregator
 {
   static final Comparator COMPARATOR = LongMaxAggregator.COMPARATOR;
 
-  static long combineValues(Object lhs, Object rhs)
+  static Object combineValues(Comparator<Long> comparator, Object lhs, Object rhs)
   {
-    return Math.max(((Number)lhs).longValue(), ((Number)rhs).longValue());
+    if (comparator.compare(((Number) lhs).longValue(), ((Number) rhs).longValue()) > 0) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   private final ObjectColumnSelector selector;
@@ -59,7 +63,8 @@ public class TimestampAggregator implements Aggregator
   }
 
   @Override
-  public void aggregate() {
+  public void aggregate()
+  {
     Long value = TimestampAggregatorFactory.convertLong(timestampSpec, selector.get());
 
     if (value != null) {
@@ -86,15 +91,21 @@ public class TimestampAggregator implements Aggregator
   }
 
   @Override
-  public void close()
+  public double getDouble()
   {
-    // no resource to cleanup
+    return (double) most;
   }
 
   @Override
   public long getLong()
   {
     return most;
+  }
+
+  @Override
+  public void close()
+  {
+    // no resource to cleanup
   }
 
   @Override

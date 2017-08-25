@@ -26,7 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
@@ -36,6 +36,7 @@ import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -169,9 +170,7 @@ public class SegmentMetadataQueryTest
 
     expectedSegmentAnalysis1 = new SegmentAnalysis(
         id1,
-        ImmutableList.of(
-            new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")
-        ),
+        ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
@@ -195,7 +194,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
-                ValueType.FLOAT.toString(),
+                ValueType.DOUBLE.toString(),
                 false,
                 9672,
                 null,
@@ -203,7 +202,7 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        ), mmap1 ? 123969 : 124664,
+        ), mmap1 ? 167493 : 168188,
         1209,
         null,
         null,
@@ -212,9 +211,7 @@ public class SegmentMetadataQueryTest
     );
     expectedSegmentAnalysis2 = new SegmentAnalysis(
         id2,
-        ImmutableList.of(
-            new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")
-        ),
+        ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
@@ -238,7 +235,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
-                ValueType.FLOAT.toString(),
+                ValueType.DOUBLE.toString(),
                 false,
                 9672,
                 null,
@@ -247,7 +244,7 @@ public class SegmentMetadataQueryTest
                 null
             )
             // null_column will be included only for incremental index, which makes a little bigger result than expected
-        ), mmap2 ? 123969 : 124664,
+        ), mmap2 ? 167493 : 168188,
         1209,
         null,
         null,
@@ -261,7 +258,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQuery()
   {
     List<SegmentAnalysis> results = Sequences.toList(
-        runner1.run(testQuery, Maps.newHashMap()),
+        runner1.run(QueryPlus.wrap(testQuery), Maps.newHashMap()),
         Lists.<SegmentAnalysis>newArrayList()
     );
 
@@ -320,18 +317,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.ROLLUP)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.ROLLUP)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -389,18 +385,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -458,18 +453,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "quality_uniques")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "quality_uniques")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -541,7 +535,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
-                ValueType.FLOAT.toString(),
+                ValueType.DOUBLE.toString(),
                 false,
                 9672 * 2,
                 null,
@@ -580,7 +574,7 @@ public class SegmentMetadataQueryTest
 
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(query, Maps.newHashMap()),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -628,18 +622,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .analysisTypes()
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                  .analysisTypes()
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -691,18 +684,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -750,18 +742,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.TIMESTAMPSPEC)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.TIMESTAMPSPEC)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -809,18 +800,17 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    SegmentMetadataQuery query = Druids
+        .newSegmentMetadataQueryBuilder()
+        .dataSource("testing")
+        .intervals("2013/2014")
+        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .analysisTypes(SegmentMetadataQuery.AnalysisType.QUERYGRANULARITY)
+        .merge(true)
+        .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            Druids.newSegmentMetadataQueryBuilder()
-                  .dataSource("testing")
-                  .intervals("2013/2014")
-                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                  .analysisTypes(SegmentMetadataQuery.AnalysisType.QUERYGRANULARITY)
-                  .merge(true)
-                  .build(),
-            Maps.newHashMap()
-        ),
+        myRunner.run(QueryPlus.wrap(query), Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -858,7 +848,7 @@ public class SegmentMetadataQueryTest
     TestHelper.assertExpectedObjects(
         ImmutableList.of(bySegmentResult, bySegmentResult),
         myRunner.run(
-            testQuery.withOverriddenContext(ImmutableMap.<String, Object>of("bySegment", true)),
+            QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.<String, Object>of("bySegment", true))),
             Maps.newHashMap()
         ),
         "failed SegmentMetadata bySegment query"
@@ -884,7 +874,10 @@ public class SegmentMetadataQueryTest
     Query query = MAPPER.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
     Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
-    Assert.assertEquals(new Interval("2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z"), query.getIntervals().get(0));
+    Assert.assertEquals(
+        Intervals.of("2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z"),
+        query.getIntervals().get(0)
+    );
     Assert.assertEquals(expectedAnalysisTypes, ((SegmentMetadataQuery) query).getAnalysisTypes());
 
     // test serialize and deserialize
@@ -901,7 +894,7 @@ public class SegmentMetadataQueryTest
     Query query = MAPPER.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
     Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
-    Assert.assertEquals(new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT), query.getIntervals().get(0));
+    Assert.assertEquals(Intervals.ETERNITY, query.getIntervals().get(0));
     Assert.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
 
     // test serialize and deserialize
@@ -916,14 +909,9 @@ public class SegmentMetadataQueryTest
                                            .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
                                            .merge(true)
                                            .build();
-
-    Interval expectedInterval = new Interval(
-        JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
-    );
-
     /* No interval specified, should use default interval */
     Assert.assertTrue(testQuery.isUsingDefaultInterval());
-    Assert.assertEquals(testQuery.getIntervals().get(0), expectedInterval);
+    Assert.assertEquals(Intervals.ETERNITY, testQuery.getIntervals().get(0));
     Assert.assertEquals(testQuery.getIntervals().size(), 1);
 
     List<LogicalSegment> testSegments = Arrays.asList(
@@ -932,7 +920,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2012-01-01/P1D");
+            return Intervals.of("2012-01-01/P1D");
           }
         },
         new LogicalSegment()
@@ -940,7 +928,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2012-01-01T01/PT1H");
+            return Intervals.of("2012-01-01T01/PT1H");
           }
         },
         new LogicalSegment()
@@ -948,7 +936,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2013-01-05/P1D");
+            return Intervals.of("2013-01-05/P1D");
           }
         },
         new LogicalSegment()
@@ -956,7 +944,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2013-05-20/P1D");
+            return Intervals.of("2013-05-20/P1D");
           }
         },
         new LogicalSegment()
@@ -964,7 +952,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2014-01-05/P1D");
+            return Intervals.of("2014-01-05/P1D");
           }
         },
         new LogicalSegment()
@@ -972,7 +960,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2014-02-05/P1D");
+            return Intervals.of("2014-02-05/P1D");
           }
         },
         new LogicalSegment()
@@ -980,7 +968,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2015-01-19T01/PT1H");
+            return Intervals.of("2015-01-19T01/PT1H");
           }
         },
         new LogicalSegment()
@@ -988,7 +976,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2015-01-20T02/PT1H");
+            return Intervals.of("2015-01-20T02/PT1H");
           }
         }
     );
@@ -1007,7 +995,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2015-01-19T01/PT1H");
+            return Intervals.of("2015-01-19T01/PT1H");
           }
         },
         new LogicalSegment()
@@ -1015,7 +1003,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2015-01-20T02/PT1H");
+            return Intervals.of("2015-01-20T02/PT1H");
           }
         }
     );
@@ -1040,7 +1028,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2013-05-20/P1D");
+            return Intervals.of("2013-05-20/P1D");
           }
         },
         new LogicalSegment()
@@ -1048,7 +1036,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2014-01-05/P1D");
+            return Intervals.of("2014-01-05/P1D");
           }
         },
         new LogicalSegment()
@@ -1056,7 +1044,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2014-02-05/P1D");
+            return Intervals.of("2014-02-05/P1D");
           }
         },
         new LogicalSegment()
@@ -1064,7 +1052,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2015-01-19T01/PT1H");
+            return Intervals.of("2015-01-19T01/PT1H");
           }
         },
         new LogicalSegment()
@@ -1072,7 +1060,7 @@ public class SegmentMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2015-01-20T02/PT1H");
+            return Intervals.of("2015-01-20T02/PT1H");
           }
         }
     );

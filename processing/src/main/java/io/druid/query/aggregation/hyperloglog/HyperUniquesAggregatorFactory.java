@@ -25,12 +25,15 @@ import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
+import io.druid.query.aggregation.cardinality.HyperLogLogCollectorAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
@@ -54,8 +57,6 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
 
     return ((HyperLogLogCollector) object).estimateCardinality();
   }
-
-  private static final byte CACHE_TYPE_ID = 0x5;
 
   private final String name;
   private final String fieldName;
@@ -138,6 +139,12 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new HyperLogLogCollectorAggregateCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new HyperUniquesAggregatorFactory(name, name, false);
@@ -156,7 +163,11 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory(fieldName, fieldName, isInputHyperUnique));
+    return Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory(
+        fieldName,
+        fieldName,
+        isInputHyperUnique
+    ));
   }
 
   @Override
@@ -214,7 +225,10 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+    return ByteBuffer.allocate(1 + fieldNameBytes.length)
+                     .put(AggregatorUtil.HYPER_UNIQUE_CACHE_TYPE_ID)
+                     .put(fieldNameBytes)
+                     .array();
   }
 
   @Override
@@ -256,7 +270,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     HyperUniquesAggregatorFactory that = (HyperUniquesAggregatorFactory) o;
 
     return Objects.equals(fieldName, that.fieldName) && Objects.equals(name, that.name) &&
-            Objects.equals(isInputHyperUnique, that.isInputHyperUnique);
+           Objects.equals(isInputHyperUnique, that.isInputHyperUnique);
   }
 
   @Override

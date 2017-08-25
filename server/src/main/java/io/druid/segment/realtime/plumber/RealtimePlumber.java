@@ -42,7 +42,9 @@ import io.druid.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -230,14 +232,15 @@ public class RealtimePlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
-    final long truncatedTime = segmentGranularity.bucketStart(new DateTime(timestamp)).getMillis();
+    DateTime truncatedDateTime = segmentGranularity.bucketStart(DateTimes.utc(timestamp));
+    final long truncatedTime = truncatedDateTime.getMillis();
 
     Sink retVal = sinks.get(truncatedTime);
 
     if (retVal == null) {
       final Interval sinkInterval = new Interval(
-          new DateTime(truncatedTime),
-          segmentGranularity.increment(new DateTime(truncatedTime))
+          truncatedDateTime,
+          segmentGranularity.increment(truncatedDateTime)
       );
 
       retVal = new Sink(
@@ -354,7 +357,7 @@ public class RealtimePlumber implements Plumber
   private void persistAndMerge(final long truncatedTime, final Sink sink)
   {
     final String threadName = StringUtils.format(
-        "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(truncatedTime)
+        "%s-%s-persist-n-merge", schema.getDataSource(), DateTimes.utc(truncatedTime)
     );
     mergeExecutor.execute(
         new ThreadRenamingRunnable(threadName)
@@ -542,7 +545,7 @@ public class RealtimePlumber implements Plumber
 
   private void resetNextFlush()
   {
-    nextFlush = new DateTime().plus(config.getIntermediatePersistPeriod()).getMillis();
+    nextFlush = DateTimes.nowUtc().plus(config.getIntermediatePersistPeriod()).getMillis();
   }
 
   protected void initializeExecutors()
@@ -598,7 +601,7 @@ public class RealtimePlumber implements Plumber
     Object metadata = null;
     long latestCommitTime = 0;
     for (File sinkDir : files) {
-      final Interval sinkInterval = new Interval(sinkDir.getName().replace("_", "/"));
+      final Interval sinkInterval = Intervals.of(sinkDir.getName().replace("_", "/"));
 
       //final File[] sinkFiles = sinkDir.listFiles();
       // To avoid reading and listing of "merged" dir
@@ -739,12 +742,12 @@ public class RealtimePlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
-    final DateTime truncatedNow = segmentGranularity.bucketStart(new DateTime());
+    final DateTime truncatedNow = segmentGranularity.bucketStart(DateTimes.nowUtc());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
     log.info(
         "Expect to run at [%s]",
-        new DateTime().plus(
+        DateTimes.nowUtc().plus(
             new Duration(
                 System.currentTimeMillis(),
                 segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
@@ -797,14 +800,7 @@ public class RealtimePlumber implements Plumber
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
     DateTime minTimestampAsDate = segmentGranularity.bucketStart(
-        new DateTime(
-            Math.max(
-                windowMillis,
-                rejectionPolicy.getCurrMaxTime()
-                               .getMillis()
-            )
-            - windowMillis
-        )
+        DateTimes.utc(Math.max(windowMillis, rejectionPolicy.getCurrMaxTime().getMillis()) - windowMillis)
     );
     long minTimestamp = minTimestampAsDate.getMillis();
 
@@ -824,7 +820,7 @@ public class RealtimePlumber implements Plumber
         log.info(
             "Skipping persist and merge for entry [%s] : Start time [%s] >= [%s] min timestamp required in this run. Segment will be picked up in a future run.",
             entry,
-            new DateTime(intervalStart),
+            DateTimes.utc(intervalStart),
             minTimestampAsDate
         );
       }

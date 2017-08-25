@@ -193,7 +193,7 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution`, `equalDistributionWithAffinity` and `javascript`.|fillCapacity|
+|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution`, `equalDistributionWithAffinity` and `javascript`.|equalDistribution|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
 
 To view the audit history of worker config issue a GET request to the URL -
@@ -300,7 +300,7 @@ Middle managers pass their configurations down to their child peons. The middle 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "io.druid", "user.timezone","file.encoding"|
+|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "io.druid", "user.timezone", "file.encoding", "java.io.tmpdir", "hadoop"|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the middle managers should compress Znodes.|true|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|

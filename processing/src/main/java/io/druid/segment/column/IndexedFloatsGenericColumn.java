@@ -30,9 +30,8 @@ public class IndexedFloatsGenericColumn implements GenericColumn
 {
   private final IndexedFloats column;
 
-  public IndexedFloatsGenericColumn(
-      final IndexedFloats column
-  ) {
+  public IndexedFloatsGenericColumn(final IndexedFloats column)
+  {
     this.column = column;
   }
 
@@ -88,6 +87,12 @@ public class IndexedFloatsGenericColumn implements GenericColumn
   public IndexedLongs getLongMultiValueRow(int rowNum)
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public double getDoubleSingleValueRow(int rowNum)
+  {
+    return (double) column.get(rowNum);
   }
 
   @Override

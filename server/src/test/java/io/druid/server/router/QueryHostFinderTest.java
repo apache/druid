@@ -20,10 +20,10 @@
 package io.druid.server.router;
 
 import com.google.common.collect.ImmutableMap;
-
 import io.druid.client.DruidServer;
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.query.Query;
 import io.druid.query.TableDataSource;
@@ -126,7 +126,7 @@ public class QueryHostFinderTest
     Server server = queryRunner.findServer(
         new TimeBoundaryQuery(
             new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(new Interval("2011-08-31/2011-09-01"))),
+            new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(Intervals.of("2011-08-31/2011-09-01"))),
             null,
             null,
             null

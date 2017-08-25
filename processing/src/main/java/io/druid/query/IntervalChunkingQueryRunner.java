@@ -22,6 +22,7 @@ package io.druid.query;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
@@ -41,8 +42,6 @@ import java.util.concurrent.ExecutorService;
  */
 public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
 {
-  private static final DateTime EPOCH = new DateTime(0L);
-
   private final QueryRunner<T> baseRunner;
 
   private final QueryToolChest<T, Query<T>> toolChest;
@@ -68,7 +67,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
     final Period chunkPeriod = getChunkPeriod(queryPlus.getQuery());
 
     // Check for non-empty chunkPeriod, avoiding toStandardDuration since that cannot handle periods like P1M.
-    if (EPOCH.plus(chunkPeriod).getMillis() == EPOCH.getMillis()) {
+    if (DateTimes.EPOCH.plus(chunkPeriod).getMillis() == DateTimes.EPOCH.getMillis()) {
       return baseRunner.run(queryPlus, responseContext);
     }
 
@@ -124,7 +123,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
     );
   }
 
-  private Iterable<Interval> splitInterval(Interval interval, Period period)
+  private static Iterable<Interval> splitInterval(Interval interval, Period period)
   {
     if (interval.getEndMillis() == interval.getStartMillis()) {
       return Lists.newArrayList(interval);
@@ -133,15 +132,15 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
     List<Interval> intervals = Lists.newArrayList();
     Iterator<Interval> timestamps = new PeriodGranularity(period, null, null).getIterable(interval).iterator();
 
-    long start = Math.max(timestamps.next().getStartMillis(), interval.getStartMillis());
+    DateTime start = DateTimes.max(timestamps.next().getStart(), interval.getStart());
     while (timestamps.hasNext()) {
-      long end = timestamps.next().getStartMillis();
+      DateTime end = timestamps.next().getStart();
       intervals.add(new Interval(start, end));
       start = end;
     }
 
-    if (start < interval.getEndMillis()) {
-      intervals.add(new Interval(start, interval.getEndMillis()));
+    if (start.compareTo(interval.getEnd()) < 0) {
+      intervals.add(new Interval(start, interval.getEnd()));
     }
 
     return intervals;

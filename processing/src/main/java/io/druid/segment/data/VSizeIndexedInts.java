@@ -102,11 +102,9 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     byte numBytes = 4;
     if (maxValue <= 0xFF) {
       numBytes = 1;
-    }
-    else if (maxValue <= 0xFFFF) {
+    } else if (maxValue <= 0xFFFF) {
       numBytes = 2;
-    }
-    else if (maxValue <= 0xFFFFFF) {
+    } else if (maxValue <= 0xFFFFFF) {
       numBytes = 3;
     }
     return numBytes;
@@ -213,12 +211,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   }
 
   @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
-  }
-
-  @Override
   public void close() throws IOException
   {
   }
@@ -229,14 +221,17 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     inspector.visit("buffer", buffer);
   }
 
-  public WritableSupplier<IndexedInts> asWritableSupplier() {
+  public WritableSupplier<IndexedInts> asWritableSupplier()
+  {
     return new VSizeIndexedIntsSupplier(this);
   }
 
-  public static class VSizeIndexedIntsSupplier implements WritableSupplier<IndexedInts> {
+  public static class VSizeIndexedIntsSupplier implements WritableSupplier<IndexedInts>
+  {
     final VSizeIndexedInts delegate;
 
-    public VSizeIndexedIntsSupplier(VSizeIndexedInts delegate) {
+    public VSizeIndexedIntsSupplier(VSizeIndexedInts delegate)
+    {
       this.delegate = delegate;
     }
 

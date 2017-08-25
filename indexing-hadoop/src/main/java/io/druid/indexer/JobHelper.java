@@ -27,6 +27,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
@@ -51,7 +52,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-import org.joda.time.DateTime;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -308,12 +308,12 @@ public class JobHelper
 
   public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
   {
-    String mapJavaOpts = configuration.get(MRJobConfig.MAP_JAVA_OPTS);
-    String reduceJavaOpts = configuration.get(MRJobConfig.REDUCE_JAVA_OPTS);
+    String mapJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
+    String reduceJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
 
     for (String propName : System.getProperties().stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {
-        if (propName.startsWith(prefix)) {
+        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
           mapJavaOpts = StringUtils.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
           reduceJavaOpts = StringUtils.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
           break;
@@ -622,10 +622,10 @@ public class JobHelper
                   log.info(
                       "File[%s / %s / %sB] existed, but wasn't the same as [%s / %s / %sB]",
                       finalIndexZipFile.getPath(),
-                      new DateTime(finalIndexZipFile.getModificationTime()),
+                      DateTimes.utc(finalIndexZipFile.getModificationTime()),
                       finalIndexZipFile.getLen(),
                       zipFile.getPath(),
-                      new DateTime(zipFile.getModificationTime()),
+                      DateTimes.utc(zipFile.getModificationTime()),
                       zipFile.getLen()
                   );
                   outputFS.delete(finalIndexZipFilePath, false);
@@ -634,7 +634,7 @@ public class JobHelper
                   log.info(
                       "File[%s / %s / %sB] existed and will be kept",
                       finalIndexZipFile.getPath(),
-                      new DateTime(finalIndexZipFile.getModificationTime()),
+                      DateTimes.utc(finalIndexZipFile.getModificationTime()),
                       finalIndexZipFile.getLen()
                   );
                   needRename = false;

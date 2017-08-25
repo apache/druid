@@ -51,6 +51,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -141,7 +142,7 @@ public class InitializationTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class),  new DruidNode("test-inject", null, null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
                 );
               }
             }
@@ -287,9 +288,9 @@ public class InitializationTest
     final ExtensionsConfig config = new ExtensionsConfig()
     {
       @Override
-      public List<String> getLoadList()
+      public LinkedHashSet<String> getLoadList()
       {
-        return Arrays.asList("mysql-metadata-storage", "druid-kafka-eight", absolutePathExtension.getAbsolutePath());
+        return Sets.newLinkedHashSet(Arrays.asList("mysql-metadata-storage", "druid-kafka-eight", absolutePathExtension.getAbsolutePath()));
       }
 
       @Override
@@ -322,9 +323,9 @@ public class InitializationTest
     final ExtensionsConfig config = new ExtensionsConfig()
     {
       @Override
-      public List<String> getLoadList()
+      public LinkedHashSet<String> getLoadList()
       {
-        return Arrays.asList("mysql-metadata-storage", "druid-kafka-eight");
+        return Sets.newLinkedHashSet(Arrays.asList("mysql-metadata-storage", "druid-kafka-eight"));
       }
 
       @Override
