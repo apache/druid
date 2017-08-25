@@ -19,16 +19,17 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import io.druid.query.groupby.epinephelinae.Grouper.Entry;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.function.Function;
 
 public class CloseableGrouperIterator<KeyType, T> implements Iterator<T>, Closeable
 {
-  private final Function<Grouper.Entry<KeyType>, T> transformer;
+  private final Function<Entry<KeyType>, T> transformer;
   private final Closeable closer;
   private final Iterator<Grouper.Entry<KeyType>> iterator;
 

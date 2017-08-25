@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.function.ToIntFunction;
 
 /**
@@ -186,9 +187,21 @@ public interface Grouper<KeyType> extends Closeable
   interface KeySerdeFactory<T>
   {
     /**
-     * Create a new KeySerde, which may be stateful.
+     * Return max dictionary size threshold.
+     *
+     * @return max dictionary size
+     */
+    long getMaxDictionarySize();
+
+    /**
+     * Create a new {@link KeySerde}, which may be stateful.
      */
     KeySerde<T> factorize();
+
+    /**
+     * Create a new {@link KeySerde} with the given dictionary.
+     */
+    KeySerde<T> factorizeWithDictionary(List<String> dictionary);
 
     /**
      * Return an object that knows how to compare two serialized key instances. Will be called by the
@@ -216,6 +229,11 @@ public interface Grouper<KeyType> extends Closeable
      * Class of the keys.
      */
     Class<T> keyClazz();
+
+    /**
+     * Return the dictionary of this KeySerde.  The return value should not be null.
+     */
+    List<String> getDictionary();
 
     /**
      * Serialize a key. This will be called by the {@link #aggregate(Comparable)} method. The buffer will not

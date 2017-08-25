@@ -20,6 +20,7 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -123,6 +124,12 @@ public class ConcurrentGrouperTest
   private static final KeySerdeFactory<Long> keySerdeFactory = new KeySerdeFactory<Long>()
   {
     @Override
+    public long getMaxDictionarySize()
+    {
+      return 0;
+    }
+
+    @Override
     public KeySerde<Long> factorize()
     {
       return new KeySerde<Long>()
@@ -139,6 +146,12 @@ public class ConcurrentGrouperTest
         public Class<Long> keyClazz()
         {
           return Long.class;
+        }
+
+        @Override
+        public List<String> getDictionary()
+        {
+          return ImmutableList.of();
         }
 
         @Override
@@ -181,6 +194,12 @@ public class ConcurrentGrouperTest
         @Override
         public void reset() {}
       };
+    }
+
+    @Override
+    public KeySerde<Long> factorizeWithDictionary(List<String> dictionary)
+    {
+      return factorize();
     }
 
     @Override
@@ -242,6 +261,7 @@ public class ConcurrentGrouperTest
     final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
         bufferSupplier,
         combineBufferSupplier,
+        keySerdeFactory,
         keySerdeFactory,
         null_factory,
         new AggregatorFactory[]{new CountAggregatorFactory("cnt")},

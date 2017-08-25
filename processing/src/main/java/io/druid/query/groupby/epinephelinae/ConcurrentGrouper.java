@@ -23,18 +23,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKeySerde;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -51,8 +52,10 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -72,7 +75,6 @@ import java.util.stream.Collectors;
  */
 public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 {
-  private static final Logger LOG = new Logger(ConcurrentGrouper.class);
   private static final int MINIMUM_COMBINE_DEGREE = 2;
 
   private final List<SpillingGrouper<KeyType>> groupers;
@@ -92,6 +94,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final ObjectMapper spillMapper;
   private final int concurrencyHint;
   private final KeySerdeFactory<KeyType> keySerdeFactory;
+  private final KeySerdeFactory<KeyType> mergingKeySerdeFactory;
   private final DefaultLimitSpec limitSpec;
   private final boolean sortHasNonGroupingFields;
   private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
@@ -107,6 +110,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final Supplier<ByteBuffer> bufferSupplier,
       final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
       final KeySerdeFactory<KeyType> keySerdeFactory,
+      final KeySerdeFactory<KeyType> mergingKeySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
       final int bufferGrouperMaxSize,
@@ -147,6 +151,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     this.spillMapper = spillMapper;
     this.concurrencyHint = concurrencyHint;
     this.keySerdeFactory = keySerdeFactory;
+    this.mergingKeySerdeFactory = mergingKeySerdeFactory;
     this.limitSpec = limitSpec;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
     this.keyObjComparator = keySerdeFactory.objectComparator(sortHasNonGroupingFields);
@@ -267,10 +272,12 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       // Parallel combine is used only when data are spilled. This is because ConcurrentGrouper uses two different modes
       // depending on data are spilled or not. If data is not spilled, all inputs are completely aggregated and no more
       // aggregation is required.
-      return parallelCombine(sortedIterators);
-    } else {
-      return Groupers.mergeIterators(sortedIterators, sorted ? keyObjComparator : null);
+      final List<String> mergedDictionary = mergeDictionary();
+      if (mergedDictionary != null) {
+        return parallelCombine(sortedIterators, mergedDictionary);
+      }
     }
+    return Groupers.mergeIterators(sortedIterators, sorted ? keyObjComparator : null);
   }
 
   private boolean isParallelizable()
@@ -322,6 +329,31 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   /**
+   * Merge dictionaries of {@link Grouper.KeySerde}s of {@link Grouper}s.  The result dictionary contains unique string
+   * string keys.
+   *
+   * @return merged dictionary if its size does not exceed max dictionary size.  Otherwise null.
+   */
+  @Nullable
+  private List<String> mergeDictionary()
+  {
+    final long maxDictionarySize = mergingKeySerdeFactory.getMaxDictionarySize();
+    final Set<String> mergedDictionary = new HashSet<>();
+    long totalDictionarySize = 0L;
+
+    for (SpillingGrouper<KeyType> grouper : groupers) {
+      final List<String> dictionary = grouper.getDictionary();
+      totalDictionarySize += dictionary.stream().mapToLong(RowBasedKeySerde::estimateStringKeySize).sum();
+      if (totalDictionarySize > maxDictionarySize) {
+        return null;
+      }
+      mergedDictionary.addAll(dictionary);
+    }
+
+    return ImmutableList.copyOf(mergedDictionary);
+  }
+
+  /**
    * Build a combining tree for the input iterators which combine input entries asynchronously.  This method is called
    * when data are spilled and thus streaming combine is preferred to avoid too many disk accesses.
    *
@@ -329,7 +361,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
    *
    * @return an iterator of the root grouper of the combining tree
    */
-  private Iterator<Entry<KeyType>> parallelCombine(List<Iterator<Entry<KeyType>>> sortedIterators)
+  private Iterator<Entry<KeyType>> parallelCombine(
+      List<Iterator<Entry<KeyType>>> sortedIterators,
+      List<String> mergedDictionary
+  )
   {
     // CombineBuffer is initialized when this method is called
     final ResourceHolder<ByteBuffer> combineBufferHolder = combineBufferSupplier.get();
@@ -339,7 +374,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       combiningFactories[i] = aggregatorFactories[i].getCombiningFactory();
     }
     final int minimumRequiredBufferCapacity = StreamingMergeSortedGrouper.requiredBufferCapacity(
-        keySerdeFactory.factorize(),
+        mergingKeySerdeFactory.factorizeWithDictionary(mergedDictionary),
         combiningFactories
     );
     final Pair<Integer, Integer> degreeAndBufferNum = findCombineDegreeAndNumBuffers(
@@ -383,7 +418,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         bufferSupplier,
         combiningFactories,
         combineDegree,
-        combineFutures
+        combineFutures,
+        mergedDictionary
     );
 
     return new Iterator<Entry<KeyType>>()
@@ -492,7 +528,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       Supplier<ByteBuffer> bufferSupplier,
       AggregatorFactory[] combiningFactories,
       int combineDegree,
-      List<Future> combineFutures
+      List<Future> combineFutures,
+      List<String> dictionary
   )
   {
     final int numIterators = sortedIterators.size();
@@ -506,13 +543,14 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                 bufferSupplier,
                 combiningFactories,
                 combineDegree,
-                combineFutures
+                combineFutures,
+                dictionary
             )
         );
       }
-      return runCombiner(childIterators, bufferSupplier.get(), combiningFactories, combineFutures).iterator();
+      return runCombiner(childIterators, bufferSupplier.get(), combiningFactories, combineFutures, dictionary).iterator();
     } else {
-      return runCombiner(sortedIterators, bufferSupplier.get(), combiningFactories, combineFutures).iterator();
+      return runCombiner(sortedIterators, bufferSupplier.get(), combiningFactories, combineFutures, dictionary).iterator();
     }
   }
 
@@ -528,7 +566,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       List<Iterator<Entry<KeyType>>> iterators,
       ByteBuffer combineBuffer,
       AggregatorFactory[] combiningFactories,
-      List<Future> combineFutures
+      List<Future> combineFutures,
+      List<String> dictionary
   )
   {
     final Iterator<Entry<KeyType>> mergedIterator = Groupers.mergeIterators(iterators, keyObjComparator);
@@ -536,7 +575,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         new SettableColumnSelectorFactory(aggregatorFactories);
     final StreamingMergeSortedGrouper<KeyType> grouper = new StreamingMergeSortedGrouper<>(
         Suppliers.ofInstance(combineBuffer),
-        keySerdeFactory.factorize(),
+        mergingKeySerdeFactory.factorizeWithDictionary(dictionary),
         settableColumnSelectorFactory,
         combiningFactories
     );

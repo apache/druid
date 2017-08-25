@@ -19,11 +19,13 @@
 
 package io.druid.query.groupby.epinephelinae;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.List;
 
 public class IntKeySerde implements Grouper.KeySerde<Integer>
 {
@@ -64,6 +66,12 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
   public Class<Integer> keyClazz()
   {
     return Integer.class;
+  }
+
+  @Override
+  public List<String> getDictionary()
+  {
+    return ImmutableList.of();
   }
 
   @Override

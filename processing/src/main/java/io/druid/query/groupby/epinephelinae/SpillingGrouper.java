@@ -42,8 +42,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Grouper based around a single underlying {@link BufferHashGrouper}. Not thread-safe.
@@ -64,6 +66,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
 
   private final List<File> files = Lists.newArrayList();
+  private final List<File> dictionaryFiles = Lists.newArrayList();
   private final List<Closeable> closeables = Lists.newArrayList();
   private final boolean sortHasNonGroupingFields;
 
@@ -167,6 +170,30 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     deleteFiles();
   }
 
+  public List<String> getDictionary()
+  {
+    final Set<String> mergedDictionary = new HashSet<>();
+    mergedDictionary.addAll(keySerde.getDictionary());
+
+    for (File dictFile : dictionaryFiles) {
+      try {
+        final MappingIterator<String> dictIterator = spillMapper.readValues(
+            spillMapper.getFactory().createParser(new LZ4BlockInputStream(new FileInputStream(dictFile))),
+            spillMapper.getTypeFactory().constructType(String.class)
+        );
+
+        while (dictIterator.hasNext()) {
+          mergedDictionary.add(dictIterator.next());
+        }
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    return new ArrayList<>(mergedDictionary);
+  }
+
   public void setSpillingAllowed(final boolean spillingAllowed)
   {
     this.spillingAllowed = spillingAllowed;
@@ -214,24 +241,27 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
   private void spill() throws IOException
   {
-    final File outFile;
+    files.add(spill(grouper.iterator(true)));
+    dictionaryFiles.add(spill(keySerde.getDictionary().iterator()));
 
+    grouper.reset();
+  }
+
+  private <T> File spill(Iterator<T> iterator) throws IOException
+  {
     try (
         final LimitedTemporaryStorage.LimitedOutputStream out = temporaryStorage.createFile();
         final LZ4BlockOutputStream compressedOut = new LZ4BlockOutputStream(out);
         final JsonGenerator jsonGenerator = spillMapper.getFactory().createGenerator(compressedOut)
     ) {
-      outFile = out.getFile();
-      final Iterator<Entry<KeyType>> it = grouper.iterator(true);
-      while (it.hasNext()) {
+      while (iterator.hasNext()) {
         BaseQuery.checkInterrupted();
 
-        jsonGenerator.writeObject(it.next());
+        jsonGenerator.writeObject(iterator.next());
       }
-    }
 
-    files.add(outFile);
-    grouper.reset();
+      return out.getFile();
+    }
   }
 
   private MappingIterator<Entry<KeyType>> read(final File file, final Class<KeyType> keyClazz)
