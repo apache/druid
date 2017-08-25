@@ -116,10 +116,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 30)
 public class GroupByBenchmark
 {
-  @Param({"8"})
+  @Param({"4"})
   private int numSegments;
 
-  @Param({"8"})
+  @Param({"2", "4"})
   private int numProcessingThreads;
 
   @Param({"-1"})
@@ -128,13 +128,13 @@ public class GroupByBenchmark
   @Param({"100000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.nested"})
   private String schemaAndQuery;
 
-  @Param({"v2"})
+  @Param({"v1", "v2"})
   private String defaultStrategy;
 
-  @Param({"all"})
+  @Param({"all", "day"})
   private String queryGranularity;
 
   private static final Logger log = new Logger(GroupByBenchmark.class);
