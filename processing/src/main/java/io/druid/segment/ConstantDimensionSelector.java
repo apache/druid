@@ -110,11 +110,7 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   @Override
   public int lookupId(String name)
   {
-    if (value == null) {
-      return Strings.isNullOrEmpty(name) ? 0 : -1;
-    } else {
-      return value.equals(name) ? 0 : -1;
-    }
+    return value.equals(name) ? 0 : -1;
   }
 
   @Override

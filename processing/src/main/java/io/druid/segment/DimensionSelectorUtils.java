@@ -29,6 +29,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 
+import javax.annotation.Nullable;
 import java.util.BitSet;
 import java.util.Objects;
 
@@ -249,7 +250,7 @@ public final class DimensionSelectorUtils
     return valueIds;
   }
 
-  public static DimensionSelector constantSelector(final String value)
+  public static DimensionSelector constantSelector(@Nullable final String value)
   {
     if (Strings.isNullOrEmpty(value)) {
       return NullDimensionSelector.instance();
@@ -258,7 +259,10 @@ public final class DimensionSelectorUtils
     }
   }
 
-  public static DimensionSelector constantSelector(final String value, final ExtractionFn extractionFn)
+  public static DimensionSelector constantSelector(
+      @Nullable final String value,
+      @Nullable final ExtractionFn extractionFn
+  )
   {
     if (extractionFn == null) {
       return constantSelector(value);
