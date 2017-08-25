@@ -68,6 +68,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -104,10 +105,10 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
   private volatile ExecutorService executor;
 
-  // a queue of queryable server names for which worker threads in executor initiate the segment list call i.e.
-  // DruidServerHolder.updateSegmentsListAsync(..) which updates the segment list asynchronously and adds itself
-  // to this queue again for next update.
-  private final BlockingQueue<String> queue = new LinkedBlockingDeque<>();
+  // the work queue, all items in this are sequentially processed by main thread setup in start()
+  // used to call inventoryInitialized on all SegmentCallbacks and
+  // for keeping segment list for each queryable server uptodate.
+  private final BlockingQueue<Runnable> queue = new LinkedBlockingDeque<>();
 
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
@@ -161,10 +162,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
                 while (!Thread.interrupted() && lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
                   try {
-                    DruidServerHolder holder = servers.get(queue.take());
-                    if (holder != null) {
-                      holder.updateSegmentsListAsync();
-                    }
+                    queue.take().run();
                   }
                   catch (InterruptedException ex) {
                     log.info("main thread interrupted, served segments list is not synced anymore.");
@@ -184,17 +182,27 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         druidNodeDiscovery.registerListener(
             new DruidNodeDiscovery.Listener()
             {
+              private volatile boolean initialized = false;
 
               @Override
-              public void nodeAdded(DiscoveryDruidNode node)
+              public void nodesAdded(List<DiscoveryDruidNode> nodes)
               {
-                serverAddedOrUpdated(toDruidServer(node));
+                nodes.forEach(
+                    node -> serverAddedOrUpdated(toDruidServer(node))
+                );
+
+                if (!initialized) {
+                  initialized = true;
+                  queue.add(HttpServerInventoryView.this::serverInventoryInitialized);
+                }
               }
 
               @Override
-              public void nodeRemoved(DiscoveryDruidNode node)
+              public void nodesRemoved(List<DiscoveryDruidNode> nodes)
               {
-                serverRemoved(toDruidServer(node));
+                nodes.forEach(
+                    node -> serverRemoved(toDruidServer(node))
+                );
               }
 
               private DruidServer toDruidServer(DiscoveryDruidNode node)
@@ -572,7 +580,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                   log.error(ex, "error processing segment list response from server [%s]", druidServer.getName());
                 }
                 finally {
-                  queue.add(druidServer.getName());
+                  addNextSyncToWorkQueue(druidServer.getName());
                 }
               }
 
@@ -611,7 +619,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                   }
                 }
                 finally {
-                  queue.add(druidServer.getName());
+                  addNextSyncToWorkQueue(druidServer.getName());
                 }
               }
             },
@@ -621,7 +629,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         return future;
       }
       catch (Throwable th) {
-        queue.add(druidServer.getName());
+        addNextSyncToWorkQueue(druidServer.getName());
 
         String logMsg = StringUtils.nonStrictFormat(
             "Fatal error while fetching segment list from server [%s].", druidServer.getName()
@@ -644,6 +652,18 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         throw Throwables.propagate(th);
       }
+    }
+
+    private void addNextSyncToWorkQueue(final String serverId)
+    {
+      queue.add(
+          () -> {
+            DruidServerHolder holder = servers.get(serverId);
+            if (holder != null) {
+              holder.updateSegmentsListAsync();
+            }
+          }
+      );
     }
 
     private boolean hasUnstabilityTimeoutPassed()

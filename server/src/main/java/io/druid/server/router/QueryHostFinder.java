@@ -24,12 +24,12 @@ import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.query.Query;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -52,27 +52,27 @@ public class QueryHostFinder
 
   public <T> Server findServer(Query<T> query)
   {
-    final Pair<String, ServerDiscoverySelector> selected = hostSelector.select(query);
+    final Pair<String, Server> selected = hostSelector.select(query);
     return findServerInner(selected);
   }
 
   public Server findDefaultServer()
   {
-    final Pair<String, ServerDiscoverySelector> selected = hostSelector.getDefaultLookup();
+    final Pair<String, Server> selected = hostSelector.getDefaultLookup();
     return findServerInner(selected);
   }
 
   public Collection<String> getAllHosts()
   {
     return FluentIterable
-        .from((Collection<ServerDiscoverySelector>) hostSelector.getAllBrokers().values())
+        .from((Collection<List<Server>>) hostSelector.getAllBrokers().values())
         .transformAndConcat(
-            new Function<ServerDiscoverySelector, Iterable<Server>>()
+            new Function<List<Server>, Iterable<Server>>()
             {
               @Override
-              public Iterable<Server> apply(ServerDiscoverySelector input)
+              public Iterable<Server> apply(List<Server> input)
               {
-                return input.getAll();
+                return input;
               }
             }
         ).transform(new Function<Server, String>()
@@ -118,16 +118,15 @@ public class QueryHostFinder
     return server.getHost();
   }
 
-  private Server findServerInner(final Pair<String, ServerDiscoverySelector> selected)
+  private Server findServerInner(final Pair<String, Server> selected)
   {
     if (selected == null) {
       log.error("Danger, Will Robinson! Unable to find any brokers!");
     }
 
     final String serviceName = selected == null ? hostSelector.getDefaultServiceName() : selected.lhs;
-    final ServerDiscoverySelector selector = selected == null ? null : selected.rhs;
+    Server server = selected == null ? null : selected.rhs;
 
-    Server server = selector == null ? null : selector.pick();
     if (server == null) {
       log.error(
           "WTF?! No server found for serviceName[%s]. Using backup",
