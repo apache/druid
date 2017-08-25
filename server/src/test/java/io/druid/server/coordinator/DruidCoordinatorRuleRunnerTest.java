@@ -1439,9 +1439,7 @@ public class DruidCoordinatorRuleRunnerTest
 
   private void mockCoordinator()
   {
-    EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
-        createCoordinatorDynamicConfig()
-    ).anyTimes();
+    EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
     coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
@@ -1450,6 +1448,7 @@ public class DruidCoordinatorRuleRunnerTest
   private void mockEmptyPeon()
   {
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.newHashSet()).anyTimes();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
     EasyMock.replay(mockPeon);
