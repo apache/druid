@@ -45,15 +45,6 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
     this.value = value;
   }
 
-  public static ConstantDimensionSelector of(final String value)
-  {
-    if (Strings.isNullOrEmpty(value)) {
-      throw new IllegalArgumentException("Use NullDimensionSelector");
-    } else {
-      return new ConstantDimensionSelector(value);
-    }
-  }
-
   @Override
   public IndexedInts getRow()
   {
