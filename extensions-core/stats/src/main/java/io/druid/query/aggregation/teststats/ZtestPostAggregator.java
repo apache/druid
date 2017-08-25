@@ -162,6 +162,7 @@ public class ZtestPostAggregator implements PostAggregator
     }
   }
 
+  @Override
   public int hashCode()
   {
     int result = name != null ? name.hashCode() : 0;
