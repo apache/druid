@@ -148,7 +148,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.4.5</version>
+                <version>0.6.0</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>

@@ -17,32 +17,20 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.emitter;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.name.Named;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.NoopEmitter;
-import io.druid.guice.ManageLifecycle;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
 
 /**
  */
-public class NoopEmitterModule implements Module
+public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
 {
-  public static final String EMITTER_TYPE = "noop";
+  @JsonProperty
+  private Period readTimeout = new Period("PT5M");
 
-  @Override
-  public void configure(Binder binder)
+  public Period getReadTimeout()
   {
-  }
-
-  @Provides
-  @ManageLifecycle
-  @Named(EMITTER_TYPE)
-  public Emitter makeEmitter()
-  {
-    return new NoopEmitter();
+    return readTimeout;
   }
 }
