@@ -69,6 +69,12 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new DoubleMinAggregateCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new FloatMinAggregatorFactory(name, name, null, macroTable);

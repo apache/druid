@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -126,7 +127,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public DateTime getMinTime()
   {
     try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
-      return new DateTime(column.getLongSingleValueRow(0));
+      return DateTimes.utc(column.getLongSingleValueRow(0));
     }
   }
 
@@ -134,7 +135,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public DateTime getMaxTime()
   {
     try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
-      return new DateTime(column.getLongSingleValueRow(column.length() - 1));
+      return DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
     }
   }
 
@@ -206,12 +207,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     Interval actualInterval = interval;
 
-    long minDataTimestamp = getMinTime().getMillis();
-    long maxDataTimestamp = getMaxTime().getMillis();
-    final Interval dataInterval = new Interval(
-        minDataTimestamp,
-        gran.bucketEnd(getMaxTime()).getMillis()
-    );
+    DateTime minTime = getMinTime();
+    long minDataTimestamp = minTime.getMillis();
+    DateTime maxTime = getMaxTime();
+    long maxDataTimestamp = maxTime.getMillis();
+    final Interval dataInterval = new Interval(minTime, gran.bucketEnd(maxTime));
 
     if (!actualInterval.overlaps(dataInterval)) {
       return Sequences.empty();
@@ -966,6 +966,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return timeInRange(timestamps.getLongSingleValueRow(baseOffset.getOffset()));
     }
 
+    @Override
+    public void reset()
+    {
+      baseOffset.reset();
+    }
+
     protected abstract boolean timeInRange(long current);
 
     @Override
@@ -1051,56 +1057,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public Offset clone()
     {
       return new DescendingTimestampCheckingOffset(baseOffset.clone(), timestamps, timeLimit, allWithinThreshold);
-    }
-  }
-
-  public static class NoFilterOffset extends Offset
-  {
-    private final int rowCount;
-    private final boolean descending;
-    private int currentOffset;
-
-    NoFilterOffset(int currentOffset, int rowCount, boolean descending)
-    {
-      this.currentOffset = currentOffset;
-      this.rowCount = rowCount;
-      this.descending = descending;
-    }
-
-    @Override
-    public void increment()
-    {
-      currentOffset++;
-    }
-
-    @Override
-    public boolean withinBounds()
-    {
-      return currentOffset < rowCount;
-    }
-
-    @Override
-    public Offset clone()
-    {
-      return new NoFilterOffset(currentOffset, rowCount, descending);
-    }
-
-    @Override
-    public int getOffset()
-    {
-      return descending ? rowCount - currentOffset - 1 : currentOffset;
-    }
-
-    @Override
-    public String toString()
-    {
-      return currentOffset + "/" + rowCount + (descending ? "(DSC)" : "");
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("descending", descending);
     }
   }
 

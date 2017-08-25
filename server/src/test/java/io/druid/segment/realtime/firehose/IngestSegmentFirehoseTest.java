@@ -31,6 +31,8 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -45,8 +47,6 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -127,7 +127,7 @@ public class IngestSegmentFirehoseTest
         final InputRow row = firehose.nextRow();
         Assert.assertNotNull(row);
         if (count == 0) {
-          Assert.assertEquals(new DateTime("2014-10-22T00Z"), row.getTimestamp());
+          Assert.assertEquals(DateTimes.of("2014-10-22T00Z"), row.getTimestamp());
           Assert.assertEquals("host1", row.getRaw("host"));
           Assert.assertEquals("0,1", row.getRaw("spatial"));
           Assert.assertEquals(10L, row.getRaw("visited_sum"));
@@ -148,14 +148,14 @@ public class IngestSegmentFirehoseTest
 
       // Do a spatial filter
       final IngestSegmentFirehose firehose2 = new IngestSegmentFirehose(
-          ImmutableList.of(new WindowedStorageAdapter(queryable, new Interval("2000/3000"))),
+          ImmutableList.of(new WindowedStorageAdapter(queryable, Intervals.of("2000/3000"))),
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
           new SpatialDimFilter("spatial", new RadiusBound(new float[]{1, 0}, 0.1f))
       );
       final InputRow row = firehose2.nextRow();
       Assert.assertFalse(firehose2.hasMore());
-      Assert.assertEquals(new DateTime("2014-10-22T00Z"), row.getTimestamp());
+      Assert.assertEquals(DateTimes.of("2014-10-22T00Z"), row.getTimestamp());
       Assert.assertEquals("host2", row.getRaw("host"));
       Assert.assertEquals("1,0", row.getRaw("spatial"));
       Assert.assertEquals(40L, row.getRaw("visited_sum"));

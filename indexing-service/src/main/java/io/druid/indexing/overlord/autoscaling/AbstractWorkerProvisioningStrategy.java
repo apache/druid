@@ -22,8 +22,8 @@ package io.druid.indexing.overlord.autoscaling;
 import com.google.common.base.Supplier;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.WorkerTaskRunner;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.PeriodGranularity;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -91,7 +91,7 @@ public abstract class AbstractWorkerProvisioningStrategy implements Provisioning
           provisioningSchedulerConfig.getOriginTime(),
           null
       );
-      final long startTime = granularity.bucketEnd(new DateTime()).getMillis();
+      final long startTime = granularity.bucketEnd(DateTimes.nowUtc()).getMillis();
 
       exec.scheduleAtFixedRate(
           new Runnable()

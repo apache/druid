@@ -21,9 +21,9 @@ package io.druid.server.http;
 
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.client.DruidDataSource;
 import io.druid.client.InventoryView;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.security.AuthConfig;
@@ -99,7 +99,7 @@ public class IntervalsResource
       @Context final HttpServletRequest req
   )
   {
-    final Interval theInterval = new Interval(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
     final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
                                              InventoryViewUtils.getSecuredDataSources(
                                                  serverInventoryView,

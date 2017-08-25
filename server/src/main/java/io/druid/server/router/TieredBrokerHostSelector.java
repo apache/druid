@@ -27,6 +27,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.client.selector.HostSelector;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -146,7 +147,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
       List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getNames(), null));
 
       // find the rule that can apply to the entire set of intervals
-      DateTime now = new DateTime();
+      DateTime now = DateTimes.nowUtc();
       int lastRulePosition = -1;
       LoadRule baseRule = null;
 

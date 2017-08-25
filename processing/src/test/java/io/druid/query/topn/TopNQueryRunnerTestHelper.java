@@ -22,8 +22,8 @@ package io.druid.query.topn;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.Result;
-import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -43,6 +43,6 @@ public class TopNQueryRunnerTestHelper
       }
       expected.add(theVals);
     }
-    return new Result<TopNResultValue>(new DateTime(date), new TopNResultValue(expected));
+    return new Result<TopNResultValue>(DateTimes.of(date), new TopNResultValue(expected));
   }
 }

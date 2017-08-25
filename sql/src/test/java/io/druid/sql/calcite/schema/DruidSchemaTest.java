@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -45,7 +46,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -116,7 +116,7 @@ public class DruidSchemaTest
     walker = new SpecificSegmentsQuerySegmentWalker(CalciteTests.queryRunnerFactoryConglomerate()).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(new Interval("2000/P1Y"))
+                   .interval(Intervals.of("2000/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
@@ -124,7 +124,7 @@ public class DruidSchemaTest
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(new Interval("2001/P1Y"))
+                   .interval(Intervals.of("2001/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
                    .build(),

@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -189,6 +190,12 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
       return rhs;
     }
     return ((HyperLogLogCollector) lhs).fold((HyperLogLogCollector) rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new HyperLogLogCollectorAggregateCombiner();
   }
 
   @Override

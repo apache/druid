@@ -58,6 +58,28 @@ public class Histogram
     }
   }
 
+  public Histogram(Histogram other)
+  {
+    this.breaks = other.breaks;
+    this.bins = other.bins.clone();
+    this.min = other.min;
+    this.max = other.max;
+    this.count = other.count;
+  }
+
+  public void copyFrom(Histogram other)
+  {
+    this.breaks = other.breaks;
+    if (this.bins.length == other.bins.length) {
+      System.arraycopy(other.bins, 0, this.bins, 0, this.bins.length);
+    } else {
+      this.bins = other.bins.clone();
+    }
+    this.min = other.min;
+    this.max = other.max;
+    this.count = other.count;
+  }
+
   public void offer(float d)
   {
     if (d > max) {

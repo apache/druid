@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
@@ -32,7 +33,7 @@ public class NoopRejectionPolicyFactory implements RejectionPolicyFactory
       @Override
       public DateTime getCurrMaxTime()
       {
-        return new DateTime(0);
+        return DateTimes.EPOCH;
       }
 
       @Override

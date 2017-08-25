@@ -22,13 +22,15 @@ package io.druid.indexer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -40,8 +42,6 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -80,7 +80,7 @@ public class IndexGeneratorCombinerTest
                     new HyperUniquesAggregatorFactory("unique_hosts", "host")
                 },
                 new UniformGranularitySpec(
-                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Interval.parse("2010/2011"))
+                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2010/2011"))
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
@@ -136,7 +136,7 @@ public class IndexGeneratorCombinerTest
   {
     long timestamp = System.currentTimeMillis();
 
-    Bucket bucket = new Bucket(0, new DateTime(timestamp), 0);
+    Bucket bucket = new Bucket(0, DateTimes.utc(timestamp), 0);
     SortableBytes keySortableBytes = new SortableBytes(
         bucket.toGroupKey(),
         new byte[0]
@@ -195,7 +195,7 @@ public class IndexGeneratorCombinerTest
   {
     long timestamp = System.currentTimeMillis();
 
-    Bucket bucket = new Bucket(0, new DateTime(timestamp), 0);
+    Bucket bucket = new Bucket(0, DateTimes.utc(timestamp), 0);
     SortableBytes keySortableBytes = new SortableBytes(
         bucket.toGroupKey(),
         new byte[0]

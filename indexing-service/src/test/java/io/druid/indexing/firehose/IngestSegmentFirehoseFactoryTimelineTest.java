@@ -31,7 +31,6 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -49,6 +48,9 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.NoopDimFilter;
 import io.druid.segment.IndexIO;
@@ -66,7 +68,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -172,7 +173,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
 
     return new TestCase(
         tmpDir,
-        new Interval(intervalString),
+        Intervals.of(intervalString),
         expectedCount,
         expectedSum,
         segments
@@ -186,16 +187,16 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       InputRow... rows
   )
   {
-    return new DataSegmentMaker(new Interval(intervalString), version, partitionNum, Arrays.asList(rows));
+    return new DataSegmentMaker(Intervals.of(intervalString), version, partitionNum, Arrays.asList(rows));
   }
 
   private static InputRow IR(String timeString, long metricValue)
   {
     return new MapBasedInputRow(
-        new DateTime(timeString).getMillis(),
+        DateTimes.of(timeString).getMillis(),
         Arrays.asList(DIMENSIONS),
         ImmutableMap.<String, Object>of(
-            TIME_COLUMN, new DateTime(timeString).toString(),
+            TIME_COLUMN, DateTimes.of(timeString).toString(),
             DIMENSIONS[0], "bar",
             METRICS[0], metricValue
         )
@@ -333,7 +334,11 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           INDEX_IO,
           null,
           null,
-          INDEX_MERGER_V9
+          INDEX_MERGER_V9,
+          null,
+          null,
+          null,
+          null
       );
       final Injector injector = Guice.createInjector(
           new Module()

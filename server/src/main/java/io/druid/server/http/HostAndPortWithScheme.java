@@ -21,6 +21,7 @@ package io.druid.server.http;
 
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
+import io.druid.java.util.common.StringUtils;
 
 public class HostAndPortWithScheme
 {
@@ -56,8 +57,9 @@ public class HostAndPortWithScheme
 
   private static String checkAndGetScheme(String scheme)
   {
-    Preconditions.checkState(scheme.toLowerCase().equals("http") || scheme.toLowerCase().equals("https"));
-    return scheme.toLowerCase();
+    String schemeLowerCase = StringUtils.toLowerCase(scheme);
+    Preconditions.checkState(schemeLowerCase.equals("http") || schemeLowerCase.equals("https"));
+    return schemeLowerCase;
   }
 
   public String getScheme()
@@ -88,7 +90,7 @@ public class HostAndPortWithScheme
   @Override
   public String toString()
   {
-    return String.format("%s:%s", scheme, hostAndPort.toString());
+    return StringUtils.format("%s:%s", scheme, hostAndPort.toString());
   }
 
   @Override

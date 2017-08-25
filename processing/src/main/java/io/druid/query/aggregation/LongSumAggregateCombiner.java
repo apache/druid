@@ -17,18 +17,29 @@
  * under the License.
  */
 
-package io.druid.indexer;
+package io.druid.query.aggregation;
 
-import com.google.common.base.Function;
-import org.joda.time.Interval;
+import io.druid.segment.ColumnValueSelector;
 
-/**
-*/
-class StringIntervalFunction implements Function<String, Interval>
+public final class LongSumAggregateCombiner extends LongAggregateCombiner
 {
+  private long sum;
+
   @Override
-  public Interval apply(String input)
+  public void reset(ColumnValueSelector selector)
   {
-    return new Interval(input);
+    sum = selector.getLong();
+  }
+
+  @Override
+  public void fold(ColumnValueSelector selector)
+  {
+    sum += selector.getLong();
+  }
+
+  @Override
+  public long getLong()
+  {
+    return sum;
   }
 }

@@ -24,6 +24,7 @@ import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 /**
  */
@@ -79,6 +80,30 @@ public class ServerConfig
   public boolean isTls()
   {
     return tls;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ServerConfig that = (ServerConfig) o;
+    return numThreads == that.numThreads &&
+           defaultQueryTimeout == that.defaultQueryTimeout &&
+           maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           plaintext == that.plaintext &&
+           tls == that.tls &&
+           Objects.equals(maxIdleTime, that.maxIdleTime);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(numThreads, maxIdleTime, defaultQueryTimeout, maxScatterGatherBytes, plaintext, tls);
   }
 
   @Override

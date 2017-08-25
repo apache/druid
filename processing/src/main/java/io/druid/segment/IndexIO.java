@@ -39,6 +39,7 @@ import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -335,7 +336,7 @@ public class IndexIO
           GenericIndexed.STRING_STRATEGY,
           smooshedFiles
       );
-      final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
+      final Interval dataInterval = Intervals.of(serializerUtils.readString(indexBuffer));
       final BitmapSerdeFactory bitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
 
       CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
@@ -558,7 +559,7 @@ public class IndexIO
           GenericIndexed.STRING_STRATEGY,
           smooshedFiles
       );
-      final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
+      final Interval dataInterval = Intervals.utc(indexBuffer.getLong(), indexBuffer.getLong());
       final BitmapSerdeFactory segmentBitmapSerdeFactory;
 
       /**

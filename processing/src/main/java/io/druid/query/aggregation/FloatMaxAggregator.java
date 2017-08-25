@@ -21,14 +21,10 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.FloatColumnSelector;
 
-import java.util.Comparator;
-
 /**
  */
 public class FloatMaxAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = FloatSumAggregator.COMPARATOR;
-
   static double combineValues(Object lhs, Object rhs)
   {
     return Math.max(((Number) lhs).floatValue(), ((Number) rhs).floatValue());

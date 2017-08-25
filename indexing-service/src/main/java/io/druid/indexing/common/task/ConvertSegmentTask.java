@@ -27,12 +27,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.logger.Logger;
@@ -40,7 +40,6 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;
@@ -120,7 +119,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(interval, "interval");
-    return joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), new DateTime());
+    return joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), DateTimes.nowUtc());
   }
 
   @JsonCreator

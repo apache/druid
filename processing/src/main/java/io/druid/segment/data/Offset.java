@@ -25,6 +25,9 @@ import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 /**
  * The "mutable" version of a ReadableOffset.  Introduces "increment()" and "withinBounds()" methods, which are
  * very similar to "next()" and "hasNext()" on the Iterator interface except increment() does not return a value.
+ * 
+ * This class is not thread-safe, all it's methods, including {@link #reset()} and {@link #clone()}, must be called
+ * from a single thread.
  *
  * Annotated with {@link SubclassesMustBePublic} because Offset occurrences are replaced with a subclass in {@link
  * io.druid.query.topn.Historical1SimpleDoubleAggPooledTopNScannerPrototype} and {@link
@@ -39,6 +42,11 @@ public abstract class Offset implements ReadableOffset, Cloneable
 
   @CalledFromHotLoop
   public abstract boolean withinBounds();
+
+  /**
+   * Resets the Offset to the position it was created or cloned with.
+   */
+  public abstract void reset();
 
   @Override
   public Offset clone()

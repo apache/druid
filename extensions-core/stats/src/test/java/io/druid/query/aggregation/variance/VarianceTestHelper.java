@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -99,7 +100,7 @@ public class VarianceTestHelper extends QueryRunnerTestHelper
       for (int i = 0; i < values.length; i++) {
         theVals.put(names[i], values[i]);
       }
-      DateTime ts = new DateTime(timestamp);
+      DateTime ts = DateTimes.of(timestamp);
       return new MapBasedRow(ts, theVals);
     }
   }

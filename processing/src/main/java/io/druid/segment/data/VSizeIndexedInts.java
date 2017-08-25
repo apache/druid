@@ -211,12 +211,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   }
 
   @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
-  }
-
-  @Override
   public void close() throws IOException
   {
   }
