@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -82,6 +83,9 @@ public class LoadQueuePeon
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR
   );
+  private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
+      DruidCoordinator.SEGMENT_COMPARATOR
+  );
 
   private final Object lock = new Object();
 
@@ -115,6 +119,12 @@ public class LoadQueuePeon
   public Set<DataSegment> getSegmentsToDrop()
   {
     return segmentsToDrop.keySet();
+  }
+
+  @JsonProperty
+  public Set<DataSegment> getSegmentsMarkedToDrop()
+  {
+    return segmentsMarkedToDrop;
   }
 
   public long getLoadQueueSize()
@@ -189,6 +199,16 @@ public class LoadQueuePeon
 
     log.info("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
     segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
+  }
+
+  public void markSegmentToDrop(DataSegment dataSegment)
+  {
+    segmentsMarkedToDrop.add(dataSegment);
+  }
+
+  public void unmarkSegmentToDrop(DataSegment dataSegment)
+  {
+    segmentsMarkedToDrop.remove(dataSegment);
   }
 
   private void processSegmentChangeRequest()

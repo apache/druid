@@ -388,7 +388,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                 public Cursor apply(final Interval inputInterval)
                 {
                   final long timeStart = Math.max(interval.getStartMillis(), inputInterval.getStartMillis());
-                  final long timeEnd = Math.min(interval.getEndMillis(), gran.increment(inputInterval.getStart()).getMillis());
+                  final long timeEnd = Math.min(
+                      interval.getEndMillis(),
+                      gran.increment(inputInterval.getStart()).getMillis()
+                  );
 
                   if (descending) {
                     for (; baseOffset.withinBounds(); baseOffset.increment()) {

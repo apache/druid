@@ -102,7 +102,6 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       return;
     }
 
-
     final List<ServerHolder> serverHolderList = Lists.newArrayList(servers);
 
     if (serverHolderList.size() <= 1) {
