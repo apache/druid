@@ -131,29 +131,36 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (selector == null) {
-        // Column doesn't exist
-        return;
-      }
-
-      if (selector.nameLookupPossibleInAdvance()
-          && selector.getValueCardinality() == 1
-          && selector.lookupName(0) == null) {
-        // Column exists, all values are null
-        return;
-      }
-
-      final IndexedInts vals = selector.getRow();
-      for (int i = 0; i < vals.size(); ++i) {
-        final String dimVal = selector.lookupName(vals.get(i));
-        if (searchQuerySpec.accept(dimVal)) {
-          set.addTo(new SearchHit(outputName, Strings.nullToEmpty(dimVal)), 1);
-          if (set.size() >= limit) {
-            return;
+      if (!isNullSelector(selector)) {
+        final IndexedInts vals = selector.getRow();
+        for (int i = 0; i < vals.size(); ++i) {
+          final String dimVal = selector.lookupName(vals.get(i));
+          if (searchQuerySpec.accept(dimVal)) {
+            set.addTo(new SearchHit(outputName, Strings.nullToEmpty(dimVal)), 1);
+            if (set.size() >= limit) {
+              return;
+            }
           }
         }
       }
     }
+  }
+
+  private static boolean isNullSelector(final DimensionSelector selector)
+  {
+    if (selector == null) {
+      // Column doesn't exist
+      return true;
+    }
+
+    if (selector.nameLookupPossibleInAdvance()
+        && selector.getValueCardinality() == 1
+        && selector.lookupName(0) == null) {
+      // Column exists, all values are null
+      return true;
+    }
+
+    return false;
   }
 
   public static class LongSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<LongColumnSelector>
