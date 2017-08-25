@@ -47,12 +47,6 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   // thread from being blocked if its iterator is not consumed due to some failure.
   private static final long DEFAULT_TIMEOUT_MS = 5000L;
 
-  private static final AggregateResult DICTIONARY_FULL = AggregateResult.failure(
-      "Not enough dictionary space to execute this query. Try increasing "
-      + "druid.query.groupBy.maxMergingDictionarySize or use single-threaded combine by setting "
-      + "druid.query.groupBy.forceSingleThreadedCombine to true."
-  );
-
   private final Supplier<ByteBuffer> bufferSupplier;
   private final KeySerde<KeyType> keySerde;
   private final BufferAggregator[] aggregators;
