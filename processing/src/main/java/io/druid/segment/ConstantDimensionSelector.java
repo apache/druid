@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
