@@ -131,7 +131,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (!isNullSelector(selector)) {
+      if (selector != null && !isNilSelector(selector)) {
         final IndexedInts vals = selector.getRow();
         for (int i = 0; i < vals.size(); ++i) {
           final String dimVal = selector.lookupName(vals.get(i));
@@ -146,13 +146,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
   }
 
-  private static boolean isNullSelector(final DimensionSelector selector)
+  private static boolean isNilSelector(final DimensionSelector selector)
   {
-    if (selector == null) {
-      // Column doesn't exist
-      return true;
-    }
-
     return selector.nameLookupPossibleInAdvance()
            && selector.getValueCardinality() == 1
            && selector.lookupName(0) == null;
