@@ -211,14 +211,16 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   {
     return fields.stream()
                  .map(
-                     input -> new CardinalityAggregatorFactory(
-                         input.getOutputName(),
-                         null,
-                         Collections.singletonList(input),
-                         byRow,
-                         round
-                     )
-                 ).collect(Collectors.toList());
+                     field ->
+                         new CardinalityAggregatorFactory(
+                             field.getOutputName(),
+                             null,
+                             Collections.singletonList(field),
+                             byRow,
+                             round
+                         )
+                 )
+                 .collect(Collectors.toList());
   }
 
   @Override
