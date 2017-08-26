@@ -289,12 +289,6 @@ public class GroupByQueryRunnerTest
       }
 
       @Override
-      public boolean isForceSingleThreadedCombine()
-      {
-        return true;
-      }
-
-      @Override
       public String toString()
       {
         return "v2SmallDictionary";

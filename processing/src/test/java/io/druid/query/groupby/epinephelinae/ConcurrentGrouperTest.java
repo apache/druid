@@ -276,8 +276,7 @@ public class ConcurrentGrouperTest
         MoreExecutors.listeningDecorator(service),
         0,
         false,
-        0,
-        false
+        0
     );
     grouper.init();
 

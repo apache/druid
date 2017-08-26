@@ -85,6 +85,9 @@ import java.util.function.Function;
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
 {
+  // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
+  private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
+
   private static final int SINGLE_THREAD_CONCURRENCY_HINT = -1;
   private static final int UNKNOWN_THREAD_PRIORITY = -1;
   private static final long UNKNOWN_TIMEOUT = -1L;
@@ -196,11 +199,11 @@ public class RowBasedGrouperHelper
           sortHasNonGroupingFields
       );
     } else {
-      final Grouper.KeySerdeFactory<RowBasedKey> mergingKeySerdeFactory = new RowBasedKeySerdeFactory(
+      final Grouper.KeySerdeFactory<RowBasedKey> combineKeySerdeFactory = new RowBasedKeySerdeFactory(
           includeTimestamp,
           query.getContextSortByDimsFirst(),
           query.getDimensions(),
-          querySpecificConfig.getMaxMergingDictionarySize(), // use entire dictionary space for one key serde
+          querySpecificConfig.getMaxMergingDictionarySize(), // use entire dictionary space for combining key serde
           valueTypes,
           aggregatorFactories,
           limitSpec
@@ -210,7 +213,7 @@ public class RowBasedGrouperHelper
           bufferSupplier,
           combineBufferSupplier,
           keySerdeFactory,
-          mergingKeySerdeFactory,
+          combineKeySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,
           querySpecificConfig.getBufferGrouperMaxSize(),
@@ -224,8 +227,7 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt,
-          config.isForceSingleThreadedCombine()
+          queryTimeoutAt
       );
     }
 
@@ -929,10 +931,13 @@ public class RowBasedGrouperHelper
     }
   }
 
-  static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
+  static long estimateStringKeySize(String key)
   {
-    // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
-    private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
+    return (long) key.length() * Chars.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
+  }
+
+  private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
+  {
     private static final int DICTIONARY_INITIAL_CAPACITY = 10000;
     private static final int UNKNOWN_DICTIONARY_KEY = -1;
 
@@ -987,7 +992,9 @@ public class RowBasedGrouperHelper
       this.keyBuffer = ByteBuffer.allocate(keySize);
 
       if (!enableRuntimeDictionaryGeneration) {
-        final long initialDictionarySize = dictionary.stream().mapToLong(RowBasedKeySerde::estimateStringKeySize).sum();
+        final long initialDictionarySize = dictionary.stream()
+                                                     .mapToLong(RowBasedGrouperHelper::estimateStringKeySize)
+                                                     .sum();
         Preconditions.checkState(
             maxDictionarySize >= initialDictionarySize,
             "Dictionary size[%s] exceeds threshold[%s]",
@@ -1405,11 +1412,6 @@ public class RowBasedGrouperHelper
       }
     }
 
-    static long estimateStringKeySize(String key)
-    {
-      return (long) key.length() * Chars.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
-    }
-
     private static boolean isPrimitiveComparable(boolean pushLimitDown, @Nullable StringComparator stringComparator)
     {
       return !pushLimitDown || stringComparator == null || stringComparator == StringComparators.NUMERIC;
@@ -1694,7 +1696,7 @@ public class RowBasedGrouperHelper
     }
   }
 
-  static int compareDimsInBuffersForNullFudgeTimestamp(
+  private static int compareDimsInBuffersForNullFudgeTimestamp(
       List<RowBasedKeySerdeHelper> serdeHelpers,
       int dimCount,
       ByteBuffer lhsBuffer,
@@ -1718,7 +1720,7 @@ public class RowBasedGrouperHelper
     return 0;
   }
 
-  static int compareDimsInBuffersForNullFudgeTimestampForPushDown(
+  private static int compareDimsInBuffersForNullFudgeTimestampForPushDown(
       List<RowBasedKeySerdeHelper> serdeHelpers,
       List<Boolean> needsReverses,
       int dimCount,

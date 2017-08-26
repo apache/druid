@@ -76,9 +76,6 @@ public class GroupByQueryConfig
   @JsonProperty
   private boolean forceHashAggregation = false;
 
-  @JsonProperty
-  private boolean forceSingleThreadedCombine = false;
-
   public String getDefaultStrategy()
   {
     return defaultStrategy;
@@ -149,11 +146,6 @@ public class GroupByQueryConfig
     return forceHashAggregation;
   }
 
-  public boolean isForceSingleThreadedCombine()
-  {
-    return forceSingleThreadedCombine;
-  }
-  
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
@@ -189,10 +181,6 @@ public class GroupByQueryConfig
     );
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.forceHashAggregation = query.getContextBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
-    newConfig.forceSingleThreadedCombine = query.getContextBoolean(
-        CTX_KEY_FORCE_SINGLE_THREADED_COMBINE,
-        isForceSingleThreadedCombine()
-    );
     return newConfig;
   }
 
@@ -211,7 +199,6 @@ public class GroupByQueryConfig
            ", maxOnDiskStorage=" + maxOnDiskStorage +
            ", forcePushDownLimit=" + forcePushDownLimit +
            ", forceHashAggregation=" + forceHashAggregation +
-           ", forceSingleThreadedCombine=" + forceSingleThreadedCombine +
            '}';
   }
 }
