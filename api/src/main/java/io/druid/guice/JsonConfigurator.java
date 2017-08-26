@@ -180,10 +180,10 @@ public class JsonConfigurator
       return;
     }
     if (dotIndex == 0) {
-      throw new ProvisionException(String.format("Double dot in property: %s", originalProperty));
+      throw new ProvisionException(StringUtils.format("Double dot in property: %s", originalProperty));
     }
     if (dotIndex == property.length() - 1) {
-      throw new ProvisionException(String.format("Dot at the end of property: %s", originalProperty));
+      throw new ProvisionException(StringUtils.format("Dot at the end of property: %s", originalProperty));
     }
     String nestedKey = property.substring(0, dotIndex);
     Object nested = targetMap.computeIfAbsent(nestedKey, k -> new HashMap<String, Object>());
