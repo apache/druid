@@ -174,12 +174,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Map<String, DimensionHandler> getDimensionHandlers()
-  {
-    return index.getDimensionHandlers();
-  }
-
-  @Override
   public String getColumnTypeName(String columnName)
   {
     final Column column = index.getColumn(columnName);

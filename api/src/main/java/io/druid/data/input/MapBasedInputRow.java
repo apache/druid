@@ -19,6 +19,7 @@
 
 package io.druid.data.input;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
@@ -27,6 +28,7 @@ import java.util.Map;
 
 /**
  */
+@PublicApi
 public class MapBasedInputRow extends MapBasedRow implements InputRow
 {
   private final List<String> dimensions;

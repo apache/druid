@@ -78,6 +78,9 @@ import java.util.List;
  * dimension or metric is useful and not very expensive to process and store then emit, skip (see above Goals, 1.)
  * otherwise.
  *
+ * <p>This interface can be extended, but is not marked as an {@code ExtensionPoint}, because it may change in breaking
+ * ways even in minor releases.
+ *
  * <p>If implementors of custom QueryMetrics don't want to fix builds on every Druid release (e. g. if they want to add
  * a single dimension to emitted events and don't want to alter other dimensions and emitted metrics), they could
  * inherit their custom QueryMetrics from {@link DefaultQueryMetrics} or query-specific default implementation class,

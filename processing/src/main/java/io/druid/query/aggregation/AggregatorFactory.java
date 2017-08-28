@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
@@ -35,6 +36,7 @@ import java.util.Map;
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  */
+@ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
 {
   private static final Logger log = new Logger(AggregatorFactory.class);

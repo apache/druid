@@ -35,7 +35,6 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
@@ -64,7 +63,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
-import java.util.Map;
 
 /**
  */
@@ -171,12 +169,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     return index.getCapabilities(column);
-  }
-
-  @Override
-  public Map<String, DimensionHandler> getDimensionHandlers()
-  {
-    return index.getDimensionHandlers();
   }
 
   @Override

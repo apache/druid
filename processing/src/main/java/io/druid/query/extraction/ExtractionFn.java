@@ -21,6 +21,7 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
 
@@ -28,6 +29,7 @@ import javax.annotation.Nullable;
 
 /**
  */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "time", value = TimeDimExtractionFn.class),

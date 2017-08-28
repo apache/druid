@@ -19,10 +19,13 @@
 
 package io.druid.tasklogs;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import java.io.IOException;
 
 /**
  */
+@ExtensionPoint
 public interface TaskLogKiller
 {
   void killAll() throws IOException;
