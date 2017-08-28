@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.ByteSource;
 import com.google.common.primitives.Ints;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
