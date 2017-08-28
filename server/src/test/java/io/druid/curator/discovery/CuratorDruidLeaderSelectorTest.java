@@ -82,6 +82,13 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
         }
     );
 
+    while (!"h1:8080".equals(currLeader.get())) {
+      logger.info("current leader = [%s]", currLeader.get());
+      Thread.sleep(100);
+    }
+
+    Assert.assertTrue(leaderSelector1.localTerm() >= 1);
+
     CuratorDruidLeaderSelector leaderSelector2 = new CuratorDruidLeaderSelector(
         curator,
         new DruidNode("s2", "h2", 8080, null, new ServerConfig()),
@@ -106,6 +113,15 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
         }
     );
 
+    while (!"h2:8080".equals(currLeader.get())) {
+      logger.info("current leader = [%s]", currLeader.get());
+      Thread.sleep(100);
+    }
+
+    Assert.assertTrue(leaderSelector2.isLeader());
+    Assert.assertEquals("h2:8080", leaderSelector1.getCurrentLeader());
+    Assert.assertEquals(1, leaderSelector2.localTerm());
+
     CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(
         curator,
         new DruidNode("s3", "h3", 8080, null, new ServerConfig()),
@@ -129,26 +145,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
         }
     );
 
-    leaderSelector1.start();
-    while (!"h1:8080".equals(currLeader.get())) {
-      logger.info("current leader = [%s]", currLeader.get());
-      Thread.sleep(100);
-    }
-
-    Assert.assertTrue(leaderSelector1.localTerm() >= 1);
-
-    leaderSelector2.start();
-    while (!"h2:8080".equals(currLeader.get())) {
-      logger.info("current leader = [%s]", currLeader.get());
-      Thread.sleep(100);
-    }
-
-    Assert.assertTrue(leaderSelector2.isLeader());
-    Assert.assertEquals("h2:8080", leaderSelector1.getCurrentLeader());
-    Assert.assertEquals(1, leaderSelector2.localTerm());
-
-    leaderSelector3.start();
-    leaderSelector2.stop();
+    leaderSelector2.unregisterListener();
     while (!"h3:8080".equals(currLeader.get())) {
       logger.info("current leader = [%s]", currLeader.get());
       Thread.sleep(100);

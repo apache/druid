@@ -50,6 +50,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public class TaskMaster
 {
   private final DruidLeaderSelector overlordLeaderSelector;
+  private final DruidLeaderSelector.Listener leadershipListener;
+
   private final ReentrantLock giant = new ReentrantLock(true);
   private final TaskActionClientFactory taskActionClientFactory;
   private final SupervisorManager supervisorManager;
@@ -85,84 +87,82 @@ public class TaskMaster
     final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
                            selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
 
-    this.overlordLeaderSelector.registerListener(
-        new DruidLeaderSelector.Listener()
-        {
-          @Override
-          public void becomeLeader()
-          {
-            giant.lock();
+    this.leadershipListener = new DruidLeaderSelector.Listener()
+    {
+      @Override
+      public void becomeLeader()
+      {
+        giant.lock();
 
-            // I AM THE MASTER OF THE UNIVERSE.
-            log.info("By the power of Grayskull, I have the power!");
+        // I AM THE MASTER OF THE UNIVERSE.
+        log.info("By the power of Grayskull, I have the power!");
 
-            try {
-              taskLockbox.syncFromStorage();
-              taskRunner = runnerFactory.build();
-              taskQueue = new TaskQueue(
-                  taskQueueConfig,
-                  taskStorage,
-                  taskRunner,
-                  taskActionClientFactory,
-                  taskLockbox,
-                  emitter
-              );
+        try {
+          taskLockbox.syncFromStorage();
+          taskRunner = runnerFactory.build();
+          taskQueue = new TaskQueue(
+              taskQueueConfig,
+              taskStorage,
+              taskRunner,
+              taskActionClientFactory,
+              taskLockbox,
+              emitter
+          );
 
-              // Sensible order to start stuff:
-              final Lifecycle leaderLifecycle = new Lifecycle();
-              if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
-                log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
-                   .emit();
-              }
-
-              leaderLifecycle.addManagedInstance(taskRunner);
-              leaderLifecycle.addManagedInstance(taskQueue);
-              leaderLifecycle.addManagedInstance(supervisorManager);
-              leaderLifecycle.addManagedInstance(overlordHelperManager);
-
-              leaderLifecycle.addHandler(
-                  new Lifecycle.Handler()
-                  {
-                    @Override
-                    public void start() throws Exception
-                    {
-                      serviceAnnouncer.announce(node);
-                    }
-
-                    @Override
-                    public void stop()
-                    {
-                      serviceAnnouncer.unannounce(node);
-                    }
-                  }
-              );
-
-              leaderLifecycle.start();
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
-            finally {
-              giant.unlock();
-            }
+          // Sensible order to start stuff:
+          final Lifecycle leaderLifecycle = new Lifecycle();
+          if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
+            log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
+               .emit();
           }
 
-          @Override
-          public void stopBeingLeader()
-          {
-            giant.lock();
-            try {
-              final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
-              if (leaderLifecycle != null) {
-                leaderLifecycle.stop();
+          leaderLifecycle.addManagedInstance(taskRunner);
+          leaderLifecycle.addManagedInstance(taskQueue);
+          leaderLifecycle.addManagedInstance(supervisorManager);
+          leaderLifecycle.addManagedInstance(overlordHelperManager);
+
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler()
+              {
+                @Override
+                public void start() throws Exception
+                {
+                  serviceAnnouncer.announce(node);
+                }
+
+                @Override
+                public void stop()
+                {
+                  serviceAnnouncer.unannounce(node);
+                }
               }
-            }
-            finally {
-              giant.unlock();
-            }
+          );
+
+          leaderLifecycle.start();
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+        finally {
+          giant.unlock();
+        }
+      }
+
+      @Override
+      public void stopBeingLeader()
+      {
+        giant.lock();
+        try {
+          final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
+          if (leaderLifecycle != null) {
+            leaderLifecycle.stop();
           }
         }
-    );
+        finally {
+          giant.unlock();
+        }
+      }
+    };
   }
 
   /**
@@ -174,7 +174,7 @@ public class TaskMaster
     giant.lock();
 
     try {
-      overlordLeaderSelector.start();
+      overlordLeaderSelector.registerListener(leadershipListener);
     }
     finally {
       giant.unlock();
@@ -191,7 +191,7 @@ public class TaskMaster
     giant.lock();
 
     try {
-      overlordLeaderSelector.stop();
+      overlordLeaderSelector.unregisterListener();
     }
     finally {
       giant.unlock();

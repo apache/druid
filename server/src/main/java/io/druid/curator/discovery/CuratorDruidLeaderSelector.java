@@ -169,20 +169,13 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   @Override
   public void registerListener(DruidLeaderSelector.Listener listener)
   {
-    Preconditions.checkArgument(this.listener == null, "listener is already registered.");
-    this.listener = listener;
-  }
+    Preconditions.checkArgument(listener != null, "listener is null.");
 
-  @Override
-  public void start()
-  {
     if (!lifecycleLock.canStart()) {
       throw new ISE("can't start.");
     }
     try {
-      if (listener == null) {
-        throw new ISE("listener is not registered yet");
-      }
+      this.listener = listener;
 
       createNewLeaderLatch();
       leaderLatch.get().start();
@@ -198,7 +191,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   }
 
   @Override
-  public void stop()
+  public void unregisterListener()
   {
     if (!lifecycleLock.canStop()) {
       throw new ISE("can't stop.");

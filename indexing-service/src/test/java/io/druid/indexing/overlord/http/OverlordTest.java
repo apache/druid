@@ -454,17 +454,13 @@ public class OverlordTest
     public void registerListener(Listener listener)
     {
       this.listener = listener;
-    }
 
-    @Override
-    public void start()
-    {
       leader = "what:1234";
       listener.becomeLeader();
     }
 
     @Override
-    public void stop()
+    public void unregisterListener()
     {
       leader = null;
       listener.stopBeingLeader();

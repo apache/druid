@@ -29,16 +29,15 @@ import javax.annotation.Nullable;
  * Usage is as follow.
  * On lifecycle start:
  *  druidLeaderSelector.registerListener(myListener);
- *  druidLeaderSelector.start();
  *
  * On lifecycle stop:
- *  druidLeaderSelector.stop();
+ *  druidLeaderSelector.unregisterListener();
  */
 public interface DruidLeaderSelector
 {
 
   /**
-   * Get ID of current Leader.
+   * Get ID of current Leader. Returns NULL if it can't find the leader.
    */
   @Nullable
   String getCurrentLeader();
@@ -58,19 +57,14 @@ public interface DruidLeaderSelector
   int localTerm();
 
   /**
-   * Register the listener for watching leadership notifications.
+   * Register the listener for watching leadership notifications. It should only be called once.
    */
   void registerListener(Listener listener);
 
   /**
-   * Must be called right after registerLeader(Listener).
+   * Unregisters the listener.
    */
-  void start();
-
-  /**
-   * Must be called when the Druid process is stopping.
-   */
-  void stop();
+  void unregisterListener();
 
   interface Listener
   {

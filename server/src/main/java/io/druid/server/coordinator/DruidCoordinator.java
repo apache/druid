@@ -494,7 +494,6 @@ public class DruidCoordinator
             }
           }
       );
-      coordLeaderSelector.start();
     }
   }
 
@@ -506,7 +505,7 @@ public class DruidCoordinator
         return;
       }
 
-      coordLeaderSelector.stop();
+      coordLeaderSelector.unregisterListener();
 
       started = false;
 
