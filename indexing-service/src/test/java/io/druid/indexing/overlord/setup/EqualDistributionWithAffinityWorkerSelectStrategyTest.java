@@ -21,6 +21,7 @@ package io.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -31,15 +32,13 @@ import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-
 public class EqualDistributionWithAffinityWorkerSelectStrategyTest
 {
   @Test
   public void testFindWorkerForTask() throws Exception
   {
-      EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
-            new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost1", "localhost2", "localhost3")), false)
+    EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
+        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost1", "localhost2", "localhost3")), false)
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -90,7 +89,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   public void testFindWorkerForTaskWithNulls() throws Exception
   {
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
-            new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
+            new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -120,7 +119,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   public void testIsolation() throws Exception
   {
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
-            new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
+            new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -144,7 +143,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   {
     final ObjectMapper objectMapper = TestHelper.getJsonMapper();
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
+        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
     );
     final WorkerSelectStrategy strategy2 = objectMapper.readValue(
         objectMapper.writeValueAsBytes(strategy),

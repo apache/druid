@@ -69,11 +69,9 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 
   private static ImmutableWorkerInfo selectFromEligibleWorkers(final Map<String, ImmutableWorkerInfo> eligibleWorkers)
   {
-    TreeSet<ImmutableWorkerInfo> sortedWorkers = Sets.newTreeSet(
+    return eligibleWorkers.values().stream().min(
         Comparator.comparing(ImmutableWorkerInfo::getCurrCapacityUsed).reversed()
-    );
-    sortedWorkers.addAll(eligibleWorkers.values());
-    return Iterables.getFirst(sortedWorkers, null);
+    ).orElse(null);
   }
 
   @Override
@@ -98,7 +96,7 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
   @Override
   public String toString()
   {
-    return "EqualDistributionWorkerSelectStrategy{" +
+    return "FillCapacityWorkerSelectStrategy{" +
            "affinityConfig=" + affinityConfig +
            '}';
   }

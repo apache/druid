@@ -19,8 +19,8 @@
 
 package io.druid.indexing.overlord.setup;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -213,8 +213,8 @@ public class EqualDistributionWorkerSelectStrategyTest
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(
         new AffinityConfig(
             ImmutableMap.of(
-                "foo", ImmutableList.of("localhost1", "localhost2", "localhost3"),
-                "bar", ImmutableList.of("nonexistent-worker")
+                "foo", ImmutableSet.of("localhost1", "localhost2", "localhost3"),
+                "bar", ImmutableSet.of("nonexistent-worker")
             ),
             false
         )
@@ -249,8 +249,8 @@ public class EqualDistributionWorkerSelectStrategyTest
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(
         new AffinityConfig(
             ImmutableMap.of(
-                "foo", ImmutableList.of("localhost1", "localhost2", "localhost3"),
-                "bar", ImmutableList.of("nonexistent-worker")
+                "foo", ImmutableSet.of("localhost1", "localhost2", "localhost3"),
+                "bar", ImmutableSet.of("nonexistent-worker")
             ),
             true
         )

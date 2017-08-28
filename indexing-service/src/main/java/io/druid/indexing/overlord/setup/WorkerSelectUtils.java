@@ -20,13 +20,11 @@
 package io.druid.indexing.overlord.setup;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -77,18 +75,16 @@ public class WorkerSelectUtils
           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
       // Workers assigned to the affinity pool for our task.
-      final List<String> dataSourceWorkers = affinityConfig.getAffinity().get(task.getDataSource());
+      final Set<String> dataSourceWorkers = affinityConfig.getAffinity().get(task.getDataSource());
 
       if (dataSourceWorkers == null) {
         // No affinity config for this dataSource; use non-affinity workers.
         return workerSelector.apply(ImmutableMap.copyOf(nonAffinityWorkers));
       } else {
-        final Set<String> dataSourceWorkerHosts = ImmutableSet.copyOf(dataSourceWorkers);
-
         final Map<String, ImmutableWorkerInfo> dataSourceWorkerMap = runnableWorkers
             .entrySet()
             .stream()
-            .filter(entry -> dataSourceWorkerHosts.contains(entry.getKey()))
+            .filter(entry -> dataSourceWorkers.contains(entry.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         final ImmutableWorkerInfo selected = workerSelector.apply(ImmutableMap.copyOf(dataSourceWorkerMap));

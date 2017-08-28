@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 public class AffinityConfig
 {
   // key:Datasource, value:[nodeHostNames]
-  private final Map<String, List<String>> affinity;
+  private final Map<String, Set<String>> affinity;
   private final boolean strong;
 
   // Cache of the names of workers that have affinity for any dataSource.
@@ -44,7 +44,7 @@ public class AffinityConfig
 
   @JsonCreator
   public AffinityConfig(
-      @JsonProperty("affinity") Map<String, List<String>> affinity,
+      @JsonProperty("affinity") Map<String, Set<String>> affinity,
       @JsonProperty("strong") boolean strong
   )
   {
@@ -54,7 +54,7 @@ public class AffinityConfig
   }
 
   @JsonProperty
-  public Map<String, List<String>> getAffinity()
+  public Map<String, Set<String>> getAffinity()
   {
     return affinity;
   }
@@ -68,12 +68,6 @@ public class AffinityConfig
   public Set<String> getAffinityWorkers()
   {
     return affinityWorkers;
-  }
-
-  @Nullable
-  public List<String> getAffinityWorkersForDataSource(final String dataSource)
-  {
-    return affinity.get(dataSource);
   }
 
   @Override

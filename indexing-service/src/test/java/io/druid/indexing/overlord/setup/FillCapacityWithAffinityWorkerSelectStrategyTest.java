@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.setup;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -29,15 +30,13 @@ import io.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-
 public class FillCapacityWithAffinityWorkerSelectStrategyTest
 {
   @Test
   public void testFindWorkerForTask() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
+        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -74,7 +73,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   public void testFindWorkerForTaskWithNulls() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
+        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -104,7 +103,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   public void testIsolation() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")), false)
+        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
