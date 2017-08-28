@@ -58,7 +58,7 @@ public final class OutputBytes extends OutputStream implements WritableByteChann
 
   private ByteBuffer allocateBuffer()
   {
-    return ByteBuffer.allocate(BUFFER_SIZE);
+    return ByteBuffer.allocateDirect(BUFFER_SIZE);
   }
 
   private void ensureCapacity(int len) {
