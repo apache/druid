@@ -23,9 +23,6 @@ import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedFloats;
-import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.ReadableOffset;
 import io.druid.segment.historical.HistoricalFloatColumnSelector;
 
@@ -41,22 +38,14 @@ public interface GenericColumn extends HotLoopCallee, Closeable
 
   @CalledFromHotLoop
   public String getStringSingleValueRow(int rowNum);
-  @CalledFromHotLoop
-  public Indexed<String> getStringMultiValueRow(int rowNum);
 
   @CalledFromHotLoop
   float getFloatSingleValueRow(int rowNum);
   HistoricalFloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset);
 
   @CalledFromHotLoop
-  public IndexedFloats getFloatMultiValueRow(int rowNum);
-
-  @CalledFromHotLoop
   long getLongSingleValueRow(int rowNum);
   LongColumnSelector makeLongSingleValueRowSelector(ReadableOffset offset);
-
-  @CalledFromHotLoop
-  public IndexedLongs getLongMultiValueRow(int rowNum);
 
   @CalledFromHotLoop
   double getDoubleSingleValueRow(int rowNum);
