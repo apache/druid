@@ -91,7 +91,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
 
     if (input.isDirectColumnAccess() && rowSignature.getColumnType(input.getDirectColumn()) == ValueType.COMPLEX) {
-      aggregatorFactory = new HyperUniquesAggregatorFactory(name, input.getDirectColumn());
+      aggregatorFactory = new HyperUniquesAggregatorFactory(name, input.getDirectColumn(), false, true);
     } else {
       final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
       final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
@@ -113,7 +113,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         virtualColumns.add(virtualColumn);
       }
 
-      aggregatorFactory = new CardinalityAggregatorFactory(name, ImmutableList.of(dimensionSpec), false);
+      aggregatorFactory = new CardinalityAggregatorFactory(name, null, ImmutableList.of(dimensionSpec), false, true);
     }
 
     return Aggregation.create(virtualColumns, aggregatorFactory).filter(filter);

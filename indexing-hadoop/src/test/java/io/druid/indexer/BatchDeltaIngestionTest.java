@@ -425,7 +425,7 @@ public class BatchDeltaIngestionTest
       Assert.assertEquals(expected.get("visited_sum"), actual.getLongMetric("visited_sum"));
       Assert.assertEquals(
           (Double) expected.get("unique_hosts"),
-          (Double) HyperUniquesAggregatorFactory.estimateCardinality(actual.getRaw("unique_hosts")),
+          (Double) HyperUniquesAggregatorFactory.estimateCardinality(actual.getRaw("unique_hosts"), false),
           0.001
       );
     }
