@@ -199,7 +199,9 @@ public final class OutputBytes extends OutputStream implements WritableByteChann
       @Override
       public InputStream openStream()
       {
-        return new ByteArrayInputStream(buf.array(), 0, buf.position());
+        ByteBuffer inputBuf = buf.duplicate();
+        inputBuf.flip();
+        return new ByteBufferInputStream(inputBuf);
       }
     };
     return ByteSource.concat(buffers.stream().map(byteBufferToByteSource).collect(Collectors.toList())).openStream();
