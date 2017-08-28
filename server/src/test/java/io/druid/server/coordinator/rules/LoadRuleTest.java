@@ -45,7 +45,6 @@ import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.CostBalancerStrategyFactory;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.LoadQueuePeonTester;
 import io.druid.server.coordinator.ReplicationThrottler;
@@ -110,9 +109,10 @@ public class LoadRuleTest
   @Test
   public void testLoad() throws Exception
   {
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.newHashSet()).anyTimes();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
     EasyMock.replay(mockPeon);
@@ -220,9 +220,10 @@ public class LoadRuleTest
   @Test
   public void testDrop() throws Exception
   {
-    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.newHashSet()).anyTimes();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).anyTimes();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
     EasyMock.replay(mockPeon);
@@ -334,9 +335,10 @@ public class LoadRuleTest
   @Test
   public void testLoadWithNonExistentTier() throws Exception
   {
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.newHashSet()).anyTimes();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
     EasyMock.replay(mockPeon);
@@ -426,9 +428,10 @@ public class LoadRuleTest
   @Test
   public void testDropWithNonExistentTier() throws Exception
   {
-    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Sets.newHashSet()).anyTimes();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).anyTimes();
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
     EasyMock.replay(mockPeon);

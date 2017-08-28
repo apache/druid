@@ -56,6 +56,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -66,6 +67,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -208,18 +210,31 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testMoveSegment() throws Exception
   {
-    loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
     segment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(segment.getIdentifier()).andReturn("dummySegment");
     EasyMock.expect(segment.getDataSource()).andReturn("dummyDataSource");
     EasyMock.replay(segment);
+
+    loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
     EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
+    loadQueuePeon.markSegmentToDrop(segment);
+    EasyMock.expectLastCall().once();
+    Capture<LoadPeonCallback> loadCallbackCapture = Capture.newInstance();
+    Capture<LoadPeonCallback> dropCallbackCapture = Capture.newInstance();
+    loadQueuePeon.loadSegment(EasyMock.anyObject(DataSegment.class), EasyMock.capture(loadCallbackCapture));
+    EasyMock.expectLastCall().once();
+    loadQueuePeon.dropSegment(EasyMock.anyObject(DataSegment.class), EasyMock.capture(dropCallbackCapture));
+    EasyMock.expectLastCall().once();
+    loadQueuePeon.unmarkSegmentToDrop(segment);
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(loadQueuePeon.getSegmentsToDrop()).andReturn(new HashSet<>()).once();
+    EasyMock.replay(loadQueuePeon);
+
     DruidDataSource druidDataSource = EasyMock.createNiceMock(DruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(segment);
     EasyMock.replay(druidDataSource);
     EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
     EasyMock.replay(databaseSegmentManager);
-    EasyMock.replay(loadQueuePeon);
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
     EasyMock.replay(metadataRuleManager);
@@ -247,6 +262,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     loadManagementPeons.put("from", loadQueuePeon);
     loadManagementPeons.put("to", loadQueuePeon);
 
+    EasyMock.expect(serverInventoryView.isSegmentLoadedByServer("to", segment)).andReturn(true).once();
     EasyMock.replay(serverInventoryView);
 
     coordinator.moveSegment(
@@ -254,6 +270,13 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidServer2.toImmutableDruidServer(),
         segment, null
     );
+
+    LoadPeonCallback loadCallback = loadCallbackCapture.getValue();
+    loadCallback.execute();
+
+    LoadPeonCallback dropCallback = dropCallbackCapture.getValue();
+    dropCallback.execute();
+
     EasyMock.verify(druidServer);
     EasyMock.verify(druidServer2);
     EasyMock.verify(loadQueuePeon);

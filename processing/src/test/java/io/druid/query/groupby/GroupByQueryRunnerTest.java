@@ -94,6 +94,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.extraction.StringFormatExtractionFn;
 import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
@@ -143,6 +144,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -447,6 +449,36 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L, "idxFloat", 2506.415148f, "idxDouble", 2506.415148d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L, "idxFloat", 97.387433f, "idxDouble", 97.387433d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L, "idxFloat", 126.411364f, "idxDouble", 126.411364d)
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByOnMissingColumn()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("nonexistent0", "alias0"),
+                new ExtractionDimensionSpec("nonexistent1", "alias1", new StringFormatExtractionFn("foo"))
+            )
+        )
+        .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Collections.singletonList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias0", null,
+            "alias1", "foo",
+            "rows", 26L
+        )
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

@@ -38,6 +38,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.DoubleWrappingDimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -45,7 +46,6 @@ import io.druid.segment.FloatWrappingDimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.LongWrappingDimensionSelector;
 import io.druid.segment.Metadata;
-import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
@@ -418,7 +418,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   // not a dimension, column may be a metric
                   ColumnCapabilities capabilities = getColumnCapabilities(dimension);
                   if (capabilities == null) {
-                    return NullDimensionSelector.instance();
+                    return DimensionSelectorUtils.constantSelector(null, extractionFn);
                   }
                   if (capabilities.getType() == ValueType.LONG) {
                     return new LongWrappingDimensionSelector(makeLongColumnSelector(dimension), extractionFn);
@@ -431,7 +431,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   }
 
                   // if we can't wrap the base column, just return a column of all nulls
-                  return NullDimensionSelector.instance();
+                  return DimensionSelectorUtils.constantSelector(null, extractionFn);
                 } else {
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
                   return indexer.makeDimensionSelector(dimensionSpec, currEntry, dimensionDesc);

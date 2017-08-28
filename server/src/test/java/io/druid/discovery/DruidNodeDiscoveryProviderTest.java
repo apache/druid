@@ -19,6 +19,7 @@
 
 package io.druid.discovery;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.server.DruidNode;
@@ -47,15 +48,15 @@ public class DruidNodeDiscoveryProviderTest
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodeAdded(DiscoveryDruidNode node)
+          public void nodesAdded(List<DiscoveryDruidNode> nodes)
           {
-            dataNodes.add(node);
+            dataNodes.addAll(nodes);
           }
 
           @Override
-          public void nodeRemoved(DiscoveryDruidNode node)
+          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
           {
-            dataNodes.remove(node);
+            dataNodes.removeAll(nodes);
           }
         }
     );
@@ -66,15 +67,15 @@ public class DruidNodeDiscoveryProviderTest
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodeAdded(DiscoveryDruidNode node)
+          public void nodesAdded(List<DiscoveryDruidNode> nodes)
           {
-            lookupNodes.add(node);
+            lookupNodes.addAll(nodes);
           }
 
           @Override
-          public void nodeRemoved(DiscoveryDruidNode node)
+          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
           {
-            lookupNodes.remove(node);
+            lookupNodes.removeAll(nodes);
           }
         }
     );
@@ -204,14 +205,14 @@ public class DruidNodeDiscoveryProviderTest
     void add(DiscoveryDruidNode node)
     {
       for (DruidNodeDiscovery.Listener listener : listeners) {
-        listener.nodeAdded(node);
+        listener.nodesAdded(ImmutableList.of(node));
       }
     }
 
     void remove(DiscoveryDruidNode node)
     {
       for (DruidNodeDiscovery.Listener listener : listeners) {
-        listener.nodeRemoved(node);
+        listener.nodesRemoved(ImmutableList.of(node));
       }
     }
   }
