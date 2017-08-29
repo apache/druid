@@ -89,11 +89,12 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
+    Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
     final Ordering ordering = query.getResultOrdering();
-
+    final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
@@ -121,7 +122,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   public Iterable<T> call() throws Exception
                                   {
                                     try {
-                                      Sequence<T> result = input.run(query, responseContext);
+                                      Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
                                       if (result == null) {
                                         throw new ISE("Got a null result! Segments are missing!");
                                       }
@@ -155,8 +156,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               return new MergeIterable<>(
                   ordering.nullsFirst(),
                   QueryContexts.hasTimeout(query) ?
-                  futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
-                  futures.get()
+                      futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
+                      futures.get()
               ).iterator();
             }
             catch (InterruptedException e) {

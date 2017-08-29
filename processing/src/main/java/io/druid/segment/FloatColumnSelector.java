@@ -30,5 +30,32 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
 public interface FloatColumnSelector extends ColumnValueSelector, HotLoopCallee
 {
   @CalledFromHotLoop
-  public float get();
+  @Override
+  float getFloat();
+
+  /**
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @CalledFromHotLoop
+  @Override
+  default double getDouble()
+  {
+    return getFloat();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @CalledFromHotLoop
+  @Override
+  default long getLong()
+  {
+    return (long) getFloat();
+  }
 }

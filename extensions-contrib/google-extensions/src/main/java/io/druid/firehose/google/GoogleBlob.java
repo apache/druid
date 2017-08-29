@@ -22,24 +22,37 @@ package io.druid.firehose.google;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class GoogleBlob {
+public class GoogleBlob
+{
   private final String bucket;
   private final String path;
 
   @JsonCreator
-  public GoogleBlob(@JsonProperty("bucket") String bucket, @JsonProperty("path") String path) {
+  public GoogleBlob(@JsonProperty("bucket") String bucket, @JsonProperty("path") String path)
+  {
     this.bucket = bucket;
     this.path = path;
   }
 
   @JsonProperty
-  public String getBucket() {
+  public String getBucket()
+  {
     return bucket;
   }
 
   @JsonProperty
-  public String getPath() {
+  public String getPath()
+  {
     return path;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "GoogleBlob {"
+        + "bucket=" + bucket
+        + ",path=" + path
+        + "}";
   }
 }
 

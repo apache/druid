@@ -36,9 +36,7 @@ import java.util.List;
 public class NotDimFilter implements DimFilter
 {
   private static final Function<DimFilter, DimFilter> NEGATE =
-      new Function<DimFilter, DimFilter>() {
-        public DimFilter apply(DimFilter filter) { return Druids.newNotDimFilterBuilder().field(filter).build(); }
-      };
+      filter -> Druids.newNotDimFilterBuilder().field(filter).build();
 
   final private DimFilter field;
 

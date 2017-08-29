@@ -111,7 +111,8 @@ public class FlattenJSONBenchmark
     return parsed;
   }
 
-  public static void main(String[] args) throws RunnerException {
+  public static void main(String[] args) throws RunnerException
+  {
     Options opt = new OptionsBuilder()
         .include(FlattenJSONBenchmark.class.getSimpleName())
         .warmupIterations(1)

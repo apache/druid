@@ -86,9 +86,9 @@ public class LookupExtractorTest
   @Test
   public void testApplyAllWithNotExisting()
   {
-    Map<String, String> actual = new HashMap<>();
-    actual.put("not there", null);
-    Assert.assertEquals(actual, lookupExtractor.applyAll(Lists.newArrayList("not there")));
+    Map<String, String> expected = new HashMap<>();
+    expected.put("not there", null);
+    Assert.assertEquals(expected, lookupExtractor.applyAll(Lists.newArrayList("not there")));
   }
 
   @Test

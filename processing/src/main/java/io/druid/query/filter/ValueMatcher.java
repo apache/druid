@@ -19,9 +19,13 @@
 
 package io.druid.query.filter;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
+
 /**
  */
-public interface ValueMatcher
+public interface ValueMatcher extends HotLoopCallee
 {
-  public boolean matches();
+  @CalledFromHotLoop
+  boolean matches();
 }

@@ -23,13 +23,15 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -60,9 +62,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -116,8 +115,8 @@ public class SearchQueryRunnerTest
   public void testSearchHitSerDe() throws Exception
   {
     for (SearchHit hit : Arrays.asList(new SearchHit("dim1", "val1"), new SearchHit("dim2", "val2", 3))) {
-      SearchHit read = TestHelper.JSON_MAPPER.readValue(
-          TestHelper.JSON_MAPPER.writeValueAsString(hit),
+      SearchHit read = TestHelper.getJsonMapper().readValue(
+          TestHelper.getJsonMapper().writeValueAsString(hit),
           SearchHit.class
       );
       Assert.assertEquals(hit, read);
@@ -168,16 +167,16 @@ public class SearchQueryRunnerTest
         {
           @Override
           public Sequence<Result<SearchResultValue>> run(
-              Query<Result<SearchResultValue>> query, Map<String, Object> responseContext
+              QueryPlus<Result<SearchResultValue>> queryPlus, Map<String, Object> responseContext
           )
           {
-            final Query<Result<SearchResultValue>> query1 = searchQuery.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-01-12/2011-02-28")))
+            final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-01-12/2011-02-28")))
             );
-            final Query<Result<SearchResultValue>> query2 = searchQuery.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-03-01/2011-04-15")))
+            final QueryPlus<Result<SearchResultValue>> queryPlus2 = queryPlus.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-03-01/2011-04-15")))
             );
-            return Sequences.concat(runner.run(query1, responseContext), runner.run(query2, responseContext));
+            return Sequences.concat(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext));
           }
         }
     );
@@ -701,7 +700,7 @@ public class SearchQueryRunnerTest
                                     .dimensions(
                                         new DefaultDimensionSpec(
                                             QueryRunnerTestHelper.indexMetric, QueryRunnerTestHelper.indexMetric,
-                                            ValueType.FLOAT
+                                            ValueType.DOUBLE
                                         )
                                     )
                                     .dataSource(QueryRunnerTestHelper.dataSource)
@@ -711,8 +710,8 @@ public class SearchQueryRunnerTest
                                     .build();
 
     List<SearchHit> expectedHits = Lists.newLinkedList();
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.706055", 1));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.7756", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.706057", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.775597", 1));
     checkSearchQuery(searchQuery, expectedHits);
   }
 
@@ -736,21 +735,23 @@ public class SearchQueryRunnerTest
                                     .build();
 
     List<SearchHit> expectedHits = Lists.newLinkedList();
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.7060546875", 1));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.77559661865234", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.706057", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.775597", 1));
     checkSearchQuery(searchQuery, expectedHits);
   }
 
   @Test
   public void testSearchWithNullValueInDimension() throws Exception
   {
-    IncrementalIndex<Aggregator> index = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularities.NONE)
-            .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis()).build(),
-        true,
-        10
-    );
+    IncrementalIndex<Aggregator> index = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
+                .build()
+        )
+        .setMaxRowCount(10)
+        .buildOnheap();
+
     index.add(
         new MapBasedInputRow(
             1481871600000L,
@@ -814,12 +815,12 @@ public class SearchQueryRunnerTest
   private void checkSearchQuery(Query searchQuery, QueryRunner runner, List<SearchHit> expectedResults)
   {
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(searchQuery, ImmutableMap.of()),
+        runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     List<SearchHit> copy = Lists.newLinkedList(expectedResults);
     for (Result<SearchResultValue> result : results) {
-      Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), result.getTimestamp());
+      Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());
       Assert.assertTrue(result.getValue() instanceof Iterable);
 
       Iterable<SearchHit> resultValues = result.getValue();

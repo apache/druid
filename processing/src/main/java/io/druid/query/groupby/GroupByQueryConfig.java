@@ -27,6 +27,8 @@ import io.druid.query.groupby.strategy.GroupByStrategySelector;
 public class GroupByQueryConfig
 {
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
+  public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
+  public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
@@ -35,6 +37,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
+  private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
@@ -65,6 +68,12 @@ public class GroupByQueryConfig
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
   private long maxOnDiskStorage = 0L;
+
+  @JsonProperty
+  private boolean forcePushDownLimit = false;
+
+  @JsonProperty
+  private boolean forceHashAggregation = false;
 
   public String getDefaultStrategy()
   {
@@ -126,6 +135,16 @@ public class GroupByQueryConfig
     return maxOnDiskStorage;
   }
 
+  public boolean isForcePushDownLimit()
+  {
+    return forcePushDownLimit;
+  }
+
+  public boolean isForceHashAggregation()
+  {
+    return forceHashAggregation;
+  }
+  
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
@@ -159,6 +178,26 @@ public class GroupByQueryConfig
         ((Number) query.getContextValue(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getMaxMergingDictionarySize())).longValue(),
         getMaxMergingDictionarySize()
     );
+    newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
+    newConfig.forceHashAggregation = query.getContextBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
     return newConfig;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "GroupByQueryConfig{" +
+           "defaultStrategy='" + defaultStrategy + '\'' +
+           ", singleThreaded=" + singleThreaded +
+           ", maxIntermediateRows=" + maxIntermediateRows +
+           ", maxResults=" + maxResults +
+           ", bufferGrouperMaxSize=" + bufferGrouperMaxSize +
+           ", bufferGrouperMaxLoadFactor=" + bufferGrouperMaxLoadFactor +
+           ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
+           ", maxMergingDictionarySize=" + maxMergingDictionarySize +
+           ", maxOnDiskStorage=" + maxOnDiskStorage +
+           ", forcePushDownLimit=" + forcePushDownLimit +
+           ", forceHashAggregation=" + forceHashAggregation +
+           '}';
   }
 }

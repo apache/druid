@@ -19,12 +19,14 @@
 
 package io.druid.query;
 
+import io.druid.guice.annotations.PublicApi;
 import org.joda.time.Interval;
 
 import java.util.List;
 
 /**
  */
+@PublicApi
 public interface BySegmentResultValue<T>
 {
   public List<T> getResults();

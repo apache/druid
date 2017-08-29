@@ -84,7 +84,7 @@ public class DatasourceRecordReaderTest
     Assert.assertEquals(0, rr.getProgress(), 0.0001);
 
     List<InputRow> rows = Lists.newArrayList();
-    while(rr.nextKeyValue()) {
+    while (rr.nextKeyValue()) {
       rows.add(rr.getCurrentValue());
     }
     verifyRows(rows);
@@ -130,7 +130,7 @@ public class DatasourceRecordReaderTest
       Assert.assertEquals(expected.get("visited_sum"), actual.getLongMetric("visited_sum"));
       Assert.assertEquals(
           (Double) expected.get("unique_hosts"),
-          (Double) HyperUniquesAggregatorFactory.estimateCardinality(actual.getRaw("unique_hosts")),
+          (Double) HyperUniquesAggregatorFactory.estimateCardinality(actual.getRaw("unique_hosts"), false),
           0.001
       );
     }

@@ -27,11 +27,13 @@ import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -110,8 +112,9 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                     new QueryRunner<T>()
                     {
                       @Override
-                      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+                      public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
                       {
+                        Query<T> query = queryPlus.getQuery();
                         final VersionedIntervalTimeline<String, Segment> timeline = getTimelineForTableDataSource(query);
                         return makeBaseRunner(
                             query,
@@ -154,7 +157,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                                       }
                                     }
                                 )
-                        ).run(query, responseContext);
+                        ).run(queryPlus, responseContext);
                       }
                     }
                 )
@@ -202,9 +205,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     if (query.getDataSource() instanceof TableDataSource) {
       return timelines.get(((TableDataSource) query.getDataSource()).getName());
     } else {
-      throw new UnsupportedOperationException(
-          String.format("DataSource type[%s] unsupported", query.getDataSource().getClass().getName())
-      );
+      throw new UOE("DataSource type[%s] unsupported", query.getDataSource().getClass().getName());
     }
   }
 

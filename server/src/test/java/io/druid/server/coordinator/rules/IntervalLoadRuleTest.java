@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
-import org.joda.time.Interval;
+import io.druid.java.util.common.Intervals;
 import org.junit.Assert;
 import org.junit.Test;
  
@@ -35,7 +35,7 @@ import org.junit.Test;
    public void testSerde() throws Exception
    {
      IntervalLoadRule rule = new IntervalLoadRule(
-         new Interval("0/3000"),
+         Intervals.of("0/3000"),
          ImmutableMap.<String, Integer>of(DruidServer.DEFAULT_TIER, 2)
      );
  
@@ -49,7 +49,7 @@ import org.junit.Test;
    public void testSerdeNullTieredReplicants() throws Exception
    {
      IntervalLoadRule rule = new IntervalLoadRule(
-         new Interval("0/3000"), null
+         Intervals.of("0/3000"), null
      );
 
      ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -60,7 +60,8 @@ import org.junit.Test;
    }
 
    @Test
-   public void testMappingNullTieredReplicants() throws Exception{
+   public void testMappingNullTieredReplicants() throws Exception
+   {
      String inputJson = "    {\n"
                         + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
                         + "      \"type\": \"loadByInterval\"\n"
@@ -68,7 +69,7 @@ import org.junit.Test;
      String expectedJson = "{\n"
                            + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
                            + "      \"tieredReplicants\": {\n"
-                           + "        \""+ DruidServer.DEFAULT_TIER +"\": "+ DruidServer.DEFAULT_NUM_REPLICANTS +"\n"
+                           + "        \"" + DruidServer.DEFAULT_TIER + "\": " + DruidServer.DEFAULT_NUM_REPLICANTS + "\n"
                            + "      },\n"
                            + "      \"type\": \"loadByInterval\"\n"
                            + "    }";

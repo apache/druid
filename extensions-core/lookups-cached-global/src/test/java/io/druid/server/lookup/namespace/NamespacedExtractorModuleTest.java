@@ -21,14 +21,15 @@ package io.druid.server.lookup.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
+import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
@@ -42,8 +43,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -51,7 +52,7 @@ import java.util.Map;
  */
 public class NamespacedExtractorModuleTest
 {
-  private static final ObjectMapper mapper = URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper());
+  private static final ObjectMapper mapper = UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper());
   private CacheScheduler scheduler;
   private Lifecycle lifecycle;
 
@@ -61,16 +62,16 @@ public class NamespacedExtractorModuleTest
   @Before
   public void setUp() throws Exception
   {
-    final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> factoryMap =
-        ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
-            URIExtractionNamespace.class,
-            new URIExtractionNamespaceCacheFactory(
+    final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> factoryMap =
+        ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+            UriExtractionNamespace.class,
+            new UriCacheGenerator(
                 ImmutableMap.<String, SearchableVersionedDataFinder>of(
                     "file",
                     new LocalFileTimestampVersionFinder()
                 )
             ),
-            JDBCExtractionNamespace.class, new JDBCExtractionNamespaceCacheFactory()
+            JdbcExtractionNamespace.class, new JdbcCacheGenerator()
         );
     lifecycle = new Lifecycle();
     lifecycle.start();
@@ -92,22 +93,22 @@ public class NamespacedExtractorModuleTest
   public void testNewTask() throws Exception
   {
     final File tmpFile = temporaryFolder.newFile();
-    try (OutputStreamWriter out = new FileWriter(tmpFile)) {
+    try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
-    final URIExtractionNamespaceCacheFactory factory = new URIExtractionNamespaceCacheFactory(
+    final UriCacheGenerator factory = new UriCacheGenerator(
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     );
-    final URIExtractionNamespace namespace = new URIExtractionNamespace(
+    final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(
-            URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+            UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),
         null
     );
-    CacheScheduler.VersionedCache versionedCache = factory.populateCache(namespace, null, null, scheduler);
+    CacheScheduler.VersionedCache versionedCache = factory.generateCache(namespace, null, null, scheduler);
     Assert.assertNotNull(versionedCache);
     Map<String, String> map = versionedCache.getCache();
     Assert.assertEquals("bar", map.get("foo"));
@@ -118,13 +119,13 @@ public class NamespacedExtractorModuleTest
   public void testListNamespaces() throws Exception
   {
     final File tmpFile = temporaryFolder.newFile();
-    try (OutputStreamWriter out = new FileWriter(tmpFile)) {
+    try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
-    final URIExtractionNamespace namespace = new URIExtractionNamespace(
+    final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())),
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())),
         new Period(0),
         null
     );
@@ -139,14 +140,14 @@ public class NamespacedExtractorModuleTest
   public void testDeleteNamespaces() throws Exception
   {
     final File tmpFile = temporaryFolder.newFile();
-    try (OutputStreamWriter out = new FileWriter(tmpFile)) {
+    try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
-    final URIExtractionNamespace namespace = new URIExtractionNamespace(
+    final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(
-            URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+            UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),
         null
@@ -160,14 +161,14 @@ public class NamespacedExtractorModuleTest
   public void testNewUpdate() throws Exception
   {
     final File tmpFile = temporaryFolder.newFile();
-    try (OutputStreamWriter out = new FileWriter(tmpFile)) {
+    try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
-    final URIExtractionNamespace namespace = new URIExtractionNamespace(
+    final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(
-            URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+            UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),
         null

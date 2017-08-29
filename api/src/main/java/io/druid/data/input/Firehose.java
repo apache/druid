@@ -19,6 +19,9 @@
 
 package io.druid.data.input;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -35,6 +38,7 @@ import java.io.Closeable;
  * which will be called on another thread, so the operations inside of that callback must be thread-safe.
  * </p>
  */
+@ExtensionPoint
 public interface Firehose extends Closeable
 {
   /**
@@ -46,14 +50,16 @@ public interface Firehose extends Closeable
    *
    * @return true if and when there is another row available, false if the stream has dried up
    */
-  public boolean hasMore();
+  boolean hasMore();
 
   /**
    * The next row available.  Should only be called if hasMore returns true.
+   * The return value can be null which means the caller must skip this row.
    *
    * @return The next row
    */
-  public InputRow nextRow();
+  @Nullable
+  InputRow nextRow();
 
   /**
    * Returns a runnable that will "commit" everything read up to the point at which commit() is called.  This is
@@ -74,5 +80,5 @@ public interface Firehose extends Closeable
    * because of InputRows delivered by prior calls to ##nextRow().
    * </p>
    */
-  public Runnable commit();
+  Runnable commit();
 }

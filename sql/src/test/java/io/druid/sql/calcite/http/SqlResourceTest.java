@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.sql.calcite.planner.Calcites;
@@ -33,12 +34,12 @@ import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.planner.PlannerFactory;
+import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.http.SqlQuery;
 import io.druid.sql.http.SqlResource;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.ValidationException;
 import org.junit.After;
 import org.junit.Assert;
@@ -73,11 +74,19 @@ public class SqlResourceTest
     Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema = Calcites.createRootSchema(
-        CalciteTests.createMockSchema(walker, plannerConfig)
-    );
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
-    resource = new SqlResource(JSON_MAPPER, new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig));
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    resource = new SqlResource(
+        JSON_MAPPER,
+        new PlannerFactory(
+            druidSchema,
+            CalciteTests.createMockQueryLifecycleFactory(walker),
+            operatorTable,
+            macroTable,
+            plannerConfig
+        )
+    );
   }
 
   @After
@@ -178,7 +187,7 @@ public class SqlResourceTest
         ImmutableList.of(
             ImmutableMap.<String, Object>of(
                 "PLAN",
-                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
+                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{virtualColumns=[], aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null}]])\n"
             )
         ),
         rows

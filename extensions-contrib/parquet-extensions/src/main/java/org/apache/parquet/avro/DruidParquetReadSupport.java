@@ -39,6 +39,14 @@ import java.util.Set;
 
 public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
 {
+
+  /**
+   * Select the columns from the parquet schema that are used in the schema of the ingestion job
+   *
+   * @param context The context of the file to be read
+   *
+   * @return the partial schema that only contains the columns that are being used in the schema
+   */
   private MessageType getPartialReadSchema(InitContext context)
   {
     MessageType fullSchema = context.getFileSchema();
@@ -73,6 +81,7 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
     return new MessageType(name, partialFields);
   }
 
+  @Override
   public ReadContext init(InitContext context)
   {
     MessageType requestedProjection = getSchemaForRead(context.getFileSchema(), getPartialReadSchema(context));
@@ -85,7 +94,6 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
       MessageType fileSchema, ReadContext readContext
   )
   {
-
     MessageType parquetSchema = readContext.getRequestedSchema();
     Schema avroSchema = new AvroSchemaConverter(configuration).convert(parquetSchema);
 

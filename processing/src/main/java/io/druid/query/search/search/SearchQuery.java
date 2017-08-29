@@ -162,14 +162,14 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   public String toString()
   {
     return "SearchQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", dimFilter=" + dimFilter +
-           ", granularity='" + granularity + '\'' +
-           ", dimensions=" + dimensions +
-           ", querySpec=" + querySpec +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", limit=" + limit +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", dimFilter=" + dimFilter +
+        ", granularity='" + granularity + '\'' +
+        ", dimensions=" + dimensions +
+        ", querySpec=" + querySpec +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", limit=" + limit +
+        '}';
   }
 
   @Override

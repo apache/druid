@@ -20,6 +20,7 @@
 package io.druid.segment.loading;
 
 import com.google.common.base.Predicate;
+import io.druid.guice.annotations.ExtensionPoint;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,6 +29,7 @@ import java.net.URI;
 /**
  * A URIDataPuller has handlings for URI based data
  */
+@ExtensionPoint
 public interface URIDataPuller
 {
   /**

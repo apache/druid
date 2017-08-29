@@ -19,11 +19,11 @@
 
 package io.druid.guice;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
-
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -36,7 +36,7 @@ import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -59,9 +59,9 @@ public class ServerModule implements DruidModule
   }
 
   @Override
-  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  public List<? extends Module> getJacksonModules()
   {
-    return Arrays.asList(
+    return Collections.singletonList(
         new SimpleModule()
             .registerSubtypes(
                 new NamedType(SingleDimensionShardSpec.class, "single"),

@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
@@ -32,6 +33,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
@@ -95,11 +97,9 @@ public class QueryResourceTest
       return new QueryRunner<T>()
       {
         @Override
-        public Sequence<T> run(
-            Query<T> query, Map<String, Object> responseContext
-        )
+        public Sequence<T> run(QueryPlus<T> query, Map<String, Object> responseContext)
         {
-          return Sequences.<T>empty();
+          return Sequences.empty();
         }
       };
     }
@@ -121,27 +121,30 @@ public class QueryResourceTest
   @BeforeClass
   public static void staticSetup()
   {
-    com.metamx.emitter.EmittingLogger.registerEmitter(noopServiceEmitter);
+    EmittingLogger.registerEmitter(noopServiceEmitter);
   }
 
   @Before
   public void setup()
   {
     EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
-    EasyMock.expect(testServletRequest.getHeader(QueryResource.HDR_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryManager = new QueryManager();
     queryResource = new QueryResource(
-        warehouse,
-        serverConfig,
+        new QueryLifecycleFactory(
+            warehouse,
+            testSegmentWalker,
+            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            new NoopServiceEmitter(),
+            new NoopRequestLogger(),
+            serverConfig,
+            new AuthConfig()
+        ),
         jsonMapper,
         jsonMapper,
-        testSegmentWalker,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(),
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new AuthConfig()
     );
   }
 
@@ -163,6 +166,16 @@ public class QueryResourceTest
   @Test
   public void testGoodQuery() throws IOException
   {
+    EasyMock.expect(testServletRequest.getAttribute(EasyMock.anyString())).andReturn(
+        new AuthorizationInfo()
+        {
+          @Override
+          public Access isAuthorized(Resource resource, Action action)
+          {
+            return new Access(true);
+          }
+        }
+    ).times(1);
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
         new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
@@ -207,16 +220,19 @@ public class QueryResourceTest
     EasyMock.replay(testServletRequest);
 
     queryResource = new QueryResource(
-        warehouse,
-        serverConfig,
+        new QueryLifecycleFactory(
+            warehouse,
+            testSegmentWalker,
+            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            new NoopServiceEmitter(),
+            new NoopRequestLogger(),
+            serverConfig,
+            new AuthConfig(true)
+        ),
         jsonMapper,
         jsonMapper,
-        testSegmentWalker,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true),
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new AuthConfig(true)
     );
 
     Response response = queryResource.doPost(
@@ -278,16 +294,19 @@ public class QueryResourceTest
     EasyMock.replay(testServletRequest);
 
     queryResource = new QueryResource(
-        warehouse,
-        serverConfig,
+        new QueryLifecycleFactory(
+            warehouse,
+            testSegmentWalker,
+            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            new NoopServiceEmitter(),
+            new NoopRequestLogger(),
+            serverConfig,
+            new AuthConfig(true)
+        ),
         jsonMapper,
         jsonMapper,
-        testSegmentWalker,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true),
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new AuthConfig(true)
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -375,16 +394,19 @@ public class QueryResourceTest
     EasyMock.replay(testServletRequest);
 
     queryResource = new QueryResource(
-        warehouse,
-        serverConfig,
+        new QueryLifecycleFactory(
+            warehouse,
+            testSegmentWalker,
+            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            new NoopServiceEmitter(),
+            new NoopRequestLogger(),
+            serverConfig,
+            new AuthConfig(true)
+        ),
         jsonMapper,
         jsonMapper,
-        testSegmentWalker,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true),
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new AuthConfig(true)
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","

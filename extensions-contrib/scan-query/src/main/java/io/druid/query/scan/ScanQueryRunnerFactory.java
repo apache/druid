@@ -20,12 +20,13 @@ package io.druid.query.scan;
 
 import com.google.common.base.Function;
 import com.google.inject.Inject;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -70,12 +71,12 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     {
       @Override
       public Sequence<ScanResultValue> run(
-          final Query<ScanResultValue> query, final Map<String, Object> responseContext
+          final QueryPlus<ScanResultValue> queryPlus, final Map<String, Object> responseContext
       )
       {
         // Note: this variable is effective only when queryContext has a timeout.
         // See the comment of CTX_TIMEOUT_AT.
-        final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(query);
+        final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
         responseContext.put(CTX_TIMEOUT_AT, timeoutAt);
         return Sequences.concat(
             Sequences.map(
@@ -85,7 +86,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                   @Override
                   public Sequence<ScanResultValue> apply(final QueryRunner<ScanResultValue> input)
                   {
-                    return input.run(query, responseContext);
+                    return input.run(queryPlus, responseContext);
                   }
                 }
             )
@@ -100,7 +101,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     return toolChest;
   }
 
-  private class ScanQueryRunner implements QueryRunner<ScanResultValue>
+  private static class ScanQueryRunner implements QueryRunner<ScanResultValue>
   {
     private final ScanQueryEngine engine;
     private final Segment segment;
@@ -113,9 +114,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
     @Override
     public Sequence<ScanResultValue> run(
-        Query<ScanResultValue> query, Map<String, Object> responseContext
+        QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext
     )
     {
+      Query<ScanResultValue> query = queryPlus.getQuery();
       if (!(query instanceof ScanQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
       }

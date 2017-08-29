@@ -26,6 +26,7 @@ import com.google.common.base.Strings;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -100,8 +101,9 @@ public class RegexDimExtractionFn extends DimExtractionFn
                      .array();
   }
 
+  @Nullable
   @Override
-  public String apply(String dimValue)
+  public String apply(@Nullable String dimValue)
   {
     final String retVal;
     final Matcher matcher = pattern.matcher(Strings.nullToEmpty(dimValue));
@@ -152,7 +154,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
   @Override
   public String toString()
   {
-    return String.format("regex(/%s/, %d)", expr, index);
+    return StringUtils.format("regex(/%s/, %d)", expr, index);
   }
 
   @Override

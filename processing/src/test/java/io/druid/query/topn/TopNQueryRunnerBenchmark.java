@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.collections.StupidPool;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -71,7 +72,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
       .aggregators(
           Lists.<AggregatorFactory>newArrayList(
               Iterables.concat(
-                  QueryRunnerTestHelper.commonAggregators,
+                  QueryRunnerTestHelper.commonDoubleAggregators,
                   Lists.newArrayList(
                       new DoubleMaxAggregatorFactory("maxIndex", "index"),
                       new DoubleMinAggregatorFactory("minIndex", "index")
@@ -134,7 +135,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testmMapped()
   {
-    testCaseMap.get(TestCases.mMappedTestIndex).run(query, context);
+    testCaseMap.get(TestCases.mMappedTestIndex).run(QueryPlus.wrap(query), context);
   }
 
   @Ignore
@@ -142,7 +143,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testrtIndex()
   {
-    testCaseMap.get(TestCases.rtIndex).run(query, context);
+    testCaseMap.get(TestCases.rtIndex).run(QueryPlus.wrap(query), context);
   }
 
   @Ignore
@@ -150,7 +151,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testMerged()
   {
-    testCaseMap.get(TestCases.mergedRealtimeIndex).run(query, context);
+    testCaseMap.get(TestCases.mergedRealtimeIndex).run(QueryPlus.wrap(query), context);
   }
 
   @Ignore
@@ -158,6 +159,6 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testOffHeap()
   {
-    testCaseMap.get(TestCases.rtIndexOffheap).run(query, context);
+    testCaseMap.get(TestCases.rtIndexOffheap).run(QueryPlus.wrap(query), context);
   }
 }

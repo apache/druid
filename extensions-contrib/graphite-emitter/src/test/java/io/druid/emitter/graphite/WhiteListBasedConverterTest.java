@@ -22,6 +22,7 @@ package io.druid.emitter.graphite;
 import com.google.common.collect.Maps;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.easymock.EasyMock;
@@ -45,7 +46,7 @@ public class WhiteListBasedConverterTest
       new DefaultObjectMapper()
   );
   private ServiceMetricEvent event;
-  private DateTime createdTime = new DateTime();
+  private DateTime createdTime = DateTimes.nowUtc();
   private String hostname = "testHost.yahoo.com:8080";
   private String serviceName = "historical";
   private String defaultNamespace = prefix + "." + serviceName + "." + GraphiteEmitter.sanitize(hostname);

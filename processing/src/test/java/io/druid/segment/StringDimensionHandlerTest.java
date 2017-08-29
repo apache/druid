@@ -22,9 +22,8 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.granularity.Granularities;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
@@ -32,7 +31,7 @@ import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.joda.time.Interval;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,7 +45,7 @@ import java.util.Map;
 
 public class StringDimensionHandlerTest
 {
-  private static final Interval TEST_INTERVAL = Interval.parse("2015-01-01/2015-12-31");
+  private static final Interval TEST_INTERVAL = Intervals.of("2015-01-01/2015-12-31");
 
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
       new ConciseBitmapSerdeFactory(),
@@ -62,32 +61,29 @@ public class StringDimensionHandlerTest
       List<String> dims,
       Map<String, Object> event1,
       Map<String, Object> event2
-  ) throws Exception {
-    IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex(
-        TEST_INTERVAL.getStartMillis(),
-        Granularities.NONE,
-        true,
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
-        new AggregatorFactory[]{
-            new CountAggregatorFactory(
-                "count"
-            )
-        },
-        1000
-    );
+  ) throws Exception
+  {
+    IncrementalIndex incrementalIndex1 = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(TEST_INTERVAL.getStartMillis())
+                .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
+                .withMetrics(new CountAggregatorFactory("count"))
+                .build()
+        )
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
-    IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex(
-        TEST_INTERVAL.getStartMillis(),
-        Granularities.NONE,
-        true,
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
-        new AggregatorFactory[]{
-            new CountAggregatorFactory(
-                "count"
-            )
-        },
-        1000
-    );
+    IncrementalIndex incrementalIndex2 = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(TEST_INTERVAL.getStartMillis())
+                .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
+                .withMetrics(new CountAggregatorFactory("count"))
+                .build()
+        )
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     incrementalIndex1.add(new MapBasedInputRow(TEST_INTERVAL.getStartMillis(), dims, event1));
     incrementalIndex2.add(new MapBasedInputRow(TEST_INTERVAL.getStartMillis() + 3, dims, event2));
@@ -106,7 +102,8 @@ public class StringDimensionHandlerTest
     return new Pair<>(adapter1, adapter2);
   }
 
-  private static void validate(IncrementalIndexAdapter adapter1, IncrementalIndexAdapter adapter2) throws Exception {
+  private static void validate(IncrementalIndexAdapter adapter1, IncrementalIndexAdapter adapter2) throws Exception
+  {
     Map<String, DimensionHandler> handlers = adapter1.getDimensionHandlers();
     Indexed<String> dimNames1 = adapter1.getDimensionNames();
     Indexed<String> dimNames2 = adapter2.getDimensionNames();
@@ -135,7 +132,8 @@ public class StringDimensionHandlerTest
   }
 
   @Test
-  public void testValidateSortedEncodedArrays() throws Exception {
+  public void testValidateSortedEncodedArrays() throws Exception
+  {
     Map<String, Object> event1 = ImmutableMap.<String, Object>of(
         "penguins", Arrays.asList("adelie", "emperor"),
         "predators", Arrays.asList("seal")
@@ -156,7 +154,8 @@ public class StringDimensionHandlerTest
   public ExpectedException exception = ExpectedException.none();
 
   @Test
-  public void testValidateSortedDifferentEncodedArrays() throws Exception {
+  public void testValidateSortedDifferentEncodedArrays() throws Exception
+  {
     Map<String, Object> event1 = ImmutableMap.<String, Object>of(
         "penguins", Arrays.asList("adelie", "emperor"),
         "predators", Collections.singletonList("seal")

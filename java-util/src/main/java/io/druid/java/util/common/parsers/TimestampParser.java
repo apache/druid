@@ -21,10 +21,16 @@ package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
+import org.joda.time.format.DateTimeParser;
+import org.joda.time.format.ISODateTimeFormat;
+
+import java.util.concurrent.TimeUnit;
 
 public class TimestampParser
 {
@@ -34,20 +40,20 @@ public class TimestampParser
   {
     if (format.equalsIgnoreCase("auto")) {
       // Could be iso or millis
+      final DateTimeFormatter parser = createAutoParser();
       return new Function<String, DateTime>()
       {
         @Override
         public DateTime apply(String input)
         {
           Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
-
           for (int i = 0; i < input.length(); i++) {
             if (input.charAt(i) < '0' || input.charAt(i) > '9') {
-              return new DateTime(ParserUtils.stripQuotes(input));
+              return parser.parseDateTime(ParserUtils.stripQuotes(input));
             }
           }
 
-          return new DateTime(Long.parseLong(input));
+          return DateTimes.utc(Long.parseLong(input));
         }
       };
     } else if (format.equalsIgnoreCase("iso")) {
@@ -57,7 +63,7 @@ public class TimestampParser
         public DateTime apply(String input)
         {
           Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
-          return new DateTime(ParserUtils.stripQuotes(input));
+          return DateTimes.of(ParserUtils.stripQuotes(input));
         }
       };
     } else if (format.equalsIgnoreCase("posix")
@@ -115,7 +121,7 @@ public class TimestampParser
         @Override
         public DateTime apply(Number input)
         {
-          return new DateTime(input.longValue() * 1000);
+          return DateTimes.utc(TimeUnit.SECONDS.toMillis(input.longValue()));
         }
       };
     } else if (format.equalsIgnoreCase("nano")) {
@@ -124,7 +130,7 @@ public class TimestampParser
         @Override
         public DateTime apply(Number input)
         {
-          return new DateTime(input.longValue() / 1000000L);
+          return DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(input.longValue()));
         }
       };
     } else {
@@ -133,7 +139,7 @@ public class TimestampParser
         @Override
         public DateTime apply(Number input)
         {
-          return new DateTime(input.longValue());
+          return DateTimes.utc(input.longValue());
         }
       };
     }
@@ -160,5 +166,29 @@ public class TimestampParser
         }
       }
     };
+  }
+
+  private static DateTimeFormatter createAutoParser()
+  {
+    final DateTimeFormatter offsetElement = new DateTimeFormatterBuilder()
+        .appendTimeZoneOffset("Z", true, 2, 4)
+        .toFormatter();
+
+    DateTimeParser timeOrOffset = new DateTimeFormatterBuilder()
+        .append(
+            null,
+            new DateTimeParser[]{
+                new DateTimeFormatterBuilder().appendLiteral('T').toParser(),
+                new DateTimeFormatterBuilder().appendLiteral(' ').toParser()
+            }
+        )
+        .appendOptional(ISODateTimeFormat.timeElementParser().getParser())
+        .appendOptional(offsetElement.getParser())
+        .toParser();
+
+    return new DateTimeFormatterBuilder()
+        .append(ISODateTimeFormat.dateElementParser())
+        .appendOptional(timeOrOffset)
+        .toFormatter();
   }
 }

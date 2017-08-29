@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import io.druid.data.input.MapBasedRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -35,12 +36,10 @@ import org.joda.time.Period;
 import java.util.Arrays;
 import java.util.Map;
 
-
 /**
  * TimewarpOperator is an example post-processing operator that maps current time
  * to the latest period ending withing the specified data interval and truncates
  * the query interval to discard data that would be mapped to the future.
- *
  */
 public class TimewarpOperator<T> implements PostProcessingOperator<T>
 {
@@ -49,12 +48,11 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
   private final long originMillis;
 
   /**
-   *
    * @param dataInterval interval containing the actual data
-   * @param period time will be offset by a multiple of the given period
-   *               until there is at least a full period ending within the data interval
-   * @param origin origin to be used to align time periods
-   *               (e.g. to determine on what day of the week a weekly period starts)
+   * @param period       time will be offset by a multiple of the given period
+   *                     until there is at least a full period ending within the data interval
+   * @param origin       origin to be used to align time periods
+   *                     (e.g. to determine on what day of the week a weekly period starts)
    */
   @JsonCreator
   public TimewarpOperator(
@@ -69,11 +67,10 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     this.periodMillis = period.toStandardDuration().getMillis();
   }
 
-
   @Override
   public QueryRunner<T> postProcess(QueryRunner<T> baseQueryRunner)
   {
-    return postProcess(baseQueryRunner, DateTime.now().getMillis());
+    return postProcess(baseQueryRunner, DateTimes.nowUtc().getMillis());
   }
 
   public QueryRunner<T> postProcess(final QueryRunner<T> baseRunner, final long now)
@@ -81,18 +78,19 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
         final long offset = computeOffset(now);
 
-        final Interval interval = query.getIntervals().get(0);
+        final Interval interval = queryPlus.getQuery().getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
             Math.min(interval.getStartMillis() + offset, now + offset),
-            Math.min(interval.getEndMillis() + offset, now + offset)
+            Math.min(interval.getEndMillis() + offset, now + offset),
+            interval.getChronology()
         );
         return Sequences.map(
             baseRunner.run(
-                query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval))),
+                queryPlus.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval))),
                 responseContext
             ),
             new Function<T, T>()
@@ -106,17 +104,20 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                   if (value instanceof TimeBoundaryResultValue) {
                     TimeBoundaryResultValue boundary = (TimeBoundaryResultValue) value;
 
-                    DateTime minTime = null;
-                    try{
+                    DateTime minTime;
+                    try {
                       minTime = boundary.getMinTime();
-                    } catch(IllegalArgumentException e) {}
+                    }
+                    catch (IllegalArgumentException e) {
+                      minTime = null;
+                    }
 
                     final DateTime maxTime = boundary.getMaxTime();
 
-                    return (T) ((TimeBoundaryQuery) query).buildResult(
-                        new DateTime(Math.min(res.getTimestamp().getMillis() - offset, now)),
+                    return (T) ((TimeBoundaryQuery) queryPlus.getQuery()).buildResult(
+                        DateTimes.utc(Math.min(res.getTimestamp().getMillis() - offset, now)),
                         minTime != null ? minTime.minus(offset) : null,
-                        maxTime != null ? new DateTime(Math.min(maxTime.getMillis() - offset, now)) : null
+                        maxTime != null ? DateTimes.utc(Math.min(maxTime.getMillis() - offset, now)) : null
                     ).iterator().next();
                   }
                   return (T) new Result(res.getTimestamp().minus(offset), value);
@@ -138,6 +139,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
    * Map time t into the last `period` ending within `dataInterval`
    *
    * @param t the current time to be mapped into `dataInterval`
+   *
    * @return the offset between the mapped time and time t
    */
   protected long computeOffset(final long t)
@@ -145,14 +147,15 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     // start is the beginning of the last period ending within dataInterval
     long start = dataInterval.getEndMillis() - periodMillis;
     long startOffset = start % periodMillis - originMillis % periodMillis;
-    if(startOffset < 0) {
+    if (startOffset < 0) {
       startOffset += periodMillis;
-    };
+    }
+    ;
     start -= startOffset;
 
     // tOffset is the offset time t within the last period
     long tOffset = t % periodMillis - originMillis % periodMillis;
-    if(tOffset < 0) {
+    if (tOffset < 0) {
       tOffset += periodMillis;
     }
     tOffset += start;

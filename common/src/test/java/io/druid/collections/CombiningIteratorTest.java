@@ -45,7 +45,7 @@ public class CombiningIteratorTest
     peekIterator = EasyMock.createMock(PeekingIterator.class);
     comparator = EasyMock.createMock(Comparator.class);
     binaryFn = EasyMock.createMock(BinaryFn.class);
-    testingIterator = CombiningIterator.create(peekIterator,comparator,binaryFn);
+    testingIterator = CombiningIterator.create(peekIterator, comparator, binaryFn);
   }
 
   @After
@@ -62,7 +62,7 @@ public class CombiningIteratorTest
     EasyMock.replay(peekIterator);
     boolean actual = testingIterator.hasNext();
     EasyMock.verify(peekIterator);
-    Assert.assertEquals("The hasNext function is broken",expected,actual);
+    Assert.assertEquals("The hasNext function is broken", expected, actual);
   }
 
   @Test
@@ -75,7 +75,7 @@ public class CombiningIteratorTest
     EasyMock.replay(peekIterator);
     Object res = testingIterator.next();
     EasyMock.verify(peekIterator);
-    Assert.assertNull("Should be null",res);
+    Assert.assertNull("Should be null", res);
   }
 
   @Test
@@ -102,7 +102,7 @@ public class CombiningIteratorTest
     EasyMock.replay(comparator);
 
     String actual = testingIterator.next();
-    Assert.assertEquals(resString,actual);
+    Assert.assertEquals(resString, actual);
 
     EasyMock.verify(peekIterator);
     EasyMock.verify(comparator);

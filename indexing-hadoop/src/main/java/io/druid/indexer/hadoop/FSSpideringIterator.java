@@ -50,6 +50,7 @@ public class FSSpideringIterator implements Iterator<FileStatus>
   {
     return new Iterable<FileStatus>()
     {
+      @Override
       public Iterator<FileStatus> iterator()
       {
         return spiderPathPropagateExceptions(fs, path);
@@ -72,6 +73,7 @@ public class FSSpideringIterator implements Iterator<FileStatus>
     this.statii = statii;
   }
 
+  @Override
   public boolean hasNext()
   {
     if (statuses != null && !statuses.hasNext()) {
@@ -81,6 +83,7 @@ public class FSSpideringIterator implements Iterator<FileStatus>
     return index < statii.length;
   }
 
+  @Override
   public FileStatus next()
   {
     while (hasNext()) {
@@ -98,6 +101,7 @@ public class FSSpideringIterator implements Iterator<FileStatus>
     throw new NoSuchElementException();
   }
 
+  @Override
   public void remove()
   {
     throw new UnsupportedOperationException();

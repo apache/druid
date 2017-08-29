@@ -22,16 +22,15 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-
-import org.joda.time.DateTime;
 
 import java.util.Map;
 import java.util.UUID;
@@ -75,7 +74,7 @@ public class NoopTask extends AbstractTask
   )
   {
     super(
-        id == null ? String.format("noop_%s_%s", new DateTime(), UUID.randomUUID().toString()) : id,
+        id == null ? StringUtils.format("noop_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()) : id,
         "none",
         context
     );
@@ -84,7 +83,7 @@ public class NoopTask extends AbstractTask
     this.isReadyTime = (isReadyTime == 0) ? defaultIsReadyTime : isReadyTime;
     this.isReadyResult = (isReadyResult == null)
                          ? defaultIsReadyResult
-                         : IsReadyResult.valueOf(isReadyResult.toUpperCase());
+                         : IsReadyResult.valueOf(StringUtils.toUpperCase(isReadyResult));
     this.firehoseFactory = firehoseFactory;
   }
 
@@ -139,7 +138,7 @@ public class NoopTask extends AbstractTask
     if (firehoseFactory != null) {
       log.info("Connecting firehose");
     }
-    try (Firehose firehose = firehoseFactory != null ? firehoseFactory.connect(null) : null) {
+    try (Firehose firehose = firehoseFactory != null ? firehoseFactory.connect(null, null) : null) {
 
       log.info("Running noop task[%s]", getId());
       log.info("Sleeping for %,d millis.", runTime);

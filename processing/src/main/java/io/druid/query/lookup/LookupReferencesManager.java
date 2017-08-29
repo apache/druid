@@ -163,6 +163,7 @@ public class LookupReferencesManager
       return;
     }
 
+    @SuppressWarnings("ArgumentParameterSwap")
     LookupUpdateState swappedState = atomicallyUpdateStateRef(
         oldState -> new LookupUpdateState(oldState.lookupMap, ImmutableList.of(), oldState.pendingNotices)
     );
@@ -171,7 +172,8 @@ public class LookupReferencesManager
     for (Notice notice : swappedState.noticesBeingHandled) {
       try {
         notice.handle(lookupMap);
-      } catch (Exception ex) {
+      }
+      catch (Exception ex) {
         LOG.error(ex, "Exception occured while handling lookup notice [%s].", notice);
         LOG.makeAlert("Exception occured while handling lookup notice, with message [%s].", ex.getMessage()).emit();
       }
@@ -330,7 +332,7 @@ public class LookupReferencesManager
 
   private LookupUpdateState atomicallyUpdateStateRef(Function<LookupUpdateState, LookupUpdateState> fn)
   {
-    while(true) {
+    while (true) {
       LookupUpdateState old = stateRef.get();
       LookupUpdateState newState = fn.apply(old);
       if (stateRef.compareAndSet(old, newState)) {
@@ -345,7 +347,7 @@ public class LookupReferencesManager
     void handle(Map<String, LookupExtractorFactoryContainer> lookupMap);
   }
 
-  private class LoadNotice implements Notice
+  private static class LoadNotice implements Notice
   {
     private final String lookupName;
     private final LookupExtractorFactoryContainer lookupExtractorFactoryContainer;
@@ -398,7 +400,7 @@ public class LookupReferencesManager
     }
   }
 
-  private class DropNotice implements Notice
+  private static class DropNotice implements Notice
   {
     private final String lookupName;
 
@@ -434,7 +436,7 @@ public class LookupReferencesManager
     }
   }
 
-  private class LookupUpdateState
+  private static class LookupUpdateState
   {
     private final ImmutableMap<String, LookupExtractorFactoryContainer> lookupMap;
     private final ImmutableList<Notice> pendingNotices;

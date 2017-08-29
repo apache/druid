@@ -24,7 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
@@ -32,12 +33,12 @@ import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,9 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
    * Prepend 0xFF before the analysisTypes as a separator to avoid
    * any potential confusion with string values.
    */
-  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[]{(byte) 0xFF};
+  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[] {(byte) 0xFF};
+
+  private static final QuerySegmentSpec DEFAULT_SEGMENT_SPEC = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
 
   public enum AnalysisType
   {
@@ -67,30 +70,20 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static AnalysisType fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
 
     public byte[] getCacheKey()
     {
-      return new byte[]{(byte) this.ordinal()};
+      return new byte[] {(byte) this.ordinal()};
     }
   }
-
-  public static final Interval DEFAULT_INTERVAL = new Interval(
-      JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
-  );
-
-  public static final EnumSet<AnalysisType> DEFAULT_ANALYSIS_TYPES = EnumSet.of(
-      AnalysisType.CARDINALITY,
-      AnalysisType.INTERVAL,
-      AnalysisType.MINMAX
-  );
 
   private final ColumnIncluderator toInclude;
   private final boolean merge;
@@ -110,13 +103,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("lenientAggregatorMerge") Boolean lenientAggregatorMerge
   )
   {
-    super(
-        dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(DEFAULT_INTERVAL))
-                                   : querySegmentSpec,
-        false,
-        context
-    );
+    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, false, context);
 
     if (querySegmentSpec == null) {
       this.usingDefaultInterval = true;
@@ -125,7 +112,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     }
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
-    this.analysisTypes = (analysisTypes == null) ? DEFAULT_ANALYSIS_TYPES : analysisTypes;
+    this.analysisTypes = analysisTypes;
     Preconditions.checkArgument(
         dataSource instanceof TableDataSource || dataSource instanceof UnionDataSource,
         "SegmentMetadataQuery only supports table or union datasource"
@@ -230,7 +217,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return bytes.array();
   }
 
-
   @Override
   public Query<SegmentAnalysis> withOverriddenContext(Map<String, Object> contextOverride)
   {
@@ -255,18 +241,35 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return Druids.SegmentMetadataQueryBuilder.copy(this).toInclude(includerator).build();
   }
 
+  public SegmentMetadataQuery withFinalizedAnalysisTypes(SegmentMetadataQueryConfig config)
+  {
+    if (analysisTypes != null) {
+      return this;
+    }
+    return Druids.SegmentMetadataQueryBuilder
+        .copy(this)
+        .analysisTypes(config.getDefaultAnalysisTypes())
+        .build();
+  }
+
+  @Override
+  public List<Interval> getIntervals()
+  {
+    return this.getQuerySegmentSpec().getIntervals();
+  }
+
   @Override
   public String toString()
   {
     return "SegmentMetadataQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", toInclude=" + toInclude +
-           ", merge=" + merge +
-           ", usingDefaultInterval=" + usingDefaultInterval +
-           ", analysisTypes=" + analysisTypes +
-           ", lenientAggregatorMerge=" + lenientAggregatorMerge +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", toInclude=" + toInclude +
+        ", merge=" + merge +
+        ", usingDefaultInterval=" + usingDefaultInterval +
+        ", analysisTypes=" + analysisTypes +
+        ", lenientAggregatorMerge=" + lenientAggregatorMerge +
+        '}';
   }
 
   @Override
@@ -283,10 +286,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     }
     SegmentMetadataQuery that = (SegmentMetadataQuery) o;
     return merge == that.merge &&
-           usingDefaultInterval == that.usingDefaultInterval &&
-           lenientAggregatorMerge == that.lenientAggregatorMerge &&
-           Objects.equals(toInclude, that.toInclude) &&
-           Objects.equals(analysisTypes, that.analysisTypes);
+        usingDefaultInterval == that.usingDefaultInterval &&
+        lenientAggregatorMerge == that.lenientAggregatorMerge &&
+        Objects.equals(toInclude, that.toInclude) &&
+        Objects.equals(analysisTypes, that.analysisTypes);
   }
 
   @Override

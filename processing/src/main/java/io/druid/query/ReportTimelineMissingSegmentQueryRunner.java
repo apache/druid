@@ -39,7 +39,7 @@ public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T
 
   @Override
   public Sequence<T> run(
-      Query<T> query, Map<String, Object> responseContext
+      QueryPlus<T> queryPlus, Map<String, Object> responseContext
   )
   {
     List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);

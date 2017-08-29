@@ -25,6 +25,8 @@ import org.skife.config.Config;
 
 public abstract class DruidProcessingConfig extends ExecutorServiceConfig implements ColumnConfig
 {
+  public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
+
   @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
   public int intermediateComputeSizeBytes()
   {
@@ -39,19 +41,34 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
 
   @Override
   @Config(value = "${base_path}.numThreads")
-  public int getNumThreads()
+  public int getNumThreadsConfigured()
   {
-    // default to leaving one core for background tasks
-    final int processors = Runtime.getRuntime().availableProcessors();
-    return processors > 1 ? processors - 1 : processors;
+    return DEFAULT_NUM_THREADS;
   }
 
-  @Config("${base_path}.numMergeBuffers")
   public int getNumMergeBuffers()
   {
-    return Math.max(2, getNumThreads() / 4);
+    int numMergeBuffersConfigured = getNumMergeBuffersConfigured();
+    if (numMergeBuffersConfigured != DEFAULT_NUM_MERGE_BUFFERS) {
+      return numMergeBuffersConfigured;
+    } else {
+      return Math.max(2, getNumThreads() / 4);
+    }
   }
 
+  /**
+   * Returns the number of merge buffers _explicitly_ configured, or -1 if it is not explicitly configured, that is not
+   * a valid number of buffers. To get the configured value or the default (valid) number, use {@link
+   * #getNumMergeBuffers()}. This method exists for ability to distinguish between the default value set when there is
+   * no explicit config, and an explicitly configured value.
+   */
+  @Config("${base_path}.numMergeBuffers")
+  public int getNumMergeBuffersConfigured()
+  {
+    return DEFAULT_NUM_MERGE_BUFFERS;
+  }
+
+  @Override
   @Config(value = "${base_path}.columnCache.sizeBytes")
   public int columnCacheSizeBytes()
   {
@@ -65,7 +82,8 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   }
 
   @Config(value = "${base_path}.tmpDir")
-  public String getTmpDir() {
+  public String getTmpDir()
+  {
     return System.getProperty("java.io.tmpdir");
   }
 }

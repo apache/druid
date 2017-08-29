@@ -31,16 +31,18 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
@@ -54,7 +56,6 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -111,7 +112,8 @@ public class AppenderatorPlumber implements Plumber
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
 
-  public Map<Long, SegmentIdentifier> getSegmentsView() {
+  public Map<Long, SegmentIdentifier> getSegmentsView()
+  {
     return ImmutableMap.copyOf(segments);
   }
 
@@ -169,9 +171,9 @@ public class AppenderatorPlumber implements Plumber
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
-        return query.run(appenderator, responseContext);
+        return queryPlus.run(appenderator, responseContext);
       }
     };
   }
@@ -242,14 +244,15 @@ public class AppenderatorPlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
-    final long truncatedTime = segmentGranularity.bucketStart(new DateTime(timestamp)).getMillis();
+    DateTime truncatedDateTime = segmentGranularity.bucketStart(DateTimes.utc(timestamp));
+    final long truncatedTime = truncatedDateTime.getMillis();
 
     SegmentIdentifier retVal = segments.get(truncatedTime);
 
     if (retVal == null) {
       final Interval interval = new Interval(
-          new DateTime(truncatedTime),
-          segmentGranularity.increment(new DateTime(truncatedTime))
+          truncatedDateTime,
+          segmentGranularity.increment(truncatedDateTime)
       );
 
       retVal = new SegmentIdentifier(
@@ -334,12 +337,12 @@ public class AppenderatorPlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
-    final DateTime truncatedNow = segmentGranularity.bucketStart(new DateTime());
+    final DateTime truncatedNow = segmentGranularity.bucketStart(DateTimes.nowUtc());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
     log.info(
         "Expect to run at [%s]",
-        new DateTime().plus(
+        DateTimes.nowUtc().plus(
             new Duration(
                 System.currentTimeMillis(),
                 segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
@@ -356,7 +359,7 @@ public class AppenderatorPlumber implements Plumber
             ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                String.format(
+                StringUtils.format(
                     "%s-overseer-%d",
                     schema.getDataSource(),
                     config.getShardSpec().getPartitionNum()
@@ -392,14 +395,7 @@ public class AppenderatorPlumber implements Plumber
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
     DateTime minTimestampAsDate = segmentGranularity.bucketStart(
-        new DateTime(
-            Math.max(
-                windowMillis,
-                rejectionPolicy.getCurrMaxTime()
-                               .getMillis()
-            )
-            - windowMillis
-        )
+        DateTimes.utc(Math.max(windowMillis, rejectionPolicy.getCurrMaxTime().getMillis()) - windowMillis)
     );
     long minTimestamp = minTimestampAsDate.getMillis();
 
@@ -425,7 +421,7 @@ public class AppenderatorPlumber implements Plumber
           log.info(
               "Skipping persist and merge for entry [%s] : Start time [%s] >= [%s] min timestamp required in this run. Segment will be picked up in a future run.",
               segment,
-              new DateTime(intervalStart),
+              DateTimes.utc(intervalStart),
               minTimestampAsDate
           );
         }

@@ -59,12 +59,6 @@ public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
     }
   }
 
-  @Override
-  public boolean isAnnounced(DataSegment segment)
-  {
-    return announcedSegments.contains(segment);
-  }
-
   public Set<DataSegment> getAnnouncedSegments()
   {
     return ImmutableSet.copyOf(announcedSegments);

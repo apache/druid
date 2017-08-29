@@ -93,12 +93,14 @@ public class AzureStorage
   }
 
   public CloudBlockBlob getBlob(final String containerName, final String blobPath)
-      throws URISyntaxException, StorageException {
+      throws URISyntaxException, StorageException
+  {
     return getCloudBlobContainer(containerName).getBlockBlobReference(blobPath);
   }
 
   public long getBlobLength(final String containerName, final String blobPath)
-      throws URISyntaxException, StorageException {
+      throws URISyntaxException, StorageException
+  {
     return getCloudBlobContainer(containerName).getBlockBlobReference(blobPath).getProperties().getLength();
   }
 
@@ -109,8 +111,8 @@ public class AzureStorage
     return container.getBlockBlobReference(blobPath).openInputStream();
   }
 
-  public boolean getBlobExists(String container, String blobPath)
-      throws URISyntaxException, StorageException {
+  public boolean getBlobExists(String container, String blobPath) throws URISyntaxException, StorageException
+  {
     return getCloudBlobContainer(container).getBlockBlobReference(blobPath).exists();
   }
 }

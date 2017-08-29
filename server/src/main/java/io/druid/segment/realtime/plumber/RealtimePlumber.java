@@ -42,10 +42,13 @@ import io.druid.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -229,14 +232,15 @@ public class RealtimePlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
-    final long truncatedTime = segmentGranularity.bucketStart(new DateTime(timestamp)).getMillis();
+    DateTime truncatedDateTime = segmentGranularity.bucketStart(DateTimes.utc(timestamp));
+    final long truncatedTime = truncatedDateTime.getMillis();
 
     Sink retVal = sinks.get(truncatedTime);
 
     if (retVal == null) {
       final Interval sinkInterval = new Interval(
-          new DateTime(truncatedTime),
-          segmentGranularity.increment(new DateTime(truncatedTime))
+          truncatedDateTime,
+          segmentGranularity.increment(truncatedDateTime)
       );
 
       retVal = new Sink(
@@ -285,7 +289,7 @@ public class RealtimePlumber implements Plumber
                                               );
 
     persistExecutor.execute(
-        new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
+        new ThreadRenamingRunnable(StringUtils.format("%s-incremental-persist", schema.getDataSource()))
         {
           @Override
           public void doRun()
@@ -352,8 +356,8 @@ public class RealtimePlumber implements Plumber
   // Submits persist-n-merge task for a Sink to the mergeExecutor
   private void persistAndMerge(final long truncatedTime, final Sink sink)
   {
-    final String threadName = String.format(
-        "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(truncatedTime)
+    final String threadName = StringUtils.format(
+        "%s-%s-persist-n-merge", schema.getDataSource(), DateTimes.utc(truncatedTime)
     );
     mergeExecutor.execute(
         new ThreadRenamingRunnable(threadName)
@@ -424,12 +428,11 @@ public class RealtimePlumber implements Plumber
               metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
               metrics.incrementMergeTimeMillis(mergeStopwatch.elapsed(TimeUnit.MILLISECONDS));
 
-              QueryableIndex index = indexIO.loadIndex(mergedFile);
               log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
 
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
-                  sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
               );
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());
               segmentPublisher.publishSegment(segment);
@@ -542,7 +545,7 @@ public class RealtimePlumber implements Plumber
 
   private void resetNextFlush()
   {
-    nextFlush = new DateTime().plus(config.getIntermediatePersistPeriod()).getMillis();
+    nextFlush = DateTimes.nowUtc().plus(config.getIntermediatePersistPeriod()).getMillis();
   }
 
   protected void initializeExecutors()
@@ -598,7 +601,7 @@ public class RealtimePlumber implements Plumber
     Object metadata = null;
     long latestCommitTime = 0;
     for (File sinkDir : files) {
-      final Interval sinkInterval = new Interval(sinkDir.getName().replace("_", "/"));
+      final Interval sinkInterval = Intervals.of(sinkDir.getName().replace("_", "/"));
 
       //final File[] sinkFiles = sinkDir.listFiles();
       // To avoid reading and listing of "merged" dir
@@ -739,12 +742,12 @@ public class RealtimePlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
-    final DateTime truncatedNow = segmentGranularity.bucketStart(new DateTime());
+    final DateTime truncatedNow = segmentGranularity.bucketStart(DateTimes.nowUtc());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
     log.info(
         "Expect to run at [%s]",
-        new DateTime().plus(
+        DateTimes.nowUtc().plus(
             new Duration(
                 System.currentTimeMillis(),
                 segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
@@ -761,7 +764,7 @@ public class RealtimePlumber implements Plumber
             ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                String.format(
+                StringUtils.format(
                     "%s-overseer-%d",
                     schema.getDataSource(),
                     config.getShardSpec().getPartitionNum()
@@ -797,14 +800,7 @@ public class RealtimePlumber implements Plumber
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
     DateTime minTimestampAsDate = segmentGranularity.bucketStart(
-        new DateTime(
-            Math.max(
-                windowMillis,
-                rejectionPolicy.getCurrMaxTime()
-                               .getMillis()
-            )
-            - windowMillis
-        )
+        DateTimes.utc(Math.max(windowMillis, rejectionPolicy.getCurrMaxTime().getMillis()) - windowMillis)
     );
     long minTimestamp = minTimestampAsDate.getMillis();
 
@@ -824,7 +820,7 @@ public class RealtimePlumber implements Plumber
         log.info(
             "Skipping persist and merge for entry [%s] : Start time [%s] >= [%s] min timestamp required in this run. Segment will be picked up in a future run.",
             entry,
-            new DateTime(intervalStart),
+            DateTimes.utc(intervalStart),
             minTimestampAsDate
         );
       }
@@ -861,6 +857,7 @@ public class RealtimePlumber implements Plumber
         );
         for (FireHydrant hydrant : sink) {
           cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+          hydrant.getSegment().close();
         }
         synchronized (handoffCondition) {
           handoffCondition.notifyAll();

@@ -27,19 +27,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;
@@ -119,7 +119,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(interval, "interval");
-    return joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), new DateTime());
+    return joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), DateTimes.nowUtc());
   }
 
   @JsonCreator
@@ -351,7 +351,13 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
       log.info("Subs are good!  Italian BMT and Meatball are probably my favorite.");
-      convertSegment(toolbox, segment, indexSpec, force, validate);
+      try {
+        convertSegment(toolbox, segment, indexSpec, force, validate);
+      }
+      catch (Exception e) {
+        log.error(e, "Conversion failed.");
+        throw e;
+      }
       return success();
     }
   }
@@ -390,7 +396,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
 
       // Appending to the version makes a new version that inherits most comparability parameters of the original
       // version, but is "newer" than said original version.
-      DataSegment updatedSegment = segment.withVersion(String.format("%s_v%s", segment.getVersion(), outVersion));
+      DataSegment updatedSegment = segment.withVersion(StringUtils.format("%s_v%s", segment.getVersion(), outVersion));
       updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
 
       actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));

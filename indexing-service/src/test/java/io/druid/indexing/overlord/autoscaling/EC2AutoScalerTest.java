@@ -66,7 +66,7 @@ public class EC2AutoScalerTest
   private DescribeInstancesResult describeInstancesResult;
   private Reservation reservation;
   private Instance instance;
-  private SimpleWorkerResourceManagementConfig managementConfig;
+  private SimpleWorkerProvisioningConfig managementConfig;
 
   @Before
   public void setUp() throws Exception
@@ -81,7 +81,7 @@ public class EC2AutoScalerTest
         .withImageId(AMI_ID)
         .withPrivateIpAddress(IP);
 
-    managementConfig = new SimpleWorkerResourceManagementConfig().setWorkerPort(8080).setWorkerVersion("");
+    managementConfig = new SimpleWorkerProvisioningConfig().setWorkerPort(8080).setWorkerVersion("");
   }
 
   @After
@@ -128,7 +128,7 @@ public class EC2AutoScalerTest
     Assert.assertEquals(created.getNodeIds().size(), 1);
     Assert.assertEquals("theInstance", created.getNodeIds().get(0));
 
-    AutoScalingData deleted = autoScaler.terminate(Arrays.asList("dummyIP"));
+    AutoScalingData deleted = autoScaler.terminate(Collections.singletonList("dummyIP"));
 
     Assert.assertEquals(deleted.getNodeIds().size(), 1);
     Assert.assertEquals(INSTANCE_ID, deleted.getNodeIds().get(0));
@@ -185,7 +185,7 @@ public class EC2AutoScalerTest
     );
     EasyMock.replay(describeInstancesResult);
 
-    EasyMock.expect(reservation.getInstances()).andReturn(Arrays.asList(instance)).times(n);
+    EasyMock.expect(reservation.getInstances()).andReturn(Collections.singletonList(instance)).times(n);
     EasyMock.replay(reservation);
 
     List<String> ids = autoScaler.ipToIdLookup(ips);

@@ -100,6 +100,7 @@ public final class SpecializationService
    * specialization takes some JVM memory (machine code cache, byte code, etc.)
    */
   private static final int maxSpecializations = Integer.getInteger("maxSpecializations", 1000);
+  private static final AtomicBoolean maxSpecializationsWarningEmitted = new AtomicBoolean(false);
 
   private static final ExecutorService classSpecializationExecutor = Execs.singleThreaded("class-specialization-%d");
 
@@ -124,7 +125,7 @@ public final class SpecializationService
       String runtimeShape
   )
   {
-    return getSpecializationState(prototypeClass, runtimeShape, ImmutableMap.<Class<?>, Class<?>>of());
+    return getSpecializationState(prototypeClass, runtimeShape, ImmutableMap.of());
   }
 
   /**
@@ -292,6 +293,8 @@ public final class SpecializationService
     @Override
     public T getSpecialized()
     {
+      // Returns null because the class is not yet specialized. The purpose of WindowedLoopIterationCounter is to decide
+      // whether specialization should be done, or not.
       return null;
     }
 
@@ -329,7 +332,7 @@ public final class SpecializationService
         }
       }
       if (!currentMinutePresent) {
-        perMinuteIterations.computeIfAbsent(currentMinute, AtomicLong::new).addAndGet(newIterations);
+        perMinuteIterations.computeIfAbsent(currentMinute, m -> new AtomicLong()).addAndGet(newIterations);
         totalIterations += newIterations;
       }
       return totalIterations;
@@ -346,18 +349,33 @@ public final class SpecializationService
           // PerPrototypeClassState.specializationStates. But it might be that nobody ever hits even the current
           // maxSpecializations limit, so implementing cache eviction is an unnecessary complexity.
           specialized = perPrototypeClassState.prototypeClass.newInstance();
-          LOG.warn(
-              "SpecializationService couldn't make more than [%d] specializations. "
-              + "Not doing specialization for runtime shape[%s] and class remapping[%s], using the prototype class[%s]",
-              maxSpecializations,
-              specializationId.runtimeShape,
-              specializationId.classRemapping,
-              perPrototypeClassState.prototypeClass
-          );
+          if (!maxSpecializationsWarningEmitted.get() && maxSpecializationsWarningEmitted.compareAndSet(false, true)) {
+            LOG.warn(
+                "SpecializationService couldn't make more than [%d] specializations. " +
+                "Not doing specialization for runtime shape[%s] and class remapping[%s], using the prototype class[%s]",
+                maxSpecializations,
+                specializationId.runtimeShape,
+                specializationId.classRemapping,
+                perPrototypeClassState.prototypeClass
+            );
+          }
         } else if (fakeSpecialize) {
           specialized = perPrototypeClassState.prototypeClass.newInstance();
+          LOG.info(
+              "Not specializing prototype class[%s] for runtime shape[%s] and class remapping[%s] because "
+              + "fakeSpecialize=true, using the prototype class instead",
+              perPrototypeClassState.prototypeClass,
+              specializationId.runtimeShape,
+              specializationId.classRemapping
+          );
         } else {
           specialized = perPrototypeClassState.specialize(specializationId.classRemapping);
+          LOG.info(
+              "Specializing prototype class[%s] for runtime shape[%s] and class remapping[%s]",
+              perPrototypeClassState.prototypeClass,
+              specializationId.runtimeShape,
+              specializationId.classRemapping
+          );
         }
         perPrototypeClassState.specializationStates.put(specializationId, new Specialized<>(specialized));
       }

@@ -33,14 +33,14 @@ import java.util.concurrent.atomic.AtomicLong;
 public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> delegate;
-  private final QueryToolChest<?, ? super Query<T>> queryToolChest;
+  private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
   private final ServiceEmitter emitter;
   private final AtomicLong cpuTimeAccumulator;
   private final boolean report;
 
   private CPUTimeMetricQueryRunner(
       QueryRunner<T> delegate,
-      QueryToolChest<?, ? super Query<T>> queryToolChest,
+      QueryToolChest<T, ? extends Query<T>> queryToolChest,
       ServiceEmitter emitter,
       AtomicLong cpuTimeAccumulator,
       boolean report
@@ -58,9 +58,10 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
 
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
-    final Sequence<T> baseSequence = delegate.run(query, responseContext);
+    final QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
+    final Sequence<T> baseSequence = delegate.run(queryWithMetrics, responseContext);
     return Sequences.wrap(
         baseSequence,
         new SequenceWrapper()
@@ -71,7 +72,8 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             final long start = VMUtils.getCurrentThreadCpuTime();
             try {
               return sequenceProcessing.get();
-            } finally {
+            }
+            finally {
               cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
             }
           }
@@ -82,16 +84,17 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             if (report) {
               final long cpuTimeNs = cpuTimeAccumulator.get();
               if (cpuTimeNs > 0) {
-                queryToolChest.makeMetrics(query).reportCpuTime(cpuTimeNs).emit(emitter);
+                queryWithMetrics.getQueryMetrics().reportCpuTime(cpuTimeNs).emit(emitter);
               }
             }
           }
         }
     );
   }
+
   public static <T> QueryRunner<T> safeBuild(
       QueryRunner<T> delegate,
-      QueryToolChest<?, ? super Query<T>> queryToolChest,
+      QueryToolChest<T, ? extends Query<T>> queryToolChest,
       ServiceEmitter emitter,
       AtomicLong accumulator,
       boolean report

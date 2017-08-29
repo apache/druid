@@ -53,7 +53,7 @@ public class StringComparators
       public int compare(String s, String s2)
       {
         return UnsignedBytes.lexicographicalComparator().compare(
-                StringUtils.toUtf8(s), StringUtils.toUtf8(s2));
+            StringUtils.toUtf8(s), StringUtils.toUtf8(s2));
       }
     }).nullsFirst();
     
@@ -61,7 +61,9 @@ public class StringComparators
     public int compare(String s, String s2)
     {
       // Avoid conversion to bytes for equal references
-      if(s == s2){
+      // Assuming we mostly compare different strings, checking s.equals(s2) will only make the comparison slower.
+      //noinspection StringEquality
+      if (s == s2) {
         return 0;
       }
 
@@ -98,45 +100,37 @@ public class StringComparators
   {
     // This code is based on https://github.com/amjjd/java-alphanum, see
     // NOTICE file for more information
+    @Override
     public int compare(String str1, String str2)
     {
-      int[] pos =
-      { 0, 0 };
+      int[] pos = {0, 0};
 
-      if (str1 == null)
-      {
+      if (str1 == null) {
         if (str2 == null) {
           return 0;
         }
         return -1;
-      } else if (str2 == null)
-      {
+      } else if (str2 == null) {
         return 1;
-      } else if (str1.length() == 0)
-      {
+      } else if (str1.length() == 0) {
         return str2.length() == 0 ? 0 : -1;
-      } else if (str2.length() == 0)
-      {
+      } else if (str2.length() == 0) {
         return 1;
       }
 
-      while (pos[0] < str1.length() && pos[1] < str2.length())
-      {
+      while (pos[0] < str1.length() && pos[1] < str2.length()) {
         int ch1 = str1.codePointAt(pos[0]);
         int ch2 = str2.codePointAt(pos[1]);
 
         int result = 0;
 
-        if (isDigit(ch1))
-        {
+        if (isDigit(ch1)) {
           result = isDigit(ch2) ? compareNumbers(str1, str2, pos) : -1;
-        } else
-        {
+        } else {
           result = isDigit(ch2) ? 1 : compareNonNumeric(str1, str2, pos);
         }
 
-        if (result != 0)
-        {
+        if (result != 0) {
           return result;
         }
       }
@@ -151,13 +145,11 @@ public class StringComparators
       int ch0 = -1, ch1 = -1;
 
       // Skip leading zeroes, but keep a count of them.
-      while (pos[0] < str0.length() && isZero(ch0 = str0.codePointAt(pos[0])))
-      {
+      while (pos[0] < str0.length() && isZero(ch0 = str0.codePointAt(pos[0]))) {
         zeroes0++;
         pos[0] += Character.charCount(ch0);
       }
-      while (pos[1] < str1.length() && isZero(ch1 = str1.codePointAt(pos[1])))
-      {
+      while (pos[1] < str1.length() && isZero(ch1 = str1.codePointAt(pos[1]))) {
         zeroes1++;
         pos[1] += Character.charCount(ch1);
       }
@@ -166,52 +158,39 @@ public class StringComparators
       // other, it's a larger number. In case they turn out to have
       // equal lengths, we compare digits at each position; the first
       // unequal pair determines which is the bigger number.
-      while (true)
-      {
+      while (true) {
         boolean noMoreDigits0 = (ch0 < 0) || !isDigit(ch0);
         boolean noMoreDigits1 = (ch1 < 0) || !isDigit(ch1);
 
-        if (noMoreDigits0 && noMoreDigits1)
-        {
+        if (noMoreDigits0 && noMoreDigits1) {
           return delta != 0 ? delta : zeroes0 - zeroes1;
-        } else if (noMoreDigits0)
-        {
+        } else if (noMoreDigits0) {
           return -1;
-        } else if (noMoreDigits1)
-        {
+        } else if (noMoreDigits1) {
           return 1;
-        } else if (delta == 0 && ch0 != ch1)
-        {
+        } else if (delta == 0 && ch0 != ch1) {
           delta = valueOf(ch0) - valueOf(ch1);
         }
 
-        if (pos[0] < str0.length())
-        {
+        if (pos[0] < str0.length()) {
           ch0 = str0.codePointAt(pos[0]);
-          if (isDigit(ch0))
-          {
+          if (isDigit(ch0)) {
             pos[0] += Character.charCount(ch0);
-          } else
-          {
+          } else {
             ch0 = -1;
           }
-        } else
-        {
+        } else {
           ch0 = -1;
         }
 
-        if (pos[1] < str1.length())
-        {
+        if (pos[1] < str1.length()) {
           ch1 = str1.codePointAt(pos[1]);
-          if (isDigit(ch1))
-          {
+          if (isDigit(ch1)) {
             pos[1] += Character.charCount(ch1);
-          } else
-          {
+          } else {
             ch1 = -1;
           }
-        } else
-        {
+        } else {
           ch1 = -1;
         }
       }
@@ -233,24 +212,19 @@ public class StringComparators
 
     private int valueOf(int digit)
     {
-      if (digit <= '9')
-      {
+      if (digit <= '9') {
         return digit - '0';
       }
-      if (digit <= '\u0669')
-      {
+      if (digit <= '\u0669') {
         return digit - '\u0660';
       }
-      if (digit <= '\u06F9')
-      {
+      if (digit <= '\u06F9') {
         return digit - '\u06F0';
       }
-      if (digit <= '\u096F')
-      {
+      if (digit <= '\u096F') {
         return digit - '\u0966';
       }
-      if (digit <= '\uFF19')
-      {
+      if (digit <= '\uFF19') {
         return digit - '\uFF10';
       }
 
@@ -263,16 +237,14 @@ public class StringComparators
       int start0 = pos[0];
       int ch0 = str0.codePointAt(pos[0]);
       pos[0] += Character.charCount(ch0);
-      while (pos[0] < str0.length() && !isDigit(ch0 = str0.codePointAt(pos[0])))
-      {
+      while (pos[0] < str0.length() && !isDigit(ch0 = str0.codePointAt(pos[0]))) {
         pos[0] += Character.charCount(ch0);
       }
 
       int start1 = pos[1];
       int ch1 = str1.codePointAt(pos[1]);
       pos[1] += Character.charCount(ch1);
-      while (pos[1] < str1.length() && !isDigit(ch1 = str1.codePointAt(pos[1])))
-      {
+      while (pos[1] < str1.length() && !isDigit(ch1 = str1.codePointAt(pos[1]))) {
         pos[1] += Character.charCount(ch1);
       }
 
@@ -316,10 +288,12 @@ public class StringComparators
         return Ints.compare(s.length(), s2.length());
       }
     }).nullsFirst().compound(Ordering.natural());
-    
+
     @Override
     public int compare(String s, String s2)
     {
+      // Optimization
+      //noinspection StringEquality
       if (s == s2) {
         return 0;
       }
@@ -353,7 +327,8 @@ public class StringComparators
     }
   }
 
-  private static BigDecimal convertStringToBigDecimal(String input) {
+  private static BigDecimal convertStringToBigDecimal(String input)
+  {
     if (input == null) {
       return null;
     }
@@ -362,7 +337,8 @@ public class StringComparators
     BigDecimal bd = null;
     try {
       bd = new BigDecimal(input);
-    } catch (NumberFormatException ex) {
+    }
+    catch (NumberFormatException ex) {
     }
     return bd;
   }
@@ -373,6 +349,8 @@ public class StringComparators
     public int compare(String o1, String o2)
     {
       // return if o1 and o2 are the same object
+      // Assuming we mostly compare different strings, checking o1.equals(o2) will only make the comparison slower.
+      //noinspection StringEquality
       if (o1 == o2) {
         return 0;
       }

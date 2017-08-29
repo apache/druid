@@ -24,7 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.NotNull;
 
 
-public class AzureBlob {
+public class AzureBlob
+{
   @JsonProperty
   @NotNull
   private String container = null;
@@ -33,19 +34,32 @@ public class AzureBlob {
   @NotNull
   private String path = null;
 
-  public AzureBlob() {
+  public AzureBlob()
+  {
   }
 
-  public AzureBlob(String container, String path) {
+  public AzureBlob(String container, String path)
+  {
     this.container = container;
     this.path = path;
   }
 
-  public String getContainer() {
+  public String getContainer()
+  {
     return container;
   }
 
-  public String getPath() {
+  public String getPath()
+  {
     return path;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AzureBlob{"
+        + "container=" + container
+        + ",path=" + path
+        + "}";
   }
 }

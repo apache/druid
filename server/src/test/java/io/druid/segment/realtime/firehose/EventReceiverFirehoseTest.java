@@ -21,19 +21,18 @@ package io.druid.segment.realtime.firehose;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-
 import io.druid.concurrent.Execs;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,7 +87,8 @@ public class EventReceiverFirehoseTest
                 null,
                 null
             )
-        )
+        ),
+        null
     );
   }
 
@@ -220,15 +220,16 @@ public class EventReceiverFirehoseTest
                         null,
                         null
                     )
-                )
+                ),
+                null
             );
   }
 
   @Test(timeout = 40_000L)
   public void testShutdownWithPrevTime() throws Exception
   {
-    firehose.shutdown(DateTime.now().minusMinutes(2).toString());
-    while (!firehose.isClosed()){
+    firehose.shutdown(DateTimes.nowUtc().minusMinutes(2).toString());
+    while (!firehose.isClosed()) {
       Thread.sleep(50);
     }
   }
@@ -236,8 +237,8 @@ public class EventReceiverFirehoseTest
   @Test(timeout = 40_000L)
   public void testShutdown() throws Exception
   {
-    firehose.shutdown(DateTime.now().plusMillis(100).toString());
-    while (!firehose.isClosed()){
+    firehose.shutdown(DateTimes.nowUtc().plusMillis(100).toString());
+    while (!firehose.isClosed()) {
      Thread.sleep(50);
     }
   }

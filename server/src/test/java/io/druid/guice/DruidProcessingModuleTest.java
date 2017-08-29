@@ -26,8 +26,9 @@ import org.junit.Test;
 public class DruidProcessingModuleTest
 {
 
-  @Test(expected=ProvisionException.class)
-  public void testMemoryCheckThrowsException() {
+  @Test(expected = ProvisionException.class)
+  public void testMemoryCheckThrowsException()
+  {
     DruidProcessingModule module = new DruidProcessingModule();
     module.getIntermediateResultsPool(new DruidProcessingConfig()
     {

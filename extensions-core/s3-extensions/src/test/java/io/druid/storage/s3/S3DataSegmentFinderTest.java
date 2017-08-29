@@ -31,6 +31,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -42,7 +43,6 @@ import org.jets3t.service.StorageObjectsChunk;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 import org.jets3t.service.model.StorageObject;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -62,62 +62,47 @@ public class S3DataSegmentFinderTest
 {
   private static final ObjectMapper mapper = new DefaultObjectMapper();
 
-  private static final DataSegment SEGMENT_1 = DataSegment.builder()
-                                                          .dataSource("wikipedia")
-                                                          .interval(
-                                                              new Interval(
-                                                                  "2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .version("2015-10-21T22:07:57.074Z")
-                                                          .loadSpec(
-                                                              ImmutableMap.<String, Object>of(
-                                                                  "type",
-                                                                  "s3_zip",
-                                                                  "bucket",
-                                                                  "bucket1",
-                                                                  "key",
-                                                                  "abc/somewhere/index.zip"
-                                                              )
-                                                          )
-                                                          .dimensions(ImmutableList.of("language", "page"))
-                                                          .metrics(ImmutableList.of("count"))
-                                                          .build();
+  private static final DataSegment SEGMENT_1 = DataSegment
+      .builder()
+      .dataSource("wikipedia")
+      .interval(Intervals.of("2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"))
+      .version("2015-10-21T22:07:57.074Z")
+      .loadSpec(
+          ImmutableMap.<String, Object>of(
+              "type",
+              "s3_zip",
+              "bucket",
+              "bucket1",
+              "key",
+              "abc/somewhere/index.zip"
+          )
+      )
+      .dimensions(ImmutableList.of("language", "page"))
+      .metrics(ImmutableList.of("count"))
+      .build();
 
-  private static final DataSegment SEGMENT_2 = DataSegment.builder(SEGMENT_1)
-                                                          .interval(
-                                                              new Interval(
-                                                                  "2013-09-01T00:00:00.000Z/2013-09-02T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .build();
+  private static final DataSegment SEGMENT_2 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-01T00:00:00.000Z/2013-09-02T00:00:00.000Z"))
+      .build();
 
-  private static final DataSegment SEGMENT_3 = DataSegment.builder(SEGMENT_1)
-                                                          .interval(
-                                                              new Interval(
-                                                                  "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .version("2015-10-22T22:07:57.074Z")
-                                                          .build();
+  private static final DataSegment SEGMENT_3 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .version("2015-10-22T22:07:57.074Z")
+      .build();
 
-  private static final DataSegment SEGMENT_4_0 = DataSegment.builder(SEGMENT_1)
-                                                            .interval(
-                                                                new Interval(
-                                                                    "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                                )
-                                                            )
-                                                            .shardSpec(new NumberedShardSpec(0, 2))
-                                                            .build();
+  private static final DataSegment SEGMENT_4_0 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .shardSpec(new NumberedShardSpec(0, 2))
+      .build();
 
-  private static final DataSegment SEGMENT_4_1 = DataSegment.builder(SEGMENT_1)
-                                                            .interval(
-                                                                new Interval(
-                                                                    "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                                )
-                                                            )
-                                                            .shardSpec(new NumberedShardSpec(1, 2))
-                                                            .build();
+  private static final DataSegment SEGMENT_4_1 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .shardSpec(new NumberedShardSpec(1, 2))
+      .build();
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -296,7 +281,8 @@ public class S3DataSegmentFinderTest
   }
 
   @Test
-  public void testFindSegmentsUpdateLoadSpec() throws Exception {
+  public void testFindSegmentsUpdateLoadSpec() throws Exception
+  {
     config.setBucket("amazing");
     final DataSegment segmentMissingLoadSpec = DataSegment.builder(SEGMENT_1)
         .loadSpec(ImmutableMap.of())
@@ -377,7 +363,7 @@ public class S3DataSegmentFinderTest
         startOffset = keys.indexOf(priorLastKey) + 1;
       }
 
-      int endOffset = startOffset + (int)maxListingLength; // exclusive
+      int endOffset = startOffset + (int) maxListingLength; // exclusive
       if (endOffset > keys.size()) {
         endOffset = keys.size();
       }
@@ -388,7 +374,7 @@ public class S3DataSegmentFinderTest
       }
 
       List<StorageObject> objects = Lists.newArrayList();
-      for(String objectKey : keys.subList(startOffset, endOffset)) {
+      for (String objectKey : keys.subList(startOffset, endOffset)) {
         objects.add(getObjectDetails(bucketName, objectKey));
       }
 

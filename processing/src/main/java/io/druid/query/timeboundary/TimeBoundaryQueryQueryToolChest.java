@@ -27,20 +27,21 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentSkippingQueryRunner;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
-import io.druid.query.GenericQueryMetricsFactory;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
-import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -109,13 +110,15 @@ public class TimeBoundaryQueryQueryToolChest
     {
       @Override
       protected Sequence<Result<TimeBoundaryResultValue>> doRun(
-          QueryRunner<Result<TimeBoundaryResultValue>> baseRunner, Query<Result<TimeBoundaryResultValue>> input, Map<String, Object> context
+          QueryRunner<Result<TimeBoundaryResultValue>> baseRunner,
+          QueryPlus<Result<TimeBoundaryResultValue>> input,
+          Map<String, Object> context
       )
       {
-        TimeBoundaryQuery query = (TimeBoundaryQuery) input;
+        TimeBoundaryQuery query = (TimeBoundaryQuery) input.getQuery();
         return Sequences.simple(
             query.mergeResults(
-                Sequences.toList(baseRunner.run(query, context), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
+                Sequences.toList(baseRunner.run(input, context), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
             )
         );
       }
@@ -194,7 +197,7 @@ public class TimeBoundaryQueryQueryToolChest
             List<Object> result = (List<Object>) input;
 
             return new Result<>(
-                new DateTime(((Number)result.get(0)).longValue()),
+                DateTimes.utc(((Number) result.get(0)).longValue()),
                 new TimeBoundaryResultValue(result.get(1))
             );
           }

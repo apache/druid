@@ -26,7 +26,7 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 
 import java.io.File;
-import java.util.Arrays;
+import java.util.Collections;
 
 /**
  */
@@ -45,7 +45,7 @@ public class SegmentLoaderFactory
   public SegmentLoader manufacturate(File storageDir)
   {
     return loader.withConfig(
-        new SegmentLoaderConfig().withLocations(Arrays.asList(new StorageLocationConfig().setPath(storageDir)))
+        new SegmentLoaderConfig().withLocations(Collections.singletonList(new StorageLocationConfig().setPath(storageDir)))
     );
   }
 }

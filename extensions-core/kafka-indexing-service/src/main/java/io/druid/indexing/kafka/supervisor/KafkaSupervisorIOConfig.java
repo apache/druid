@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -39,9 +40,11 @@ public class KafkaSupervisorIOConfig
   private final Map<String, String> consumerProperties;
   private final Duration startDelay;
   private final Duration period;
-  private final Boolean useEarliestOffset;
+  private final boolean useEarliestOffset;
   private final Duration completionTimeout;
   private final Optional<Duration> lateMessageRejectionPeriod;
+  private final Optional<Duration> earlyMessageRejectionPeriod;
+  private final boolean skipOffsetGaps;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -54,26 +57,32 @@ public class KafkaSupervisorIOConfig
       @JsonProperty("period") Period period,
       @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
       @JsonProperty("completionTimeout") Period completionTimeout,
-      @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod
+      @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
+      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
+      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
   )
   {
     this.topic = Preconditions.checkNotNull(topic, "topic");
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     Preconditions.checkNotNull(
         consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
-        String.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
+        StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
 
-    this.replicas = (replicas != null ? replicas : 1);
-    this.taskCount = (taskCount != null ? taskCount : 1);
+    this.replicas = replicas != null ? replicas : 1;
+    this.taskCount = taskCount != null ? taskCount : 1;
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
     this.startDelay = defaultDuration(startDelay, "PT5S");
     this.period = defaultDuration(period, "PT30S");
-    this.useEarliestOffset = (useEarliestOffset != null ? useEarliestOffset : false);
+    this.useEarliestOffset = useEarliestOffset != null ? useEarliestOffset : false;
     this.completionTimeout = defaultDuration(completionTimeout, "PT30M");
-    this.lateMessageRejectionPeriod = (lateMessageRejectionPeriod == null
+    this.lateMessageRejectionPeriod = lateMessageRejectionPeriod == null
+                                      ? Optional.<Duration>absent()
+                                      : Optional.of(lateMessageRejectionPeriod.toStandardDuration());
+    this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
                                        ? Optional.<Duration>absent()
-                                       : Optional.of(lateMessageRejectionPeriod.toStandardDuration()));
+                                       : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
+    this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : false;
   }
 
   @JsonProperty
@@ -119,7 +128,7 @@ public class KafkaSupervisorIOConfig
   }
 
   @JsonProperty
-  public Boolean isUseEarliestOffset()
+  public boolean isUseEarliestOffset()
   {
     return useEarliestOffset;
   }
@@ -131,9 +140,21 @@ public class KafkaSupervisorIOConfig
   }
 
   @JsonProperty
+  public Optional<Duration> getEarlyMessageRejectionPeriod()
+  {
+    return earlyMessageRejectionPeriod;
+  }
+
+  @JsonProperty
   public Optional<Duration> getLateMessageRejectionPeriod()
   {
     return lateMessageRejectionPeriod;
+  }
+
+  @JsonProperty
+  public boolean isSkipOffsetGaps()
+  {
+    return skipOffsetGaps;
   }
 
   @Override
@@ -150,6 +171,7 @@ public class KafkaSupervisorIOConfig
            ", useEarliestOffset=" + useEarliestOffset +
            ", completionTimeout=" + completionTimeout +
            ", lateMessageRejectionPeriod=" + lateMessageRejectionPeriod +
+           ", skipOffsetGaps=" + skipOffsetGaps +
            '}';
   }
 

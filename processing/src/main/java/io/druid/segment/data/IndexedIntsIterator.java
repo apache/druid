@@ -30,7 +30,7 @@ public class IndexedIntsIterator extends AbstractIntIterator
   private final IndexedInts baseInts;
   private final int size;
 
-  int currIndex = 0;
+  private int currIndex = 0;
 
   public IndexedIntsIterator(
       IndexedInts baseInts
@@ -48,7 +48,8 @@ public class IndexedIntsIterator extends AbstractIntIterator
   }
 
   @Override
-  public int nextInt() {
+  public int nextInt()
+  {
     return baseInts.get(currIndex++);
   }
 

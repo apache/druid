@@ -27,6 +27,7 @@ import com.google.common.io.Closeables;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.Closeable;
@@ -64,12 +65,13 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
   )
   {
     this.ioPeon = ioPeon;
-    this.metaFileName = String.format("%s.meta", filenameBase);
-    this.headerFileName = String.format("%s.header", filenameBase);
-    this.valuesFileName = String.format("%s.values", filenameBase);
+    this.metaFileName = StringUtils.format("%s.meta", filenameBase);
+    this.headerFileName = StringUtils.format("%s.header", filenameBase);
+    this.valuesFileName = StringUtils.format("%s.values", filenameBase);
     this.maxId = maxId;
   }
 
+  @Override
   public void open() throws IOException
   {
     headerOut = new CountingOutputStream(ioPeon.makeOutputStream(headerFileName));
@@ -116,15 +118,10 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
         numBytesWritten < Integer.MAX_VALUE, "Wrote[%s] bytes, which is too many.", numBytesWritten
     );
 
-    OutputStream metaOut = ioPeon.makeOutputStream(metaFileName);
-
-    try {
+    try (OutputStream metaOut = ioPeon.makeOutputStream(metaFileName)) {
       metaOut.write(new byte[]{VERSION, numBytesForMax});
       metaOut.write(Ints.toByteArray((int) numBytesWritten + 4));
       metaOut.write(Ints.toByteArray(numWritten));
-    }
-    finally {
-      metaOut.close();
     }
   }
 
@@ -133,8 +130,8 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
     return ByteStreams.join(
         Iterables.transform(
             Arrays.asList(metaFileName, headerFileName, valuesFileName),
-            new Function<String,InputSupplier<InputStream>>() {
-
+            new Function<String, InputSupplier<InputStream>>()
+            {
               @Override
               public InputSupplier<InputStream> apply(final String input)
               {

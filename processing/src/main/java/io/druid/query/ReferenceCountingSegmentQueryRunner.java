@@ -47,12 +47,12 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
     final Closeable closeable = adapter.increment();
     if (closeable != null) {
       try {
-        final Sequence<T> baseSequence = factory.createRunner(adapter).run(query, responseContext);
+        final Sequence<T> baseSequence = factory.createRunner(adapter).run(queryPlus, responseContext);
 
         return Sequences.withBaggage(baseSequence, closeable);
       }
@@ -62,7 +62,7 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
       }
     } else {
       // Segment was closed before we had a chance to increment the reference count
-      return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(query, responseContext);
+      return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(queryPlus, responseContext);
     }
   }
 }

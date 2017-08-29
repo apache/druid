@@ -29,6 +29,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -59,7 +60,7 @@ public class ClientInfoResourceTestClient
 
   private String getBrokerURL()
   {
-    return String.format(
+    return StringUtils.format(
         "%s/druid/v2/datasources",
         brokerUrl
     );
@@ -71,7 +72,7 @@ public class ClientInfoResourceTestClient
       StatusResponseHolder response = httpClient.go(
           new Request(
               HttpMethod.GET,
-              new URL(String.format("%s/%s/dimensions?interval=%s", getBrokerURL(), dataSource, interval))
+              new URL(StringUtils.format("%s/%s/dimensions?interval=%s", getBrokerURL(), dataSource, interval))
           ),
           responseHandler
       ).get();

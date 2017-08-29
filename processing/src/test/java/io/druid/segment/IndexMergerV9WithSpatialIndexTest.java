@@ -28,9 +28,12 @@ import io.druid.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -45,9 +48,7 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -69,7 +70,7 @@ public class IndexMergerV9WithSpatialIndexTest
   private static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   public static final int NUM_POINTS = 5000;
-  private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
+  private static Interval DATA_INTERVAL = Intervals.of("2013-01-01/2013-01-07");
 
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
@@ -102,37 +103,40 @@ public class IndexMergerV9WithSpatialIndexTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                            .withQueryGranularity(Granularities.DAY)
-                                            .withMetrics(METRIC_AGGS)
-                                            .withDimensionsSpec(
-                                                new DimensionsSpec(
-                                                    null,
-                                                    null,
-                                                    Arrays.asList(
-                                                        new SpatialDimensionSchema(
-                                                            "dim.geo",
-                                                            Arrays.asList("lat", "long")
-                                                        ),
-                                                        new SpatialDimensionSchema(
-                                                            "spatialIsRad",
-                                                            Arrays.asList("lat2", "long2")
-                                                        )
+    IncrementalIndex theIndex = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                .withQueryGranularity(Granularities.DAY)
+                .withMetrics(METRIC_AGGS)
+                .withDimensionsSpec(
+                    new DimensionsSpec(
+                        null,
+                        null,
+                        Arrays.asList(
+                            new SpatialDimensionSchema(
+                                "dim.geo",
+                                Arrays.asList("lat", "long")
+                            ),
+                            new SpatialDimensionSchema(
+                                "spatialIsRad",
+                                Arrays.asList("lat2", "long2")
+                            )
 
-                                                    )
-                                                )
-                                            ).build(),
-        false,
-        NUM_POINTS
-    );
+                        )
+                    )
+                ).build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(NUM_POINTS)
+        .buildOnheap();
 
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-01").getMillis(),
+            DateTimes.of("2013-01-01").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-01").toString(),
+                "timestamp", DateTimes.of("2013-01-01").toString(),
                 "dim", "foo",
                 "lat", 0.0f,
                 "long", 0.0f,
@@ -142,10 +146,10 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-02").getMillis(),
+            DateTimes.of("2013-01-02").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-02").toString(),
+                "timestamp", DateTimes.of("2013-01-02").toString(),
                 "dim", "foo",
                 "lat", 1.0f,
                 "long", 3.0f,
@@ -155,10 +159,10 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-03").getMillis(),
+            DateTimes.of("2013-01-03").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-03").toString(),
+                "timestamp", DateTimes.of("2013-01-03").toString(),
                 "dim", "foo",
                 "lat", 4.0f,
                 "long", 2.0f,
@@ -168,10 +172,10 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-04").getMillis(),
+            DateTimes.of("2013-01-04").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-04").toString(),
+                "timestamp", DateTimes.of("2013-01-04").toString(),
                 "dim", "foo",
                 "lat", 7.0f,
                 "long", 3.0f,
@@ -181,10 +185,10 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
+            DateTimes.of("2013-01-05").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
+                "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "lat", 8.0f,
                 "long", 6.0f,
@@ -194,10 +198,10 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
+            DateTimes.of("2013-01-05").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
+                "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "lat", "_mmx.unknown",
                 "long", "_mmx.unknown",
@@ -207,10 +211,10 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
+            DateTimes.of("2013-01-05").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
+                "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "_mmx.unknown",
                 "val", 501L
@@ -219,10 +223,10 @@ public class IndexMergerV9WithSpatialIndexTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
+            DateTimes.of("2013-01-05").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
+                "timestamp", DateTimes.of("2013-01-05").toString(),
                 "lat2", 0.0f,
                 "long2", 0.0f,
                 "val", 13L
@@ -235,10 +239,10 @@ public class IndexMergerV9WithSpatialIndexTest
     for (int i = 8; i < NUM_POINTS; i++) {
       theIndex.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-01").getMillis(),
+              DateTimes.of("2013-01-01").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-01").toString(),
+                  "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "boo",
                   "lat", (float) (rand.nextFloat() * 10 + 10.0),
                   "long", (float) (rand.nextFloat() * 10 + 10.0),
@@ -270,86 +274,96 @@ public class IndexMergerV9WithSpatialIndexTest
   private static QueryableIndex makeMergedQueryableIndex(IndexSpec indexSpec)
   {
     try {
-      IncrementalIndex first = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Arrays.asList("lat", "long")
-                                                          ),
-                                                          new SpatialDimensionSchema(
-                                                              "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
-                                                          )
+      IncrementalIndex first = new IncrementalIndex.Builder()
+          .setIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Arrays.asList("lat", "long")
+                              ),
+                              new SpatialDimensionSchema(
+                                  "spatialIsRad",
+                                  Arrays.asList("lat2", "long2")
+                              )
 
-                                                      )
-                                                  )
-                                              ).build(),
-          false,
-          1000
-      );
-      IncrementalIndex second = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Arrays.asList("lat", "long")
-                                                          ),
-                                                          new SpatialDimensionSchema(
-                                                              "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
-                                                          )
+                          )
+                      )
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(1000)
+          .buildOnheap();
 
-                                                      )
-                                                  )
-                                              ).build(),
-          false,
-          1000
-      );
-      IncrementalIndex third = new OnheapIncrementalIndex(
-          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(Granularities.DAY)
-                                              .withMetrics(METRIC_AGGS)
-                                              .withDimensionsSpec(
-                                                  new DimensionsSpec(
-                                                      null,
-                                                      null,
-                                                      Arrays.asList(
-                                                          new SpatialDimensionSchema(
-                                                              "dim.geo",
-                                                              Arrays.asList("lat", "long")
-                                                          ),
-                                                          new SpatialDimensionSchema(
-                                                              "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
-                                                          )
+      IncrementalIndex second = new IncrementalIndex.Builder()
+          .setIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Arrays.asList("lat", "long")
+                              ),
+                              new SpatialDimensionSchema(
+                                  "spatialIsRad",
+                                  Arrays.asList("lat2", "long2")
+                              )
 
-                                                      )
-                                                  )
-                                              ).build(),
-          false,
-          NUM_POINTS
-      );
+                          )
+                      )
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(1000)
+          .buildOnheap();
 
+      IncrementalIndex third = new IncrementalIndex.Builder()
+          .setIndexSchema(
+              new IncrementalIndexSchema.Builder()
+                  .withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                  .withQueryGranularity(Granularities.DAY)
+                  .withMetrics(METRIC_AGGS)
+                  .withDimensionsSpec(
+                      new DimensionsSpec(
+                          null,
+                          null,
+                          Arrays.asList(
+                              new SpatialDimensionSchema(
+                                  "dim.geo",
+                                  Arrays.asList("lat", "long")
+                              ),
+                              new SpatialDimensionSchema(
+                                  "spatialIsRad",
+                                  Arrays.asList("lat2", "long2")
+                              )
+
+                          )
+                      )
+                  ).build()
+          )
+          .setReportParseExceptions(false)
+          .setMaxRowCount(NUM_POINTS)
+          .buildOnheap();
 
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-01").getMillis(),
+              DateTimes.of("2013-01-01").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-01").toString(),
+                  "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "foo",
                   "lat", 0.0f,
                   "long", 0.0f,
@@ -359,10 +373,10 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-02").getMillis(),
+              DateTimes.of("2013-01-02").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-02").toString(),
+                  "timestamp", DateTimes.of("2013-01-02").toString(),
                   "dim", "foo",
                   "lat", 1.0f,
                   "long", 3.0f,
@@ -372,10 +386,10 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-03").getMillis(),
+              DateTimes.of("2013-01-03").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-03").toString(),
+                  "timestamp", DateTimes.of("2013-01-03").toString(),
                   "dim", "foo",
                   "lat", 4.0f,
                   "long", 2.0f,
@@ -385,10 +399,10 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
+              DateTimes.of("2013-01-05").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "lat", "_mmx.unknown",
                   "long", "_mmx.unknown",
@@ -398,10 +412,10 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
+              DateTimes.of("2013-01-05").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "_mmx.unknown",
                   "val", 501L
@@ -410,10 +424,10 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       second.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-04").getMillis(),
+              DateTimes.of("2013-01-04").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-04").toString(),
+                  "timestamp", DateTimes.of("2013-01-04").toString(),
                   "dim", "foo",
                   "lat", 7.0f,
                   "long", 3.0f,
@@ -423,10 +437,10 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       second.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
+              DateTimes.of("2013-01-05").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "lat", 8.0f,
                   "long", 6.0f,
@@ -436,10 +450,10 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       second.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
+              DateTimes.of("2013-01-05").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "timestamp", DateTimes.of("2013-01-05").toString(),
                   "lat2", 0.0f,
                   "long2", 0.0f,
                   "val", 13L
@@ -452,10 +466,10 @@ public class IndexMergerV9WithSpatialIndexTest
       for (int i = 8; i < NUM_POINTS; i++) {
         third.add(
             new MapBasedInputRow(
-                new DateTime("2013-01-01").getMillis(),
+                DateTimes.of("2013-01-01").getMillis(),
                 DIMS,
                 ImmutableMap.<String, Object>of(
-                    "timestamp", new DateTime("2013-01-01").toString(),
+                    "timestamp", DateTimes.of("2013-01-01").toString(),
                     "dim", "boo",
                     "lat", (float) (rand.nextFloat() * 10 + 10.0),
                     "long", (float) (rand.nextFloat() * 10 + 10.0),
@@ -526,7 +540,7 @@ public class IndexMergerV9WithSpatialIndexTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -543,7 +557,7 @@ public class IndexMergerV9WithSpatialIndexTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 3L)
@@ -566,7 +580,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -580,7 +594,7 @@ public class IndexMergerV9WithSpatialIndexTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "spatialIsRad",
@@ -597,7 +611,7 @@ public class IndexMergerV9WithSpatialIndexTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -620,7 +634,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -633,7 +647,7 @@ public class IndexMergerV9WithSpatialIndexTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -650,7 +664,7 @@ public class IndexMergerV9WithSpatialIndexTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -659,7 +673,7 @@ public class IndexMergerV9WithSpatialIndexTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-02T00:00:00.000Z"),
+            DateTimes.of("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -668,7 +682,7 @@ public class IndexMergerV9WithSpatialIndexTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-03T00:00:00.000Z"),
+            DateTimes.of("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -677,7 +691,7 @@ public class IndexMergerV9WithSpatialIndexTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-04T00:00:00.000Z"),
+            DateTimes.of("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -686,7 +700,7 @@ public class IndexMergerV9WithSpatialIndexTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-05T00:00:00.000Z"),
+            DateTimes.of("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -709,7 +723,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

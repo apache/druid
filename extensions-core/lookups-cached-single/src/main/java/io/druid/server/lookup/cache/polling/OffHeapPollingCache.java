@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.StringUtils;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
@@ -49,8 +50,8 @@ public class OffHeapPollingCache<K, V> implements PollingCache<K, V>
   public OffHeapPollingCache(final Iterable<Map.Entry<K, V>> entries)
   {
     synchronized (started) {
-      this.cacheName = String.format("cache-%s", UUID.randomUUID());
-      this.reverseCacheName = String.format("reverseCache-%s", UUID.randomUUID());
+      this.cacheName = StringUtils.format("cache-%s", UUID.randomUUID());
+      this.reverseCacheName = StringUtils.format("reverseCache-%s", UUID.randomUUID());
       mapCache = DB.createHashMap(cacheName).make();
       reverseCache = DB.createHashMap(reverseCacheName).make();
       ImmutableSet.Builder<V> setOfValuesBuilder = ImmutableSet.builder();

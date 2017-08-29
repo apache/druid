@@ -19,10 +19,14 @@
 
 package io.druid.client;
 
+import io.druid.timeline.DataSegment;
+
 /**
  */
 public interface InventoryView
 {
-  public DruidServer getInventoryValue(String string);
-  public Iterable<DruidServer> getInventory();
+  DruidServer getInventoryValue(String string);
+  Iterable<DruidServer> getInventory();
+  boolean isStarted();
+  boolean isSegmentLoadedByServer(String serverKey, DataSegment segment);
 }

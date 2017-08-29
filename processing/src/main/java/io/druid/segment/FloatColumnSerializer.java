@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
@@ -64,7 +65,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   {
     writer = CompressionFactory.getFloatSerializer(
         ioPeon,
-        String.format("%s.float_column", filenameBase),
+        StringUtils.format("%s.float_column", filenameBase),
         byteOrder,
         compression
     );

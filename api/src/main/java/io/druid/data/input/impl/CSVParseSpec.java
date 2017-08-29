@@ -21,9 +21,7 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-
 import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.Parser;
 
@@ -35,26 +33,49 @@ public class CSVParseSpec extends ParseSpec
 {
   private final String listDelimiter;
   private final List<String> columns;
+  private final boolean hasHeaderRow;
+  private final int skipHeaderRows;
 
   @JsonCreator
   public CSVParseSpec(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("listDelimiter") String listDelimiter,
-      @JsonProperty("columns") List<String> columns
+      @JsonProperty("columns") List<String> columns,
+      @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
+      @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
     super(timestampSpec, dimensionsSpec);
 
     this.listDelimiter = listDelimiter;
-    Preconditions.checkNotNull(columns, "columns");
-    for (String column : columns) {
-      Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
-    }
-
     this.columns = columns;
+    this.hasHeaderRow = hasHeaderRow;
+    this.skipHeaderRows = skipHeaderRows;
 
-    verify(dimensionsSpec.getDimensionNames());
+    if (columns != null) {
+      for (String column : columns) {
+        Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
+      }
+      verify(dimensionsSpec.getDimensionNames());
+    } else {
+      Preconditions.checkArgument(
+          hasHeaderRow,
+          "If columns field is not set, the first row of your data must have your header"
+          + " and hasHeaderRow must be set to true."
+      );
+    }
+  }
+
+  @Deprecated
+  public CSVParseSpec(
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      String listDelimiter,
+      List<String> columns
+  )
+  {
+    this(timestampSpec, dimensionsSpec, listDelimiter, columns, false, 0);
   }
 
   @JsonProperty
@@ -69,6 +90,18 @@ public class CSVParseSpec extends ParseSpec
     return columns;
   }
 
+  @JsonProperty
+  public boolean isHasHeaderRow()
+  {
+    return hasHeaderRow;
+  }
+
+  @JsonProperty("skipHeaderRows")
+  public int getSkipHeaderRows()
+  {
+    return skipHeaderRows;
+  }
+
   @Override
   public void verify(List<String> usedCols)
   {
@@ -80,23 +113,23 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new CSVParser(Optional.fromNullable(listDelimiter), columns);
+    return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns);
+    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns);
+    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
   public ParseSpec withColumns(List<String> cols)
   {
-    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols);
+    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, hasHeaderRow, skipHeaderRows);
   }
 }

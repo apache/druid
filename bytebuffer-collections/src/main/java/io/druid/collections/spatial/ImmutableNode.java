@@ -160,6 +160,7 @@ public class ImmutableNode
     return bitmapFactory.mapImmutableBitmap(tmpBuffer.asReadOnlyBuffer());
   }
 
+  @SuppressWarnings("ArgumentParameterSwap")
   public Iterable<ImmutableNode> getChildren()
   {
     return new Iterable<ImmutableNode>()

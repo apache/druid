@@ -22,7 +22,8 @@ package io.druid.query.datasourcemetadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
@@ -32,9 +33,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -43,9 +42,7 @@ import java.util.Map;
  */
 public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadataResultValue>>
 {
-  public static final Interval MY_Y2K_INTERVAL = new Interval(
-      JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
-  );
+  private static final QuerySegmentSpec DEFAULT_SEGMENT_SPEC = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
 
   @JsonCreator
   public DataSourceMetadataQuery(
@@ -54,13 +51,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(
-        dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Collections.singletonList(MY_Y2K_INTERVAL))
-                                   : querySegmentSpec,
-        false,
-        context
-    );
+    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, false, context);
   }
 
   @Override
@@ -102,16 +93,18 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
 
   public Iterable<Result<DataSourceMetadataResultValue>> buildResult(DateTime timestamp, DateTime maxIngestedEventTime)
   {
-    return Arrays.asList(new Result<>(timestamp, new DataSourceMetadataResultValue(maxIngestedEventTime)));
+    return Collections.singletonList(new Result<>(timestamp, new DataSourceMetadataResultValue(maxIngestedEventTime)));
   }
 
-  public Iterable<Result<DataSourceMetadataResultValue>> mergeResults(List<Result<DataSourceMetadataResultValue>> results)
+  public Iterable<Result<DataSourceMetadataResultValue>> mergeResults(
+      List<Result<DataSourceMetadataResultValue>> results
+  )
   {
     if (results == null || results.isEmpty()) {
       return Lists.newArrayList();
     }
 
-    DateTime max = new DateTime(JodaUtils.MIN_INSTANT);
+    DateTime max = DateTimes.MIN;
     for (Result<DataSourceMetadataResultValue> result : results) {
       DateTime currMaxIngestedEventTime = result.getValue().getMaxIngestedEventTime();
       if (currMaxIngestedEventTime != null && currMaxIngestedEventTime.isAfter(max)) {
@@ -126,10 +119,10 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   public String toString()
   {
     return "DataSourceMetadataQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", duration=" + getDuration() +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", duration=" + getDuration() +
+        '}';
   }
 
 }

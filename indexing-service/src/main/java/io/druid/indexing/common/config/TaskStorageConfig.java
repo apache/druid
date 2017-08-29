@@ -37,7 +37,7 @@ public class TaskStorageConfig
       @JsonProperty("recentlyFinishedThreshold") Period period
   )
   {
-    if(period != null) {
+    if (period != null) {
       this.recentlyFinishedThreshold = period.toStandardDuration();
     }
   }

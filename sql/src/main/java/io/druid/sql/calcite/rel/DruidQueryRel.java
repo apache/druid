@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryDataSource;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.segment.VirtualColumns;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
@@ -73,6 +75,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       final RelOptCluster cluster,
       final RelOptTable table,
       final DruidTable druidTable,
+      final PlannerContext plannerContext,
       final QueryMaker queryMaker
   )
   {
@@ -89,11 +92,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public QueryDataSource asDataSource()
   {
-    final GroupByQuery groupByQuery = getQueryBuilder().toGroupByQuery(
-        druidTable.getDataSource(),
-        druidTable.getRowSignature(),
-        getPlannerContext().getQueryContext()
-    );
+    final GroupByQuery groupByQuery = getQueryBuilder().toGroupByQuery(druidTable.getDataSource(), getPlannerContext());
 
     if (groupByQuery == null) {
       // QueryDataSources must currently embody groupBy queries. This will thrown an exception if the query
@@ -165,7 +164,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public Sequence<Object[]> runQuery()
   {
-    return getQueryMaker().runQuery(druidTable.getDataSource(), druidTable.getRowSignature(), queryBuilder);
+    return getQueryMaker().runQuery(druidTable.getDataSource(), queryBuilder);
   }
 
   @Override
@@ -186,6 +185,10 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
     pw.item("dataSource", druidTable.getDataSource());
     if (queryBuilder != null) {
       final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(getSourceRowSignature());
+      final VirtualColumns virtualColumns = queryBuilder.getVirtualColumns(getPlannerContext().getExprMacroTable());
+      if (!virtualColumns.isEmpty()) {
+        pw.item("virtualColumns", virtualColumns);
+      }
       if (!filtration.getIntervals().equals(ImmutableList.of(Filtration.eternity()))) {
         pw.item("intervals", filtration.getIntervals());
       }
@@ -193,8 +196,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         pw.item("filter", filtration.getDimFilter());
       }
       if (queryBuilder.getSelectProjection() != null) {
-        pw.item("selectDimensions", queryBuilder.getSelectProjection().getDimensions());
-        pw.item("selectMetrics", queryBuilder.getSelectProjection().getMetrics());
+        pw.item("selectProjection", queryBuilder.getSelectProjection());
       }
       if (queryBuilder.getGrouping() != null) {
         pw.item("dimensions", queryBuilder.getGrouping().getDimensions());

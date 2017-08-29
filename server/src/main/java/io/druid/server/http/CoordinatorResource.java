@@ -36,6 +36,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Map;
 
 /**
  */
@@ -59,6 +60,20 @@ public class CoordinatorResource
   public Response getLeader()
   {
     return Response.ok(coordinator.getCurrentLeader()).build();
+  }
+
+  @GET
+  @Path("/isLeader")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response isLeader()
+  {
+    final boolean leading = coordinator.isLeader();
+    final Map<String, Boolean> response = ImmutableMap.of("leader", leading);
+    if (leading) {
+      return Response.ok(response).build();
+    } else {
+      return Response.status(Response.Status.NOT_FOUND).entity(response).build();
+    }
   }
 
   @GET
@@ -147,16 +162,16 @@ public class CoordinatorResource
                     )
                     .put(
                         "segmentsToDrop", Collections2.transform(
-                        input.getSegmentsToDrop(),
-                        new Function<DataSegment, Object>()
-                        {
-                          @Override
-                          public String apply(DataSegment segment)
-                          {
-                            return segment.getIdentifier();
-                          }
-                        }
-                    )
+                            input.getSegmentsToDrop(),
+                            new Function<DataSegment, Object>()
+                            {
+                              @Override
+                              public String apply(DataSegment segment)
+                              {
+                                return segment.getIdentifier();
+                              }
+                            }
+                        )
                     )
                     .build();
               }

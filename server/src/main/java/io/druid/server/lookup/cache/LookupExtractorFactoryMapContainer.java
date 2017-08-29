@@ -22,7 +22,7 @@ package io.druid.server.lookup.cache;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Ordering;
+import io.druid.java.util.common.guava.Comparators;
 
 import java.util.Map;
 import java.util.Objects;
@@ -34,8 +34,6 @@ import java.util.Objects;
  */
 public class LookupExtractorFactoryMapContainer
 {
-  private final static Ordering VERSION_COMPARATOR =  Ordering.natural().nullsFirst();
-
   private final String version;
   private final Map<String, Object> lookupExtractorFactory;
 
@@ -61,12 +59,13 @@ public class LookupExtractorFactoryMapContainer
     return lookupExtractorFactory;
   }
 
-  public boolean replaces(LookupExtractorFactoryMapContainer other) {
+  public boolean replaces(LookupExtractorFactoryMapContainer other)
+  {
     if (version == null && other.getVersion() == null) {
       return false;
     }
 
-    return VERSION_COMPARATOR.compare(version, other.getVersion()) > 0;
+    return Comparators.<String>naturalNullsFirst().compare(version, other.getVersion()) > 0;
   }
 
   @Override

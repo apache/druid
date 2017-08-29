@@ -22,6 +22,7 @@ package io.druid.server.http.security;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizationInfo;
@@ -73,7 +74,7 @@ public class StateResourceFilter extends AbstractResourceFilter
       if (!authResult.isAllowed()) {
         throw new WebApplicationException(
             Response.status(Response.Status.FORBIDDEN)
-                    .entity(String.format("Access-Check-Result: %s", authResult.toString()))
+                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
                     .build()
         );
       }
@@ -82,6 +83,7 @@ public class StateResourceFilter extends AbstractResourceFilter
     return request;
   }
 
+  @Override
   public boolean isApplicable(String requestPath)
   {
     return requestPath.startsWith("druid/broker/v1") ||

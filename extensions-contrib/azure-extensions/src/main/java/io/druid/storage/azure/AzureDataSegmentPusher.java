@@ -21,21 +21,24 @@ package io.druid.storage.azure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
 
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -72,6 +75,12 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     return null;
   }
 
+  @Override
+  public List<String> getAllowedPropertyPrefixesForHadoop()
+  {
+    return ImmutableList.of("druid.azure");
+  }
+
   public File createSegmentDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment) throws
                                                                                                     IOException
   {
@@ -85,11 +94,11 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
   public Map<String, String> getAzurePaths(final DataSegment segment)
   {
-    final String storageDir = DataSegmentPusherUtil.getStorageDir(segment);
+    final String storageDir = this.getStorageDir(segment);
 
     return ImmutableMap.of(
-        "index", String.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
-        "descriptor", String.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME)
+        "index", StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
+        "descriptor", StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME)
     );
 
   }
@@ -109,16 +118,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
     final DataSegment outSegment = segment
         .withSize(size)
-        .withLoadSpec(
-            ImmutableMap.<String, Object>of(
-                "type",
-                AzureStorageDruidModule.SCHEME,
-                "containerName",
-                config.getContainer(),
-                "blobPath",
-                azurePaths.get("index")
-            )
-        )
+        .withLoadSpec(this.makeLoadSpec(new URI(azurePaths.get("index"))))
         .withBinaryVersion(version);
 
     log.info("Deleting file [%s]", compressedSegmentData);
@@ -173,5 +173,18 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         descriptorFile.delete();
       }
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI uri)
+  {
+    return ImmutableMap.<String, Object>of(
+        "type",
+        AzureStorageDruidModule.SCHEME,
+        "containerName",
+        config.getContainer(),
+        "blobPath",
+        uri.toString()
+    );
   }
 }

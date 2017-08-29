@@ -35,7 +35,7 @@ import java.nio.ByteOrder;
 public class VSizeLongSerde
 {
 
-  public static final int SUPPORTED_SIZE[] = {1, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
+  public static final int SUPPORTED_SIZES[] = {1, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
   public static final byte EMPTY[] = {0, 0, 0, 0};
 
   public static int getBitsForMax(long value)
@@ -45,13 +45,13 @@ public class VSizeLongSerde
     }
     byte numBits = 0;
     long maxValue = 1;
-    for (int i = 0; i < SUPPORTED_SIZE.length; i++) {
-      while (numBits < SUPPORTED_SIZE[i] && maxValue < Long.MAX_VALUE / 2) {
+    for (int supportedSize : SUPPORTED_SIZES) {
+      while (numBits < supportedSize && maxValue < Long.MAX_VALUE / 2) {
         numBits++;
         maxValue *= 2;
       }
       if (value <= maxValue || maxValue >= Long.MAX_VALUE / 2) {
-        return SUPPORTED_SIZE[i];
+        return supportedSize;
       }
     }
     return 64;
@@ -497,6 +497,7 @@ public class VSizeLongSerde
       this.offset = bufferOffset;
     }
 
+    @Override
     public long get(int index)
     {
       return buffer.getShort(offset + (index << 1)) & 0xFFFF;

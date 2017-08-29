@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -33,15 +34,13 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
-
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -52,6 +51,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -83,7 +83,7 @@ public class TaskLockbox
   }
 
   /**
-   * Wipe out our current in-memory state and resync it from our bundled {@link io.druid.indexing.overlord.TaskStorage}.
+   * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
    */
   public void syncFromStorage()
   {
@@ -125,30 +125,37 @@ public class TaskLockbox
           log.warn("WTF?! Got lock with empty interval for task: %s", task.getId());
           continue;
         }
-        final Optional<TaskLock> acquiredTaskLock = tryLock(
+
+        final TaskLockPosse taskLockPosse = createOrFindLockPosse(
             task,
             savedTaskLock.getInterval(),
             Optional.of(savedTaskLock.getVersion())
         );
-        if (acquiredTaskLock.isPresent() && savedTaskLock.getVersion().equals(acquiredTaskLock.get().getVersion())) {
-          taskLockCount ++;
-          log.info(
-              "Reacquired lock on interval[%s] version[%s] for task: %s",
-              savedTaskLock.getInterval(),
-              savedTaskLock.getVersion(),
-              task.getId()
-          );
-        } else if (acquiredTaskLock.isPresent()) {
-          taskLockCount ++;
-          log.info(
-              "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task: %s",
-              savedTaskLock.getInterval(),
-              savedTaskLock.getVersion(),
-              acquiredTaskLock.get().getVersion(),
-              task.getId()
-          );
+        if (taskLockPosse != null) {
+          taskLockPosse.getTaskIds().add(task.getId());
+
+          final TaskLock taskLock = taskLockPosse.getTaskLock();
+
+          if (savedTaskLock.getVersion().equals(taskLock.getVersion())) {
+            taskLockCount++;
+            log.info(
+                "Reacquired lock on interval[%s] version[%s] for task: %s",
+                savedTaskLock.getInterval(),
+                savedTaskLock.getVersion(),
+                task.getId()
+            );
+          } else {
+            taskLockCount++;
+            log.info(
+                "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task: %s",
+                savedTaskLock.getInterval(),
+                savedTaskLock.getVersion(),
+                taskLock.getVersion(),
+                task.getId()
+            );
+          }
         } else {
-          log.info(
+          throw new ISE(
               "Could not reacquire lock on interval[%s] version[%s] for task: %s",
               savedTaskLock.getInterval(),
               savedTaskLock.getVersion(),
@@ -162,32 +169,62 @@ public class TaskLockbox
           activeTasks.size(),
           storedLocks.size() - taskLockCount
       );
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
 
   /**
-   * Acquires a lock on behalf of a task. Blocks until the lock is acquired. Throws an exception if the lock
-   * cannot be acquired.
+   * Acquires a lock on behalf of a task. Blocks until the lock is acquired.
    *
    * @param task task to acquire lock for
    * @param interval interval to lock
    * @return acquired TaskLock
    *
-   * @throws java.lang.InterruptedException if the lock cannot be acquired
+   * @throws InterruptedException if the current thread is interrupted
    */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {
-    giant.lock();
+    giant.lockInterruptibly();
     try {
       Optional<TaskLock> taskLock;
       while (!(taskLock = tryLock(task, interval)).isPresent()) {
         lockReleaseCondition.await();
       }
-
       return taskLock.get();
-    } finally {
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Acquires a lock on behalf of a task, waiting up to the specified wait time if necessary.
+   *
+   * @param task      task to acquire a lock for
+   * @param interval  interval to lock
+   * @param timeoutMs maximum time to wait
+   *
+   * @return acquired lock
+   *
+   * @throws InterruptedException if the current thread is interrupted
+   */
+  public TaskLock lock(final Task task, final Interval interval, long timeoutMs) throws InterruptedException
+  {
+    long nanos = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+    giant.lockInterruptibly();
+    try {
+      Optional<TaskLock> taskLock;
+      while (!(taskLock = tryLock(task, interval)).isPresent()) {
+        if (nanos <= 0) {
+          return null;
+        }
+        nanos = lockReleaseCondition.awaitNanos(nanos);
+      }
+      return taskLock.get();
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -226,10 +263,56 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      if(!activeTasks.contains(task.getId())){
+      if (!activeTasks.contains(task.getId())) {
         throw new ISE("Unable to grant lock to inactive Task [%s]", task.getId());
       }
       Preconditions.checkArgument(interval.toDurationMillis() > 0, "interval empty");
+
+      final TaskLockPosse posseToUse = createOrFindLockPosse(task, interval, preferredVersion);
+      if (posseToUse != null) {
+        // Add to existing TaskLockPosse, if necessary
+        if (posseToUse.getTaskIds().add(task.getId())) {
+          log.info("Added task[%s] to TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
+
+          // Update task storage facility. If it fails, revoke the lock.
+          try {
+            taskStorage.addLock(task.getId(), posseToUse.getTaskLock());
+            return Optional.of(posseToUse.getTaskLock());
+          }
+          catch (Exception e) {
+            log.makeAlert("Failed to persist lock in storage")
+               .addData("task", task.getId())
+               .addData("dataSource", posseToUse.getTaskLock().getDataSource())
+               .addData("interval", posseToUse.getTaskLock().getInterval())
+               .addData("version", posseToUse.getTaskLock().getVersion())
+               .emit();
+            unlock(task, interval);
+            return Optional.absent();
+          }
+        } else {
+          log.info("Task[%s] already present in TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
+          return Optional.of(posseToUse.getTaskLock());
+        }
+
+      } else {
+        return Optional.absent();
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+
+  }
+
+  private TaskLockPosse createOrFindLockPosse(
+      final Task task,
+      final Interval interval,
+      final Optional<String> preferredVersion
+  )
+  {
+    giant.lock();
+
+    try {
       final String dataSource = task.getDataSource();
       final List<TaskLockPosse> foundPosses = findLockPossesForInterval(dataSource, interval);
       final TaskLockPosse posseToUse;
@@ -237,7 +320,7 @@ public class TaskLockbox
       if (foundPosses.size() > 1) {
 
         // Too many existing locks.
-        return Optional.absent();
+        return null;
 
       } else if (foundPosses.size() == 1) {
 
@@ -247,7 +330,13 @@ public class TaskLockbox
         if (foundPosse.getTaskLock().getInterval().contains(interval) && foundPosse.getTaskLock().getGroupId().equals(task.getGroupId())) {
           posseToUse = foundPosse;
         } else {
-          return Optional.absent();
+          //Could be a deadlock for LockAcquireAction: same task trying to acquire lock for overlapping interval
+          if (foundPosse.getTaskIds().contains(task.getId())) {
+            log.makeAlert("Same Task is trying to acquire lock for overlapping interval")
+               .addData("task", task.getId())
+               .addData("interval", interval);
+          }
+          return null;
         }
 
       } else {
@@ -267,11 +356,11 @@ public class TaskLockbox
           // We have a preferred version. We'll trust our caller to not break our ordering assumptions and just use it.
           version = preferredVersion.get();
         } else {
-          // We are running under an interval lock right now, so just using the current time works as long as we can trust
-          // our clock to be monotonic and have enough resolution since the last time we created a TaskLock for the same
-          // interval. This may not always be true; to assure it we would need to use some method of timekeeping other
-          // than the wall clock.
-          version = new DateTime().toString();
+          // We are running under an interval lock right now, so just using the current time works as long as we can
+          // trust our clock to be monotonic and have enough resolution since the last time we created a TaskLock for
+          // the same interval. This may not always be true; to assure it we would need to use some method of
+          // timekeeping other than the wall clock.
+          version = DateTimes.nowUtc().toString();
         }
 
         posseToUse = new TaskLockPosse(new TaskLock(task.getGroupId(), dataSource, interval, version));
@@ -281,33 +370,11 @@ public class TaskLockbox
         log.info("Created new TaskLockPosse: %s", posseToUse);
       }
 
-      // Add to existing TaskLockPosse, if necessary
-      if (posseToUse.getTaskIds().add(task.getId())) {
-        log.info("Added task[%s] to TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
-
-        // Update task storage facility. If it fails, revoke the lock.
-        try {
-          taskStorage.addLock(task.getId(), posseToUse.getTaskLock());
-          return Optional.of(posseToUse.getTaskLock());
-        } catch(Exception e) {
-          log.makeAlert("Failed to persist lock in storage")
-             .addData("task", task.getId())
-             .addData("dataSource", posseToUse.getTaskLock().getDataSource())
-             .addData("interval", posseToUse.getTaskLock().getInterval())
-             .addData("version", posseToUse.getTaskLock().getVersion())
-             .emit();
-          unlock(task, interval);
-          return Optional.absent();
-        }
-      } else {
-        log.info("Task[%s] already present in TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
-        return Optional.of(posseToUse.getTaskLock());
-      }
+      return posseToUse;
     }
     finally {
       giant.unlock();
     }
-
   }
 
   /**
@@ -331,7 +398,8 @@ public class TaskLockbox
             }
           }
       );
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -354,9 +422,9 @@ public class TaskLockbox
       // So we can alert if activeTasks try to release stuff they don't have
       boolean removed = false;
 
-      if(dsRunning != null) {
+      if (dsRunning != null) {
         final TaskLockPosse taskLockPosse = dsRunning.get(interval);
-        if(taskLockPosse != null) {
+        if (taskLockPosse != null) {
           final TaskLock taskLock = taskLockPosse.getTaskLock();
 
           // Remove task from live list
@@ -378,7 +446,8 @@ public class TaskLockbox
           // Remove lock from storage. If it cannot be removed, just ignore the failure.
           try {
             taskStorage.removeLock(task.getId(), taskLock);
-          } catch(Exception e) {
+          }
+          catch (Exception e) {
             log.makeAlert(e, "Failed to clean up lock from storage")
                .addData("task", task.getId())
                .addData("dataSource", taskLock.getDataSource())
@@ -389,13 +458,14 @@ public class TaskLockbox
         }
       }
 
-      if(!removed) {
+      if (!removed) {
         log.makeAlert("Lock release without acquire")
            .addData("task", task.getId())
            .addData("interval", interval)
            .emit();
       }
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -438,7 +508,7 @@ public class TaskLockbox
 
       // Scan through all locks for this datasource
       final NavigableMap<Interval, TaskLockPosse> dsRunning = running.get(task.getDataSource());
-      if(dsRunning == null) {
+      if (dsRunning == null) {
         searchSpace = ImmutableList.of();
       } else {
         searchSpace = dsRunning.values();
@@ -479,11 +549,11 @@ public class TaskLockbox
         final NavigableSet<Interval> dsLockbox = dsRunning.navigableKeySet();
         final Iterable<Interval> searchIntervals = Iterables.concat(
             // Single interval that starts at or before ours
-            Collections.singletonList(dsLockbox.floor(new Interval(interval.getStart(), new DateTime(JodaUtils.MAX_INSTANT)))),
+            Collections.singletonList(dsLockbox.floor(new Interval(interval.getStart(), DateTimes.MAX))),
 
             // All intervals that start somewhere between our start instant (exclusive) and end instant (exclusive)
             dsLockbox.subSet(
-                new Interval(interval.getStart(), new DateTime(JodaUtils.MAX_INSTANT)),
+                new Interval(interval.getStart(), DateTimes.MAX),
                 false,
                 new Interval(interval.getEnd(), interval.getEnd()),
                 false
@@ -527,12 +597,25 @@ public class TaskLockbox
     try {
       log.info("Adding task[%s] to activeTasks", task.getId());
       activeTasks.add(task.getId());
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
 
-  private static class TaskLockPosse
+  @VisibleForTesting
+  Set<String> getActiveTasks()
+  {
+    return activeTasks;
+  }
+
+  @VisibleForTesting
+  Map<String, NavigableMap<Interval, TaskLockPosse>> getAllLocks()
+  {
+    return running;
+  }
+
+  static class TaskLockPosse
   {
     final private TaskLock taskLock;
     final private Set<String> taskIds;
@@ -551,6 +634,31 @@ public class TaskLockbox
     public Set<String> getTaskIds()
     {
       return taskIds;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+
+      if (!getClass().equals(o.getClass())) {
+        return false;
+      }
+
+      final TaskLockPosse that = (TaskLockPosse) o;
+      if (!taskLock.equals(that.taskLock)) {
+        return false;
+      }
+
+      return taskIds.equals(that.taskIds);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hashCode(taskLock, taskIds);
     }
 
     @Override

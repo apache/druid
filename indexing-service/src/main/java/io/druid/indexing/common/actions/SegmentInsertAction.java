@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -56,6 +55,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
     return segments;
   }
 
+  @Override
   public TypeReference<Set<DataSegment>> getReturnTypeReference()
   {
     return new TypeReference<Set<DataSegment>>()
@@ -65,7 +65,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 
   /**
    * Behaves similarly to
-   * {@link io.druid.indexing.overlord.IndexerMetadataStorageCoordinator#announceHistoricalSegments(Set, DataSourceMetadata, DataSourceMetadata)},
+   * {@link io.druid.indexing.overlord.IndexerMetadataStorageCoordinator#announceHistoricalSegments},
    * with startMetadata and endMetadata both null.
    */
   @Override

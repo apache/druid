@@ -19,6 +19,8 @@
 
 package io.druid.query;
 
+import io.druid.java.util.common.StringUtils;
+
 /**
  * Exception indicating that an operation failed because it exceeded some configured resource limit.
  *
@@ -27,8 +29,8 @@ package io.druid.query;
  */
 public class ResourceLimitExceededException extends RuntimeException
 {
-  public ResourceLimitExceededException(String message)
+  public ResourceLimitExceededException(String message, Object... arguments)
   {
-    super(message);
+    super(StringUtils.nonStrictFormat(message, arguments));
   }
 }

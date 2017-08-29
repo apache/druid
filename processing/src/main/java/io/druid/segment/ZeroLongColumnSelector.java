@@ -36,7 +36,7 @@ public final class ZeroLongColumnSelector implements LongColumnSelector
   }
 
   @Override
-  public long get()
+  public long getLong()
   {
     return 0;
   }
@@ -44,5 +44,6 @@ public final class ZeroLongColumnSelector implements LongColumnSelector
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

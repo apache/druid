@@ -110,8 +110,8 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
       return false;
     }
     return !(schemaRepository != null
-             ? !schemaRepository.equals(that.schemaRepository)
-             : that.schemaRepository != null);
+        ? !schemaRepository.equals(that.schemaRepository)
+        : that.schemaRepository != null);
   }
 
   @Override

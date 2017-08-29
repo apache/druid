@@ -19,9 +19,7 @@
 
 package io.druid.indexer;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataOutput;
@@ -29,14 +27,15 @@ import com.google.common.io.ByteStreams;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import io.druid.segment.VirtualColumns;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -111,6 +110,8 @@ public class InputRowSerde
             out.writeFloat(agg.getFloat());
           } else if (t.equals("long")) {
             WritableUtils.writeVLong(out, agg.getLong());
+          } else if (t.equals("double")) {
+            out.writeDouble(agg.getDouble());
           } else {
             //its a complex metric
             Object val = agg.get();
@@ -121,8 +122,9 @@ public class InputRowSerde
       }
 
       return out.toByteArray();
-    } catch(IOException ex) {
-      throw Throwables.propagate(ex);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
   }
 
@@ -134,7 +136,7 @@ public class InputRowSerde
 
   private static void writeString(String value, ByteArrayDataOutput out) throws IOException
   {
-    writeBytes(value.getBytes(Charsets.UTF_8), out);
+    writeBytes(StringUtils.toUtf8(value), out);
   }
 
   private static void writeStringArray(List<String> values, ByteArrayDataOutput out) throws IOException
@@ -152,7 +154,7 @@ public class InputRowSerde
   private static String readString(DataInput in) throws IOException
   {
     byte[] result = readBytes(in);
-    return new String(result, Charsets.UTF_8);
+    return StringUtils.fromUtf8(result);
   }
 
   private static byte[] readBytes(DataInput in) throws IOException
@@ -212,6 +214,8 @@ public class InputRowSerde
           event.put(metric, in.readFloat());
         } else if (type.equals("long")) {
           event.put(metric, WritableUtils.readVLong(in));
+        } else if (type.equals("double")) {
+          event.put(metric, in.readDouble());
         } else {
           ComplexMetricSerde serde = getComplexMetricSerde(type);
           byte[] value = readBytes(in);
@@ -220,8 +224,9 @@ public class InputRowSerde
       }
 
       return new MapBasedInputRow(timestamp, dimensions, event);
-    } catch(IOException ex) {
-      throw Throwables.propagate(ex);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
   }
 

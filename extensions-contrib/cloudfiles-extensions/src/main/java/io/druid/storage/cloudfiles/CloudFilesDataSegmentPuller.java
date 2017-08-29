@@ -69,7 +69,7 @@ public class CloudFilesDataSegmentPuller implements DataSegmentPuller
     try {
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource, outDir,
-          CloudFilesUtils.CLOUDFILESRETRY, true
+          CloudFilesUtils.CLOUDFILESRETRY, false
       );
       log.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
       return result;

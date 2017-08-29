@@ -26,6 +26,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -98,6 +99,6 @@ public class HadoopTaskTest
     Assert.assertTrue(classLoader instanceof URLClassLoader);
 
     final ClassLoader appLoader = HadoopDruidConverterConfig.class.getClassLoader();
-    Assert.assertNotEquals(String.format("ClassLoader [%s] is not isolated!", classLoader), appLoader, classLoader);
+    Assert.assertNotEquals(StringUtils.format("ClassLoader [%s] is not isolated!", classLoader), appLoader, classLoader);
   }
 }

@@ -27,6 +27,7 @@ import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -73,8 +74,9 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
-    if(powerOf2) {
-      return new CompressedIndexedInts() {
+    if (powerOf2) {
+      return new CompressedIndexedInts()
+      {
         @Override
         public int get(int index)
         {
@@ -94,6 +96,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     }
   }
 
+  @Override
   public long getSerializedSize()
   {
     return 1 + // version
@@ -103,6 +106,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
            baseIntBuffers.getSerializedSize(); // data
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
@@ -219,7 +223,10 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   }
 
   public static CompressedIntsIndexedSupplier fromList(
-      final List<Integer> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final List<Integer> list,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -254,7 +261,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
                       retVal.limit(list.size() - position);
                     }
                     final List<Integer> ints = list.subList(position, position + retVal.remaining());
-                    for(int value : ints) {
+                    for (int value : ints) {
                       retVal.put(value);
                     }
                     retVal.rewind();
@@ -310,37 +317,6 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
       return new IndexedIntsIterator(this);
     }
 
-    @Override
-    public void fill(int index, int[] toFill)
-    {
-      if (totalSize - index < toFill.length) {
-        throw new IndexOutOfBoundsException(
-            String.format(
-                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-            )
-        );
-      }
-
-      int bufferNum = index / sizePer;
-      int bufferIndex = index % sizePer;
-
-      int leftToFill = toFill.length;
-      while (leftToFill > 0) {
-        if (bufferNum != currIndex) {
-          loadBuffer(bufferNum);
-        }
-
-        buffer.mark();
-        buffer.position(buffer.position() + bufferIndex);
-        final int numToGet = Math.min(buffer.remaining(), leftToFill);
-        buffer.get(toFill, toFill.length - leftToFill, numToGet);
-        buffer.reset();
-        leftToFill -= numToGet;
-        ++bufferNum;
-        bufferIndex = 0;
-      }
-    }
-
     protected void loadBuffer(int bufferNum)
     {
       CloseQuietly.close(holder);
@@ -364,6 +340,15 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     public void close() throws IOException
     {
       Closeables.close(holder, false);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      // ideally should inspect buffer, but at the moment of inspectRuntimeShape() call buffer is likely to be null,
+      // because loadBuffer() is not yet called, although during the processing it is not null, hence "visiting" null is
+      // not representative.
+      inspector.visit("singleThreadedIntBuffers", singleThreadedIntBuffers);
     }
   }
 }

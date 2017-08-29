@@ -29,6 +29,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
@@ -40,7 +41,6 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -57,7 +57,7 @@ public class InFilterTest extends BaseFilterTest
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", new DateTime("2000")),
+          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
           new DimensionsSpec(null, null, null)
       )
   );
@@ -145,7 +145,7 @@ public class InFilterTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        toInFilter("dim2", "", (String)null),
+        toInFilter("dim2", "", (String) null),
         ImmutableList.of("b", "c", "f")
     );
 
@@ -176,7 +176,7 @@ public class InFilterTest extends BaseFilterTest
   public void testMissingColumn()
   {
     assertFilterMatches(
-        toInFilter("dim3", null, (String)null),
+        toInFilter("dim3", null, (String) null),
         ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
 
@@ -247,7 +247,8 @@ public class InFilterTest extends BaseFilterTest
   }
 
   @Test
-  public void testMatchWithLookupExtractionFn() {
+  public void testMatchWithLookupExtractionFn()
+  {
     final Map<String, String> stringMap = ImmutableMap.of(
         "a", "HELLO",
         "10", "HELLO",

@@ -51,10 +51,18 @@ Sample spec:
 }
 ```
 
+This firehose provides caching and prefetching features. In IndexTask, a firehose can be read twice if intervals or
+shardSpecs are not specified, and, in this case, caching can be useful. Prefetching is preferred when direct scan of objects is slow.
+
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|This should be "static-azure-blobstore".|N/A|yes|
+|type|This should be `static-azure-blobstore`.|N/A|yes|
 |blobs|JSON array of [Azure blobs](https://msdn.microsoft.com/en-us/library/azure/ee691964.aspx).|N/A|yes|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|no|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|no|
+|prefetchTriggerBytes|Threshold to trigger prefetching Azure objects.|maxFetchCapacityBytes / 2|no|
+|fetchTimeout|Timeout for fetching an Azure object.|60000|no|
+|maxFetchRetry|Maximum retry for fetching an Azure object.|3|no|
 
 Azure Blobs:
 

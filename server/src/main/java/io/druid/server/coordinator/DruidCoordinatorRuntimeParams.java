@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidDataSource;
+import io.druid.java.util.common.DateTimes;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -223,7 +224,7 @@ public class DruidCoordinatorRuntimeParams
       this.emitter = null;
       this.stats = new CoordinatorStats();
       this.coordinatorDynamicConfig = new CoordinatorDynamicConfig.Builder().build();
-      this.balancerReferenceTimestamp = DateTime.now();
+      this.balancerReferenceTimestamp = DateTimes.nowUtc();
     }
 
     Builder(
@@ -254,7 +255,7 @@ public class DruidCoordinatorRuntimeParams
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.stats = stats;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
-      this.balancerStrategy=balancerStrategy;
+      this.balancerStrategy = balancerStrategy;
     }
 
     public DruidCoordinatorRuntimeParams build()
@@ -350,7 +351,7 @@ public class DruidCoordinatorRuntimeParams
 
     public Builder withBalancerStrategy(BalancerStrategy balancerStrategy)
     {
-      this.balancerStrategy=balancerStrategy;
+      this.balancerStrategy = balancerStrategy;
       return this;
     }
   }

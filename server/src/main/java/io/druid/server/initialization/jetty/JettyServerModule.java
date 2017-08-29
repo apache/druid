@@ -54,14 +54,20 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.initialization.TLSServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
+import org.apache.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 
@@ -86,6 +92,7 @@ public class JettyServerModule extends JerseyServletModule
     Binder binder = binder();
 
     JsonConfigProvider.bind(binder, "druid.server.http", ServerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.server.https", TLSServerConfig.class);
 
     binder.bind(GuiceContainer.class).to(DruidGuiceContainer.class);
     binder.bind(DruidGuiceContainer.class).in(Scopes.SINGLETON);
@@ -130,10 +137,14 @@ public class JettyServerModule extends JerseyServletModule
   @Provides
   @LazySingleton
   public Server getServer(
-      final Injector injector, final Lifecycle lifecycle, @Self final DruidNode node, final ServerConfig config
+      final Injector injector,
+      final Lifecycle lifecycle,
+      @Self final DruidNode node,
+      final ServerConfig config,
+      final TLSServerConfig TLSServerConfig
   )
   {
-    final Server server = makeJettyServer(node, config);
+    final Server server = makeJettyServer(node, config, TLSServerConfig);
     initializeServer(injector, lifecycle, server);
     return server;
   }
@@ -156,7 +167,7 @@ public class JettyServerModule extends JerseyServletModule
     return provider;
   }
 
-  static Server makeJettyServer(DruidNode node, ServerConfig config)
+  static Server makeJettyServer(DruidNode node, ServerConfig config, TLSServerConfig tlsServerConfig)
   {
     final QueuedThreadPool threadPool = new QueuedThreadPool();
     threadPool.setMinThreads(config.getNumThreads());
@@ -169,20 +180,53 @@ public class JettyServerModule extends JerseyServletModule
     // to fire on main exit. Related bug: https://github.com/druid-io/druid/pull/1627
     server.addBean(new ScheduledExecutorScheduler("JettyScheduler", true), true);
 
-    ServerConnector connector = new ServerConnector(server);
-    connector.setPort(node.getPort());
-    connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
-    // workaround suggested in -
-    // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
-    connector.setAcceptorPriorityDelta(-1);
+    final List<ServerConnector> serverConnectors = new ArrayList<>();
 
-    List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
-    for (ConnectionFactory cf : connector.getConnectionFactories()) {
-      monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, activeConnections));
+    if (config.isPlaintext()) {
+      log.info("Creating http connector with port [%d]", node.getPlaintextPort());
+      final ServerConnector connector = new ServerConnector(server);
+      connector.setPort(node.getPlaintextPort());
+      serverConnectors.add(connector);
     }
-    connector.setConnectionFactories(monitoredConnFactories);
+    if (config.isTls()) {
+      log.info("Creating https connector with port [%d]", node.getTlsPort());
+      final SslContextFactory sslContextFactory = new SslContextFactory(tlsServerConfig.getKeyStorePath());
+      sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
+      sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());
+      sslContextFactory.setCertAlias(tlsServerConfig.getCertAlias());
+      sslContextFactory.setKeyManagerPassword(tlsServerConfig.getKeyManagerPasswordProvider() == null
+                                              ? null
+                                              : tlsServerConfig.getKeyManagerPasswordProvider().getPassword());
+      final HttpConfiguration httpsConfiguration = new HttpConfiguration();
+      httpsConfiguration.setSecureScheme("https");
+      httpsConfiguration.setSecurePort(node.getTlsPort());
+      httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+      final ServerConnector connector = new ServerConnector(
+          server,
+          new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()),
+          new HttpConnectionFactory(httpsConfiguration)
+      );
+      connector.setPort(node.getTlsPort());
+      serverConnectors.add(connector);
+    }
 
-    server.setConnectors(new Connector[]{connector});
+    final ServerConnector[] connectors = new ServerConnector[serverConnectors.size()];
+    int index = 0;
+    for (ServerConnector connector : serverConnectors) {
+      connectors[index++] = connector;
+      connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
+      // workaround suggested in -
+      // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
+      connector.setAcceptorPriorityDelta(-1);
+
+      List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
+      for (ConnectionFactory cf : connector.getConnectionFactories()) {
+        monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, activeConnections));
+      }
+      connector.setConnectionFactories(monitoredConnFactories);
+    }
+
+    server.setConnectors(connectors);
 
     return server;
   }

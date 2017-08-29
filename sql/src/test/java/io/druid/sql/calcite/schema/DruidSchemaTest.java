@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
-import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -46,7 +46,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -92,11 +91,9 @@ public class DruidSchemaTest
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(
-                                                          new AggregatorFactory[]{
-                                                              new CountAggregatorFactory("cnt"),
-                                                              new DoubleSumAggregatorFactory("m1", "m1"),
-                                                              new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                          }
+                                                          new CountAggregatorFactory("cnt"),
+                                                          new DoubleSumAggregatorFactory("m1", "m1"),
+                                                          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
                                                       )
                                                       .withRollup(false)
                                                       .build()
@@ -109,11 +106,7 @@ public class DruidSchemaTest
                                               .indexMerger(TestHelper.getTestIndexMergerV9())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
-                                                      .withMetrics(
-                                                          new AggregatorFactory[]{
-                                                              new LongSumAggregatorFactory("m1", "m1")
-                                                          }
-                                                      )
+                                                      .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
                                                       .withRollup(false)
                                                       .build()
                                               )
@@ -123,7 +116,7 @@ public class DruidSchemaTest
     walker = new SpecificSegmentsQuerySegmentWalker(CalciteTests.queryRunnerFactoryConglomerate()).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(new Interval("2000/P1Y"))
+                   .interval(Intervals.of("2000/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
@@ -131,7 +124,7 @@ public class DruidSchemaTest
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(new Interval("2001/P1Y"))
+                   .interval(Intervals.of("2001/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
@@ -147,7 +140,7 @@ public class DruidSchemaTest
     );
 
     schema = new DruidSchema(
-        walker,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager()
@@ -171,8 +164,12 @@ public class DruidSchemaTest
 
     final Map<String, Table> tableMap = schema.getTableMap();
     Assert.assertEquals(ImmutableSet.of("foo", "foo2"), tableMap.keySet());
+  }
 
-    final DruidTable fooTable = (DruidTable) tableMap.get("foo");
+  @Test
+  public void testGetTableMapFoo()
+  {
+    final DruidTable fooTable = (DruidTable) schema.getTableMap().get("foo");
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
@@ -187,13 +184,32 @@ public class DruidSchemaTest
     Assert.assertEquals("dim1", fields.get(2).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(2).getType().getSqlTypeName());
 
-    Assert.assertEquals("m1", fields.get(3).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(3).getType().getSqlTypeName());
+    Assert.assertEquals("dim2", fields.get(3).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
 
-    Assert.assertEquals("unique_dim1", fields.get(4).getName());
-    Assert.assertEquals(SqlTypeName.OTHER, fields.get(4).getType().getSqlTypeName());
+    Assert.assertEquals("m1", fields.get(4).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getSqlTypeName());
 
-    Assert.assertEquals("dim2", fields.get(5).getName());
-    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(5).getType().getSqlTypeName());
+    Assert.assertEquals("unique_dim1", fields.get(5).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
+  }
+
+  @Test
+  public void testGetTableMapFoo2()
+  {
+    final DruidTable fooTable = (DruidTable) schema.getTableMap().get("foo2");
+    final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
+    final List<RelDataTypeField> fields = rowType.getFieldList();
+
+    Assert.assertEquals(3, fields.size());
+
+    Assert.assertEquals("__time", fields.get(0).getName());
+    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
+
+    Assert.assertEquals("dim2", fields.get(1).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
+
+    Assert.assertEquals("m1", fields.get(2).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
   }
 }

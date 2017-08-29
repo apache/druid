@@ -25,7 +25,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.net.URLEncoder;
 
 public class OverlordRedirectInfoTest
 {
@@ -40,20 +42,35 @@ public class OverlordRedirectInfoTest
   }
 
   @Test
-  public void testDoLocal()
+  public void testDoLocalWhenLeading()
   {
-    EasyMock.expect(taskMaster.isLeading()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
     EasyMock.replay(taskMaster);
     Assert.assertTrue(redirectInfo.doLocal(null));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
+    EasyMock.verify(taskMaster);
+  }
+
+  @Test
+  public void testDoLocalWhenNotLeading()
+  {
+    EasyMock.expect(taskMaster.isLeader()).andReturn(false).anyTimes();
+    EasyMock.replay(taskMaster);
+    Assert.assertFalse(redirectInfo.doLocal(null));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
+    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    Assert.assertFalse(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
     EasyMock.verify(taskMaster);
   }
 
   @Test
   public void testGetRedirectURLNull()
   {
-    EasyMock.expect(taskMaster.getLeader()).andReturn(null).anyTimes();
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(null).anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("query", "/request");
+    URL url = redirectInfo.getRedirectURL("http", "query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(taskMaster);
   }
@@ -61,9 +78,9 @@ public class OverlordRedirectInfoTest
   @Test
   public void testGetRedirectURLEmpty()
   {
-    EasyMock.expect(taskMaster.getLeader()).andReturn("").anyTimes();
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn("").anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("query", "/request");
+    URL url = redirectInfo.getRedirectURL("http", "query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(taskMaster);
   }
@@ -74,10 +91,30 @@ public class OverlordRedirectInfoTest
     String host = "localhost";
     String query = "foo=bar&x=y";
     String request = "/request";
-    EasyMock.expect(taskMaster.getLeader()).andReturn(host).anyTimes();
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL(query, request);
+    URL url = redirectInfo.getRedirectURL("http", query, request);
     Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
     EasyMock.verify(taskMaster);
   }
+
+  @Test
+  public void testGetRedirectURLWithEncodedCharacter() throws UnsupportedEncodingException
+  {
+    String host = "localhost";
+    String request = "/druid/indexer/v1/task/" + URLEncoder.encode(
+        "index_hadoop_datasource_2017-07-12T07:43:01.495Z",
+        "UTF-8"
+    ) + "/status";
+
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
+    EasyMock.replay(taskMaster);
+    URL url = redirectInfo.getRedirectURL("http", null, request);
+    Assert.assertEquals(
+        "http://localhost/druid/indexer/v1/task/index_hadoop_datasource_2017-07-12T07%3A43%3A01.495Z/status",
+        url.toString()
+    );
+    EasyMock.verify(taskMaster);
+  }
+
 }

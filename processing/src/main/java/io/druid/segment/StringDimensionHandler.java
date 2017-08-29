@@ -81,7 +81,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   ) throws SegmentValidationException
   {
     if (lhs == null || rhs == null) {
-      if (lhs != rhs) {
+      if (lhs != null || rhs != null) {
         throw new SegmentValidationException(
             "Expected nulls, found %s and %s",
             Arrays.toString(lhs),
@@ -202,15 +202,4 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     return new StringDimensionMergerV9(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
   }
 
-  @Override
-  public DimensionMergerLegacy makeLegacyMerger(
-      IndexSpec indexSpec,
-      File outDir,
-      IOPeon ioPeon,
-      ColumnCapabilities capabilities,
-      ProgressIndicator progress
-  )
-  {
-    return new StringDimensionMergerLegacy(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
-  }
 }

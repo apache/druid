@@ -31,6 +31,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
@@ -62,6 +63,7 @@ public class InDimFilter implements DimFilter
   private final ExtractionFn extractionFn;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
+  private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
   @JsonCreator
   public InDimFilter(
@@ -89,6 +91,7 @@ public class InDimFilter implements DimFilter
     this.extractionFn = extractionFn;
     this.longPredicateSupplier = getLongPredicateSupplier();
     this.floatPredicateSupplier = getFloatPredicateSupplier();
+    this.doublePredicateSupplier = getDoublePredicateSupplier();
   }
 
   @JsonProperty
@@ -149,7 +152,8 @@ public class InDimFilter implements DimFilter
     return inFilter;
   }
 
-  private InDimFilter optimizeLookup() {
+  private InDimFilter optimizeLookup()
+  {
     if (extractionFn instanceof LookupExtractionFn
         && ((LookupExtractionFn) extractionFn).isOptimize()) {
       LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
@@ -188,7 +192,14 @@ public class InDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new InFilter(dimension, values, longPredicateSupplier, floatPredicateSupplier, extractionFn);
+    return new InFilter(
+        dimension,
+        values,
+        longPredicateSupplier,
+        floatPredicateSupplier,
+        doublePredicateSupplier,
+        extractionFn
+    );
   }
 
   @Override
@@ -289,26 +300,12 @@ public class InDimFilter implements DimFilter
           if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
             final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
 
-            predicate = new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return longHashSet.contains(input);
-              }
-            };
+            predicate = input -> longHashSet.contains(input);
           } else {
             final long[] longArray = longs.toLongArray();
             Arrays.sort(longArray);
 
-            predicate = new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return Arrays.binarySearch(longArray, input) >= 0;
-              }
-            };
+            predicate = input -> Arrays.binarySearch(longArray, input) >= 0;
           }
         }
       }
@@ -351,26 +348,12 @@ public class InDimFilter implements DimFilter
           if (floatBits.size() > NUMERIC_HASHING_THRESHOLD) {
             final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
 
-            predicate = new DruidFloatPredicate()
-            {
-              @Override
-              public boolean applyFloat(float input)
-              {
-                return floatBitsHashSet.contains(Float.floatToIntBits(input));
-              }
-            };
+            predicate = input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
           } else {
             final int[] floatBitsArray = floatBits.toIntArray();
             Arrays.sort(floatBitsArray);
 
-            predicate = new DruidFloatPredicate()
-            {
-              @Override
-              public boolean applyFloat(float input)
-              {
-                return Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
-              }
-            };
+            predicate = input -> Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
           }
         }
       }
@@ -379,6 +362,53 @@ public class InDimFilter implements DimFilter
       public DruidFloatPredicate get()
       {
         initFloatValues();
+        return predicate;
+      }
+    };
+  }
+
+  private Supplier<DruidDoublePredicate> getDoublePredicateSupplier()
+  {
+    return new Supplier<DruidDoublePredicate>()
+    {
+      private final Object initLock = new Object();
+      private DruidDoublePredicate predicate;
+
+      private void initDoubleValues()
+      {
+        if (predicate != null) {
+          return;
+        }
+
+        synchronized (initLock) {
+          if (predicate != null) {
+            return;
+          }
+
+          LongArrayList doubleBits = new LongArrayList(values.size());
+          for (String value : values) {
+            Double doubleValue = Doubles.tryParse(value);
+            if (doubleValue != null) {
+              doubleBits.add(Double.doubleToLongBits((doubleValue)));
+            }
+          }
+
+          if (doubleBits.size() > NUMERIC_HASHING_THRESHOLD) {
+            final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
+
+            predicate = input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
+          } else {
+            final long[] doubleBitsArray = doubleBits.toLongArray();
+            Arrays.sort(doubleBitsArray);
+
+            predicate = input -> Arrays.binarySearch(doubleBitsArray, Double.doubleToLongBits(input)) >= 0;
+          }
+        }
+      }
+      @Override
+      public DruidDoublePredicate get()
+      {
+        initDoubleValues();
         return predicate;
       }
     };

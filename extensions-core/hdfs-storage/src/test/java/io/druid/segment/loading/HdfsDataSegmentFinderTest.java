@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.Intervals;
 import io.druid.storage.hdfs.HdfsDataSegmentFinder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -35,7 +37,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,80 +56,62 @@ public class HdfsDataSegmentFinderTest
   private static final ObjectMapper mapper = new DefaultObjectMapper();
   private static final String DESCRIPTOR_JSON = "descriptor.json";
   private static final String INDEX_ZIP = "index.zip";
-  private static final DataSegment SEGMENT_1 = DataSegment.builder()
-                                                          .dataSource("wikipedia")
-                                                          .interval(
-                                                              new Interval(
-                                                                  "2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .version("2015-10-21T22:07:57.074Z")
-                                                          .loadSpec(
-                                                              ImmutableMap.<String, Object>of(
-                                                                  "type",
-                                                                  "hdfs",
-                                                                  "path",
-                                                                  "hdfs://abc.com:1234/somewhere/index.zip"
-                                                              )
-                                                          )
-                                                          .dimensions(ImmutableList.of("language", "page"))
-                                                          .metrics(ImmutableList.of("count"))
-                                                          .build();
+  private static final DataSegment SEGMENT_1 = DataSegment
+      .builder()
+      .dataSource("wikipedia")
+      .interval(Intervals.of("2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"))
+      .version("2015-10-21T22:07:57.074Z")
+      .loadSpec(
+          ImmutableMap.<String, Object>of(
+              "type",
+              "hdfs",
+              "path",
+              "hdfs://abc.com:1234/somewhere/index.zip"
+          )
+      )
+      .dimensions(ImmutableList.of("language", "page"))
+      .metrics(ImmutableList.of("count"))
+      .build();
 
-  private static final DataSegment SEGMENT_2 = DataSegment.builder(SEGMENT_1)
-                                                          .interval(
-                                                              new Interval(
-                                                                  "2013-09-01T00:00:00.000Z/2013-09-02T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .build();
+  private static final DataSegment SEGMENT_2 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-01T00:00:00.000Z/2013-09-02T00:00:00.000Z"))
+      .build();
 
-  private static final DataSegment SEGMENT_3 = DataSegment.builder(SEGMENT_1)
-                                                          .interval(
-                                                              new Interval(
-                                                                  "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .version("2015-10-22T22:07:57.074Z")
-                                                          .build();
+  private static final DataSegment SEGMENT_3 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .version("2015-10-22T22:07:57.074Z")
+      .build();
 
-  private static final DataSegment SEGMENT_4_0 = DataSegment.builder(SEGMENT_1)
-                                                            .interval(
-                                                                new Interval(
-                                                                    "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                                )
-                                                            )
-                                                            .shardSpec(new NumberedShardSpec(0, 2))
-                                                            .build();
+  private static final DataSegment SEGMENT_4_0 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .shardSpec(new NumberedShardSpec(0, 2))
+      .build();
 
-  private static final DataSegment SEGMENT_4_1 = DataSegment.builder(SEGMENT_1)
-                                                            .interval(
-                                                                new Interval(
-                                                                    "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                                )
-                                                            )
-                                                            .shardSpec(new NumberedShardSpec(1, 2))
-                                                            .build();
+  private static final DataSegment SEGMENT_4_1 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .shardSpec(new NumberedShardSpec(1, 2))
+      .build();
 
-  private static final DataSegment SEGMENT_5 = DataSegment.builder()
-                                                          .dataSource("wikipedia")
-                                                          .interval(
-                                                              new Interval(
-                                                                  "2013-09-03T00:00:00.000Z/2013-09-04T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .version("2015-10-21T22:07:57.074Z")
-                                                          .loadSpec(
-                                                              ImmutableMap.<String, Object>of(
-                                                                  "type",
-                                                                  "hdfs",
-                                                                  "path",
-                                                                  "hdfs://abc.com:1234/somewhere/1_index.zip"
-                                                              )
-                                                          )
-                                                          .dimensions(ImmutableList.of("language", "page"))
-                                                          .metrics(ImmutableList.of("count"))
-                                                          .build();
+  private static final DataSegment SEGMENT_5 = DataSegment
+      .builder()
+      .dataSource("wikipedia")
+      .interval(Intervals.of("2013-09-03T00:00:00.000Z/2013-09-04T00:00:00.000Z"))
+      .version("2015-10-21T22:07:57.074Z")
+      .loadSpec(
+          ImmutableMap.<String, Object>of(
+              "type",
+              "hdfs",
+              "path",
+              "hdfs://abc.com:1234/somewhere/1_index.zip"
+          )
+      )
+      .dimensions(ImmutableList.of("language", "page"))
+      .metrics(ImmutableList.of("count"))
+      .build();
 
   private static MiniDFSCluster miniCluster;
   private static File hdfsTmpDir;
@@ -157,7 +140,7 @@ public class HdfsDataSegmentFinderTest
 
     hdfsTmpDir = File.createTempFile("hdfsDataSource", "dir");
     if (!hdfsTmpDir.delete()) {
-      throw new IOException(String.format("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath()));
+      throw new IOE("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath());
     }
     conf = new Configuration(true);
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, hdfsTmpDir.getAbsolutePath());
@@ -184,7 +167,7 @@ public class HdfsDataSegmentFinderTest
     descriptor3 = new Path(dataSourceDir, "interval3/v2/0/" + DESCRIPTOR_JSON);
     descriptor4_0 = new Path(dataSourceDir, "interval4/v1/0/" + DESCRIPTOR_JSON);
     descriptor4_1 = new Path(dataSourceDir, "interval4/v1/1/" + DESCRIPTOR_JSON);
-    descriptor5 = new Path(dataSourceDir, "interval5/v1/1/" + "1_" +DESCRIPTOR_JSON);
+    descriptor5 = new Path(dataSourceDir, "interval5/v1/1/" + "1_" + DESCRIPTOR_JSON);
     indexZip1 = new Path(descriptor1.getParent(), INDEX_ZIP);
     indexZip2 = new Path(descriptor2.getParent(), INDEX_ZIP);
     indexZip3 = new Path(descriptor3.getParent(), INDEX_ZIP);
@@ -244,8 +227,7 @@ public class HdfsDataSegmentFinderTest
         updatedSegment4_1 = dataSegment;
       } else if (dataSegment.getIdentifier().equals(SEGMENT_5.getIdentifier())) {
         updatedSegment5 = dataSegment;
-      }
-      else {
+      } else {
         Assert.fail("Unexpected segment");
       }
     }

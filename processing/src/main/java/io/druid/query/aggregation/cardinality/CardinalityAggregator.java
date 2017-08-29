@@ -109,7 +109,9 @@ public class CardinalityAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return collector;
+    // Workaround for non-thread-safe use of HyperLogLogCollector.
+    // OnheapIncrementalIndex has a penchant for calling "aggregate" and "get" simultaneously.
+    return HyperLogLogCollector.makeCollectorSharingStorage(collector);
   }
 
   @Override
@@ -122,6 +124,12 @@ public class CardinalityAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("CardinalityAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("CardinalityAggregator does not support getDouble()");
   }
 
   @Override

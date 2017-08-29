@@ -20,12 +20,14 @@
 package io.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import io.druid.java.util.common.StringUtils;
 
 /**
 */
 public enum ValueType
 {
   FLOAT,
+  DOUBLE,
   LONG,
   STRING,
   COMPLEX;
@@ -36,6 +38,14 @@ public enum ValueType
     if (name == null) {
       return null;
     }
-    return valueOf(name.toUpperCase());
+    return valueOf(StringUtils.toUpperCase(name));
+  }
+
+  public static boolean isNumeric(ValueType type)
+  {
+    if (type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE) {
+      return true;
+    }
+    return false;
   }
 }

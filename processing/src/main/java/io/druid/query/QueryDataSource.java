@@ -49,7 +49,11 @@ public class QueryDataSource implements DataSource
     return query;
   }
 
-  public String toString() { return query.toString(); }
+  @Override
+  public String toString()
+  {
+    return query.toString();
+  }
 
   @Override
   public boolean equals(Object o)

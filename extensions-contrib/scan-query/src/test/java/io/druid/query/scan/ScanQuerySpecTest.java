@@ -21,10 +21,10 @@ package io.druid.query.scan;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.TableDataSource;
 import io.druid.query.spec.LegacySegmentSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -58,7 +58,7 @@ public class ScanQuerySpecTest
 
     ScanQuery query = new ScanQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
+        new LegacySegmentSpec(Intervals.of("2011-01-12/2011-01-14")),
         null,
         0,
         3,

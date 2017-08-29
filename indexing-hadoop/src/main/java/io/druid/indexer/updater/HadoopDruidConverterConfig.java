@@ -37,7 +37,9 @@ import io.druid.initialization.Initialization;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -53,6 +55,7 @@ public class HadoopDruidConverterConfig
   public static final ObjectMapper jsonMapper;
   public static final IndexIO INDEX_IO;
   public static final IndexMerger INDEX_MERGER;
+  public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
 
   private static final Injector injector = Initialization.makeInjectorWithModules(
       GuiceInjectors.makeStartupInjector(),
@@ -63,7 +66,7 @@ public class HadoopDruidConverterConfig
             public void configure(Binder binder)
             {
               JsonConfigProvider.bindInstance(
-                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-converter", null, null)
+                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-converter", null, null, null, new ServerConfig())
               );
             }
           }
@@ -75,6 +78,7 @@ public class HadoopDruidConverterConfig
     jsonMapper.registerSubtypes(HadoopDruidConverterConfig.class);
     INDEX_IO = injector.getInstance(IndexIO.class);
     INDEX_MERGER = injector.getInstance(IndexMerger.class);
+    DATA_SEGMENT_PUSHER = injector.getInstance(DataSegmentPusher.class);
   }
 
   private static final TypeReference<Map<String, Object>> mapTypeReference = new TypeReference<Map<String, Object>>()

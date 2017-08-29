@@ -28,7 +28,7 @@ public class DruidToWhiteListBasedConverterTest
   @Test
   public void testSanitize()
   {
-    String test  = "host name.yahoo.com:8080";
+    String test = "host name.yahoo.com:8080";
     Assert.assertEquals("host_name_yahoo_com:8080", AmbariMetricsEmitter.sanitize(test));
   }
 }

@@ -19,6 +19,9 @@
 
 package io.druid.tasklogs;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
+@ExtensionPoint
 public interface TaskLogs extends TaskLogStreamer, TaskLogPusher, TaskLogKiller
 {
 }

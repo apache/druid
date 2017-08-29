@@ -20,10 +20,10 @@
 package io.druid.storage.google;
 
 import com.google.api.client.http.InputStreamContent;
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
@@ -35,13 +35,14 @@ import org.junit.Test;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 
-public class GoogleTaskLogsTest extends EasyMockSupport {
+public class GoogleTaskLogsTest extends EasyMockSupport
+{
   private static final String bucket = "test";
   private static final String prefix = "test/log";
   private static final String taskid = "taskid";
@@ -50,19 +51,21 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
   private GoogleTaskLogs googleTaskLogs;
 
   @Before
-  public void before() {
+  public void before()
+  {
     storage = createMock(GoogleStorage.class);
     GoogleTaskLogsConfig config = new GoogleTaskLogsConfig(bucket, prefix);
     googleTaskLogs = new GoogleTaskLogs(config, storage);
   }
 
   @Test
-  public void testPushTaskLog() throws Exception {
+  public void testPushTaskLog() throws Exception
+  {
     final File tmpDir = Files.createTempDir();
 
     try {
       final File logFile = new File(tmpDir, "log");
-      BufferedWriter output = new BufferedWriter(new FileWriter(logFile));
+      BufferedWriter output = java.nio.file.Files.newBufferedWriter(logFile.toPath(), StandardCharsets.UTF_8);
       output.write("test");
       output.close();
 
@@ -74,21 +77,21 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
       googleTaskLogs.pushTaskLog(taskid, logFile);
 
       verifyAll();
-    } finally {
+    }
+    finally {
       FileUtils.deleteDirectory(tmpDir);
     }
   }
 
   @Test
-  public void testStreamTaskLogWithoutOffset() throws Exception {
+  public void testStreamTaskLogWithoutOffset() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String logPath = prefix + "/" + taskid;
     expect(storage.exists(bucket, logPath)).andReturn(true);
     expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8))
-    );
+    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
@@ -102,15 +105,14 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
   }
 
   @Test
-  public void testStreamTaskLogWithPositiveOffset() throws Exception {
+  public void testStreamTaskLogWithPositiveOffset() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String logPath = prefix + "/" + taskid;
     expect(storage.exists(bucket, logPath)).andReturn(true);
     expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8))
-    );
+    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
@@ -124,15 +126,14 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
   }
 
   @Test
-  public void testStreamTaskLogWithNegative() throws Exception {
+  public void testStreamTaskLogWithNegative() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String logPath = prefix + "/" + taskid;
     expect(storage.exists(bucket, logPath)).andReturn(true);
     expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8))
-    );
+    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 

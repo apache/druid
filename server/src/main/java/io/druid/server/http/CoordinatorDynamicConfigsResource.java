@@ -24,6 +24,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
 import io.druid.server.http.security.ConfigResourceFilter;
 import org.joda.time.Interval;
@@ -76,15 +77,20 @@ public class CoordinatorDynamicConfigsResource
   // default value is used for backwards compatibility
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response setDynamicConfigs(final CoordinatorDynamicConfig dynamicConfig,
+  public Response setDynamicConfigs(final CoordinatorDynamicConfig.Builder dynamicConfigBuilder,
                                     @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
                                     @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
                                     @Context HttpServletRequest req
   )
   {
+    CoordinatorDynamicConfig current = manager.watch(
+        CoordinatorDynamicConfig.CONFIG_KEY,
+        CoordinatorDynamicConfig.class
+    ).get();
+
     if (!manager.set(
         CoordinatorDynamicConfig.CONFIG_KEY,
-        dynamicConfig,
+        current == null ? dynamicConfigBuilder.build() : dynamicConfigBuilder.build(current),
         new AuditInfo(author, comment, req.getRemoteAddr())
     )) {
       return Response.status(Response.Status.BAD_REQUEST).build();
@@ -100,7 +106,7 @@ public class CoordinatorDynamicConfigsResource
       @QueryParam("count") final Integer count
   )
   {
-    Interval theInterval = interval == null ? null : new Interval(interval);
+    Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
         return Response.ok(

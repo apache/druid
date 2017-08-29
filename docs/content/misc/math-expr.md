@@ -21,15 +21,48 @@ For logical operators, a number is true if and only if it is positive (0 or minu
 
 Also, the following built-in functions are supported.
 
+## General functions
+
 |name|description|
 |----|-----------|
 |cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING') returns expr with specified type. exception can be thrown |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
+|like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
+|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\])|
+|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\])|
+
+## String functions
+
+|name|description|
+|----|-----------|
+|concat|concatenate a list of strings|
+|like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
+|lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](lookups.html)|
+|regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
+|replace|replace(expr, pattern, replacement) replaces pattern with replacement|
+|substring|substring(expr, index, length) behaves like java.lang.String's substring|
+|strlen|returns length of a string in UTF-16 code units|
+|trim|remove leading and trailing whitespace from a string|
+|lower|convert a string to lowercase|
+|upper|convert a string to uppercase|
+
+## Time functions
+
+|name|description|
+|----|-----------|
 |timestamp|timestamp(expr[,format-string]) parses string expr into date then returns milli-seconds from java epoch. without 'format-string' it's regarded as ISO datetime format |
 |unix_timestamp|same with 'timestamp' function but returns seconds instead |
+|timestamp_ceil|timestamp_ceil(expr, period, \[origin, \[timezone\]\]) rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
+|timestamp_floor|timestamp_floor(expr, period, \[origin, [timezone\]\]) rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
+|timestamp_shift|timestamp_shift(expr, period, step, \[timezone\]) shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
+|timestamp_extract|timestamp_extract(expr, unit, \[timezone\]) extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00"|
+|timestamp_parse|timestamp_parse(string expr, \[pattern, [timezone\]\]) parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as nulls.|
+|timestamp_format|timestamp_format(expr, \[pattern, \[timezone\]\]) formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
 
-And built-in math functions. See javadoc of java.lang.Math for detailed explanation for each function.
+## Math functions
+
+See javadoc of java.lang.Math for detailed explanation for each function.
 
 |name|description|
 |----|-----------|
@@ -43,6 +76,7 @@ And built-in math functions. See javadoc of java.lang.Math for detailed explanat
 |copysign|copysign(x) would return the first floating-point argument with the sign of the second floating-point argument|
 |cos|cos(x) would return the trigonometric cosine of x|
 |cosh|cosh(x) would return the hyperbolic cosine of x|
+|div|div(x,y) is integer division of x by y|
 |exp|exp(x) would return Euler's number raised to the power of x|
 |expm1|expm1(x) would return e^x-1|
 |floor|floor(x) would return the largest (closest to positive infinity) double value that is less than or equal to x and is equal to a mathematical integer|

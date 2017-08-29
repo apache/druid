@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import io.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class TestObjectMapper extends ObjectMapper
                 JsonParser jsonParser, DeserializationContext deserializationContext
             ) throws IOException, JsonProcessingException
             {
-              return new Interval(jsonParser.getText());
+              return Intervals.of(jsonParser.getText());
             }
           }
       );

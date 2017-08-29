@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -39,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class CostBalancerStrategyBenchmark
 {
-  private final static DateTime t0 = new DateTime("2016-01-01T01:00:00Z");
+  private final static DateTime t0 = DateTimes.of("2016-01-01T01:00:00Z");
 
   private List<DataSegment> segments;
   private DataSegment segment;
@@ -57,8 +58,8 @@ public class CostBalancerStrategyBenchmark
 
     Random r = new Random(1234);
     segments = new ArrayList<>(n);
-    for(int i = 0; i < n; ++i) {
-      final DateTime t = t0.minusHours(r.nextInt(365 * 24) - 365*12);
+    for (int i = 0; i < n; ++i) {
+      final DateTime t = t0.minusHours(r.nextInt(365 * 24) - 365 * 12);
       segments.add(createSegment(t));
     }
   }
@@ -85,7 +86,7 @@ public class CostBalancerStrategyBenchmark
   public double measureCostStrategySingle() throws InterruptedException
   {
     double totalCost = 0;
-    for(DataSegment s :  segments) {
+    for (DataSegment s : segments) {
       totalCost += CostBalancerStrategy.computeJointSegmentsCost(segment, s);
     }
     return totalCost;

@@ -25,7 +25,9 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -38,7 +40,7 @@ import java.util.concurrent.Executors;
 
 public class DiskNormalizedCostBalancerStrategyTest
 {
-  private static final Interval day = new Interval("2015-01-01T00/2015-01-01T01");
+  private static final Interval day = Intervals.of("2015-01-01T00/2015-01-01T01");
 
   /**
    * Create Druid cluster with serverCount servers having maxSegments segments each, and 1 server with 98 segment
@@ -60,7 +62,7 @@ public class DiskNormalizedCostBalancerStrategyTest
       serverHolderList.add(
           new ServerHolder(
               new ImmutableDruidServer(
-                  new DruidServerMetadata("DruidServer_Name_" + i, "localhost", 10000000L, "hot", "hot", 1),
+                  new DruidServerMetadata("DruidServer_Name_" + i, "localhost", null, 10000000L, ServerType.HISTORICAL, "hot", 1),
                   3000L,
                   ImmutableMap.of("DUMMY", EasyMock.createMock(ImmutableDruidDataSource.class)),
                   ImmutableMap.copyOf(segments)

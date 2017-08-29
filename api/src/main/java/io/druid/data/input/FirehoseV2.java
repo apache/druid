@@ -19,6 +19,8 @@
 
 package io.druid.data.input;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import java.io.Closeable;
 /**
  * This is an interface that holds onto the stream of incoming data.  Realtime data ingestion is built around this
@@ -44,6 +46,7 @@ import java.io.Closeable;
  * which will be called on another thread, so the operations inside of that callback must be thread-safe.
  * </p>
  */
+@ExtensionPoint
 public interface FirehoseV2 extends Closeable
 {
     /**
@@ -63,7 +66,7 @@ public interface FirehoseV2 extends Closeable
     /**
      * @return The current row
      */
-    public InputRow currRow() ;
+    public InputRow currRow();
 
     /**
      * Returns a Committer that will "commit" everything read up to the point at which makeCommitter() is called.

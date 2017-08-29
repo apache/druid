@@ -27,6 +27,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.DefaultBlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
@@ -100,7 +102,7 @@ public class GroupByQueryRunnerFailureTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
+    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByQueryEngine-bufferPool",
         new Supplier<ByteBuffer>()
         {
@@ -138,7 +140,7 @@ public class GroupByQueryRunnerFailureTest
     );
   }
 
-  private final static BlockingPool<ByteBuffer> mergeBufferPool = new BlockingPool<>(
+  private final static BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
       new Supplier<ByteBuffer>()
       {
         @Override
@@ -154,6 +156,7 @@ public class GroupByQueryRunnerFailureTest
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
+        @Override
         public String getDefaultStrategy()
         {
           return "v2";
@@ -247,7 +250,6 @@ public class GroupByQueryRunnerFailureTest
   @Test(timeout = 10000, expected = InsufficientResourcesException.class)
   public void testInsufficientResourcesOnBroker() throws IOException
   {
-    final ReferenceCountingResourceHolder<List<ByteBuffer>> holder = mergeBufferPool.takeBatch(1, 10);
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(
@@ -267,10 +269,8 @@ public class GroupByQueryRunnerFailureTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
-    try {
+    try (ReferenceCountingResourceHolder<List<ByteBuffer>> holder = mergeBufferPool.takeBatch(1, 10)) {
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    } finally {
-      holder.close();
     }
   }
 }

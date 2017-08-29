@@ -31,6 +31,7 @@ import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -66,13 +67,13 @@ public class RealtimeishTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final Interval interval1 = new Interval("2010-01-01T00/PT1H");
-    final Interval interval2 = new Interval("2010-01-01T01/PT1H");
+    final Interval interval1 = Intervals.of("2010-01-01T00/PT1H");
+    final Interval interval2 = Intervals.of("2010-01-01T01/PT1H");
 
     // Sort of similar to what realtime tasks do:
 
     // Acquire lock for first interval
-    final TaskLock lock1 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval1));
+    final TaskLock lock1 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval1, 5000));
     final List<TaskLock> locks1 = toolbox.getTaskActionClient().submit(new LockListAction());
 
     // (Confirm lock sanity)
@@ -80,7 +81,7 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks1", ImmutableList.of(lock1), locks1);
 
     // Acquire lock for second interval
-    final TaskLock lock2 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval2));
+    final TaskLock lock2 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval2, 5000));
     final List<TaskLock> locks2 = toolbox.getTaskActionClient().submit(new LockListAction());
 
     // (Confirm lock sanity)

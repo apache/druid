@@ -22,6 +22,7 @@ package io.druid.metadata.storage.postgresql;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
@@ -64,7 +65,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected String getPayloadType() {
+  protected String getPayloadType()
+  {
     return PAYLOAD_TYPE;
   }
 
@@ -75,7 +77,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public String getQuoteString() {
+  public String getQuoteString()
+  {
     return QUOTE_STRING;
   }
 
@@ -126,7 +129,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
           {
             if (canUpsert(handle)) {
               handle.createStatement(
-                  String.format(
+                  StringUtils.format(
                       "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON CONFLICT (%2$s) DO UPDATE SET %3$s = EXCLUDED.%3$s",
                       tableName,
                       keyColumn,
@@ -138,7 +141,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
                     .execute();
             } else {
               handle.createStatement(
-                  String.format(
+                  StringUtils.format(
                       "BEGIN;\n" +
                       "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
                       "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +
@@ -160,12 +163,15 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public DBI getDBI() { return dbi; }
+  public DBI getDBI()
+  {
+    return dbi;
+  }
 
   @Override
   protected boolean connectorIsTransientException(Throwable e)
   {
-    if(e instanceof SQLException) {
+    if (e instanceof SQLException) {
       final String sqlState = ((SQLException) e).getSQLState();
       // limited to errors that are likely to be resolved within a few retries
       // retry on connection errors and insufficient resources

@@ -31,7 +31,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Emits all the events instance of {@link com.metamx.emitter.service.ServiceMetricEvent}.
+ * Emits all the events instance of {@link ServiceMetricEvent}.
  * <p>
  * All the dimensions will be retained and lexicographically order using dimensions name.
  * <p>

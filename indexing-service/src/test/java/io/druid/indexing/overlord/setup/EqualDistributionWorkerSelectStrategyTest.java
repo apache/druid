@@ -26,7 +26,7 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
-import org.joda.time.DateTime;
+import io.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,17 +43,17 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("lhost", "lhost", 1, "v1"), 0,
+                new Worker("http", "lhost", "lhost", 1, "v1"), 0,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
-                DateTime.now()
+                DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("localhost", "localhost", 1, "v1"), 1,
+                new Worker("http", "localhost", "localhost", 1, "v1"), 1,
                 Sets.<String>newHashSet(),
                 Sets.<String>newHashSet(),
-                DateTime.now()
+                DateTimes.nowUtc()
             )
         ),
         new NoopTask(null, 1, 0, null, null, null)
@@ -70,6 +70,42 @@ public class EqualDistributionWorkerSelectStrategyTest
   }
 
   @Test
+  public void testFindWorkerForTaskWhenSameCurrCapacityUsed() throws Exception
+  {
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
+
+    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        ImmutableMap.of(
+            "lhost",
+            new ImmutableWorkerInfo(
+                new Worker("http", "lhost", "lhost", 5, "v1"), 5,
+                Sets.<String>newHashSet(),
+                Sets.<String>newHashSet(),
+                DateTimes.nowUtc()
+            ),
+            "localhost",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost", "localhost", 10, "v1"), 5,
+                Sets.<String>newHashSet(),
+                Sets.<String>newHashSet(),
+                DateTimes.nowUtc()
+            )
+        ),
+        new NoopTask(null, 1, 0, null, null, null)
+        {
+          @Override
+          public String getDataSource()
+          {
+            return "foo";
+          }
+        }
+    );
+    ImmutableWorkerInfo worker = optional.get();
+    Assert.assertEquals("localhost", worker.getWorker().getHost());
+  }
+
+  @Test
   public void testOneDisableWorkerDifferentUsedCapacity() throws Exception
   {
     String DISABLED_VERSION = "";
@@ -78,28 +114,28 @@ public class EqualDistributionWorkerSelectStrategyTest
     Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
-                      "lhost",
-                      new ImmutableWorkerInfo(
-                              new Worker("disableHost", "disableHost", 10, DISABLED_VERSION), 2,
-                              Sets.<String>newHashSet(),
-                              Sets.<String>newHashSet(),
-                              DateTime.now()
-                      ),
-                      "localhost",
-                      new ImmutableWorkerInfo(
-                              new Worker("enableHost", "enableHost", 10, "v1"), 5,
-                              Sets.<String>newHashSet(),
-                              Sets.<String>newHashSet(),
-                              DateTime.now()
-                      )
+            "lhost",
+            new ImmutableWorkerInfo(
+                new Worker("http", "disableHost", "disableHost", 10, DISABLED_VERSION), 2,
+                Sets.<String>newHashSet(),
+                Sets.<String>newHashSet(),
+                DateTimes.nowUtc()
+            ),
+            "localhost",
+            new ImmutableWorkerInfo(
+                new Worker("http", "enableHost", "enableHost", 10, "v1"), 5,
+                Sets.<String>newHashSet(),
+                Sets.<String>newHashSet(),
+                DateTimes.nowUtc()
+            )
         ),
         new NoopTask(null, 1, 0, null, null, null)
         {
           @Override
           public String getDataSource()
-                  {
-                      return "foo";
-                  }
+          {
+            return "foo";
+          }
         }
     );
     ImmutableWorkerInfo worker = optional.get();
@@ -113,31 +149,31 @@ public class EqualDistributionWorkerSelectStrategyTest
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
 
     Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
-            new RemoteTaskRunnerConfig(),
-            ImmutableMap.of(
-                    "lhost",
-                    new ImmutableWorkerInfo(
-                            new Worker("disableHost", "disableHost", 10, DISABLED_VERSION), 5,
-                            Sets.<String>newHashSet(),
-                            Sets.<String>newHashSet(),
-                            DateTime.now()
-                    ),
-                    "localhost",
-                    new ImmutableWorkerInfo(
-                            new Worker("enableHost", "enableHost", 10, "v1"), 5,
-                            Sets.<String>newHashSet(),
-                            Sets.<String>newHashSet(),
-                            DateTime.now()
-                    )
+        new RemoteTaskRunnerConfig(),
+        ImmutableMap.of(
+            "lhost",
+            new ImmutableWorkerInfo(
+                new Worker("http", "disableHost", "disableHost", 10, DISABLED_VERSION), 5,
+                Sets.<String>newHashSet(),
+                Sets.<String>newHashSet(),
+                DateTimes.nowUtc()
             ),
-            new NoopTask(null, 1, 0, null, null, null)
-            {
-                @Override
-                public String getDataSource()
-                {
-                    return "foo";
-                }
-            }
+            "localhost",
+            new ImmutableWorkerInfo(
+                new Worker("http", "enableHost", "enableHost", 10, "v1"), 5,
+                Sets.<String>newHashSet(),
+                Sets.<String>newHashSet(),
+                DateTimes.nowUtc()
+            )
+        ),
+        new NoopTask(null, 1, 0, null, null, null)
+        {
+          @Override
+          public String getDataSource()
+          {
+            return "foo";
+          }
+        }
     );
     ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("enableHost", worker.getWorker().getHost());

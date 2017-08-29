@@ -127,7 +127,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
     catch (Throwable t) {
       log.error(
           t,
-          "Exception while checking handoff for dataSource[%s] Segment[%s], Will try again after [%d]secs",
+          "Exception while checking handoff for dataSource[%s], Will try again after [%d]secs",
           dataSource,
           pollDurationMillis
       );
@@ -148,7 +148,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
             @Override
             public boolean apply(DruidServerMetadata input)
             {
-              return input.isAssignable();
+              return input.segmentReplicatable();
             }
           }
       )) {

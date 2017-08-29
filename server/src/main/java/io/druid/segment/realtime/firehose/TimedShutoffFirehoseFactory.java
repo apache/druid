@@ -29,6 +29,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import org.joda.time.DateTime;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -53,21 +54,21 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
   }
 
   @Override
-  public Firehose connect(InputRowParser parser) throws IOException
+  public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
   {
-    return new TimedShutoffFirehose(parser);
+    return new TimedShutoffFirehose(parser, temporaryDirectory);
   }
 
-  public class TimedShutoffFirehose implements Firehose
+  class TimedShutoffFirehose implements Firehose
   {
     private final Firehose firehose;
     private final ScheduledExecutorService exec;
     private final Object shutdownLock = new Object();
     private volatile boolean shutdown = false;
 
-    public TimedShutoffFirehose(InputRowParser parser) throws IOException
+    TimedShutoffFirehose(InputRowParser parser, File temporaryDirectory) throws IOException
     {
-      firehose = delegateFactory.connect(parser);
+      firehose = delegateFactory.connect(parser, temporaryDirectory);
 
       exec = Execs.scheduledSingleThreaded("timed-shutoff-firehose-%d");
 

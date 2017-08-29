@@ -182,7 +182,7 @@ public class TaskMaster
         }
     );
 
-    leaderSelector.setId(node.getHostAndPort());
+    leaderSelector.setId(node.getHostAndPortToUse());
     leaderSelector.autoRequeue();
   }
 
@@ -242,12 +242,12 @@ public class TaskMaster
     }
   }
 
-  public boolean isLeading()
+  public boolean isLeader()
   {
     return leading;
   }
 
-  public String getLeader()
+  public String getCurrentLeader()
   {
     try {
       final Participant leader = leaderSelector.getLeader();

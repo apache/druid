@@ -30,6 +30,13 @@ import io.druid.data.input.InputRow;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * An extendable linear shard spec containing the information of core partitions.  This class contains two variables of
+ * {@link #partitionNum} and {@link #partitions}, which represent the unique id of a partition and the number of core
+ * partitions, respectively.  {@link #partitions} simply indicates that the atomic update is regarded as completed when
+ * {@link #partitions} partitions are successfully updated, and {@link #partitionNum} can go beyond it when some types
+ * of index tasks are trying to append to existing partitions.
+ */
 public class NumberedShardSpec implements ShardSpec
 {
   @JsonIgnore

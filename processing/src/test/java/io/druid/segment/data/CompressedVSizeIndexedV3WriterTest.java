@@ -25,6 +25,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
@@ -115,10 +116,9 @@ public class CompressedVSizeIndexedV3WriterTest
   private void checkSerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
     FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
-    final IOPeon ioPeon = new TmpFileIOPeon();
     final IndexedMultivalue<IndexedInts> indexedMultivalue;
 
-    try {
+    try (IOPeon ioPeon = new TmpFileIOPeon()) {
       int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
       CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
           ioPeon, "offset", offsetChunkFactor, byteOrder, compressionStrategy
@@ -169,9 +169,6 @@ public class CompressedVSizeIndexedV3WriterTest
         }
       }
       CloseQuietly.close(indexedMultivalue);
-    }
-    finally {
-      ioPeon.close();
     }
   }
 
@@ -239,16 +236,15 @@ public class CompressedVSizeIndexedV3WriterTest
 
   private void checkV2SerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
-    File tmpDirectory = Files.createTempDirectory(String.format(
+    File tmpDirectory = Files.createTempDirectory(StringUtils.format(
         "CompressedVSizeIndexedV3WriterTest_%d_%d",
         offsetChunkFactor,
         offsetChunkFactor
     )).toFile();
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
-    final IOPeon ioPeon = new TmpFileIOPeon();
     int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
 
-    try {
+    try (IOPeon ioPeon = new TmpFileIOPeon()) {
       CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
           offsetChunkFactor,
           compressionStrategy,
@@ -315,9 +311,6 @@ public class CompressedVSizeIndexedV3WriterTest
       }
       CloseQuietly.close(indexedMultivalue);
       mapper.close();
-    }
-    finally {
-      ioPeon.close();
     }
   }
 

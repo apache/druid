@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
-import org.joda.time.DateTime;
+import io.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,12 +35,12 @@ public class ImmutableWorkerInfoTest
   {
     ImmutableWorkerInfo workerInfo = new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     );
     ObjectMapper mapper = new DefaultObjectMapper();
     final ImmutableWorkerInfo serde = mapper.readValue(
@@ -56,117 +56,137 @@ public class ImmutableWorkerInfoTest
     // Everything equal
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), true);
 
     // different worker same tasks
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker1", "192.0.0.1", 10, "v1"
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker2", "192.0.0.1", 10, "v1"
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), false);
 
     // same worker different task groups
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp3", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker", "192.0.0.1", 10, "v1"
+            "http", "testWorker", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), false);
 
     // same worker different tasks
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker1", "192.0.0.1", 10, "v1"
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker2", "192.0.0.1", 10, "v1"
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task3"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), false);
 
     // same worker different capacity
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker1", "192.0.0.1", 10, "v1"
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
         ),
         3,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker2", "192.0.0.1", 10, "v1"
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), false);
 
     // same worker different lastCompletedTaskTime
     assertEqualsAndHashCode(new ImmutableWorkerInfo(
         new Worker(
-            "testWorker1", "192.0.0.1", 10, "v1"
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
         ),
         3,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:01Z")
+        DateTimes.of("2015-01-01T01:01:01Z")
     ), new ImmutableWorkerInfo(
         new Worker(
-            "testWorker2", "192.0.0.1", 10, "v1"
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
         ),
         2,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
-        new DateTime("2015-01-01T01:01:02Z")
+        DateTimes.of("2015-01-01T01:01:02Z")
     ), false);
 
+    // same worker different blacklistedUntil
+    assertEqualsAndHashCode(new ImmutableWorkerInfo(
+        new Worker(
+            "http", "testWorker1", "192.0.0.1", 10, "v1"
+        ),
+        3,
+        ImmutableSet.of("grp1", "grp2"),
+        ImmutableSet.of("task1", "task2"),
+        DateTimes.of("2015-01-01T01:01:01Z"),
+        DateTimes.of("2017-07-30")
+    ), new ImmutableWorkerInfo(
+        new Worker(
+            "http", "testWorker2", "192.0.0.1", 10, "v1"
+        ),
+        2,
+        ImmutableSet.of("grp1", "grp2"),
+        ImmutableSet.of("task1", "task2"),
+        DateTimes.of("2015-01-01T01:01:02Z"),
+        DateTimes.of("2017-07-31")
+    ), false);
   }
 
   private void assertEqualsAndHashCode(ImmutableWorkerInfo o1, ImmutableWorkerInfo o2, boolean shouldMatch)

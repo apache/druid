@@ -23,7 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -34,10 +35,8 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -45,10 +44,7 @@ import java.util.Map;
  */
 public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>>
 {
-  public static final Interval MY_Y2K_INTERVAL = new Interval(
-      new DateTime("0000-01-01"),
-      new DateTime("3000-01-01")
-  );
+  private static final QuerySegmentSpec DEFAULT_SEGMENT_SPEC = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
   public static final String MAX_TIME = "maxTime";
   public static final String MIN_TIME = "minTime";
 
@@ -66,20 +62,15 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(
-        dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(MY_Y2K_INTERVAL))
-                                   : querySegmentSpec,
-        false,
-        context
-    );
+    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, false, context);
 
     this.dimFilter = dimFilter;
     this.bound = bound == null ? "" : bound;
   }
 
   @Override
-  public boolean hasFilters() {
+  public boolean hasFilters()
+  {
     return dimFilter != null;
   }
 
@@ -123,15 +114,15 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   public byte[] getCacheKey()
   {
-    final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
+    final byte[] filterBytes = dimFilter == null ? new byte[] {} : dimFilter.getCacheKey();
     final byte[] boundBytes = StringUtils.toUtf8(bound);
     final byte delimiter = (byte) 0xff;
     return ByteBuffer.allocate(2 + boundBytes.length + filterBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(boundBytes)
-                     .put(delimiter)
-                     .put(filterBytes)
-                     .array();
+        .put(CACHE_TYPE_ID)
+        .put(boundBytes)
+        .put(delimiter)
+        .put(filterBytes)
+        .array();
   }
 
   public Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
@@ -158,8 +149,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       return Lists.newArrayList();
     }
 
-    DateTime min = new DateTime(JodaUtils.MAX_INSTANT);
-    DateTime max = new DateTime(JodaUtils.MIN_INSTANT);
+    DateTime min = DateTimes.MAX;
+    DateTime max = DateTimes.MIN;
     for (Result<TimeBoundaryResultValue> result : results) {
       TimeBoundaryResultValue val = result.getValue();
 
@@ -208,12 +199,12 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   public String toString()
   {
     return "TimeBoundaryQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", duration=" + getDuration() +
-           ", bound=" + bound +
-           ", dimFilter=" + dimFilter +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", duration=" + getDuration() +
+        ", bound=" + bound +
+        ", dimFilter=" + dimFilter +
+        '}';
   }
 
   @Override

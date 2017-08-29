@@ -85,7 +85,8 @@ public class DruidSecondaryModule implements Module
     return smileMapper;
   }
 
-  private void setupJackson(Injector injector, final ObjectMapper mapper) {
+  private void setupJackson(Injector injector, final ObjectMapper mapper)
+  {
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
 
     mapper.setInjectableValues(new GuiceInjectableValues(injector));

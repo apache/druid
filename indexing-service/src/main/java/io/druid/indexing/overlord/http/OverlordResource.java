@@ -52,7 +52,10 @@ import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.http.security.TaskResourceFilter;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import io.druid.server.http.security.ConfigResourceFilter;
@@ -163,7 +166,7 @@ public class OverlordResource
             }
             catch (EntryExistsException e) {
               return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(ImmutableMap.of("error", String.format("Task[%s] already exists!", task.getId())))
+                             .entity(ImmutableMap.of("error", StringUtils.format("Task[%s] already exists!", task.getId())))
                              .build();
             }
           }
@@ -177,7 +180,22 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLeader()
   {
-    return Response.ok(taskMaster.getLeader()).build();
+    return Response.ok(taskMaster.getCurrentLeader()).build();
+  }
+
+  @GET
+  @Path("/isLeader")
+  @ResourceFilters(StateResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response isLeader()
+  {
+    final boolean leading = taskMaster.isLeader();
+    final Map<String, Boolean> response = ImmutableMap.of("leader", leading);
+    if (leading) {
+      return Response.ok(response).build();
+    } else {
+      return Response.status(Response.Status.NOT_FOUND).entity(response).build();
+    }
   }
 
   @GET
@@ -275,7 +293,7 @@ public class OverlordResource
       @QueryParam("count") final Integer count
   )
   {
-    Interval theInterval = interval == null ? null : new Interval(interval);
+    Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
         return Response.ok(
@@ -404,8 +422,8 @@ public class OverlordResource
                     new TaskRunnerWorkItem(
                         task.getId(),
                         SettableFuture.<TaskStatus>create(),
-                        new DateTime(0),
-                        new DateTime(0)
+                        DateTimes.EPOCH,
+                        DateTimes.EPOCH
                     )
                     {
                       @Override
@@ -491,7 +509,7 @@ public class OverlordResource
                   if (!optionalTask.isPresent()) {
                     throw new WebApplicationException(
                         Response.serverError().entity(
-                            String.format("No task information found for task with id: [%s]", taskId)
+                            StringUtils.format("No task information found for task with id: [%s]", taskId)
                         ).build()
                     );
                   }
@@ -523,8 +541,8 @@ public class OverlordResource
             // Would be nice to include the real created date, but the TaskStorage API doesn't yet allow it.
             return new TaskResponseObject(
                 taskStatus.getId(),
-                new DateTime(0),
-                new DateTime(0),
+                DateTimes.EPOCH,
+                DateTimes.EPOCH,
                 Optional.of(taskStatus),
                 TaskLocation.unknown()
             );
@@ -682,7 +700,7 @@ public class OverlordResource
             if (!optionalTask.isPresent()) {
               throw new WebApplicationException(
                   Response.serverError().entity(
-                      String.format("No task information found for task with id: [%s]", taskId)
+                      StringUtils.format("No task information found for task with id: [%s]", taskId)
                   ).build()
               );
             }

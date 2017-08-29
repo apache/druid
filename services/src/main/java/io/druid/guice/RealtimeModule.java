@@ -39,9 +39,13 @@ import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
-import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.QueryResource;
+import io.druid.server.SegmentManager;
+import io.druid.server.coordination.ServerType;
+import io.druid.server.coordination.ZkCoordinator;
+import io.druid.server.http.SegmentListerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -54,13 +58,7 @@ public class RealtimeModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoiceWithDefault(
-        binder,
-        "druid.publish.type",
-        Key.get(SegmentPublisher.class),
-        null,
-        "metadata"
-    );
+    PolyBind.createChoiceWithDefault(binder, "druid.publish.type", Key.get(SegmentPublisher.class), "metadata");
     final MapBinder<String, SegmentPublisher> publisherBinder = PolyBind.optionBinder(
         binder,
         Key.get(SegmentPublisher.class)
@@ -101,11 +99,16 @@ public class RealtimeModule implements Module
     binder.install(new CacheModule());
 
     binder.bind(QuerySegmentWalker.class).to(RealtimeManager.class).in(ManageLifecycle.class);
-    binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("realtime"));
+    binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.REALTIME));
     binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
     binder.bind(QueryCountStatsProvider.class).to(QueryResource.class).in(LazySingleton.class);
     Jerseys.addResource(binder, QueryResource.class);
+    Jerseys.addResource(binder, SegmentListerResource.class);
     LifecycleModule.register(binder, QueryResource.class);
     LifecycleModule.register(binder, Server.class);
+
+    binder.bind(SegmentManager.class).in(LazySingleton.class);
+    binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+    LifecycleModule.register(binder, ZkCoordinator.class);
   }
 }

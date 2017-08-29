@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
@@ -101,11 +102,9 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     byte numBytes = 4;
     if (maxValue <= 0xFF) {
       numBytes = 1;
-    }
-    else if (maxValue <= 0xFFFF) {
+    } else if (maxValue <= 0xFFFF) {
       numBytes = 2;
-    }
-    else if (maxValue <= 0xFFFFFF) {
+    } else if (maxValue <= 0xFFFFFF) {
       numBytes = 3;
     }
     return numBytes;
@@ -212,25 +211,27 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   }
 
   @Override
-  public void fill(int index, int[] toFill)
+  public void close() throws IOException
   {
-    throw new UnsupportedOperationException("fill not supported");
   }
 
   @Override
-  public void close() throws IOException
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-
+    inspector.visit("buffer", buffer);
   }
 
-  public WritableSupplier<IndexedInts> asWritableSupplier() {
+  public WritableSupplier<IndexedInts> asWritableSupplier()
+  {
     return new VSizeIndexedIntsSupplier(this);
   }
 
-  public static class VSizeIndexedIntsSupplier implements WritableSupplier<IndexedInts> {
+  public static class VSizeIndexedIntsSupplier implements WritableSupplier<IndexedInts>
+  {
     final VSizeIndexedInts delegate;
 
-    public VSizeIndexedIntsSupplier(VSizeIndexedInts delegate) {
+    public VSizeIndexedIntsSupplier(VSizeIndexedInts delegate)
+    {
       this.delegate = delegate;
     }
 
