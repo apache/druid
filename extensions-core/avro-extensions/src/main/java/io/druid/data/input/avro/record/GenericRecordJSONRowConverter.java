@@ -42,6 +42,7 @@ public class GenericRecordJSONRowConverter extends GenericRecordRowConverter
   public MapBasedInputRow convert(GenericRecord record)
   {
     Map<String, Object> map = parser.parse(record.toString());
+
     TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
     DateTime dateTime = timestampSpec.extractTimestamp(map);
     return new MapBasedInputRow(dateTime, dimensions, map);

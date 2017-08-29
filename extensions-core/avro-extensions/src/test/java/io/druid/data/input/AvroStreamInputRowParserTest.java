@@ -234,103 +234,6 @@ public class AvroStreamInputRowParserTest
     assertInputRowCorrect(inputRow);
   }
 
-  @Test
-  public void testParseJSON() throws SchemaValidationException, IOException
-  {
-    // serde test
-    Repository repository = new InMemoryRepository(null);
-    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
-        JSON_PARSE_SPEC,
-        new SchemaRepoBasedAvroBytesDecoder<String, Integer>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
-    );
-    ByteBufferInputRowParser parser2 = jsonMapper.readValue(
-        jsonMapper.writeValueAsString(parser),
-        ByteBufferInputRowParser.class
-    );
-    repository = ((SchemaRepoBasedAvroBytesDecoder) ((AvroStreamInputRowParser) parser2).getAvroBytesDecoder()).getSchemaRepository();
-
-    // prepare data
-    GenericRecord someAvroDatum = buildSomeAvroDatum();
-
-    // encode schema id
-    Avro1124SubjectAndIdConverter converter = new Avro1124SubjectAndIdConverter(TOPIC);
-    TypedSchemaRepository<Integer, Schema, String> repositoryClient = new TypedSchemaRepository<Integer, Schema, String>(
-        repository,
-        new IntegerConverter(),
-        new AvroSchemaConverter(),
-        new IdentityConverter()
-    );
-    Integer id = repositoryClient.registerSchema(TOPIC, SomeAvroDatum.getClassSchema());
-    ByteBuffer byteBuffer = ByteBuffer.allocate(4);
-    converter.putSubjectAndId(TOPIC, id, byteBuffer);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    out.write(byteBuffer.array());
-    // encode data
-    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(someAvroDatum.getSchema());
-    // write avro datum to bytes
-    writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
-
-    InputRow inputRow = parser2.parse(ByteBuffer.wrap(out.toByteArray()));
-
-
-    assertEquals(JSON_DIMENSIONS, inputRow.getDimensions());
-    assertEquals(DATE_TIME.getMillis(), inputRow.getTimestampFromEpoch());
-
-    // test dimensions
-    assertEquals(Collections.singletonList(String.valueOf(EVENT_TYPE_VALUE)), inputRow.getDimension(EVENT_TYPE));
-    assertEquals(Collections.singletonList(String.valueOf(ID_VALUE)), inputRow.getDimension(ID));
-    assertEquals(Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)), inputRow.getDimension(SOME_OTHER_ID));
-    assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
-    assertEquals(
-        Lists.transform(SOME_INT_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
-        inputRow.getDimension("someIntArray")
-    );
-    assertEquals(
-        Lists.transform(SOME_STRING_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
-        inputRow.getDimension("someStringArray")
-    );
-    // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
-    assertEquals(1, inputRow.getDimension("someIntValueMap").size());
-    assertEquals(
-        SOME_INT_VALUE_MAP_VALUE, new HashMap<CharSequence, Integer>(
-            Maps.transformValues(
-                Splitter.on(",")
-                        .withKeyValueSeparator("=")
-                        .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", "")),
-                new Function<String, Integer>()
-                {
-                  @Nullable
-                  @Override
-                  public Integer apply(@Nullable String input)
-                  {
-                    return Integer.valueOf(input);
-                  }
-                }
-            )
-        )
-    );
-    assertEquals(
-        SOME_STRING_VALUE_MAP_VALUE, new HashMap<CharSequence, CharSequence>(
-            Splitter.on(",")
-                    .withKeyValueSeparator("=")
-                    .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", ""))
-        )
-    );
-    assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));
-    assertEquals(Collections.emptyList(), inputRow.getDimension("someNull"));
-    assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
-    assertEquals(Collections.singletonList("4892"), inputRow.getDimension("subRecInt"));
-    assertEquals(Collections.singletonList("1543698"), inputRow.getDimension("subRecLong"));
-
-
-    assertEquals(4892, inputRow.getLongMetric("subRecInt"));
-    assertEquals(1543698, inputRow.getLongMetric("subRecLong"));
-    // test metrics
-    assertEquals(SOME_FLOAT_VALUE, inputRow.getFloatMetric("someFloat"), 0);
-    assertEquals(SOME_LONG_VALUE, inputRow.getLongMetric("someLong"));
-    assertEquals(SOME_INT_VALUE, inputRow.getLongMetric("someInt"));
-    // test metrics
-  }
 
   public static void assertInputRowCorrect(InputRow inputRow)
   {
@@ -392,6 +295,111 @@ public class AvroStreamInputRowParserTest
     assertEquals(SOME_LONG_VALUE, inputRow.getLongMetric("someLong"));
     assertEquals(SOME_INT_VALUE, inputRow.getLongMetric("someInt"));
   }
+
+
+  @Test
+  public void testParseJSON() throws SchemaValidationException, IOException
+  {
+    // serde test
+    Repository repository = new InMemoryRepository(null);
+    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
+        JSON_PARSE_SPEC,
+        new SchemaRepoBasedAvroBytesDecoder<String, Integer>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
+    );
+    ByteBufferInputRowParser parser2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(parser),
+        ByteBufferInputRowParser.class
+    );
+    repository = ((SchemaRepoBasedAvroBytesDecoder) ((AvroStreamInputRowParser) parser2).getAvroBytesDecoder()).getSchemaRepository();
+
+    // prepare data
+    GenericRecord someAvroDatum = buildSomeAvroDatum();
+
+    // encode schema id
+    Avro1124SubjectAndIdConverter converter = new Avro1124SubjectAndIdConverter(TOPIC);
+    TypedSchemaRepository<Integer, Schema, String> repositoryClient = new TypedSchemaRepository<Integer, Schema, String>(
+        repository,
+        new IntegerConverter(),
+        new AvroSchemaConverter(),
+        new IdentityConverter()
+    );
+    Integer id = repositoryClient.registerSchema(TOPIC, SomeAvroDatum.getClassSchema());
+    ByteBuffer byteBuffer = ByteBuffer.allocate(4);
+    converter.putSubjectAndId(TOPIC, id, byteBuffer);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    out.write(byteBuffer.array());
+    // encode data
+    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(someAvroDatum.getSchema());
+    // write avro datum to bytes
+    writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
+
+    InputRow inputRow = parser2.parse(ByteBuffer.wrap(out.toByteArray()));
+
+    assertJSONInputRowCorrect(inputRow);
+  }
+
+
+  public static void assertJSONInputRowCorrect(InputRow inputRow)
+  {
+
+    assertEquals(JSON_DIMENSIONS, inputRow.getDimensions());
+    assertEquals(DATE_TIME.getMillis(), inputRow.getTimestampFromEpoch());
+
+    // test dimensions
+    assertEquals(Collections.singletonList(String.valueOf(EVENT_TYPE_VALUE)), inputRow.getDimension(EVENT_TYPE));
+    assertEquals(Collections.singletonList(String.valueOf(ID_VALUE)), inputRow.getDimension(ID));
+    assertEquals(Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)), inputRow.getDimension(SOME_OTHER_ID));
+    assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
+    assertEquals(
+        Lists.transform(SOME_INT_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
+        inputRow.getDimension("someIntArray")
+    );
+    assertEquals(
+        Lists.transform(SOME_STRING_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
+        inputRow.getDimension("someStringArray")
+    );
+    // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
+    assertEquals(1, inputRow.getDimension("someIntValueMap").size());
+    assertEquals(
+        SOME_INT_VALUE_MAP_VALUE, new HashMap<CharSequence, Integer>(
+            Maps.transformValues(
+                Splitter.on(",")
+                        .withKeyValueSeparator("=")
+                        .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", "")),
+                new Function<String, Integer>()
+                {
+                  @Nullable
+                  @Override
+                  public Integer apply(@Nullable String input)
+                  {
+                    return Integer.valueOf(input);
+                  }
+                }
+            )
+        )
+    );
+    assertEquals(
+        SOME_STRING_VALUE_MAP_VALUE, new HashMap<CharSequence, CharSequence>(
+            Splitter.on(",")
+                    .withKeyValueSeparator("=")
+                    .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", ""))
+        )
+    );
+    assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));
+    assertEquals(Collections.emptyList(), inputRow.getDimension("someNull"));
+    assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
+    assertEquals(Collections.singletonList("4892"), inputRow.getDimension("subRecInt"));
+    assertEquals(Collections.singletonList("1543698"), inputRow.getDimension("subRecLong"));
+
+
+    assertEquals(4892, inputRow.getLongMetric("subRecInt"));
+    assertEquals(1543698, inputRow.getLongMetric("subRecLong"));
+    // test metrics
+    assertEquals(SOME_FLOAT_VALUE, inputRow.getFloatMetric("someFloat"), 0);
+    assertEquals(SOME_LONG_VALUE, inputRow.getLongMetric("someLong"));
+    assertEquals(SOME_INT_VALUE, inputRow.getLongMetric("someInt"));
+  }
+
 
   public static GenericRecord buildSomeAvroDatum() throws IOException
   {
