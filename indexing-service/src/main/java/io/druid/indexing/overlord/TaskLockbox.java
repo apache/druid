@@ -491,12 +491,7 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      final TaskLockPosse taskLockPosseToUpdate = getOnlyTaskLockPosse(
-          task,
-          interval,
-          findLockPossesContainingInterval(task.getDataSource(), interval)
-      );
-
+      final TaskLockPosse taskLockPosseToUpdate = getOnlyTaskLockPosseContainingInterval(task, interval);
       final TaskLock lock = taskLockPosseToUpdate.getTaskLock();
 
       Preconditions.checkState(
@@ -543,11 +538,7 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      final TaskLockPosse taskLockPosseToUpdate = getOnlyTaskLockPosse(
-          task,
-          interval,
-          findLockPossesContainingInterval(task.getDataSource(), interval)
-      );
+      final TaskLockPosse taskLockPosseToUpdate = getOnlyTaskLockPosseContainingInterval(task, interval);
       final TaskLock lock = taskLockPosseToUpdate.taskLock;
 
       Preconditions.checkState(
@@ -882,22 +873,19 @@ public class TaskLockbox
     return existingLock.getPriority() < tryLockPriority && !existingLock.isUpgraded();
   }
 
-  private static TaskLockPosse getOnlyTaskLockPosse(Task task, Interval interval, List<TaskLockPosse> lockPosses)
+  private TaskLockPosse getOnlyTaskLockPosseContainingInterval(Task task, Interval interval)
   {
-    final List<TaskLockPosse> filteredPosses = lockPosses.stream()
-                                                         .filter(lockPosse -> lockPosse.containsTask(task))
-                                                         .collect(Collectors.toList());
+    final List<TaskLockPosse> filteredPosses = findLockPossesContainingInterval(task.getDataSource(), interval)
+        .stream()
+        .filter(lockPosse -> lockPosse.containsTask(task))
+        .collect(Collectors.toList());
+
     if (filteredPosses.isEmpty()) {
       throw new ISE("Cannot find locks for task[%s] and interval[%s]", task.getId(), interval);
     } else if (filteredPosses.size() > 1) {
       throw new ISE("There are multiple lockPosses for task[%s] and interval[%s]?", task.getId(), interval);
     } else {
-      final TaskLockPosse foundPosse = filteredPosses.get(0);
-      if (foundPosse.containsTask(task)) {
-        return foundPosse;
-      } else {
-        throw new ISE("Cannot find locks for task[%s] and interval[%s]", task.getId(), interval);
-      }
+      return filteredPosses.get(0);
     }
   }
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
@@ -46,8 +47,8 @@ public class LockAcquireAction implements TaskAction<LockResult>
       @JsonProperty("timeoutMs") long timeoutMs
   )
   {
-    this.type = type;
-    this.interval = interval;
+    this.type = Preconditions.checkNotNull(type, "lockType");
+    this.interval = Preconditions.checkNotNull(interval, "interval");
     this.timeoutMs = timeoutMs;
   }
 
