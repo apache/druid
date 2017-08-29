@@ -24,9 +24,11 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.StringUtils;
+import org.joda.time.DateTimeZone;
 
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -89,6 +91,26 @@ public class ParserUtils
     if (input.charAt(0) == '\"' && input.charAt(input.length() - 1) == '\"') {
       input = input.substring(1, input.length() - 1).trim();
     }
+    return input;
+  }
+
+  public static DateTimeZone extractTimeZone(String input)
+  {
+    String[] inputArray = input.split(" ");
+    if (inputArray.length == 3) {
+      return DateTimeZone.forTimeZone(TimeZone.getTimeZone(inputArray[2]));
+    }
+
+    return DateTimeZone.UTC;
+  }
+
+  public static String removeTimeZone(String input)
+  {
+    String[] inputArray = input.split(" ");
+    if (inputArray.length == 3) {
+      return inputArray[0] + " " + inputArray[1];
+    }
+
     return input;
   }
 
