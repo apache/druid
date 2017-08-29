@@ -24,12 +24,15 @@ import com.google.common.base.Preconditions;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 public class TimestampParser
@@ -47,13 +50,21 @@ public class TimestampParser
         public DateTime apply(String input)
         {
           Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
+          String[] inputArray = input.split(" ");
+          String timeZone = "UTC";
+          if (inputArray.length == 3) {
+            // Extract Locale info
+            timeZone = inputArray[2];
+            input = inputArray[0] + " " + inputArray[1];
+          }
           for (int i = 0; i < input.length(); i++) {
             if (input.charAt(i) < '0' || input.charAt(i) > '9') {
-              return parser.parseDateTime(ParserUtils.stripQuotes(input));
+              return new DateTime(parser.parseDateTime(ParserUtils.stripQuotes(input)),
+                  ISOChronology.getInstance(DateTimeZone.forTimeZone(TimeZone.getTimeZone(timeZone))));
             }
           }
 
-          return DateTimes.utc(Long.parseLong(input));
+          return DateTimes.of(Long.parseLong(input), timeZone);
         }
       };
     } else if (format.equalsIgnoreCase("iso")) {

@@ -20,7 +20,10 @@
 package io.druid.java.util.common;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
+
+import java.util.TimeZone;
 
 public final class DateTimes
 {
@@ -33,9 +36,21 @@ public final class DateTimes
     return new DateTime(instant, ISOChronology.getInstanceUTC());
   }
 
+  public static DateTime of(long instant, String locale)
+  {
+    return new DateTime(instant,
+        ISOChronology.getInstance(DateTimeZone.forTimeZone(TimeZone.getTimeZone(locale))));
+  }
+
   public static DateTime of(String instant)
   {
     return new DateTime(instant, ISOChronology.getInstanceUTC());
+  }
+
+  public static DateTime of(String instant, String locale)
+  {
+    return new DateTime(instant,
+        ISOChronology.getInstance(DateTimeZone.forTimeZone(TimeZone.getTimeZone(locale))));
   }
 
   public static DateTime nowUtc()
