@@ -30,6 +30,8 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.LockResult;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 public class LockAcquireAction implements TaskAction<LockResult>
 {
   private final TaskLockType type;
@@ -42,12 +44,12 @@ public class LockAcquireAction implements TaskAction<LockResult>
 
   @JsonCreator
   public LockAcquireAction(
-      @JsonProperty("lockType") TaskLockType type,
+      @JsonProperty("lockType") @Nullable TaskLockType type, // nullable for backward compatibility
       @JsonProperty("interval") Interval interval,
       @JsonProperty("timeoutMs") long timeoutMs
   )
   {
-    this.type = Preconditions.checkNotNull(type, "lockType");
+    this.type = type == null ? TaskLockType.EXCLUSIVE : type;
     this.interval = Preconditions.checkNotNull(interval, "interval");
     this.timeoutMs = timeoutMs;
   }
