@@ -25,6 +25,8 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 /**
  * Represents a lock held by some task. Immutable.
  */
@@ -36,32 +38,32 @@ public class TaskLock
   private final Interval interval;
   private final String version;
   private final int priority;
-  private final boolean upgraded;
-  private final boolean revoked;
+  private final TaskLockStatus lockStatus;
 
   @JsonCreator
   public TaskLock(
-      @JsonProperty("type") TaskLockType type,
+      @JsonProperty("type") @Nullable TaskLockType type,            // nullable for backward compatibility
       @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
       @JsonProperty("priority") int priority,
-      @JsonProperty("upgraded") boolean upgraded,
-      @JsonProperty("revoked") boolean revoked
+      @JsonProperty("lockStatus") @Nullable TaskLockStatus lockStatus // nullable for backward compatibility
   )
   {
-    Preconditions.checkArgument(!type.equals(TaskLockType.SHARED) || !upgraded, "lock[%s] cannot be upgraded", type);
-    Preconditions.checkArgument(!upgraded || !revoked, "Upgraded locks cannot be revoked");
-
-    this.type = type;
-    this.groupId = Preconditions.checkNotNull(groupId);
-    this.dataSource = Preconditions.checkNotNull(dataSource);
-    this.interval = Preconditions.checkNotNull(interval);
-    this.version = Preconditions.checkNotNull(version);
+    this.type = type == null ? TaskLockType.EXCLUSIVE : type;
+    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    this.interval = Preconditions.checkNotNull(interval, "interval");
+    this.version = Preconditions.checkNotNull(version, "version");
     this.priority = priority;
-    this.upgraded = upgraded;
-    this.revoked = revoked;
+    this.lockStatus = lockStatus == null ? TaskLockStatus.NON_PREEMPTIBLE : lockStatus;
+
+    Preconditions.checkArgument(
+        !this.type.equals(TaskLockType.SHARED) || this.lockStatus != TaskLockStatus.NON_PREEMPTIBLE,
+        "lock[%s] cannot be upgraded to non-preemptible",
+        this.type
+    );
   }
 
   public TaskLock(
@@ -73,28 +75,46 @@ public class TaskLock
       int priority
   )
   {
-    this(type, groupId, dataSource, interval, version, priority, false, false);
+    this(type, groupId, dataSource, interval, version, priority, TaskLockStatus.PREEMPTIBLE);
   }
 
   public TaskLock upgrade()
   {
-    Preconditions.checkState(!revoked, "Revoked locks cannot be upgraded");
-    Preconditions.checkState(!upgraded, "Already upgraded");
-    return new TaskLock(type, groupId, dataSource, interval, version, priority, true, revoked);
+    return new TaskLock(
+        type,
+        groupId,
+        dataSource,
+        interval,
+        version,
+        priority,
+        lockStatus.transitTo(TaskLockStatus.NON_PREEMPTIBLE)
+    );
   }
 
   public TaskLock downgrade()
   {
-    Preconditions.checkState(!revoked, "Revoked locks cannot be downgraded");
-    Preconditions.checkState(upgraded, "Already downgraded");
-    return new TaskLock(type, groupId, dataSource, interval, version, priority, false, revoked);
+    return new TaskLock(
+        type,
+        groupId,
+        dataSource,
+        interval,
+        version,
+        priority,
+        lockStatus.transitTo(TaskLockStatus.PREEMPTIBLE)
+    );
   }
 
   public TaskLock revoke()
   {
-    Preconditions.checkState(!revoked, "Already revoked");
-    Preconditions.checkState(!upgraded, "Upgraded locks cannot be revoked");
-    return new TaskLock(type, groupId, dataSource, interval, version, priority, upgraded, true);
+    return new TaskLock(
+        type,
+        groupId,
+        dataSource,
+        interval,
+        version,
+        priority,
+        lockStatus.transitTo(TaskLockStatus.REVOKED)
+    );
   }
 
   @JsonProperty
@@ -134,15 +154,19 @@ public class TaskLock
   }
 
   @JsonProperty
-  public boolean isUpgraded()
+  public TaskLockStatus getLockStatus()
   {
-    return upgraded;
+    return lockStatus;
   }
 
-  @JsonProperty
+  public boolean isUpgraded()
+  {
+    return lockStatus == TaskLockStatus.NON_PREEMPTIBLE;
+  }
+
   public boolean isRevoked()
   {
-    return revoked;
+    return lockStatus == TaskLockStatus.REVOKED;
   }
 
   @Override
@@ -158,15 +182,14 @@ public class TaskLock
              this.interval.equals(that.interval) &&
              this.version.equals(that.version) &&
              this.priority == that.priority &&
-             this.upgraded == that.upgraded &&
-             this.revoked == that.revoked;
+             this.lockStatus == that.lockStatus;
     }
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(type, groupId, dataSource, interval, version, priority, upgraded, revoked);
+    return Objects.hashCode(type, groupId, dataSource, interval, version, priority, lockStatus);
   }
 
   @Override
@@ -179,8 +202,7 @@ public class TaskLock
                   .add("interval", interval)
                   .add("version", version)
                   .add("priority", priority)
-                  .add("upgraded", upgraded)
-                  .add("revoked", revoked)
+                  .add("lockStatus", lockStatus)
                   .toString();
   }
 }
