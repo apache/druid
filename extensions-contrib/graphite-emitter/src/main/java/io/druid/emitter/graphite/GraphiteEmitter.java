@@ -140,7 +140,8 @@ public class GraphiteEmitter implements Emitter
   {
     private final GraphiteSender graphite;
 
-    public ConsumerRunnable() {
+    public ConsumerRunnable()
+    {
       if (graphiteEmitterConfig.getProtocol().equals(GraphiteEmitterConfig.PLAINTEXT_PROTOCOL)) {
         graphite = new Graphite(
           graphiteEmitterConfig.getHostname(),
