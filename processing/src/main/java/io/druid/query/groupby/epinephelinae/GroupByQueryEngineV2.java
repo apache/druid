@@ -142,7 +142,7 @@ public class GroupByQueryEngineV2
                     .createColumnSelectorPluses(
                         STRATEGY_FACTORY,
                         query.getDimensions(),
-                        cursor
+                        cursor.getColumnSelectorFactory()
                     );
                 GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
 
@@ -434,7 +434,7 @@ public class GroupByQueryEngineV2
       return new BufferHashGrouper<>(
           Suppliers.ofInstance(buffer),
           keySerde,
-          cursor,
+          cursor.getColumnSelectorFactory(),
           query.getAggregatorSpecs()
                .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]),
           querySpecificConfig.getBufferGrouperMaxSize(),
@@ -587,7 +587,7 @@ public class GroupByQueryEngineV2
     {
       return new BufferArrayGrouper(
           Suppliers.ofInstance(buffer),
-          cursor,
+          cursor.getColumnSelectorFactory(),
           query.getAggregatorSpecs()
                .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]),
           cardinality

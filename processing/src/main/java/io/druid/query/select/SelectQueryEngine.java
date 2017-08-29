@@ -241,13 +241,14 @@ public class SelectQueryEngine
                 query.isDescending()
             );
 
-            final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
+            final LongColumnSelector timestampColumnSelector =
+                cursor.getColumnSelectorFactory().makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
             final List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
                 DimensionHandlerUtils.createColumnSelectorPluses(
                     STRATEGY_FACTORY,
                     Lists.newArrayList(dims),
-                    cursor
+                    cursor.getColumnSelectorFactory()
                 )
             );
 
@@ -257,7 +258,8 @@ public class SelectQueryEngine
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
             for (String metric : metrics) {
-              final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
+              final ObjectColumnSelector metricSelector =
+                  cursor.getColumnSelectorFactory().makeObjectColumnSelector(metric);
               metSelectors.put(metric, metricSelector);
               builder.addMetric(metric);
             }
