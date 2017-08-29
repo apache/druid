@@ -228,7 +228,7 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     server.setConnectors(connectors);
-    server.setAttribute(GRACEFUL_SHUTDOWN_TIME, config.getGracefulShutdownTimeout().getMillis());
+    server.setAttribute(GRACEFUL_SHUTDOWN_TIME, config.getGracefulShutdownTimeout().toStandardDuration().getMillis());
 
     return server;
   }
@@ -256,17 +256,24 @@ public class JettyServerModule extends JerseyServletModule
           public void stop()
           {
             if (activeConnections.get() != 0) {
-              long graceFullShutDownTime = (int) server.getAttribute(GRACEFUL_SHUTDOWN_TIME);
+              long graceFulShutDownTime = (long) server.getAttribute(GRACEFUL_SHUTDOWN_TIME);
               log.info("Waiting for [%s] milliseconds for active requests to be zero, current active requests=[%s]",
-                  graceFullShutDownTime, activeConnections.get());
+                  graceFulShutDownTime, activeConnections.get());
               try {
-                Thread.sleep(graceFullShutDownTime);
+                Thread.sleep(graceFulShutDownTime);
               }
               catch (InterruptedException e) {
                 log.error("Sleep has been interrupted, while waiting for active requests to be zero");
+                stopImmediately();
                 Thread.currentThread().interrupt();
+                return;
               }
             }
+            stopImmediately();
+          }
+
+          private void stopImmediately()
+          {
             log.info("Stopping Jetty Server with active requests=[%s]", activeConnections.get());
             try {
               server.stop();
