@@ -38,7 +38,6 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
-  private static final String CTX_KEY_FORCE_SINGLE_THREADED_COMBINE = "forceSingleThreadedCombine";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
