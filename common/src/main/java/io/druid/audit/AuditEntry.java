@@ -74,7 +74,6 @@ public class AuditEntry
   }
 
   /**
-  * @param None
   * @return returns payload as String
   */
   @JsonProperty
@@ -82,8 +81,8 @@ public class AuditEntry
   {
     return payload;
   }
+
   /**
-  * @param None
   * @return audit time as DateTime
   */
   @JsonProperty

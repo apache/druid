@@ -19,6 +19,8 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
+import io.druid.guice.annotations.PublicApi;
+
 import java.io.Closeable;
 
 /**
@@ -29,6 +31,7 @@ import java.io.Closeable;
  *
  * @see ProvisioningStrategy#makeProvisioningService
  */
+@PublicApi
 public interface ProvisioningService extends Closeable
 {
   /**

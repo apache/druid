@@ -35,6 +35,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
@@ -51,7 +52,7 @@ import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.http.security.TaskResourceFilter;
-import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
@@ -107,7 +108,7 @@ public class OverlordResource
   private final AuditManager auditManager;
   private final AuthConfig authConfig;
 
-  private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
+  private AtomicReference<BaseWorkerBehaviorConfig> workerConfigRef = null;
 
   @Inject
   public OverlordResource(
@@ -253,7 +254,7 @@ public class OverlordResource
   public Response getWorkerConfig()
   {
     if (workerConfigRef == null) {
-      workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
+      workerConfigRef = configManager.watch(BaseWorkerBehaviorConfig.CONFIG_KEY, BaseWorkerBehaviorConfig.class);
     }
 
     return Response.ok(workerConfigRef.get()).build();
@@ -265,14 +266,14 @@ public class OverlordResource
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response setWorkerConfig(
-      final WorkerBehaviorConfig workerBehaviorConfig,
+      final BaseWorkerBehaviorConfig workerBehaviorConfig,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
       @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context final HttpServletRequest req
   )
   {
     if (!configManager.set(
-        WorkerBehaviorConfig.CONFIG_KEY,
+        BaseWorkerBehaviorConfig.CONFIG_KEY,
         workerBehaviorConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
     )) {
@@ -296,14 +297,12 @@ public class OverlordResource
     Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
-        return Response.ok(
-            auditManager.fetchAuditHistory(
-                WorkerBehaviorConfig.CONFIG_KEY,
-                WorkerBehaviorConfig.CONFIG_KEY,
-                count
-            )
-        )
-                       .build();
+        List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
+            BaseWorkerBehaviorConfig.CONFIG_KEY,
+            BaseWorkerBehaviorConfig.CONFIG_KEY,
+            count
+        );
+        return Response.ok(workerEntryList).build();
       }
       catch (IllegalArgumentException e) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -311,14 +310,12 @@ public class OverlordResource
                        .build();
       }
     }
-    return Response.ok(
-        auditManager.fetchAuditHistory(
-            WorkerBehaviorConfig.CONFIG_KEY,
-            WorkerBehaviorConfig.CONFIG_KEY,
-            theInterval
-        )
-    )
-                   .build();
+    List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
+        BaseWorkerBehaviorConfig.CONFIG_KEY,
+        BaseWorkerBehaviorConfig.CONFIG_KEY,
+        theInterval
+    );
+    return Response.ok(workerEntryList).build();
   }
 
   @POST

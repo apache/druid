@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
@@ -33,6 +34,7 @@ import java.util.Set;
 /**
  * A snapshot of a Worker and its current state i.e tasks assigned to that worker.
  */
+@PublicApi
 public class ImmutableWorkerInfo
 {
   private final Worker worker;

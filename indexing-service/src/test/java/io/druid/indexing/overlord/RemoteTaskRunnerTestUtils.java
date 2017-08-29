@@ -35,6 +35,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
@@ -227,7 +228,7 @@ public class RemoteTaskRunnerTestUtils
         CuratorFramework cf,
         PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
         HttpClient httpClient,
-        Supplier<WorkerBehaviorConfig> workerConfigRef,
+        Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
         ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
     )
     {

@@ -17,22 +17,21 @@
  * under the License.
  */
 
-package io.druid.indexing.overlord.autoscaling;
+package io.druid.indexing.overlord.setup;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.guice.annotations.ExtensionPoint;
-import io.druid.indexing.overlord.TaskRunner;
 
-/**
- * In general, the resource management is tied to the runner.
- */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = WorkerBehaviorConfig.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "default", value = WorkerBehaviorConfig.class)
+})
 @ExtensionPoint
-public interface ProvisioningStrategy<T extends TaskRunner>
+public interface BaseWorkerBehaviorConfig
 {
-  /**
-   * Creates a new {@link ProvisioningService} for the given {@link TaskRunner}
-   * This method is intended to be called from the TaskRunner's lifecycle start
-   *
-   * @param runner The TaskRunner state holder this strategy should use during execution
-   */
-  ProvisioningService makeProvisioningService(T runner);
+  String CONFIG_KEY = "worker.config";
+  WorkerSelectStrategy DEFAULT_STRATEGY = new EqualDistributionWorkerSelectStrategy();
+
+  WorkerSelectStrategy getSelectStrategy();
 }

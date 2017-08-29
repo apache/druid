@@ -21,10 +21,12 @@ package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.guice.annotations.PublicApi;
 
 /**
  * A container for worker metadata.
  */
+@PublicApi
 public class Worker
 {
   private final String scheme;

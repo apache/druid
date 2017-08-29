@@ -19,31 +19,28 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.base.Predicate;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 
 import java.util.Collection;
 
+@PublicApi
 public interface WorkerTaskRunner extends TaskRunner
 {
   /**
-   * List of known workers who can accept tasks
-   * @return A list of workers who can accept tasks for running
+   * List of known workers who can accept tasks for running
    */
   Collection<ImmutableWorkerInfo> getWorkers();
 
   /**
    * Return a list of workers who can be reaped by autoscaling
-   * @return Workers which can be reaped by autoscaling
    */
   Collection<Worker> getLazyWorkers();
 
   /**
    * Check which workers can be marked as lazy
-   * @param isLazyWorker
-   * @param maxWorkers
-   * @return
    */
   Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers);
 

@@ -38,6 +38,7 @@ import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
@@ -65,7 +66,7 @@ public class SimpleProvisioningStrategyTest
   private AutoScaler autoScaler;
   private Task testTask;
   private SimpleWorkerProvisioningStrategy strategy;
-  private AtomicReference<WorkerBehaviorConfig> workerConfig;
+  private AtomicReference<BaseWorkerBehaviorConfig> workerConfig;
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
 
   @Before
