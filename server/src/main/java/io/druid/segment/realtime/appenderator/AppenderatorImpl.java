@@ -959,7 +959,7 @@ public class AppenderatorImpl implements Appenderator
               if (cache != null) {
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
               }
-              hydrant.closeSegment();
+              hydrant.swapSegment(null);
             }
 
             if (removeOnDiskData) {

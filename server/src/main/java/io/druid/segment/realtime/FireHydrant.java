@@ -27,6 +27,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -97,10 +98,13 @@ public class FireHydrant
     return index == null;
   }
 
-  public void swapSegment(Segment newSegment)
+  public void swapSegment(@Nullable Segment newSegment)
   {
     while (true) {
       ReferenceCountingSegment currentSegment = adapter.get();
+      if (currentSegment == null && newSegment == null) {
+        return;
+      }
       if (currentSegment != null && newSegment != null &&
           !newSegment.getIdentifier().equals(currentSegment.getIdentifier())) {
         // Sanity check: identifier should not change
@@ -113,7 +117,9 @@ public class FireHydrant
       if (currentSegment == newSegment) {
         throw new ISE("Cannot swap to the same segment");
       }
-      if (adapter.compareAndSet(currentSegment, new ReferenceCountingSegment(newSegment))) {
+      ReferenceCountingSegment newReferenceCountingSegment =
+          newSegment != null ? new ReferenceCountingSegment(newSegment) : null;
+      if (adapter.compareAndSet(currentSegment, newReferenceCountingSegment)) {
         if (currentSegment != null) {
           currentSegment.close();
         }
@@ -139,11 +145,6 @@ public class FireHydrant
       segment = newSegment;
       // Spin loop.
     }
-  }
-
-  public void closeSegment()
-  {
-    adapter.get().close();
   }
 
   @Override

@@ -871,7 +871,7 @@ public class RealtimePlumber implements Plumber
         );
         for (FireHydrant hydrant : sink) {
           cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
-          hydrant.closeSegment();
+          hydrant.swapSegment(null);
         }
         synchronized (handoffCondition) {
           handoffCondition.notifyAll();
