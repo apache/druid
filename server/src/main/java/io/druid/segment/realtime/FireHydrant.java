@@ -83,6 +83,9 @@ public class FireHydrant
       if (segment == newSegment) {
         throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
       }
+      if (newSegment == null) {
+        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
+      }
       segment = newSegment;
       // Spin loop.
     }
@@ -131,20 +134,8 @@ public class FireHydrant
 
   public Pair<Segment, Closeable> getAndIncrementSegment()
   {
-    ReferenceCountingSegment segment = adapter.get();
-    while (true) {
-      if (segment.increment()) {
-        return new Pair<>(segment, segment.decrementOnceCloseable());
-      }
-      // segment.increment() returned false, means it is closed. Since close() in swapSegment() happens after segment
-      // swap, the new segment should already be visible.
-      ReferenceCountingSegment newSegment = adapter.get();
-      if (segment == newSegment) {
-        throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
-      }
-      segment = newSegment;
-      // Spin loop.
-    }
+    ReferenceCountingSegment segment = getIncrementedSegment();
+    return new Pair<>(segment, segment.decrementOnceCloseable());
   }
 
   @Override
